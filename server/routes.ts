@@ -801,6 +801,51 @@ Only include jobs with a score above 40. Sort by score descending.`;
     }
   });
 
+  // Career Advisor - Parse job posting file (PDF/DOCX)
+  app.post("/api/career-advisor/parse-job-file", isAuthenticated, upload.single("file"), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "No file uploaded" });
+      }
+
+      const file = req.file;
+      let text = "";
+
+      if (file.mimetype === "application/pdf") {
+        try {
+          text = await extractTextFromPDF(file.buffer);
+        } catch (pdfError: any) {
+          if (pdfError instanceof InvalidPDFError) {
+            return res.status(400).json({ error: pdfError.message });
+          }
+          throw pdfError;
+        }
+      } else if (
+        file.mimetype === "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+      ) {
+        text = await extractTextFromDOCX(file.buffer);
+      } else {
+        return res.status(400).json({ error: "Unsupported file type. Please upload PDF or DOCX." });
+      }
+
+      if (!text || text.trim().length < 50) {
+        return res.status(400).json({ error: "Could not extract sufficient text from the file." });
+      }
+
+      // Try to extract title from first line or use filename
+      const lines = text.split("\n").filter((l) => l.trim());
+      let title = "";
+      if (lines.length > 0 && lines[0].length < 100) {
+        title = lines[0].trim();
+      }
+
+      res.json({ text: text.trim(), title });
+    } catch (error) {
+      console.error("Error parsing job file:", error);
+      res.status(500).json({ error: "Failed to parse job file" });
+    }
+  });
+
   // Career Advisor - Compare multiple jobs for career guidance
   const careerAdvisorJobSchema = z.object({
     id: z.string(),

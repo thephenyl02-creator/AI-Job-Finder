@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Header } from "@/components/header";
 import { Button } from "@/components/ui/button";
@@ -23,13 +23,16 @@ import {
   ArrowRight,
   Lightbulb,
   FileText,
-  Scale
+  Scale,
+  Upload
 } from "lucide-react";
 
 interface JobInput {
   id: string;
   title: string;
   description: string;
+  fileName?: string;
+  isUploading?: boolean;
 }
 
 interface JobAnalysis {
@@ -83,11 +86,100 @@ export default function CareerAdvisor() {
     { id: "2", title: "", description: "" },
   ]);
   const [result, setResult] = useState<ComparisonResult | null>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
 
   const { data: resumeData } = useQuery<{ hasResume: boolean; extractedData?: any }>({
     queryKey: ["/api/resume"],
     enabled: isAuthenticated,
   });
+
+  const handleFileDrop = useCallback(async (jobId: string, file: File) => {
+    const validTypes = [
+      "application/pdf",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ];
+    if (!validTypes.includes(file.type)) {
+      toast({
+        title: "Invalid file type",
+        description: "Please upload a PDF or DOCX file.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Maximum file size is 5MB.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setJobs((prev) =>
+      prev.map((j) => (j.id === jobId ? { ...j, isUploading: true, fileName: file.name } : j))
+    );
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const response = await fetch("/api/career-advisor/parse-job-file", {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to parse file");
+      }
+
+      const data = await response.json();
+      setJobs((prev) =>
+        prev.map((j) =>
+          j.id === jobId
+            ? { ...j, description: data.text, title: data.title || j.title, isUploading: false }
+            : j
+        )
+      );
+      toast({
+        title: "File uploaded",
+        description: `Extracted ${data.text.length} characters from ${file.name}`,
+      });
+    } catch (error: any) {
+      setJobs((prev) =>
+        prev.map((j) => (j.id === jobId ? { ...j, isUploading: false, fileName: undefined } : j))
+      );
+      toast({
+        title: "Upload failed",
+        description: error.message || "Could not extract text from file.",
+        variant: "destructive",
+      });
+    }
+  }, [toast]);
+
+  const handleDragOver = useCallback((e: React.DragEvent, jobId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOverId(jobId);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOverId(null);
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent, jobId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOverId(null);
+    const file = e.dataTransfer.files[0];
+    if (file) {
+      handleFileDrop(jobId, file);
+    }
+  }, [handleFileDrop]);
 
   const compareMutation = useMutation({
     mutationFn: async (data: { jobs: JobInput[]; includeResume: boolean }) => {
@@ -193,7 +285,14 @@ export default function CareerAdvisor() {
 
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {jobs.map((job, index) => (
-                <Card key={job.id} data-testid={`card-job-input-${index}`}>
+                <Card 
+                  key={job.id} 
+                  data-testid={`card-job-input-${index}`}
+                  className={dragOverId === job.id ? "ring-2 ring-primary ring-offset-2" : ""}
+                  onDragOver={(e) => handleDragOver(e, job.id)}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e) => handleDrop(e, job.id)}
+                >
                   <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-lg">Job {index + 1}</CardTitle>
@@ -208,8 +307,54 @@ export default function CareerAdvisor() {
                         </Button>
                       )}
                     </div>
+                    {job.fileName && (
+                      <Badge variant="secondary" className="w-fit">
+                        <FileText className="h-3 w-3 mr-1" />
+                        {job.fileName}
+                      </Badge>
+                    )}
                   </CardHeader>
                   <CardContent className="space-y-4">
+                    <div
+                      className={`border-2 border-dashed rounded-lg p-4 text-center transition-colors ${
+                        dragOverId === job.id 
+                          ? "border-primary bg-primary/5" 
+                          : "border-muted-foreground/25"
+                      }`}
+                    >
+                      {job.isUploading ? (
+                        <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                          <Loader2 className="h-5 w-5 animate-spin" />
+                          <span>Extracting text...</span>
+                        </div>
+                      ) : (
+                        <label className="cursor-pointer">
+                          <input
+                            type="file"
+                            accept=".pdf,.docx"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) handleFileDrop(job.id, file);
+                              e.target.value = "";
+                            }}
+                            data-testid={`input-file-upload-${index}`}
+                          />
+                          <div className="flex flex-col items-center gap-1 text-muted-foreground">
+                            <Upload className="h-6 w-6" />
+                            <span className="text-sm font-medium">Drop PDF/DOCX or click to upload</span>
+                            <span className="text-xs">Job posting file (max 5MB)</span>
+                          </div>
+                        </label>
+                      )}
+                    </div>
+                    <div className="relative">
+                      <div className="absolute inset-x-0 top-0 flex items-center justify-center">
+                        <span className="bg-background px-2 text-xs text-muted-foreground -translate-y-1/2">
+                          or paste text
+                        </span>
+                      </div>
+                    </div>
                     <div>
                       <label className="text-sm font-medium text-muted-foreground">
                         Job Title (optional)

@@ -91,10 +91,13 @@ Preferred communication style: Simple, everyday language.
 - **Purpose**: Strategic career guidance for comparing 2-3 job opportunities
 - **Features**:
   - Compare 2-3 job descriptions side-by-side
+  - **Drag-and-drop file upload**: Upload PDF/DOCX job posting files directly
   - AI analyzes: responsibilities, skills, work type (structured vs ambiguous), growth paths, transition difficulty
   - Personalized fit analysis when resume is uploaded (strengths, gaps, interview risks, resume positioning)
   - Strategic recommendations: best fit now, best long-term, biggest career shift
-- **API**: POST `/api/career-advisor/compare` with Zod validation
+- **API**: 
+  - POST `/api/career-advisor/parse-job-file` - Extract text from uploaded job posting files
+  - POST `/api/career-advisor/compare` - Compare jobs with Zod validation
 - **Implementation**: `client/src/pages/career-advisor.tsx`, API endpoint in `server/routes.ts`
 
 ### Job Scraper (Admin Feature)
