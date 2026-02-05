@@ -228,6 +228,223 @@ Only include jobs with a score above 40. Sort by score descending.`;
     }
   });
 
+  // Guided search - analyze query and generate clarifying questions
+  app.post("/api/search/analyze", isAuthenticated, async (req, res) => {
+    try {
+      const { query } = req.body;
+      
+      if (!query || typeof query !== "string") {
+        return res.status(400).json({ error: "Search query is required" });
+      }
+
+      // Get user's resume data if available for personalization
+      const user = req.user as any;
+      let userContext = "";
+      if (user?.claims?.sub) {
+        const userData = await storage.getUserResume(user.claims.sub);
+        if (userData?.extractedData) {
+          const skills = userData.extractedData.skills?.join(", ") || "";
+          const experience = userData.extractedData.experience || "";
+          if (skills || experience) {
+            userContext = `\nUser background: ${skills} ${experience}`;
+          }
+        }
+      }
+
+      const systemPrompt = `You are an expert legal tech career advisor. Analyze the user's job search query and generate 2-4 smart clarifying questions to help pinpoint exactly what they're looking for.
+
+Your questions should help understand:
+- Their ideal role type and responsibilities
+- Experience level and career stage
+- Work preferences (remote, location, company size)
+- Salary expectations (if not clear)
+- Specific skills or areas they want to use or develop
+
+Generate questions that are:
+1. Specific and actionable (not generic)
+2. Have 3-5 predefined answer options each
+3. Directly relevant to their query
+4. Quick to answer (single select)
+
+Return ONLY valid JSON in this format:
+{
+  "refinedIntent": "Brief summary of what the user seems to be looking for",
+  "questions": [
+    {
+      "id": "q1",
+      "question": "What seniority level are you targeting?",
+      "options": [
+        {"value": "entry", "label": "Entry level / New grad"},
+        {"value": "mid", "label": "Mid-level (2-5 years)"},
+        {"value": "senior", "label": "Senior (5+ years)"},
+        {"value": "lead", "label": "Lead / Director"}
+      ]
+    }
+  ]
+}`;
+
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: `Search query: "${query}"${userContext}` },
+        ],
+        response_format: { type: "json_object" },
+        max_completion_tokens: 1024,
+      });
+
+      const content = response.choices[0]?.message?.content;
+      if (!content) {
+        return res.status(500).json({ error: "Failed to analyze query" });
+      }
+
+      const analysisResult = JSON.parse(content);
+      res.json({
+        originalQuery: query,
+        ...analysisResult,
+      });
+    } catch (error) {
+      console.error("Error analyzing search query:", error);
+      res.status(500).json({ error: "Failed to analyze query" });
+    }
+  });
+
+  // Refined search - use answers to curate precise results
+  app.post("/api/search/refined", isAuthenticated, async (req, res) => {
+    try {
+      const { originalQuery, answers, refinedIntent } = req.body;
+      
+      if (!originalQuery) {
+        return res.status(400).json({ error: "Original query is required" });
+      }
+
+      const jobs = await storage.getActiveJobs();
+      if (jobs.length === 0) {
+        return res.json([]);
+      }
+
+      // Get user's resume data for better matching
+      const user = req.user as any;
+      let userContext = "";
+      if (user?.claims?.sub) {
+        const userData = await storage.getUserResume(user.claims.sub);
+        if (userData?.extractedData) {
+          const skills = userData.extractedData.skills?.join(", ") || "not provided";
+          const experience = userData.extractedData.experience || "not provided";
+          userContext = `\nCandidate background: Skills: ${skills}. Experience: ${experience}.`;
+        }
+      }
+
+      const jobSummaries = jobs.map((job, index) => ({
+        index,
+        title: job.title,
+        company: job.company,
+        location: job.location,
+        isRemote: job.isRemote,
+        salaryMin: job.salaryMin,
+        salaryMax: job.salaryMax,
+        seniorityLevel: job.seniorityLevel,
+        roleCategory: job.roleCategory,
+        roleSubcategory: job.roleSubcategory,
+        keySkills: job.keySkills,
+        description: job.description.substring(0, 300),
+      }));
+
+      const answersText = Object.entries(answers || {})
+        .map(([question, answer]) => `${question}: ${answer}`)
+        .join("\n");
+
+      const systemPrompt = `You are an expert legal tech job matching assistant. The user has refined their search with specific preferences. Score ONLY the jobs that PRECISELY match their criteria.
+
+Be VERY selective - only include jobs that are genuinely excellent matches (score 75+).
+
+Scoring criteria:
+- 90-100: Perfect match - hits all or almost all preferences
+- 80-89: Excellent match - hits most key preferences
+- 75-79: Strong match - hits several important preferences
+- Below 75: Do not include
+
+For each matched job provide:
+1. A match score (75-100 only)
+2. A concise, specific reason explaining why this is a great fit
+3. Any minor gaps or considerations
+
+Return ONLY valid JSON:
+{
+  "matches": [
+    {
+      "index": 0,
+      "score": 92,
+      "reason": "Perfect fit: Senior product role at AI legal tech company, fully remote, matches your contract law background",
+      "considerations": "Salary range slightly below your target"
+    }
+  ],
+  "searchSummary": "Found X highly-matched roles focusing on [key criteria]"
+}
+
+Sort by score descending. Include maximum 15 jobs.`;
+
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { 
+            role: "user", 
+            content: `Original query: "${originalQuery}"
+Intent: ${refinedIntent || "Not specified"}
+
+User's refined preferences:
+${answersText || "No additional preferences specified"}
+${userContext}
+
+Available jobs:
+${JSON.stringify(jobSummaries, null, 2)}` 
+          },
+        ],
+        response_format: { type: "json_object" },
+        max_completion_tokens: 2048,
+      });
+
+      const content = response.choices[0]?.message?.content;
+      if (!content) {
+        return res.json({ jobs: [], searchSummary: "No results found" });
+      }
+
+      let matchResults: { 
+        matches: Array<{ index: number; score: number; reason: string; considerations?: string }>;
+        searchSummary: string;
+      };
+      try {
+        matchResults = JSON.parse(content);
+      } catch {
+        console.error("Failed to parse refined search response:", content);
+        return res.json({ jobs: [], searchSummary: "Search error occurred" });
+      }
+
+      const scoredJobs: JobWithScore[] = matchResults.matches
+        .filter(match => match.index >= 0 && match.index < jobs.length && match.score >= 75)
+        .map(match => ({
+          ...jobs[match.index],
+          matchScore: match.score,
+          matchReason: match.reason,
+        }))
+        .sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0));
+
+      // Save refined search for user
+      if (user?.claims?.sub) {
+        storage.updateUserLastSearch(user.claims.sub, `${originalQuery} (refined)`).catch(console.error);
+      }
+
+      res.json({
+        jobs: scoredJobs,
+        searchSummary: matchResults.searchSummary || `Found ${scoredJobs.length} curated matches`,
+      });
+    } catch (error) {
+      console.error("Error in refined search:", error);
+      res.status(500).json({ error: "Refined search failed" });
+    }
+  });
+
   // Resume upload endpoint
   app.post("/api/resume/upload", isAuthenticated, upload.single("resume"), async (req, res) => {
     try {
@@ -877,13 +1094,10 @@ Only include jobs with a score above 40. Sort by score descending.`;
       let resumeContext = "";
       if (includeResume) {
         const resumeData = await storage.getUserResume(userId);
-        if (resumeData?.resumeText && resumeData.extractedData && Object.keys(resumeData.extractedData).length > 0) {
+        if (resumeData?.extractedData && Object.keys(resumeData.extractedData).length > 0) {
           resumeContext = `
 CANDIDATE RESUME DATA:
 ${JSON.stringify(resumeData.extractedData, null, 2)}
-
-Resume Text (excerpt):
-${resumeData.resumeText.substring(0, 2000)}
 `;
         }
       }
