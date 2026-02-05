@@ -65,9 +65,25 @@ Preferred communication style: Simple, everyday language.
 
 ### Resume Upload
 - **Supported Formats**: PDF, DOCX (max 5MB)
-- **Processing**: pdf-parse for PDFs, mammoth for DOCX
+- **Processing**: pdf-parse v2 for PDFs (using class-based API), mammoth for DOCX
+- **PDF Validation**: Header validation to detect invalid/corrupted files with user-friendly error messages
 - **AI Extraction**: Extracts skills, experience, preferred roles, salary expectations
 - **Auto-search**: Generates natural language search query from resume data
+
+### Resume-Job Comparison
+- **Compare Button**: Available in Jobs table view (/jobs) for each job listing
+- **Requirements**: User must upload a valid resume first (button disabled otherwise)
+- **AI Analysis**: Compares resume against job posting using OpenAI
+- **Comparison Sections**:
+  - Overall match score (0-100%)
+  - Skills match with status (match/partial/missing) and explanations
+  - Experience match (years required vs actual)
+  - Location match (including remote preferences)
+  - Salary match (expected vs offered)
+  - Seniority match (level comparison)
+  - Gap analysis (skill gaps identified)
+  - Recommendations (actionable advice)
+- **Implementation**: `server/lib/resume-job-comparison.ts`, `client/src/components/job-comparison.tsx`
 
 ### Job Scraper (Admin Feature)
 - **Sources**: Legal AI startups (Harvey, CoCounsel, etc.), Legal tech companies (Clio, Relativity, etc.)
