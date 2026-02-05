@@ -27,6 +27,7 @@ export const users = pgTable("users", {
   resumeFilename: varchar("resume_filename", { length: 255 }),
   extractedData: jsonb("extracted_data"),
   lastSearchQuery: text("last_search_query"),
+  isAdmin: boolean("is_admin").default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

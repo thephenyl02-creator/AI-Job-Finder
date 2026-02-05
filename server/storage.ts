@@ -22,6 +22,9 @@ export interface IStorage {
   // User Preferences
   getUserPreferences(userId: string): Promise<UserPreferences | null>;
   upsertUserPreferences(userId: string, prefs: Partial<InsertUserPreferences>): Promise<UserPreferences>;
+  // User Admin
+  isUserAdmin(userId: string): Promise<boolean>;
+  setUserAdmin(userId: string, isAdmin: boolean): Promise<void>;
   // Job Categories
   getJobCategories(): Promise<JobCategory[]>;
   seedJobCategories(): Promise<void>;
@@ -411,6 +414,22 @@ class DatabaseStorage implements IStorage {
         .returning();
       return created;
     }
+  }
+
+  // User Admin methods
+  async isUserAdmin(userId: string): Promise<boolean> {
+    const [user] = await db
+      .select({ isAdmin: users.isAdmin })
+      .from(users)
+      .where(eq(users.id, userId));
+    return user?.isAdmin ?? false;
+  }
+
+  async setUserAdmin(userId: string, isAdmin: boolean): Promise<void> {
+    await db
+      .update(users)
+      .set({ isAdmin, updatedAt: new Date() })
+      .where(eq(users.id, userId));
   }
 
   // Job Categories methods

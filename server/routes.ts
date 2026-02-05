@@ -346,24 +346,23 @@ Only include jobs with a score above 40. Sort by score descending.`;
     }
   });
 
-  // Simple admin check - you can customize this allowlist
-  const ADMIN_EMAILS = process.env.ADMIN_EMAILS?.split(',') || [];
-  
-  const isAdmin = (req: any): boolean => {
+  // Check admin status from database
+  const isAdminCheck = async (req: any): Promise<boolean> => {
     const user = req.user as any;
-    const email = user?.claims?.email;
-    // Allow if ADMIN_EMAILS not configured (dev mode) or email is in allowlist
-    return ADMIN_EMAILS.length === 0 || ADMIN_EMAILS.includes(email);
+    const userId = user?.claims?.sub;
+    if (!userId) return false;
+    return storage.isUserAdmin(userId);
   };
 
   // Check if current user is admin
-  app.get("/api/auth/is-admin", isAuthenticated, (req, res) => {
-    res.json({ isAdmin: isAdmin(req) });
+  app.get("/api/auth/is-admin", isAuthenticated, async (req, res) => {
+    const adminStatus = await isAdminCheck(req);
+    res.json({ isAdmin: adminStatus });
   });
 
   // Admin: Get list of companies that can be scraped
-  app.get("/api/admin/scraper/companies", isAuthenticated, (req, res) => {
-    if (!isAdmin(req)) {
+  app.get("/api/admin/scraper/companies", isAuthenticated, async (req, res) => {
+    if (!(await isAdminCheck(req))) {
       return res.status(403).json({ error: "Admin access required" });
     }
     const companies = LAW_FIRMS_AND_COMPANIES.map(f => ({
@@ -377,7 +376,7 @@ Only include jobs with a score above 40. Sort by score descending.`;
 
   // Admin: Scrape all companies
   app.post("/api/admin/scraper/run", isAuthenticated, async (req, res) => {
-    if (!isAdmin(req)) {
+    if (!(await isAdminCheck(req))) {
       return res.status(403).json({ error: "Admin access required" });
     }
     try {
@@ -413,7 +412,7 @@ Only include jobs with a score above 40. Sort by score descending.`;
 
   // Admin: Scrape all companies with AI categorization
   app.post("/api/admin/scraper/run-with-ai", isAuthenticated, async (req, res) => {
-    if (!isAdmin(req)) {
+    if (!(await isAdminCheck(req))) {
       return res.status(403).json({ error: "Admin access required" });
     }
     try {
@@ -449,7 +448,7 @@ Only include jobs with a score above 40. Sort by score descending.`;
 
   // Admin: Scrape single company
   app.post("/api/admin/scraper/company/:name", isAuthenticated, async (req, res) => {
-    if (!isAdmin(req)) {
+    if (!(await isAdminCheck(req))) {
       return res.status(403).json({ error: "Admin access required" });
     }
     try {
@@ -500,7 +499,7 @@ Only include jobs with a score above 40. Sort by score descending.`;
 
   // Admin: Get job submissions
   app.get("/api/admin/job-submissions", isAuthenticated, async (req, res) => {
-    if (!isAdmin(req)) {
+    if (!(await isAdminCheck(req))) {
       return res.status(403).json({ error: "Admin access required" });
     }
     try {
@@ -518,7 +517,7 @@ Only include jobs with a score above 40. Sort by score descending.`;
 
   // Get scheduler status and job statistics
   app.get("/api/admin/monitoring", isAuthenticated, async (req, res) => {
-    if (!isAdmin(req)) {
+    if (!(await isAdminCheck(req))) {
       return res.status(403).json({ error: "Admin access required" });
     }
     try {
@@ -554,7 +553,7 @@ Only include jobs with a score above 40. Sort by score descending.`;
 
   // Get specific log file content
   app.get("/api/admin/logs/:filename", isAuthenticated, async (req, res) => {
-    if (!isAdmin(req)) {
+    if (!(await isAdminCheck(req))) {
       return res.status(403).json({ error: "Admin access required" });
     }
     try {
@@ -577,7 +576,7 @@ Only include jobs with a score above 40. Sort by score descending.`;
 
   // Start/stop scheduler
   app.post("/api/admin/scheduler/:action", isAuthenticated, async (req, res) => {
-    if (!isAdmin(req)) {
+    if (!(await isAdminCheck(req))) {
       return res.status(403).json({ error: "Admin access required" });
     }
     
@@ -599,7 +598,7 @@ Only include jobs with a score above 40. Sort by score descending.`;
 
   // Get validation status
   app.get("/api/admin/validation-status", isAuthenticated, async (req, res) => {
-    if (!isAdmin(req)) {
+    if (!(await isAdminCheck(req))) {
       return res.status(403).json({ error: "Admin access required" });
     }
     try {
@@ -613,7 +612,7 @@ Only include jobs with a score above 40. Sort by score descending.`;
 
   // Start continuous validation
   app.post("/api/admin/validate-links/start", isAuthenticated, async (req, res) => {
-    if (!isAdmin(req)) {
+    if (!(await isAdminCheck(req))) {
       return res.status(403).json({ error: "Admin access required" });
     }
     try {
@@ -644,7 +643,7 @@ Only include jobs with a score above 40. Sort by score descending.`;
 
   // Stop continuous validation
   app.post("/api/admin/validate-links/stop", isAuthenticated, async (req, res) => {
-    if (!isAdmin(req)) {
+    if (!(await isAdminCheck(req))) {
       return res.status(403).json({ error: "Admin access required" });
     }
     try {
@@ -661,7 +660,7 @@ Only include jobs with a score above 40. Sort by score descending.`;
 
   // Legacy quick validate (for backward compatibility)
   app.post("/api/admin/validate-links", isAuthenticated, async (req, res) => {
-    if (!isAdmin(req)) {
+    if (!(await isAdminCheck(req))) {
       return res.status(403).json({ error: "Admin access required" });
     }
     try {
