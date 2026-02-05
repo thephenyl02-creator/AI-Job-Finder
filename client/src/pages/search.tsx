@@ -264,13 +264,15 @@ export default function Search() {
             </div>
 
             <div className="text-center pt-4">
-              <button
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => setLocation("/jobs")}
-                className="text-muted-foreground hover:text-foreground transition-colors text-sm"
+                className="text-muted-foreground"
                 data-testid="link-browse-all"
               >
                 Or browse all jobs
-              </button>
+              </Button>
             </div>
           </div>
         )}
@@ -377,17 +379,17 @@ export default function Search() {
         {/* Step: Results */}
         {step === "results" && results && (
           <div className="space-y-6">
-            <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+            <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20" data-testid="card-curated-matches">
               <CardContent className="p-5">
-                <div className="flex items-center gap-3 mb-3">
+                <div className="flex items-center gap-3 mb-3 flex-wrap">
                   <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
                     <Target className="h-5 w-5 text-primary" />
                   </div>
                   <div>
-                    <p className="font-semibold text-foreground">
+                    <p className="font-semibold text-foreground" data-testid="text-match-count">
                       {results.jobs.length} Curated Matches
                     </p>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-sm text-muted-foreground" data-testid="text-search-summary">
                       {results.searchSummary}
                     </p>
                   </div>
@@ -407,20 +409,21 @@ export default function Search() {
                         sessionStorage.setItem("searchQuery", query);
                         setLocation("/jobs");
                       }}
+                      data-testid={`card-result-${job.id}`}
                     >
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between gap-4">
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <h3 className="font-medium text-foreground truncate">{job.title}</h3>
-                              <Badge variant="secondary" className="shrink-0">
+                            <div className="flex items-center gap-2 mb-1 flex-wrap">
+                              <h3 className="font-medium text-foreground truncate" data-testid={`text-job-title-${job.id}`}>{job.title}</h3>
+                              <Badge variant="secondary" className="shrink-0" data-testid={`badge-match-score-${job.id}`}>
                                 {job.matchScore}% match
                               </Badge>
                             </div>
-                            <p className="text-sm text-muted-foreground mb-2">
+                            <p className="text-sm text-muted-foreground mb-2" data-testid={`text-job-company-${job.id}`}>
                               {job.company} • {job.location || "Remote"}
                             </p>
-                            <p className="text-sm text-muted-foreground line-clamp-2">
+                            <p className="text-sm text-muted-foreground line-clamp-2" data-testid={`text-match-reason-${job.id}`}>
                               {job.matchReason}
                             </p>
                           </div>
@@ -443,12 +446,12 @@ export default function Search() {
                 )}
               </>
             ) : (
-              <Card className="bg-muted/30">
+              <Card className="bg-muted/30" data-testid="card-no-results">
                 <CardContent className="p-8 text-center">
-                  <p className="text-muted-foreground mb-4">
+                  <p className="text-muted-foreground mb-4" data-testid="text-no-results">
                     No perfect matches found for your specific criteria. Try broadening your search.
                   </p>
-                  <Button variant="outline" onClick={handleReset}>
+                  <Button variant="outline" onClick={handleReset} data-testid="button-try-different">
                     Try a Different Search
                   </Button>
                 </CardContent>
@@ -456,7 +459,7 @@ export default function Search() {
             )}
 
             <div className="flex justify-center pt-4">
-              <Button variant="ghost" onClick={handleReset} className="gap-2">
+              <Button variant="ghost" onClick={handleReset} className="gap-2" data-testid="button-new-search">
                 <ArrowLeft className="h-4 w-4" />
                 New Search
               </Button>

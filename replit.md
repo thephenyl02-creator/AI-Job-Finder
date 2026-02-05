@@ -43,12 +43,25 @@ Preferred communication style: Simple, everyday language.
 ### AI Integration
 - **Provider**: OpenAI API (via Replit AI Integrations)
 - **Features**: 
+  - **Guided Search (Smart Search)**: Multi-step search that asks clarifying questions to pinpoint exactly what users need
   - Semantic job search with natural language queries
   - Match scoring with explanations for job-candidate fit
   - Resume parsing and skill extraction from PDF/DOCX uploads
   - Auto-generated search queries from resume data
   - **Job Categorization**: Automatic classification into 3-tier taxonomy with AI summaries
 - **Configuration**: Uses `AI_INTEGRATIONS_OPENAI_API_KEY` and `AI_INTEGRATIONS_OPENAI_BASE_URL` environment variables
+
+### Guided Search (AI-Powered)
+- **Route**: Search page (/) for authenticated users
+- **Two Search Modes**:
+  1. **Smart Search**: Interactive flow that analyzes query, asks 2-4 clarifying questions, returns curated matches (75%+ score only)
+  2. **Quick Search**: Traditional semantic search, faster but less precise
+- **Question Generation**: AI generates role-specific questions about seniority, work preferences, skills, salary expectations
+- **Precision Matching**: Only returns jobs scoring 75%+ match, with detailed reasons for each match
+- **API Endpoints**:
+  - POST `/api/search/analyze` - Analyzes query and generates clarifying questions
+  - POST `/api/search/refined` - Uses answers to perform precision search
+- **Implementation**: `client/src/pages/search.tsx`, endpoints in `server/routes.ts`
 
 ### Job Categorization (AI-Powered)
 - **Taxonomy**: 13 primary categories with 80+ subcategories for comprehensive legal tech coverage
