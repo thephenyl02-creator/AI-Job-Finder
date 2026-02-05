@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, Briefcase, Info, Settings } from "lucide-react";
+import { LogOut, Briefcase, Info, Settings, Compass } from "lucide-react";
 import { Link } from "wouter";
 
 export function Header() {
@@ -42,6 +42,12 @@ export function Header() {
         <div className="flex items-center gap-2 sm:gap-4">
           {isAuthenticated ? (
             <>
+              <Link href="/career-advisor">
+                <Button variant="ghost" size="sm" className="hidden sm:flex gap-2" data-testid="link-career-advisor">
+                  <Compass className="h-4 w-4" />
+                  Career Advisor
+                </Button>
+              </Link>
               <Link href="/about">
                 <Button variant="ghost" size="sm" className="hidden sm:flex gap-2" data-testid="link-about">
                   <Info className="h-4 w-4" />

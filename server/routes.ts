@@ -800,6 +800,124 @@ Only include jobs with a score above 40. Sort by score descending.`;
     }
   });
 
+  // Career Advisor - Compare multiple jobs for career guidance
+  app.post("/api/career-advisor/compare", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const userId = user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const { jobs, includeResume } = req.body as {
+        jobs: Array<{ id: string; title: string; description: string }>;
+        includeResume: boolean;
+      };
+
+      if (!jobs || jobs.length < 2 || jobs.length > 3) {
+        return res.status(400).json({ error: "Please provide 2-3 job descriptions" });
+      }
+
+      let resumeContext = "";
+      if (includeResume) {
+        const resumeData = await storage.getUserResume(userId);
+        if (resumeData?.resumeText && resumeData.extractedData && Object.keys(resumeData.extractedData).length > 0) {
+          resumeContext = `
+CANDIDATE RESUME DATA:
+${JSON.stringify(resumeData.extractedData, null, 2)}
+
+Resume Text (excerpt):
+${resumeData.resumeText.substring(0, 2000)}
+`;
+        }
+      }
+
+      const jobDescriptions = jobs.map((j, i) => `
+JOB ${i + 1}: ${j.title || `Position ${i + 1}`}
+${j.description}
+`).join("\n---\n");
+
+      const systemPrompt = `You are a senior career advisor with 20+ years of experience helping professionals make strategic career decisions. Your role is NOT to do ATS keyword matching, but to provide deep career guidance.
+
+Analyze the provided job opportunities and ${resumeContext ? "the candidate's resume" : "provide general analysis"}.
+
+Focus on:
+1. Strategic career implications of each role
+2. Day-to-day reality vs. job description promises
+3. Growth trajectories and ceiling potential
+4. Cultural fit indicators and red flags
+5. Transition feasibility based on typical hiring patterns
+
+Return a JSON response with this exact structure:
+{
+  "jobs": [
+    {
+      "jobTitle": "The job title",
+      "mainResponsibilities": ["3-5 key responsibilities"],
+      "requiredSkills": ["5-8 skills with focus on must-haves vs nice-to-haves"],
+      "workType": {
+        "structured": 0-100,
+        "ambiguous": 0-100,
+        "description": "Brief description of the work style"
+      },
+      "growthOpportunities": ["3-4 realistic growth paths"],
+      "transitionDifficulty": {
+        "level": "Easy|Moderate|Challenging|Difficult",
+        "explanation": "Why this difficulty level"
+      },
+      "whoSucceeds": ["3-4 traits of people who thrive in this role"]${resumeContext ? `,
+      "fitAnalysis": {
+        "overallFit": 0-100,
+        "strengths": ["3-4 candidate strengths for this role"],
+        "gaps": ["2-3 gaps or areas to address"],
+        "resumePositioning": ["2-3 ways to position resume for this role"],
+        "interviewRisks": ["2-3 potential red flags or tough questions to prepare for"]
+      }` : ""}
+    }
+  ],
+  "recommendation": {
+    "bestFitNow": {
+      "jobTitle": "The best immediate fit",
+      "reason": "Why this is the best fit right now"
+    },
+    "bestLongTerm": {
+      "jobTitle": "The best for career growth",
+      "reason": "Why this offers the best long-term trajectory"
+    },
+    "biggestShift": {
+      "jobTitle": "The role requiring most career change",
+      "reason": "What makes this the biggest shift"
+    }
+  },
+  "overallStrategy": "2-3 sentences of strategic career advice based on this comparison"
+}`;
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-5-mini",
+        messages: [
+          { role: "system", content: systemPrompt },
+          {
+            role: "user",
+            content: `Compare these job opportunities:\n\n${jobDescriptions}${resumeContext ? `\n\n${resumeContext}` : ""}`,
+          },
+        ],
+        response_format: { type: "json_object" },
+        max_completion_tokens: 4000,
+      });
+
+      const content = completion.choices[0]?.message?.content;
+      if (!content) {
+        throw new Error("No response from AI");
+      }
+
+      const result = JSON.parse(content);
+      res.json(result);
+    } catch (error) {
+      console.error("Career advisor error:", error);
+      res.status(500).json({ error: "Failed to analyze career options" });
+    }
+  });
+
   // Run startup cleanup and start the scheduler when the server starts
   runStartupCleanup();
   startScheduler();
