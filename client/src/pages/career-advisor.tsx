@@ -240,29 +240,35 @@ export default function CareerAdvisor() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
       <Header />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-serif font-normal text-foreground mb-2">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-10">
+        <div className="mb-10 text-center">
+          <div className="inline-flex items-center gap-2 bg-primary/10 text-primary rounded-full px-4 py-1.5 text-sm font-medium mb-4 border border-primary/20">
+            <Target className="h-4 w-4" />
+            AI-Powered Analysis
+          </div>
+          <h1 className="text-3xl sm:text-4xl font-bold text-foreground mb-3 tracking-tight">
             Career Advisor
           </h1>
-          <p className="text-muted-foreground">
-            Compare job opportunities and get personalized career guidance
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            Compare job opportunities side-by-side and get strategic career guidance tailored for legal professionals
           </p>
         </div>
 
         {!result ? (
-          <div className="space-y-6">
+          <div className="space-y-8">
             {resumeData?.hasResume && (
-              <Card className="bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-900">
-                <CardContent className="flex items-center gap-3 py-4">
-                  <CheckCircle2 className="h-5 w-5 text-green-600" />
+              <Card className="bg-gradient-to-r from-green-50 to-emerald-50/50 dark:from-green-950/30 dark:to-emerald-950/20 border-green-200/50 dark:border-green-900/50 max-w-2xl mx-auto">
+                <CardContent className="flex items-center gap-4 py-5 px-6">
+                  <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/50 flex items-center justify-center shrink-0">
+                    <CheckCircle2 className="h-5 w-5 text-green-600" />
+                  </div>
                   <div>
-                    <p className="font-medium text-green-800 dark:text-green-200">Resume detected</p>
+                    <p className="font-semibold text-green-800 dark:text-green-200">Resume Connected</p>
                     <p className="text-sm text-green-600 dark:text-green-400">
-                      Your analysis will include personalized fit assessments for each role
+                      Your analysis will include personalized fit scores and positioning advice
                     </p>
                   </div>
                 </CardContent>
@@ -270,13 +276,15 @@ export default function CareerAdvisor() {
             )}
 
             {!resumeData?.hasResume && (
-              <Card className="bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900">
-                <CardContent className="flex items-center gap-3 py-4">
-                  <FileText className="h-5 w-5 text-amber-600" />
+              <Card className="bg-gradient-to-r from-amber-50 to-orange-50/50 dark:from-amber-950/30 dark:to-orange-950/20 border-amber-200/50 dark:border-amber-900/50 max-w-2xl mx-auto">
+                <CardContent className="flex items-center gap-4 py-5 px-6">
+                  <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center shrink-0">
+                    <FileText className="h-5 w-5 text-amber-600" />
+                  </div>
                   <div>
-                    <p className="font-medium text-amber-800 dark:text-amber-200">No resume uploaded</p>
+                    <p className="font-semibold text-amber-800 dark:text-amber-200">No Resume Uploaded</p>
                     <p className="text-sm text-amber-600 dark:text-amber-400">
-                      Upload a resume from the search page to get personalized fit analysis
+                      Upload your resume from the search page to unlock personalized fit analysis
                     </p>
                   </div>
                 </CardContent>
@@ -288,14 +296,19 @@ export default function CareerAdvisor() {
                 <Card 
                   key={job.id} 
                   data-testid={`card-job-input-${index}`}
-                  className={dragOverId === job.id ? "ring-2 ring-primary ring-offset-2" : ""}
+                  className={`transition-all duration-200 ${dragOverId === job.id ? "ring-2 ring-primary ring-offset-2 shadow-lg" : "hover:shadow-md"}`}
                   onDragOver={(e) => handleDragOver(e, job.id)}
                   onDragLeave={handleDragLeave}
                   onDrop={(e) => handleDrop(e, job.id)}
                 >
                   <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
-                      <CardTitle className="text-lg">Job {index + 1}</CardTitle>
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
+                          <span className="text-sm font-bold text-primary">{index + 1}</span>
+                        </div>
+                        <CardTitle className="text-lg">Opportunity {index + 1}</CardTitle>
+                      </div>
                       {jobs.length > 2 && (
                         <Button
                           variant="ghost"
@@ -308,7 +321,7 @@ export default function CareerAdvisor() {
                       )}
                     </div>
                     {job.fileName && (
-                      <Badge variant="secondary" className="w-fit">
+                      <Badge variant="secondary" className="w-fit mt-2">
                         <FileText className="h-3 w-3 mr-1" />
                         {job.fileName}
                       </Badge>
@@ -316,19 +329,19 @@ export default function CareerAdvisor() {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div
-                      className={`border-2 border-dashed rounded-lg p-4 text-center transition-colors ${
+                      className={`border-2 border-dashed rounded-xl p-6 text-center transition-all duration-200 ${
                         dragOverId === job.id 
-                          ? "border-primary bg-primary/5" 
-                          : "border-muted-foreground/25"
+                          ? "border-primary bg-primary/5 scale-[1.02]" 
+                          : "border-muted-foreground/20 hover:border-primary/40 hover:bg-muted/30"
                       }`}
                     >
                       {job.isUploading ? (
-                        <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                        <div className="flex items-center justify-center gap-2 text-muted-foreground py-2">
                           <Loader2 className="h-5 w-5 animate-spin" />
-                          <span>Extracting text...</span>
+                          <span className="font-medium">Extracting text...</span>
                         </div>
                       ) : (
-                        <label className="cursor-pointer">
+                        <label className="cursor-pointer block">
                           <input
                             type="file"
                             accept=".pdf,.docx"
@@ -340,47 +353,62 @@ export default function CareerAdvisor() {
                             }}
                             data-testid={`input-file-upload-${index}`}
                           />
-                          <div className="flex flex-col items-center gap-1 text-muted-foreground">
-                            <Upload className="h-6 w-6" />
-                            <span className="text-sm font-medium">Drop PDF/DOCX or click to upload</span>
-                            <span className="text-xs">Job posting file (max 5MB)</span>
+                          <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                            <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center">
+                              <Upload className="h-6 w-6" />
+                            </div>
+                            <div>
+                              <span className="text-sm font-semibold text-foreground block">Drop job posting file</span>
+                              <span className="text-xs">or click to browse (PDF, DOCX)</span>
+                            </div>
                           </div>
                         </label>
                       )}
                     </div>
-                    <div className="relative">
-                      <div className="absolute inset-x-0 top-0 flex items-center justify-center">
-                        <span className="bg-background px-2 text-xs text-muted-foreground -translate-y-1/2">
+                    <div className="relative py-2">
+                      <div className="absolute inset-0 flex items-center">
+                        <div className="w-full border-t border-border"></div>
+                      </div>
+                      <div className="relative flex justify-center">
+                        <span className="bg-card px-3 text-xs text-muted-foreground uppercase tracking-wider">
                           or paste text
                         </span>
                       </div>
                     </div>
                     <div>
-                      <label className="text-sm font-medium text-muted-foreground">
-                        Job Title (optional)
+                      <label className="text-sm font-medium text-foreground">
+                        Job Title
                       </label>
                       <Input
                         value={job.title}
                         onChange={(e) => updateJob(job.id, "title", e.target.value)}
-                        placeholder="e.g., Senior Product Manager"
-                        className="mt-1"
+                        placeholder="e.g., Legal AI Product Manager"
+                        className="mt-1.5"
                         data-testid={`input-job-title-${index}`}
                       />
                     </div>
                     <div>
-                      <label className="text-sm font-medium text-muted-foreground">
+                      <label className="text-sm font-medium text-foreground">
                         Job Description
                       </label>
                       <Textarea
                         value={job.description}
                         onChange={(e) => updateJob(job.id, "description", e.target.value)}
                         placeholder="Paste the full job description here..."
-                        className="mt-1 min-h-[200px] resize-none"
+                        className="mt-1.5 min-h-[180px] resize-none"
                         data-testid={`input-job-description-${index}`}
                       />
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {job.description.length} characters
-                      </p>
+                      <div className="flex items-center justify-between mt-1.5">
+                        <p className="text-xs text-muted-foreground">
+                          {job.description.length} characters
+                        </p>
+                        {job.description.length > 0 && job.description.length < 50 && (
+                          <p className="text-xs text-amber-600">Minimum 50 characters</p>
+                        )}
+                        {job.description.length >= 50 && (
+                          <CheckCircle2 className="h-4 w-4 text-green-500" />
+                        )}
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -388,25 +416,27 @@ export default function CareerAdvisor() {
 
               {jobs.length < 3 && (
                 <Card
-                  className="border-dashed cursor-pointer hover-elevate flex items-center justify-center min-h-[300px]"
+                  className="border-2 border-dashed border-muted-foreground/20 cursor-pointer hover:border-primary/40 hover:bg-muted/30 transition-all duration-200 flex items-center justify-center min-h-[400px]"
                   onClick={addJob}
                   data-testid="button-add-job"
                 >
-                  <div className="text-center text-muted-foreground">
-                    <Plus className="h-8 w-8 mx-auto mb-2" />
-                    <p>Add another job</p>
-                    <p className="text-xs">Compare up to 3 roles</p>
+                  <div className="text-center">
+                    <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-4">
+                      <Plus className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                    <p className="font-semibold text-foreground">Add Third Opportunity</p>
+                    <p className="text-sm text-muted-foreground mt-1">Compare up to 3 roles side-by-side</p>
                   </div>
                 </Card>
               )}
             </div>
 
-            <div className="flex justify-center pt-4">
+            <div className="flex flex-col items-center gap-4 pt-8">
               <Button
                 size="lg"
                 onClick={handleCompare}
                 disabled={compareMutation.isPending || jobs.filter((j) => j.description.length > 50).length < 2}
-                className="gap-2"
+                className="gap-2 px-10 h-12 shadow-lg text-base"
                 data-testid="button-compare-jobs"
               >
                 {compareMutation.isPending ? (
@@ -417,10 +447,13 @@ export default function CareerAdvisor() {
                 ) : (
                   <>
                     <Scale className="h-4 w-4" />
-                    Compare Jobs
+                    Analyze & Compare
                   </>
                 )}
               </Button>
+              <p className="text-sm text-muted-foreground">
+                Get strategic insights in under 30 seconds
+              </p>
             </div>
           </div>
         ) : (

@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, Briefcase, Info, Settings, Compass } from "lucide-react";
+import { LogOut, Briefcase, Info, Settings, Compass, Scale } from "lucide-react";
 import { Link } from "wouter";
 
 export function Header() {
@@ -31,12 +31,17 @@ export function Header() {
     <header className="sticky top-0 z-50 bg-background border-b border-border">
       <nav className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
         <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity" data-testid="logo-header">
-          <div className="w-7 h-7 bg-foreground rounded flex items-center justify-center text-background text-xs font-medium">
-            L
+          <div className="w-8 h-8 bg-gradient-to-br from-primary to-primary/70 rounded-lg flex items-center justify-center text-primary-foreground shadow-sm">
+            <Scale className="h-4 w-4" />
           </div>
-          <span className="text-base font-medium text-foreground hidden sm:inline">
-            Legal AI Careers
-          </span>
+          <div className="hidden sm:flex flex-col">
+            <span className="text-sm font-semibold text-foreground leading-tight">
+              Legal Tech Careers
+            </span>
+            <span className="text-[10px] text-muted-foreground leading-tight">
+              For Lawyers in AI
+            </span>
+          </div>
         </Link>
 
         <div className="flex items-center gap-2 sm:gap-4">

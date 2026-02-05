@@ -1,8 +1,8 @@
-# Legal AI Careers
+# Legal Tech Careers - For Lawyers Interested in AI
 
 ## Overview
 
-A minimal, elegant job search platform for legal technology careers with AI-powered semantic search. Users can search for jobs using natural language queries, and the system uses OpenAI to match and score job listings based on semantic understanding of the query.
+A premium job search platform for legal technology careers, built specifically for attorneys, paralegals, and legal professionals interested in AI. Features AI-powered semantic search, resume analysis, job comparison tools, and strategic career guidance. The platform connects legal talent with opportunities at companies transforming the legal industry with artificial intelligence.
 
 ## User Preferences
 
