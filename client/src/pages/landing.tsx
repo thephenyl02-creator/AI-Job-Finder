@@ -1,23 +1,24 @@
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { Sparkles, Search, Briefcase, TrendingUp, Shield, Zap, Scale, Brain, Users, GraduationCap, ArrowRight, FileText, Target, BookOpen, Rocket, RefreshCw } from "lucide-react";
+import { Search, Briefcase, TrendingUp, Scale, Users, GraduationCap, ArrowRight, FileText, Target, BookOpen, Rocket, RefreshCw, Building2, FolderOpen } from "lucide-react";
 
 const features = [
   {
-    icon: Brain,
-    title: "AI-Powered Search",
-    description: "Describe your ideal role in plain English. Our AI understands legal context and matches you with the right opportunities.",
+    icon: Search,
+    title: "Smart Search",
+    description: "Describe your ideal role in plain English. Find opportunities that match your skills and interests.",
   },
   {
     icon: Target,
     title: "Career Advisor",
-    description: "Compare multiple job offers side-by-side. Get strategic career guidance, not just keyword matching.",
+    description: "Compare multiple job offers side-by-side. Get strategic career guidance for your transition.",
   },
   {
     icon: FileText,
     title: "Resume Analysis",
-    description: "Upload your resume and see how you match against each role. Identify gaps and positioning opportunities.",
+    description: "Upload your resume and see how you match against each role. Identify gaps and opportunities.",
   },
 ];
 
@@ -25,12 +26,12 @@ const audiences = [
   {
     icon: RefreshCw,
     title: "Career Transitioners",
-    description: "Moving from traditional practice? Your legal expertise is your superpower in legal tech.",
+    description: "Moving from traditional practice? Your legal expertise is valuable in legal tech.",
   },
   {
     icon: BookOpen,
     title: "Law Students",
-    description: "Start your career at the cutting edge. Find entry-level roles and internships in legal AI.",
+    description: "Start your career at the cutting edge. Find entry-level roles and internships.",
   },
   {
     icon: GraduationCap,
@@ -40,7 +41,7 @@ const audiences = [
   {
     icon: Users,
     title: "Paralegals & Legal Ops",
-    description: "Leverage your expertise in AI-powered document review, CLM, and legal operations.",
+    description: "Leverage your expertise in document review, CLM, and legal operations.",
   },
   {
     icon: TrendingUp,
@@ -54,7 +55,18 @@ const audiences = [
   },
 ];
 
+interface Stats {
+  totalJobs: number;
+  totalCompanies: number;
+  totalCategories: number;
+}
+
 export default function Landing() {
+  const { data: stats } = useQuery<Stats>({
+    queryKey: ["/api/stats"],
+    refetchInterval: 30000, // Refresh every 30 seconds
+  });
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted/30">
       <header className="fixed top-0 left-0 right-0 z-50 bg-background/90 backdrop-blur-md border-b border-border/50">
@@ -89,47 +101,46 @@ export default function Landing() {
           
           <div className="max-w-6xl mx-auto px-4 sm:px-6 py-24 sm:py-36 relative">
             <div className="max-w-3xl mx-auto text-center">
-              <div className="inline-flex items-center gap-2 bg-primary/10 text-primary rounded-full px-4 py-2 text-sm font-medium mb-8 border border-primary/20">
-                <Sparkles className="h-4 w-4" />
-                The Future of Legal Careers
-              </div>
-              
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-foreground mb-6 leading-[1.1] tracking-tight">
-                Where Legal Expertise Meets{" "}
+                Legal Tech{" "}
                 <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-                  AI Innovation
+                  Careers
                 </span>
               </h1>
               
               <p className="text-lg sm:text-xl text-muted-foreground mb-10 max-w-2xl mx-auto leading-relaxed">
-                Discover career opportunities at the intersection of law and technology. 
-                Built for attorneys, paralegals, and legal professionals ready to shape the future of legal services.
+                Find your next role at the intersection of law and technology.
               </p>
+
+              {/* Live Stats */}
+              <div className="grid grid-cols-3 gap-4 sm:gap-8 max-w-xl mx-auto mb-10">
+                <div className="text-center" data-testid="stat-jobs">
+                  <div className="text-4xl sm:text-5xl font-bold text-foreground tabular-nums">
+                    {stats?.totalJobs ?? "—"}
+                  </div>
+                  <div className="text-sm text-muted-foreground mt-1">Jobs</div>
+                </div>
+                <div className="text-center" data-testid="stat-companies">
+                  <div className="text-4xl sm:text-5xl font-bold text-foreground tabular-nums">
+                    {stats?.totalCompanies ?? "—"}
+                  </div>
+                  <div className="text-sm text-muted-foreground mt-1">Companies</div>
+                </div>
+                <div className="text-center" data-testid="stat-categories">
+                  <div className="text-4xl sm:text-5xl font-bold text-foreground tabular-nums">
+                    {stats?.totalCategories ?? "—"}
+                  </div>
+                  <div className="text-sm text-muted-foreground mt-1">Categories</div>
+                </div>
+              </div>
               
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                 <Button size="lg" asChild className="w-full sm:w-auto text-base px-8 h-12 shadow-lg" data-testid="button-hero-get-started">
                   <a href="/api/login">
                     <Search className="mr-2 h-5 w-5" />
-                    Explore Opportunities
+                    Browse Jobs
                   </a>
                 </Button>
-                <Button size="lg" variant="outline" className="w-full sm:w-auto text-base px-8 h-12" data-testid="button-hero-learn-more">
-                  <a href="#features">
-                    Learn More
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </a>
-                </Button>
-              </div>
-              
-              <div className="flex items-center justify-center gap-8 mt-10 text-sm text-muted-foreground">
-                <div className="flex items-center gap-2">
-                  <Shield className="h-4 w-4 text-green-500" />
-                  <span>Free to use</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Zap className="h-4 w-4 text-amber-500" />
-                  <span>AI-powered matching</span>
-                </div>
               </div>
             </div>
           </div>
@@ -139,10 +150,10 @@ export default function Landing() {
           <div className="max-w-6xl mx-auto px-4 sm:px-6">
             <div className="text-center mb-14">
               <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-4 tracking-tight">
-                Intelligent Career Tools
+                Tools
               </h2>
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                More than a job board. Strategic tools designed for legal professionals navigating the AI revolution.
+                Search, compare, and find the right opportunity for you.
               </p>
             </div>
             
@@ -170,10 +181,10 @@ export default function Landing() {
           <div className="max-w-6xl mx-auto px-4 sm:px-6">
             <div className="text-center mb-14">
               <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-4 tracking-tight">
-                Your Path Into Legal Tech
+                For Legal Professionals
               </h2>
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                Whether you're transitioning from practice, starting fresh, or expanding your expertise — there's a place for you.
+                Whether you're transitioning from practice, starting fresh, or expanding your expertise.
               </p>
             </div>
             
@@ -205,14 +216,14 @@ export default function Landing() {
           <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
             <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-3xl p-12 sm:p-16 border border-primary/10">
               <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-4 tracking-tight">
-                Ready to Shape the Future of Law?
+                Get Started
               </h2>
               <p className="text-lg text-muted-foreground mb-10 max-w-xl mx-auto">
-                Join legal professionals who are pioneering the intersection of law and artificial intelligence.
+                Free to use. No account required to browse.
               </p>
               <Button size="lg" asChild className="text-base px-10 h-12 shadow-lg" data-testid="button-cta-sign-up">
                 <a href="/api/login">
-                  Start Your Journey
+                  Sign In
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </a>
               </Button>

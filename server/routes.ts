@@ -67,6 +67,23 @@ export async function registerRoutes(
   await storage.seedJobs();
   await storage.seedJobCategories();
 
+  // Public stats endpoint (no auth required)
+  app.get("/api/stats", async (req, res) => {
+    try {
+      const jobs = await storage.getActiveJobs();
+      const uniqueCompanies = new Set(jobs.map(j => j.company)).size;
+      const uniqueCategories = new Set(jobs.map(j => j.roleCategory).filter(Boolean)).size;
+      res.json({
+        totalJobs: jobs.length,
+        totalCompanies: uniqueCompanies,
+        totalCategories: uniqueCategories,
+      });
+    } catch (error) {
+      console.error("Error fetching stats:", error);
+      res.status(500).json({ error: "Failed to fetch stats" });
+    }
+  });
+
   app.get("/api/job-categories", async (req, res) => {
     try {
       const categories = await storage.getJobCategories();
