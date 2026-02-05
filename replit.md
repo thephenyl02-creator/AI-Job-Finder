@@ -25,7 +25,7 @@ Preferred communication style: Simple, everyday language.
 
 ### Data Storage
 - **Database**: PostgreSQL via Drizzle ORM
-- **Schema Location**: `shared/schema.ts` - contains jobs, users, sessions, conversations, and messages tables
+- **Schema Location**: `shared/schema.ts` - contains jobs, users (with resume fields), sessions, user_preferences tables
 - **Migrations**: Drizzle Kit with `db:push` command for schema synchronization
 
 ### Authentication
@@ -38,7 +38,15 @@ Preferred communication style: Simple, everyday language.
 - **Features**: 
   - Semantic job search with natural language queries
   - Match scoring with explanations for job-candidate fit
+  - Resume parsing and skill extraction from PDF/DOCX uploads
+  - Auto-generated search queries from resume data
 - **Configuration**: Uses `AI_INTEGRATIONS_OPENAI_API_KEY` and `AI_INTEGRATIONS_OPENAI_BASE_URL` environment variables
+
+### Resume Upload
+- **Supported Formats**: PDF, DOCX (max 5MB)
+- **Processing**: pdf-parse for PDFs, mammoth for DOCX
+- **AI Extraction**: Extracts skills, experience, preferred roles, salary expectations
+- **Auto-search**: Generates natural language search query from resume data
 
 ### Project Structure
 ```

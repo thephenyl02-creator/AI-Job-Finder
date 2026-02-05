@@ -1,0 +1,996 @@
+FEATURE: Scrape legal tech roles directly from law firm career websites
+
+Target law firms:
+- BigLaw firms (Baker McKenzie, DLA Piper, etc.)
+- Legal tech companies (Clio, LexisNexis, Thomson Reuters)
+- Legal AI startups (Harvey, CoCounsel, EvenUp, etc.)
+- Corporate legal departments (Google Legal, Meta Legal, etc.)
+
+═══════════════════════════════════════════════════════════════════════════
+
+LAW FIRM & LEGAL TECH COMPANY LIST
+
+═══════════════════════════════════════════════════════════════════════════
+
+const LAW_FIRMS_AND_COMPANIES = [
+  // Legal AI Startups
+  {
+    name: 'Harvey AI',
+    careerUrl: 'https://www.harvey.ai/careers',
+    type: 'startup',
+    selectors: {
+      jobList: '.job-listing, [class*="career"], [class*="job"]',
+      title: 'h3, .job-title',
+      location: '.location',
+      applyLink: 'a[href*="job"], a[href*="career"]'
+    }
+  },
+  {
+    name: 'CoCounsel (Casetext)',
+    careerUrl: 'https://casetext.com/careers',
+    type: 'startup',
+  },
+  {
+    name: 'EvenUp',
+    careerUrl: 'https://www.evenuplaw.com/careers',
+    type: 'startup',
+  },
+  {
+    name: 'Robin AI',
+    careerUrl: 'https://www.robinai.com/careers',
+    type: 'startup',
+  },
+  {
+    name: 'Ironclad',
+    careerUrl: 'https://ironcladapp.com/careers/',
+    type: 'startup',
+  },
+  {
+    name: 'Lexion',
+    careerUrl: 'https://www.lexion.ai/careers',
+    type: 'startup',
+  },
+  
+  // Legal Tech Companies
+  {
+    name: 'Clio',
+    careerUrl: 'https://www.clio.com/company/careers/',
+    greenhouseId: 'clio',
+    type: 'company',
+  },
+  {
+    name: 'Thomson Reuters',
+    careerUrl: 'https://careers.thomsonreuters.com/search-jobs/legal%20technology',
+    type: 'company',
+  },
+  {
+    name: 'LexisNexis',
+    careerUrl: 'https://www.lexisnexis.com/en-us/careers.page',
+    type: 'company',
+  },
+  {
+    name: 'Relativity',
+    careerUrl: 'https://www.relativity.com/careers/',
+    leverPostingsUrl: 'https://jobs.lever.co/relativity',
+    type: 'company',
+  },
+  {
+    name: 'DISCO',
+    careerUrl: 'https://www.csdisco.com/careers',
+    type: 'company',
+  },
+  {
+    name: 'Everlaw',
+    careerUrl: 'https://www.everlaw.com/careers/',
+    type: 'company',
+  },
+  {
+    name: 'vLex',
+    careerUrl: 'https://vlex.com/careers',
+    type: 'company',
+  },
+  
+  // BigLaw Firms with Legal Tech Teams
+  {
+    name: 'Baker McKenzie',
+    careerUrl: 'https://www.bakermckenzie.com/en/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'DLA Piper',
+    careerUrl: 'https://careers.dlapiper.com/',
+    type: 'biglaw',
+  },
+  {
+    name: 'Latham & Watkins',
+    careerUrl: 'https://www.lw.com/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'Allen & Overy',
+    careerUrl: 'https://www.allenovery.com/careers',
+    type: 'biglaw',
+  },
+  
+  // Tech Companies - Legal Departments
+  {
+    name: 'Google Legal',
+    careerUrl: 'https://careers.google.com/jobs/results/?q=legal%20engineer',
+    type: 'tech-legal',
+  },
+  {
+    name: 'Meta Legal',
+    careerUrl: 'https://www.metacareers.com/jobs/?q=legal',
+    type: 'tech-legal',
+  },
+  {
+    name: 'Microsoft Legal',
+    careerUrl: 'https://careers.microsoft.com/professionals/us/en/search-results?keywords=legal%20technology',
+    type: 'tech-legal',
+  },
+]
+
+═══════════════════════════════════════════════════════════════════════════
+
+NEW FILE: lib/law-firm-scraper.js
+
+═══════════════════════════════════════════════════════════════════════════
+
+import axios from 'axios'
+import * as cheerio from 'cheerio'
+import { LAW_FIRMS_AND_COMPANIES } from './law-firms-list'
+
+// Main scraper function
+export async function scrapeAllLawFirms() {
+  const allJobs = []
+  
+  for (const firm of LAW_FIRMS_AND_COMPANIES) {
+    try {
+      console.log(`Scraping ${firm.name}...`)
+      
+      let jobs = []
+      
+      // Use appropriate scraper based on ATS platform
+      if (firm.greenhouseId) {
+        jobs = await scrapeGreenhouse(firm.greenhouseId, firm.name)
+      } else if (firm.leverPostingsUrl) {
+        jobs = await scrapeLever(firm.leverPostingsUrl, firm.name)
+      } else if (firm.ashbyUrl) {
+        jobs = await scrapeAshby(firm.ashbyUrl, firm.name)
+      } else {
+        jobs = await scrapeGenericCareerPage(firm.careerUrl, firm.name, firm.selectors)
+      }
+      
+      // Filter for legal tech roles
+      const legalTechJobs = jobs.filter(job => isLegalTechRole(job.title))
+      
+      allJobs.push(...legalTechJobs)
+      
+      console.log(`Found ${legalTechJobs.length} legal tech jobs at ${firm.name}`)
+      
+      // Delay to be respectful
+      await delay(2000)
+      
+    } catch (error) {
+      console.error(`Error scraping ${firm.name}:`, error.message)
+    }
+  }
+  
+  return allJobs
+}
+
+// Greenhouse ATS scraper (many companies use this)
+export async function scrapeGreenhouse(companyId, companyName) {
+  try {
+    const url = `https://boards-api.greenhouse.io/v1/boards/${companyId}/jobs`
+    const response = await axios.get(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; LegalAICareersBot/1.0)',
+      }
+    })
+    
+    const jobs = response.data.jobs.map(job => ({
+      title: job.title,
+      company: companyName,
+      location: job.location?.name || 'Not specified',
+      description: job.content || '',
+      applyUrl: job.absolute_url,
+      postedDate: job.updated_at || new Date().toISOString(),
+      source: 'greenhouse',
+      externalId: `gh_${companyId}_${job.id}`,
+    }))
+    
+    return jobs
+  } catch (error) {
+    console.error(`Greenhouse error for ${companyName}:`, error.message)
+    return []
+  }
+}
+
+// Lever ATS scraper
+export async function scrapeLever(leverUrl, companyName) {
+  try {
+    // Lever has a public API endpoint
+    const apiUrl = leverUrl.replace('jobs.lever.co', 'api.lever.co/v0/postings')
+    
+    const response = await axios.get(apiUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; LegalAICareersBot/1.0)',
+      }
+    })
+    
+    const jobs = response.data.map(job => ({
+      title: job.text,
+      company: companyName,
+      location: job.categories?.location || 'Not specified',
+      description: job.description || '',
+      applyUrl: job.hostedUrl,
+      postedDate: new Date(job.createdAt).toISOString(),
+      source: 'lever',
+      externalId: `lever_${job.id}`,
+    }))
+    
+    return jobs
+  } catch (error) {
+    console.error(`Lever error for ${companyName}:`, error.message)
+    return []
+  }
+}
+
+// Ashby ATS scraper
+export async function scrapeAshby(ashbyUrl, companyName) {
+  try {
+    const response = await axios.post(ashbyUrl, {}, {
+      headers: {
+        'Content-Type': 'application/json',
+        'User-Agent': 'Mozilla/5.0 (compatible; LegalAICareersBot/1.0)',
+      }
+    })
+    
+    const jobs = response.data.jobs.map(job => ({
+      title: job.title,
+      company: companyName,
+      location: job.location || 'Not specified',
+      description: job.description || '',
+      applyUrl: `${ashbyUrl}/${job.id}`,
+      postedDate: new Date(job.publishedDate).toISOString(),
+      source: 'ashby',
+      externalId: `ashby_${job.id}`,
+    }))
+    
+    return jobs
+  } catch (error) {
+    console.error(`Ashby error for ${companyName}:`, error.message)
+    return []
+  }
+}
+
+// Generic career page scraper (fallback)
+export async function scrapeGenericCareerPage(url, companyName, selectors = {}) {
+  try {
+    const response = await axios.get(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      },
+      timeout: 10000,
+    })
+    
+    const $ = cheerio.load(response.data)
+    const jobs = []
+    
+    // Try multiple common selectors
+    const jobSelectors = [
+      selectors.jobList,
+      '.job, .job-listing, .position, .opening, [class*="career"], [class*="job"]',
+      'article, .card',
+      'li[class*="job"], li[class*="position"]',
+    ].filter(Boolean)
+    
+    for (const selector of jobSelectors) {
+      $(selector).each((i, element) => {
+        const $job = $(element)
+        
+        // Extract title
+        const titleSelectors = [
+          selectors.title,
+          'h2, h3, h4',
+          '.title, .job-title, .position-title',
+          'a[class*="title"]',
+        ].filter(Boolean)
+        
+        let title = ''
+        for (const titleSel of titleSelectors) {
+          title = $job.find(titleSel).first().text().trim()
+          if (title) break
+        }
+        
+        // Extract location
+        const locationSelectors = [
+          selectors.location,
+          '.location, [class*="location"]',
+          'span:contains("Remote"), span:contains("Location")',
+        ].filter(Boolean)
+        
+        let location = ''
+        for (const locSel of locationSelectors) {
+          location = $job.find(locSel).first().text().trim()
+          if (location) break
+        }
+        
+        // Extract apply link
+        let applyUrl = $job.find('a').first().attr('href')
+        if (applyUrl && !applyUrl.startsWith('http')) {
+          const baseUrl = new URL(url).origin
+          applyUrl = baseUrl + applyUrl
+        }
+        
+        if (title && applyUrl) {
+          jobs.push({
+            title,
+            company: companyName,
+            location: location || 'Not specified',
+            description: '',
+            applyUrl,
+            postedDate: new Date().toISOString(),
+            source: 'generic',
+            externalId: `generic_${companyName.replace(/\s+/g, '_')}_${i}`,
+          })
+        }
+      })
+      
+      if (jobs.length > 0) break // Found jobs with this selector
+    }
+    
+    return jobs
+    
+  } catch (error) {
+    console.error(`Generic scrape error for ${companyName}:`, error.message)
+    return []
+  }
+}
+
+// Filter for legal tech roles
+export function isLegalTechRole(title) {
+  const legalTechKeywords = [
+    // Engineering
+    'legal engineer', 'legal technology engineer', 'legaltech engineer',
+    'software engineer legal', 'engineer legal tech', 'legal platform engineer',
+    
+    // Product
+    'product manager legal', 'legal product manager', 'legal tech product',
+    'product legal technology', 'legal operations product',
+    
+    // Design
+    'designer legal', 'legal tech designer', 'ux legal', 'ui legal',
+    
+    // Data/AI
+    'legal ai', 'ai legal', 'machine learning legal', 'data scientist legal',
+    'legal data', 'legal analytics', 'legal automation',
+    
+    // Operations
+    'legal operations', 'legal ops', 'legalops', 'legal technology operations',
+    'legal process', 'legal workflow',
+    
+    // Other tech roles in legal
+    'legal innovation', 'legal transformation', 'legal technology specialist',
+    'contract automation', 'contract technology', 'ediscovery', 'e-discovery',
+    'legal research technology', 'legal knowledge', 'legal systems',
+  ]
+  
+  const titleLower = title.toLowerCase()
+  
+  // Check if title contains legal tech keywords
+  return legalTechKeywords.some(keyword => titleLower.includes(keyword))
+}
+
+// Helper: delay between requests
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+// Transform to our schema
+export function transformToJobSchema(job) {
+  return {
+    title: job.title,
+    company: job.company,
+    company_logo: `https://logo.clearbit.com/${job.company.toLowerCase().replace(/\s+/g, '')}.com`,
+    location: job.location,
+    is_remote: job.location?.toLowerCase().includes('remote') || false,
+    salary_min: null,
+    salary_max: null,
+    experience_min: extractExperience(job.title, job.description)?.min || null,
+    experience_max: extractExperience(job.title, job.description)?.max || null,
+    role_type: inferRoleType(job.title),
+    description: job.description || `${job.title} at ${job.company}`,
+    requirements: null,
+    apply_url: job.applyUrl,
+    posted_date: new Date(job.postedDate),
+    is_active: true,
+    external_id: job.externalId,
+    source: job.source,
+  }
+}
+
+function extractExperience(title, description) {
+  const text = `${title} ${description}`.toLowerCase()
+  
+  const patterns = [
+    /(\d+)\+?\s*(?:to|-)\s*(\d+)\s*years?/,
+    /(\d+)\+\s*years?/,
+    /senior/i,
+    /junior/i,
+    /entry.level/i,
+  ]
+  
+  for (const pattern of patterns) {
+    if (pattern instanceof RegExp) {
+      const match = text.match(pattern)
+      if (match && match[1]) {
+        if (match[2]) {
+          return { min: parseInt(match[1]), max: parseInt(match[2]) }
+        } else {
+          return { min: parseInt(match[1]), max: parseInt(match[1]) + 3 }
+        }
+      }
+    }
+  }
+  
+  if (/senior/i.test(text)) return { min: 5, max: 10 }
+  if (/junior|entry/i.test(text)) return { min: 0, max: 2 }
+  
+  return null
+}
+
+function inferRoleType(title) {
+  const titleLower = title.toLowerCase()
+  
+  if (titleLower.includes('engineer') || titleLower.includes('developer')) {
+    return 'Engineering'
+  }
+  if (titleLower.includes('product manager') || titleLower.includes('product lead')) {
+    return 'Product Management'
+  }
+  if (titleLower.includes('designer') || titleLower.includes('ux') || titleLower.includes('ui')) {
+    return 'Design'
+  }
+  if (titleLower.includes('operations') || titleLower.includes('ops')) {
+    return 'Operations'
+  }
+  if (titleLower.includes('data') || titleLower.includes('analytics') || titleLower.includes('scientist')) {
+    return 'Data/Analytics'
+  }
+  if (titleLower.includes('ai') || titleLower.includes('machine learning') || titleLower.includes('ml')) {
+    return 'AI/ML'
+  }
+  
+  return 'Other'
+}
+
+═══════════════════════════════════════════════════════════════════════════
+
+NEW FILE: lib/law-firms-list.js
+
+═══════════════════════════════════════════════════════════════════════════
+
+export const LAW_FIRMS_AND_COMPANIES = [
+  // ═══════════════════════════════════════════════════════════════════════
+  // LEGAL AI STARTUPS (High priority - most legal tech roles)
+  // ═══════════════════════════════════════════════════════════════════════
+  
+  {
+    name: 'Harvey AI',
+    careerUrl: 'https://www.harvey.ai/careers',
+    greenhouseId: 'harvey',
+    type: 'startup',
+    priority: 1,
+  },
+  {
+    name: 'CoCounsel',
+    careerUrl: 'https://casetext.com/careers',
+    leverPostingsUrl: 'https://jobs.lever.co/casetext',
+    type: 'startup',
+    priority: 1,
+  },
+  {
+    name: 'EvenUp',
+    careerUrl: 'https://www.evenuplaw.com/careers',
+    greenhouseId: 'evenup',
+    type: 'startup',
+    priority: 1,
+  },
+  {
+    name: 'Robin AI',
+    careerUrl: 'https://www.robinai.com/careers',
+    type: 'startup',
+    priority: 1,
+  },
+  {
+    name: 'Ironclad',
+    careerUrl: 'https://ironcladapp.com/careers/',
+    leverPostingsUrl: 'https://jobs.lever.co/ironcladapp',
+    type: 'startup',
+    priority: 1,
+  },
+  {
+    name: 'Lexion',
+    careerUrl: 'https://www.lexion.ai/careers',
+    ashbyUrl: 'https://jobs.ashbyhq.com/api/non-user-graphql?op=JobBoard',
+    type: 'startup',
+    priority: 1,
+  },
+  {
+    name: 'Spellbook',
+    careerUrl: 'https://www.spellbook.legal/careers',
+    type: 'startup',
+    priority: 1,
+  },
+  {
+    name: 'Leya',
+    careerUrl: 'https://www.leya.ai/careers',
+    type: 'startup',
+    priority: 1,
+  },
+  
+  // ═══════════════════════════════════════════════════════════════════════
+  // LEGAL TECH PLATFORMS (Established companies)
+  // ═══════════════════════════════════════════════════════════════════════
+  
+  {
+    name: 'Clio',
+    careerUrl: 'https://www.clio.com/company/careers/',
+    greenhouseId: 'clio',
+    type: 'company',
+    priority: 2,
+  },
+  {
+    name: 'Relativity',
+    careerUrl: 'https://www.relativity.com/careers/',
+    leverPostingsUrl: 'https://jobs.lever.co/relativity',
+    type: 'company',
+    priority: 2,
+  },
+  {
+    name: 'DISCO',
+    careerUrl: 'https://www.csdisco.com/careers',
+    greenhouseId: 'csdisco',
+    type: 'company',
+    priority: 2,
+  },
+  {
+    name: 'Everlaw',
+    careerUrl: 'https://www.everlaw.com/careers/',
+    greenhouseId: 'everlaw',
+    type: 'company',
+    priority: 2,
+  },
+  {
+    name: 'ContractPodAi',
+    careerUrl: 'https://contractpodai.com/careers/',
+    type: 'company',
+    priority: 2,
+  },
+  {
+    name: 'Kira Systems',
+    careerUrl: 'https://kirasystems.com/careers/',
+    type: 'company',
+    priority: 2,
+  },
+  {
+    name: 'LawGeex',
+    careerUrl: 'https://www.lawgeex.com/careers/',
+    type: 'company',
+    priority: 2,
+  },
+  {
+    name: 'Luminance',
+    careerUrl: 'https://www.luminance.com/careers.html',
+    type: 'company',
+    priority: 2,
+  },
+  
+  // ═══════════════════════════════════════════════════════════════════════
+  // LARGE LEGAL TECH COMPANIES
+  // ═══════════════════════════════════════════════════════════════════════
+  
+  {
+    name: 'Thomson Reuters',
+    careerUrl: 'https://careers.thomsonreuters.com/search-jobs',
+    searchQuery: 'legal technology',
+    type: 'company',
+    priority: 3,
+  },
+  {
+    name: 'LexisNexis',
+    careerUrl: 'https://www.lexisnexis.com/en-us/careers.page',
+    type: 'company',
+    priority: 3,
+  },
+  {
+    name: 'Wolters Kluwer',
+    careerUrl: 'https://www.wolterskluwer.com/en/careers',
+    type: 'company',
+    priority: 3,
+  },
+  {
+    name: 'vLex',
+    careerUrl: 'https://vlex.com/careers',
+    type: 'company',
+    priority: 3,
+  },
+  
+  // ═══════════════════════════════════════════════════════════════════════
+  // BIGLAW FIRMS WITH LEGAL TECH TEAMS
+  // ═══════════════════════════════════════════════════════════════════════
+  
+  {
+    name: 'Allen & Overy',
+    careerUrl: 'https://www.allenovery.com/careers',
+    type: 'biglaw',
+    priority: 4,
+  },
+  {
+    name: 'Latham & Watkins',
+    careerUrl: 'https://www.lw.com/careers',
+    type: 'biglaw',
+    priority: 4,
+  },
+  {
+    name: 'DLA Piper',
+    careerUrl: 'https://careers.dlapiper.com/',
+    type: 'biglaw',
+    priority: 4,
+  },
+  
+  // ═══════════════════════════════════════════════════════════════════════
+  // TECH COMPANIES - LEGAL DEPARTMENTS
+  // ═══════════════════════════════════════════════════════════════════════
+  
+  {
+    name: 'Stripe',
+    careerUrl: 'https://stripe.com/jobs/search',
+    searchQuery: 'legal',
+    type: 'tech-legal',
+    priority: 2,
+  },
+  {
+    name: 'Coinbase',
+    careerUrl: 'https://www.coinbase.com/careers/positions',
+    searchQuery: 'legal',
+    type: 'tech-legal',
+    priority: 2,
+  },
+]
+
+═══════════════════════════════════════════════════════════════════════════
+
+NEW FILE: app/api/jobs/sync-law-firms/route.js
+
+═══════════════════════════════════════════════════════════════════════════
+
+import { NextResponse } from 'next/server'
+import { query } from '@/lib/db'
+import { scrapeAllLawFirms, transformToJobSchema } from '@/lib/law-firm-scraper'
+
+export async function POST(request) {
+  try {
+    console.log('Starting law firm career page sync...')
+    
+    // Scrape all law firms
+    const scrapedJobs = await scrapeAllLawFirms()
+    
+    console.log(`Scraped ${scrapedJobs.length} total jobs`)
+    
+    let jobsAdded = 0
+    let jobsUpdated = 0
+    let jobsSkipped = 0
+    
+    for (const job of scrapedJobs) {
+      try {
+        const transformedJob = transformToJobSchema(job)
+        
+        // Check if job already exists (by external_id or apply_url)
+        const existingJob = await query(
+          'SELECT id FROM jobs WHERE external_id = $1 OR apply_url = $2',
+          [transformedJob.external_id, transformedJob.apply_url]
+        )
+        
+        if (existingJob.rows.length > 0) {
+          // Update existing job
+          await query(
+            `UPDATE jobs SET 
+              title = $1,
+              location = $2,
+              is_remote = $3,
+              description = $4,
+              is_active = $5,
+              updated_at = CURRENT_TIMESTAMP
+            WHERE id = $6`,
+            [
+              transformedJob.title,
+              transformedJob.location,
+              transformedJob.is_remote,
+              transformedJob.description,
+              transformedJob.is_active,
+              existingJob.rows[0].id
+            ]
+          )
+          jobsUpdated++
+        } else {
+          // Insert new job
+          await query(
+            `INSERT INTO jobs (
+              title, company, company_logo, location, is_remote,
+              experience_min, experience_max, role_type, description,
+              apply_url, posted_date, is_active, external_id, source
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+            [
+              transformedJob.title,
+              transformedJob.company,
+              transformedJob.company_logo,
+              transformedJob.location,
+              transformedJob.is_remote,
+              transformedJob.experience_min,
+              transformedJob.experience_max,
+              transformedJob.role_type,
+              transformedJob.description,
+              transformedJob.apply_url,
+              transformedJob.posted_date,
+              transformedJob.is_active,
+              transformedJob.external_id,
+              transformedJob.source
+            ]
+          )
+          jobsAdded++
+        }
+        
+      } catch (jobError) {
+        console.error(`Error saving job: ${job.title}`, jobError)
+        jobsSkipped++
+      }
+    }
+    
+    console.log(`Sync complete: ${jobsAdded} added, ${jobsUpdated} updated, ${jobsSkipped} skipped`)
+    
+    return NextResponse.json({
+      success: true,
+      jobsScraped: scrapedJobs.length,
+      jobsAdded,
+      jobsUpdated,
+      jobsSkipped,
+      message: 'Law firm sync completed successfully'
+    })
+    
+  } catch (error) {
+    console.error('Law firm sync error:', error)
+    return NextResponse.json(
+      { error: 'Failed to sync law firm jobs', details: error.message },
+      { status: 500 }
+    )
+  }
+}
+
+// GET endpoint for testing
+export async function GET() {
+  return POST({ json: async () => ({}) })
+}
+
+═══════════════════════════════════════════════════════════════════════════
+
+UPDATE DATABASE SCHEMA
+
+═══════════════════════════════════════════════════════════════════════════
+
+-- Add columns for tracking job sources
+ALTER TABLE jobs ADD COLUMN IF NOT EXISTS external_id VARCHAR(255) UNIQUE;
+ALTER TABLE jobs ADD COLUMN IF NOT EXISTS source VARCHAR(50);
+ALTER TABLE jobs ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+
+-- Create index for faster lookups
+CREATE INDEX IF NOT EXISTS idx_jobs_external_id ON jobs(external_id);
+CREATE INDEX IF NOT EXISTS idx_jobs_source ON jobs(source);
+CREATE INDEX IF NOT EXISTS idx_jobs_company ON jobs(company);
+
+═══════════════════════════════════════════════════════════════════════════
+
+UPDATED FILE: app/admin/sync/page.js (Add Law Firm Sync Option)
+
+═══════════════════════════════════════════════════════════════════════════
+
+'use client'
+
+import { useState } from 'react'
+
+export default function AdminSyncPage() {
+  const [isLoading, setIsLoading] = useState(false)
+  const [result, setResult] = useState(null)
+  const [syncType, setSyncType] = useState('law-firms')
+
+  const handleSync = async () => {
+    setIsLoading(true)
+    setResult(null)
+
+    try {
+      const endpoint = syncType === 'law-firms' 
+        ? '/api/jobs/sync-law-firms'
+        : '/api/jobs/sync-linkedin'
+      
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      })
+
+      const data = await response.json()
+      setResult(data)
+    } catch (error) {
+      setResult({ error: error.message })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-surface p-8">
+      <div className="max-w-2xl mx-auto">
+        <div className="bg-white rounded-xl border border-border p-8">
+          <h1 className="text-2xl font-medium text-text-primary mb-2">
+            Job Board Sync
+          </h1>
+          <p className="text-sm text-text-secondary mb-6">
+            Scrape jobs directly from law firm career pages
+          </p>
+
+          {/* Sync Type Selector */}
+          <div className="flex gap-3 mb-6">
+            <button
+              onClick={() => setSyncType('law-firms')}
+              className={`flex-1 py-3 px-4 rounded-lg border-2 transition-all ${
+                syncType === 'law-firms'
+                  ? 'border-primary bg-orange-50 text-primary font-medium'
+                  : 'border-border bg-white text-text-secondary hover:border-primary'
+              }`}
+            >
+              <div className="text-2xl mb-1">⚖️</div>
+              <div className="text-sm">Law Firms</div>
+              <div className="text-xs mt-1 opacity-75">30+ sources</div>
+            </button>
+            
+            <button
+              onClick={() => setSyncType('linkedin')}
+              className={`flex-1 py-3 px-4 rounded-lg border-2 transition-all ${
+                syncType === 'linkedin'
+                  ? 'border-primary bg-orange-50 text-primary font-medium'
+                  : 'border-border bg-white text-text-secondary hover:border-primary'
+              }`}
+            >
+              <div className="text-2xl mb-1">💼</div>
+              <div className="text-sm">LinkedIn</div>
+              <div className="text-xs mt-1 opacity-75">Requires API</div>
+            </button>
+          </div>
+
+          <button
+            onClick={handleSync}
+            disabled={isLoading}
+            className="btn-primary disabled:opacity-50 w-full mb-4"
+          >
+            {isLoading ? (
+              <span className="flex items-center justify-center gap-2">
+                <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+                </svg>
+                Scraping {syncType === 'law-firms' ? 'law firms' : 'LinkedIn'}...
+              </span>
+            ) : (
+              `Sync Jobs from ${syncType === 'law-firms' ? 'Law Firms' : 'LinkedIn'}`
+            )}
+          </button>
+
+          {isLoading && (
+            <div className="text-xs text-text-tertiary text-center mb-4">
+              This may take 2-5 minutes...
+            </div>
+          )}
+
+          {/* Results */}
+          {result && (
+            <div className={`p-4 rounded-lg ${
+              result.error 
+                ? 'bg-red-50 border border-red-200' 
+                : 'bg-green-50 border border-green-200'
+            }`}>
+              {result.error ? (
+                <div className="text-sm text-red-700">
+                  <p className="font-medium mb-1">❌ Error</p>
+                  <p>{result.error}</p>
+                  {result.details && (
+                    <p className="text-xs mt-2 opacity-75">{result.details}</p>
+                  )}
+                </div>
+              ) : (
+                <div className="text-sm text-green-700">
+                  <p className="font-medium mb-3">✅ Sync completed!</p>
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between">
+                      <span>Jobs scraped:</span>
+                      <span className="font-medium">{result.jobsScraped || 'N/A'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Jobs added:</span>
+                      <span className="font-medium">{result.jobsAdded}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Jobs updated:</span>
+                      <span className="font-medium">{result.jobsUpdated}</span>
+                    </div>
+                    {result.jobsSkipped > 0 && (
+                      <div className="flex justify-between text-yellow-700">
+                        <span>Jobs skipped:</span>
+                        <span className="font-medium">{result.jobsSkipped}</span>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="mt-4 pt-4 border-t border-green-200">
+                    <a 
+                      href="/"
+                      className="text-xs text-primary hover:underline"
+                    >
+                      → View jobs on main page
+                    </a>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Info Box */}
+          <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-xs text-blue-900">
+              <strong>💡 Tip:</strong> Run sync daily to keep jobs fresh. Law firm sync is free and scrapes 30+ companies directly.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+═══════════════════════════════════════════════════════════════════════════
+
+UPDATE: package.json (No new dependencies needed!)
+
+═══════════════════════════════════════════════════════════════════════════
+
+{
+  "dependencies": {
+    // All existing dependencies work!
+    // axios and cheerio already added
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "sync-law-firms": "node -e \"fetch('http://localhost:3000/api/jobs/sync-law-firms', {method:'POST'}).then(r=>r.json()).then(console.log)\""
+  }
+}
+
+═══════════════════════════════════════════════════════════════════════════
+
+AUTOMATED DAILY SYNC SETUP
+
+═══════════════════════════════════════════════════════════════════════════
+
+Option 1: Cron-job.org (FREE, easiest)
+
+1. Go to https://cron-job.org/
+2. Create free account
+3. Add new cron job:
+   - URL: https://your-app.replit.app/api/jobs/sync-law-firms
+   - Method: POST
+   - Schedule: Daily at 3:00 AM
+   - Done!
+
+Option 2: Replit Cron (if available)
+
+Add to .replit file:
