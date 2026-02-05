@@ -106,3 +106,27 @@ export const JOB_TAXONOMY = {
 } as const;
 
 export type JobCategoryName = keyof typeof JOB_TAXONOMY;
+
+export const jobSubmissions = pgTable("job_submissions", {
+  id: serial("id").primaryKey(),
+  title: varchar("title", { length: 255 }).notNull(),
+  company: varchar("company", { length: 255 }).notNull(),
+  companyWebsite: varchar("company_website", { length: 500 }),
+  location: varchar("location", { length: 255 }),
+  isRemote: boolean("is_remote").default(false),
+  salaryRange: varchar("salary_range", { length: 100 }),
+  description: text("description").notNull(),
+  applyUrl: varchar("apply_url", { length: 500 }).notNull(),
+  contactEmail: varchar("contact_email", { length: 255 }).notNull(),
+  submittedAt: timestamp("submitted_at").default(sql`CURRENT_TIMESTAMP`),
+  status: varchar("status", { length: 50 }).default("pending"),
+});
+
+export const insertJobSubmissionSchema = createInsertSchema(jobSubmissions).omit({
+  id: true,
+  submittedAt: true,
+  status: true,
+});
+
+export type JobSubmission = typeof jobSubmissions.$inferSelect;
+export type InsertJobSubmission = z.infer<typeof insertJobSubmissionSchema>;

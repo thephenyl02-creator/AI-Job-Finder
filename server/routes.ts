@@ -3,7 +3,8 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
 import OpenAI from "openai";
-import type { Job, JobWithScore, ResumeExtractedData } from "@shared/schema";
+import type { Job, JobWithScore, ResumeExtractedData, InsertJobSubmission } from "@shared/schema";
+import { insertJobSubmissionSchema } from "@shared/schema";
 import multer from "multer";
 import {
   extractTextFromPDF,
@@ -462,6 +463,36 @@ Only include jobs with a score above 40. Sort by score descending.`;
     } catch (error: any) {
       console.error("Error scraping company:", error);
       res.status(500).json({ error: error.message || "Failed to scrape company" });
+    }
+  });
+
+  // Job Submissions (Post a Job)
+  app.post("/api/job-submissions", async (req, res) => {
+    try {
+      const parsed = insertJobSubmissionSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Invalid submission data", details: parsed.error.issues });
+      }
+      
+      const submission = await storage.createJobSubmission(parsed.data);
+      res.json({ success: true, id: submission.id });
+    } catch (error) {
+      console.error("Error creating job submission:", error);
+      res.status(500).json({ error: "Failed to submit job" });
+    }
+  });
+
+  // Admin: Get job submissions
+  app.get("/api/admin/job-submissions", isAuthenticated, async (req, res) => {
+    if (!isAdmin(req)) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    try {
+      const submissions = await storage.getJobSubmissions();
+      res.json(submissions);
+    } catch (error) {
+      console.error("Error fetching submissions:", error);
+      res.status(500).json({ error: "Failed to fetch submissions" });
     }
   });
 

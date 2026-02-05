@@ -10,6 +10,8 @@ import Landing from "@/pages/landing";
 import Search from "@/pages/search";
 import Jobs from "@/pages/jobs";
 import Admin from "@/pages/admin";
+import About from "@/pages/about";
+import PostJob from "@/pages/post-job";
 
 function AppRouter() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -27,6 +29,8 @@ function AppRouter() {
       <Route path="/" component={isAuthenticated ? Search : Landing} />
       <Route path="/jobs">{isAuthenticated ? <Jobs /> : <Landing />}</Route>
       <Route path="/admin">{isAuthenticated ? <Admin /> : <Landing />}</Route>
+      <Route path="/about" component={About} />
+      <Route path="/post-job" component={PostJob} />
       <Route component={NotFound} />
     </Switch>
   );

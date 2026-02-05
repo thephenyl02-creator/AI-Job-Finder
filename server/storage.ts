@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { jobs, users, userPreferences, jobCategories, type Job, type InsertJob, type User, type UserPreferences, type InsertUserPreferences, type ResumeExtractedData, type JobCategory, JOB_TAXONOMY } from "@shared/schema";
+import { jobs, users, userPreferences, jobCategories, jobSubmissions, type Job, type InsertJob, type User, type UserPreferences, type InsertUserPreferences, type ResumeExtractedData, type JobCategory, type JobSubmission, type InsertJobSubmission, JOB_TAXONOMY } from "@shared/schema";
 import { eq, desc, and, sql } from "drizzle-orm";
 
 export interface IStorage {
@@ -26,6 +26,9 @@ export interface IStorage {
   getJobCategories(): Promise<JobCategory[]>;
   seedJobCategories(): Promise<void>;
   getJobsByCategory(category: string): Promise<Job[]>;
+  // Job Submissions
+  createJobSubmission(submission: InsertJobSubmission): Promise<JobSubmission>;
+  getJobSubmissions(): Promise<JobSubmission[]>;
 }
 
 class DatabaseStorage implements IStorage {
@@ -438,6 +441,15 @@ class DatabaseStorage implements IStorage {
       .from(jobs)
       .where(and(eq(jobs.roleCategory, category), eq(jobs.isActive, true)))
       .orderBy(desc(jobs.postedDate));
+  }
+
+  async createJobSubmission(submission: InsertJobSubmission): Promise<JobSubmission> {
+    const [newSubmission] = await db.insert(jobSubmissions).values(submission).returning();
+    return newSubmission;
+  }
+
+  async getJobSubmissions(): Promise<JobSubmission[]> {
+    return db.select().from(jobSubmissions).orderBy(desc(jobSubmissions.submittedAt));
   }
 }
 

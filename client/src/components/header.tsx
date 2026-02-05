@@ -42,14 +42,18 @@ export function Header() {
         <div className="flex items-center gap-2 sm:gap-4">
           {isAuthenticated ? (
             <>
-              <Button variant="ghost" size="sm" className="hidden sm:flex gap-2" data-testid="link-about">
-                <Info className="h-4 w-4" />
-                About
-              </Button>
-              <Button variant="ghost" size="sm" className="hidden sm:flex gap-2" data-testid="link-post-job">
-                <Briefcase className="h-4 w-4" />
-                Post a Job
-              </Button>
+              <Link href="/about">
+                <Button variant="ghost" size="sm" className="hidden sm:flex gap-2" data-testid="link-about">
+                  <Info className="h-4 w-4" />
+                  About
+                </Button>
+              </Link>
+              <Link href="/post-job">
+                <Button variant="ghost" size="sm" className="hidden sm:flex gap-2" data-testid="link-post-job">
+                  <Briefcase className="h-4 w-4" />
+                  Post a Job
+                </Button>
+              </Link>
               <ThemeToggle />
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
