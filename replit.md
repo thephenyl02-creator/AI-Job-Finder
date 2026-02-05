@@ -73,8 +73,11 @@ Preferred communication style: Simple, everyday language.
 - **Sources**: Legal AI startups (Harvey, CoCounsel, etc.), Legal tech companies (Clio, Relativity, etc.)
 - **ATS Integrations**: Greenhouse API, Lever API, generic HTML scraping fallback
 - **Deduplication**: Uses externalId field to avoid duplicate jobs on re-scraping
-- **Access Control**: Admin-only via ADMIN_EMAILS environment variable (comma-separated)
-- **Admin UI**: Available at /admin route for authenticated users
+- **Access Control**: Database-based via `is_admin` column in users table
+  - Grant admin: `UPDATE users SET is_admin = true WHERE email = 'user@example.com';`
+  - Revoke admin: `UPDATE users SET is_admin = false WHERE email = 'user@example.com';`
+  - View admins: `SELECT * FROM users WHERE is_admin = true;`
+- **Admin UI**: Available at /admin route for admin users only (non-admins see Access Denied)
 
 ### Scheduled Scraping & Monitoring
 - **Scheduler**: Runs automatically every 24 hours on server start
