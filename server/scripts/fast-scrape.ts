@@ -4,17 +4,18 @@ import type { InsertJob } from '../../shared/schema';
 
 // Companies confirmed to have working Greenhouse APIs
 const GREENHOUSE_SOURCES = [
-  { name: 'Everlaw', id: 'everlaw' },
-  { name: 'NetDocuments', id: 'netdocuments' },
-  { name: 'Mitratech', id: 'mitratech' },
-  { name: 'Brightflag', id: 'brightflag' },
-  { name: 'Axiom', id: 'axiomlaw' },
-  { name: 'QuisLex', id: 'quislex' },
-  { name: 'Neota Logic', id: 'neotalogic' },
-  { name: 'Factor', id: 'factorlegal' },
-  { name: 'Integreon', id: 'integreon' },
-  { name: 'Baker McKenzie', id: 'bakermckenzie' },
-  { name: 'Sullivan & Cromwell', id: 'sullivancromwell' },
+  // Legal Tech Companies
+  { name: 'Everlaw', id: 'everlaw', type: 'legaltech' },
+  { name: 'NetDocuments', id: 'netdocuments', type: 'legaltech' },
+  { name: 'Mitratech', id: 'mitratech', type: 'legaltech' },
+  { name: 'Brightflag', id: 'brightflag', type: 'legaltech' },
+  { name: 'Rocket Lawyer', id: 'rocketlawyer', type: 'legaltech' },
+  
+  // Law Firms (include ALL jobs - any role at a law firm is relevant)
+  { name: 'Gibson Dunn', id: 'gibsondunn', type: 'lawfirm' },
+  
+  // Legal Services Organizations  
+  { name: 'Legal Services NYC', id: 'legalservicesnyc', type: 'legalaid' },
 ];
 
 function isLegalCareerRole(title: string, desc: string = ''): boolean {
@@ -50,30 +51,46 @@ function isLegalCareerRole(title: string, desc: string = ''): boolean {
          techRoleKeywords.some(k => text.includes(k));
 }
 
-// Strip HTML tags and clean up text
+// Strip HTML tags and decode all HTML entities
 function stripHtml(html: string): string {
   return html
-    .replace(/<[^>]*>/g, ' ')
+    .replace(/<[^>]*>/g, ' ')  // Remove HTML tags
     .replace(/&nbsp;/g, ' ')
     .replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&apos;/g, "'")
+    .replace(/&#x27;/g, "'")
+    .replace(/&#(\d+);/g, (_, num) => String.fromCharCode(parseInt(num)))  // Decode numeric entities
     .replace(/\s+/g, ' ')
     .trim();
 }
 
-async function scrapeGreenhouse(name: string, id: string): Promise<InsertJob[]> {
+async function scrapeGreenhouse(name: string, id: string, orgType: string): Promise<InsertJob[]> {
   try {
     const url = `https://boards-api.greenhouse.io/v1/boards/${id}/jobs?content=true`;
     const res = await axios.get(url, { timeout: 15000 });
     const jobs: InsertJob[] = [];
     
     for (const job of res.data.jobs || []) {
-      if (!isLegalCareerRole(job.title || '', job.content || '')) continue;
+      // For law firms and legal aid orgs, include ALL jobs (any position is relevant for lawyers)
+      // For legal tech companies, use the keyword filter
+      const isRelevant = (orgType === 'lawfirm' || orgType === 'legalaid') 
+        ? true 
+        : isLegalCareerRole(job.title || '', job.content || '');
+      
+      if (!isRelevant) continue;
       
       // Clean up description from HTML
       const rawContent = job.content || '';
       const cleanDescription = stripHtml(rawContent).slice(0, 2000);
+      
+      // Determine role category based on org type
+      let roleCategory = 'Legal Tech Startup Roles';
+      if (orgType === 'lawfirm') roleCategory = 'Law Firm Tech & Innovation';
+      if (orgType === 'legalaid') roleCategory = 'Legal AI Jobs'; // Public interest law
       
       jobs.push({
         title: job.title || 'Untitled',
@@ -85,11 +102,11 @@ async function scrapeGreenhouse(name: string, id: string): Promise<InsertJob[]> 
         applyUrl: job.absolute_url || '',
         externalId: `gh_${id}_${job.id}`,
         source: 'greenhouse',
-        roleCategory: 'Legal Tech Startup Roles',
+        roleCategory: roleCategory,
       });
     }
     
-    console.log(`${name}: ${res.data.jobs?.length || 0} jobs, ${jobs.length} legal/tech roles`);
+    console.log(`${name}: ${res.data.jobs?.length || 0} jobs, ${jobs.length} included`);
     return jobs;
   } catch (e: any) {
     console.log(`${name}: Error - ${e.message?.slice(0, 50)}`);
@@ -103,7 +120,7 @@ async function main() {
   
   // Run all requests in parallel for speed
   const results = await Promise.allSettled(
-    GREENHOUSE_SOURCES.map(s => scrapeGreenhouse(s.name, s.id))
+    GREENHOUSE_SOURCES.map(s => scrapeGreenhouse(s.name, s.id, s.type))
   );
   
   for (const result of results) {
