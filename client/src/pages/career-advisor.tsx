@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Header } from "@/components/header";
 import { Button } from "@/components/ui/button";
@@ -120,6 +120,26 @@ export default function CareerAdvisor() {
   const [jobPickerTarget, setJobPickerTarget] = useState<string | null>(null);
   const [jobSearchQuery, setJobSearchQuery] = useState("");
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+
+  // Check for pre-populated jobs from Jobs page
+  useEffect(() => {
+    const stored = sessionStorage.getItem("compareJobs");
+    if (stored) {
+      try {
+        const preloadedJobs = JSON.parse(stored) as JobInput[];
+        if (preloadedJobs.length >= 2) {
+          setJobs(preloadedJobs);
+          toast({
+            title: "Jobs loaded for comparison",
+            description: `${preloadedJobs.length} jobs ready to compare. Click "Compare Jobs" to analyze.`,
+          });
+        }
+      } catch (e) {
+        console.error("Failed to parse preloaded jobs:", e);
+      }
+      sessionStorage.removeItem("compareJobs");
+    }
+  }, [toast]);
 
   const { data: resumeData } = useQuery<{ hasResume: boolean; extractedData?: any }>({
     queryKey: ["/api/resume"],

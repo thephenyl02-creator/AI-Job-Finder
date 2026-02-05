@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   ExternalLink,
   Search,
@@ -35,6 +36,7 @@ import {
   X,
   LayoutGrid,
   List,
+  Target,
 } from "lucide-react";
 import { JobComparison } from "@/components/job-comparison";
 
@@ -71,6 +73,45 @@ export default function Jobs() {
   const [searchQuery, setSearchQuery] = useState<string | null>(null);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<"cards" | "list">("cards");
+  const [selectedJobIds, setSelectedJobIds] = useState<Set<number>>(new Set());
+
+  const toggleJobSelection = (jobId: number) => {
+    setSelectedJobIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(jobId)) {
+        next.delete(jobId);
+      } else if (next.size < 3) {
+        next.add(jobId);
+      }
+      return next;
+    });
+  };
+
+  const clearSelection = () => {
+    setSelectedJobIds(new Set());
+  };
+
+  const getSelectedJobs = () => {
+    const allDisplayJobs = searchResults || allJobs;
+    return allDisplayJobs.filter((job) => selectedJobIds.has(job.id));
+  };
+
+  const handleCompareSelected = () => {
+    const selectedJobs = getSelectedJobs();
+    if (selectedJobs.length < 2) return;
+    
+    // Store selected jobs in sessionStorage for Career Advisor to pick up
+    const jobsForComparison = selectedJobs.map((job) => ({
+      id: String(job.id),
+      title: job.title,
+      description: job.description,
+      company: job.company,
+      location: job.location || undefined,
+      portalJobId: job.id,
+    }));
+    sessionStorage.setItem("compareJobs", JSON.stringify(jobsForComparison));
+    setLocation("/career-advisor");
+  };
 
   useEffect(() => {
     const stored = sessionStorage.getItem("searchResults");
@@ -315,6 +356,9 @@ export default function Jobs() {
             <table className="w-full">
               <thead>
                 <tr className="bg-muted/50 border-b">
+                  <th className="p-3 w-10">
+                    <span className="sr-only">Select</span>
+                  </th>
                   <th className="text-left p-3 font-medium text-sm">Job Title</th>
                   <th className="text-left p-3 font-medium text-sm">Company</th>
                   <th className="text-left p-3 font-medium text-sm">Location</th>
@@ -325,7 +369,19 @@ export default function Jobs() {
               </thead>
               <tbody>
                 {filteredJobs.map((job) => (
-                  <tr key={job.id} className="border-b hover:bg-muted/30" data-testid={`row-job-${job.id}`}>
+                  <tr 
+                    key={job.id} 
+                    className={`border-b hover:bg-muted/30 ${selectedJobIds.has(job.id) ? "bg-primary/5" : ""}`} 
+                    data-testid={`row-job-${job.id}`}
+                  >
+                    <td className="p-3">
+                      <Checkbox
+                        checked={selectedJobIds.has(job.id)}
+                        onCheckedChange={() => toggleJobSelection(job.id)}
+                        disabled={!selectedJobIds.has(job.id) && selectedJobIds.size >= 3}
+                        data-testid={`checkbox-job-${job.id}`}
+                      />
+                    </td>
                     <td className="p-3">
                       <div className="font-medium" data-testid={`text-job-title-${job.id}`}>
                         {job.title}
@@ -401,6 +457,8 @@ export default function Jobs() {
                 hasResume={resumeData?.hasResume ?? false}
                 searchResults={searchResults}
                 getCategoryIcon={getCategoryIcon}
+                selectedJobIds={selectedJobIds}
+                onToggleSelection={toggleJobSelection}
               />
             ) : (
               <>
@@ -418,6 +476,8 @@ export default function Jobs() {
                       hasResume={resumeData?.hasResume ?? false}
                       searchResults={searchResults}
                       getCategoryIcon={getCategoryIcon}
+                      selectedJobIds={selectedJobIds}
+                      onToggleSelection={toggleJobSelection}
                     />
                   );
                 })}
@@ -432,10 +492,57 @@ export default function Jobs() {
                     hasResume={resumeData?.hasResume ?? false}
                     searchResults={searchResults}
                     getCategoryIcon={getCategoryIcon}
+                    selectedJobIds={selectedJobIds}
+                    onToggleSelection={toggleJobSelection}
                   />
                 )}
               </>
             )}
+          </div>
+        )}
+
+        {/* Floating Compare Action Bar */}
+        {selectedJobIds.size > 0 && (
+          <div 
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-4 duration-300"
+            data-testid="compare-action-bar"
+          >
+            <Card className="shadow-lg border-primary/20">
+              <CardContent className="flex items-center gap-4 py-3 px-5">
+                <div className="flex items-center gap-2">
+                  <Target className="h-5 w-5 text-primary" />
+                  <span className="font-medium">
+                    {selectedJobIds.size} job{selectedJobIds.size > 1 ? "s" : ""} selected
+                  </span>
+                  {selectedJobIds.size < 2 && (
+                    <span className="text-sm text-muted-foreground">(select at least 2)</span>
+                  )}
+                  {selectedJobIds.size >= 3 && (
+                    <span className="text-sm text-muted-foreground">(max 3)</span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={clearSelection}
+                    data-testid="button-clear-selection"
+                  >
+                    <X className="h-4 w-4 mr-1" />
+                    Clear
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={handleCompareSelected}
+                    disabled={selectedJobIds.size < 2}
+                    data-testid="button-compare-selected"
+                  >
+                    <Target className="h-4 w-4 mr-1" />
+                    Compare Selected
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         )}
       </main>
@@ -453,6 +560,8 @@ function CategorySection({
   hasResume,
   searchResults,
   getCategoryIcon,
+  selectedJobIds,
+  onToggleSelection,
 }: {
   category: string;
   jobs: (Job | JobWithScore)[];
@@ -463,6 +572,8 @@ function CategorySection({
   hasResume: boolean;
   searchResults: JobWithScore[] | null;
   getCategoryIcon: (icon: string) => typeof Brain;
+  selectedJobIds: Set<number>;
+  onToggleSelection: (jobId: number) => void;
 }) {
   const Icon = getCategoryIcon(taxonomy.icon);
 
@@ -514,14 +625,22 @@ function CategorySection({
                     {subJobs.map((job) => (
                       <div
                         key={job.id}
-                        className="p-3 rounded-lg border bg-card hover:bg-muted/30 transition-colors"
+                        className={`p-3 rounded-lg border bg-card hover:bg-muted/30 transition-colors ${selectedJobIds.has(job.id) ? "ring-2 ring-primary bg-primary/5" : ""}`}
                         data-testid={`card-job-${job.id}`}
                       >
                         <div className="flex items-start justify-between gap-4">
-                          <div className="min-w-0 flex-1">
-                            <h4 className="font-medium text-foreground" data-testid={`text-job-title-${job.id}`}>
-                              {job.title}
-                            </h4>
+                          <div className="flex items-start gap-3 min-w-0 flex-1">
+                            <Checkbox
+                              checked={selectedJobIds.has(job.id)}
+                              onCheckedChange={() => onToggleSelection(job.id)}
+                              disabled={!selectedJobIds.has(job.id) && selectedJobIds.size >= 3}
+                              className="mt-1"
+                              data-testid={`checkbox-job-${job.id}`}
+                            />
+                            <div className="min-w-0 flex-1">
+                              <h4 className="font-medium text-foreground" data-testid={`text-job-title-${job.id}`}>
+                                {job.title}
+                              </h4>
                             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-sm text-muted-foreground">
                               <span className="flex items-center gap-1">
                                 <Building2 className="h-3 w-3" />
@@ -550,6 +669,7 @@ function CategorySection({
                                 {job.aiSummary}
                               </p>
                             )}
+                            </div>
                           </div>
                           <div className="flex items-center gap-2 shrink-0">
                             <JobComparison
