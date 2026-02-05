@@ -111,7 +111,7 @@ Preferred communication style: Simple, everyday language.
 
 ### Career Advisor (AI-Powered)
 - **Route**: `/career-advisor` (requires authentication)
-- **Purpose**: Strategic career guidance for comparing 2-3 job opportunities
+- **Purpose**: Strategic career guidance for legal professionals comparing 2-3 job opportunities
 - **Features**:
   - Compare 2-3 job descriptions side-by-side
   - **Three input methods for job descriptions**:
@@ -119,9 +119,17 @@ Preferred communication style: Simple, everyday language.
     2. **Drag-and-drop file upload**: Upload PDF/DOCX job posting files directly
     3. **Browse from Portal**: Select jobs directly from the platform's job database via slide-in panel
   - **Portal Job Picker**: Slide-in panel with search, category grouping (by roleSubcategory), and collapsible sections
-  - AI analyzes: responsibilities, skills, work type (structured vs ambiguous), growth paths, transition difficulty
+  - **AI Analysis for Each Job**:
+    - Overall fit summary for legal professionals
+    - Pros (advantages for someone with legal experience)
+    - Cons (challenges and gaps to address)
+    - Transferable skills from legal practice
+    - Skills to develop for success
+    - Legal tech career growth potential (1-2yr, 3-5yr, 5-10yr trajectories + AI impact)
+    - Work type (structured vs ambiguous)
+    - Transition difficulty with explanation
   - Personalized fit analysis when resume is uploaded (strengths, gaps, interview risks, resume positioning)
-  - Strategic recommendations: best fit now, best long-term, biggest career shift
+  - Strategic recommendations: best fit now, best long-term in legal tech/AI, biggest career shift
 - **API**: 
   - POST `/api/career-advisor/parse-job-file` - Extract text from uploaded job posting files
   - POST `/api/career-advisor/compare` - Compare jobs with Zod validation

@@ -767,8 +767,8 @@ function ComparisonResults({
                 </tr>
               </thead>
               <tbody>
-                {/* Overall Fit Summary - when resume is available */}
-                {hasResume && result.jobs[0]?.overallFitSummary && (
+                {/* Overall Fit Summary - always shown when available */}
+                {result.jobs[0]?.overallFitSummary && (
                   <tr className="border-b bg-primary/5">
                     <td className="p-4 font-medium text-muted-foreground">Overall Fit</td>
                     {result.jobs.map((job, i) => (

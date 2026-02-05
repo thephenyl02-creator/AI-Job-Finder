@@ -1127,7 +1127,7 @@ Return a JSON response with this exact structure:
       "pros": ["4-5 key advantages of this role for someone with legal experience"],
       "cons": ["3-4 potential challenges or gaps the candidate may face"],
       "transferableSkills": ["4-6 specific skills from legal practice that transfer well to this role"],
-      "skillsToDevelo": ["3-5 specific skills or experience the candidate needs to develop"],
+      "skillsToDevelop": ["3-5 specific skills or experience the candidate needs to develop"],
       "legalTechGrowthPotential": {
         "shortTerm": "Where this role leads in 1-2 years",
         "mediumTerm": "Typical progression in 3-5 years",
