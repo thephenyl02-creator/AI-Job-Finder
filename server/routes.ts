@@ -1063,6 +1063,141 @@ ${JSON.stringify(jobSummaries, null, 2)}`
     }
   });
 
+  // Career Advisor - Parse job posting URL
+  app.post("/api/career-advisor/parse-job-url", isAuthenticated, async (req, res) => {
+    try {
+      const { url } = req.body;
+      
+      if (!url || typeof url !== "string") {
+        return res.status(400).json({ error: "URL is required" });
+      }
+
+      // Validate URL format
+      let parsedUrl: URL;
+      try {
+        parsedUrl = new URL(url);
+        if (!["http:", "https:"].includes(parsedUrl.protocol)) {
+          throw new Error("Invalid protocol");
+        }
+      } catch {
+        return res.status(400).json({ error: "Please enter a valid URL (starting with http:// or https://)" });
+      }
+
+      // Fetch the URL content
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15000);
+      
+      let response;
+      try {
+        response = await fetch(url, {
+          signal: controller.signal,
+          headers: {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+          },
+        });
+      } catch (fetchError: any) {
+        if (fetchError.name === "AbortError") {
+          return res.status(408).json({ error: "Request timed out. The website took too long to respond." });
+        }
+        return res.status(502).json({ error: "Could not fetch the URL. Please check if the link is accessible." });
+      } finally {
+        clearTimeout(timeout);
+      }
+
+      if (!response.ok) {
+        return res.status(502).json({ error: `Could not access the page (status ${response.status}). The job posting may be private or removed.` });
+      }
+
+      const html = await response.text();
+      
+      // Extract text content and job details using AI
+      // Remove script, style, and other non-content tags
+      const cleanHtml = html
+        .replace(/<script[\s\S]*?<\/script>/gi, "")
+        .replace(/<style[\s\S]*?<\/style>/gi, "")
+        .replace(/<nav[\s\S]*?<\/nav>/gi, "")
+        .replace(/<footer[\s\S]*?<\/footer>/gi, "")
+        .replace(/<header[\s\S]*?<\/header>/gi, "")
+        .replace(/<!--[\s\S]*?-->/g, "")
+        .replace(/<[^>]+>/g, " ")
+        .replace(/&nbsp;/g, " ")
+        .replace(/&amp;/g, "&")
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .replace(/\s+/g, " ")
+        .trim();
+
+      if (cleanHtml.length < 100) {
+        return res.status(400).json({ error: "Could not extract sufficient content from this page. Try pasting the job description directly." });
+      }
+
+      // Use OpenAI to extract job title and description from the page content
+      const openai = getOpenAIClient();
+      const extractionPrompt = `Extract the job posting information from this webpage content. Look for:
+1. Job title (the specific position name)
+2. Company name (if available)
+3. Job description (the main body including responsibilities, requirements, qualifications)
+
+Webpage content (truncated):
+${cleanHtml.substring(0, 12000)}
+
+Return a JSON object with:
+{
+  "title": "Job title - Company Name" or just "Job title" if no company,
+  "description": "The full job description text including responsibilities, requirements, and qualifications. Make it comprehensive.",
+  "success": true
+}
+
+If this doesn't appear to be a job posting, return:
+{
+  "title": "",
+  "description": "",
+  "success": false,
+  "error": "This page doesn't appear to be a job posting"
+}`;
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: "You are a job posting parser. Extract job information from webpage content accurately." },
+          { role: "user", content: extractionPrompt },
+        ],
+        response_format: { type: "json_object" },
+        max_tokens: 2000,
+      });
+
+      const content = completion.choices[0]?.message?.content;
+      if (!content) {
+        return res.status(502).json({ error: "Failed to parse the job posting content" });
+      }
+
+      let parsed;
+      try {
+        parsed = JSON.parse(content);
+      } catch {
+        return res.status(502).json({ error: "Failed to parse job information from the page" });
+      }
+
+      if (!parsed.success || !parsed.description || parsed.description.length < 50) {
+        return res.status(400).json({ 
+          error: parsed.error || "Could not extract a valid job posting from this URL. Try pasting the description directly." 
+        });
+      }
+
+      res.json({ 
+        title: parsed.title || "", 
+        text: parsed.description,
+        sourceUrl: url
+      });
+    } catch (error) {
+      console.error("Error parsing job URL:", error);
+      res.status(500).json({ error: "Failed to parse job URL" });
+    }
+  });
+
   // Career Advisor - Compare multiple jobs for career guidance
   const careerAdvisorJobSchema = z.object({
     id: z.string(),

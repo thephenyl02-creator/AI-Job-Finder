@@ -32,7 +32,9 @@ import {
   MapPin,
   Building2,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  Link2,
+  ExternalLink
 } from "lucide-react";
 
 interface JobInput {
@@ -44,6 +46,9 @@ interface JobInput {
   portalJobId?: number;
   company?: string;
   location?: string;
+  sourceUrl?: string;
+  urlInput?: string;
+  isParsingUrl?: boolean;
 }
 
 interface LegalTechGrowthPotential {
@@ -271,6 +276,68 @@ export default function CareerAdvisor() {
     }
   }, [handleFileDrop]);
 
+  const updateUrlInput = (id: string, url: string) => {
+    setJobs(jobs.map((j) => (j.id === id ? { ...j, urlInput: url } : j)));
+  };
+
+  const parseJobUrl = useCallback(async (jobId: string, url: string) => {
+    if (!url.trim()) {
+      toast({
+        title: "URL required",
+        description: "Please enter a job posting URL.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setJobs((prev) =>
+      prev.map((j) => (j.id === jobId ? { ...j, isParsingUrl: true } : j))
+    );
+
+    try {
+      const response = await fetch("/api/career-advisor/parse-job-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ url }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to parse URL");
+      }
+
+      const data = await response.json();
+      setJobs((prev) =>
+        prev.map((j) =>
+          j.id === jobId
+            ? { 
+                ...j, 
+                description: data.text, 
+                title: data.title || j.title, 
+                isParsingUrl: false,
+                sourceUrl: data.sourceUrl,
+                urlInput: ""
+              }
+            : j
+        )
+      );
+      toast({
+        title: "Job posting loaded",
+        description: `Successfully extracted job details from the URL`,
+      });
+    } catch (error: any) {
+      setJobs((prev) =>
+        prev.map((j) => (j.id === jobId ? { ...j, isParsingUrl: false } : j))
+      );
+      toast({
+        title: "Could not parse URL",
+        description: error.message || "Please check the URL or paste the job description directly.",
+        variant: "destructive",
+      });
+    }
+  }, [toast]);
+
   const compareMutation = useMutation({
     mutationFn: async (data: { jobs: JobInput[]; includeResume: boolean }) => {
       const response = await apiRequest("POST", "/api/career-advisor/compare", data);
@@ -469,6 +536,54 @@ export default function CareerAdvisor() {
                             </div>
                           </div>
                         </label>
+                      )}
+                    </div>
+
+                    {/* URL Input Section */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
+                        <Link2 className="h-4 w-4 text-muted-foreground" />
+                        Paste Job URL
+                      </label>
+                      <div className="flex gap-2">
+                        <Input
+                          value={job.urlInput || ""}
+                          onChange={(e) => updateUrlInput(job.id, e.target.value)}
+                          placeholder="https://careers.company.com/job/..."
+                          className="flex-1"
+                          disabled={job.isParsingUrl}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" && job.urlInput) {
+                              parseJobUrl(job.id, job.urlInput);
+                            }
+                          }}
+                          data-testid={`input-job-url-${index}`}
+                        />
+                        <Button
+                          variant="secondary"
+                          size="default"
+                          onClick={() => parseJobUrl(job.id, job.urlInput || "")}
+                          disabled={!job.urlInput || job.isParsingUrl}
+                          data-testid={`button-parse-url-${index}`}
+                        >
+                          {job.isParsingUrl ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            "Load"
+                          )}
+                        </Button>
+                      </div>
+                      {job.sourceUrl && (
+                        <a 
+                          href={job.sourceUrl} 
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          className="text-xs text-primary flex items-center gap-1 hover:underline"
+                          data-testid={`link-source-url-${index}`}
+                        >
+                          <ExternalLink className="h-3 w-3" />
+                          View original posting
+                        </a>
                       )}
                     </div>
 
