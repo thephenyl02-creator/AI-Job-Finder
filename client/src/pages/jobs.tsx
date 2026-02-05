@@ -38,7 +38,6 @@ import {
   List,
   Target,
 } from "lucide-react";
-import { JobComparison } from "@/components/job-comparison";
 
 const CATEGORY_ICONS: Record<string, typeof Brain> = {
   "Brain": Brain,
@@ -423,12 +422,6 @@ export default function Jobs() {
                     )}
                     <td className="p-3 text-right">
                       <div className="flex items-center gap-2 justify-end">
-                        <JobComparison
-                          jobId={job.id}
-                          jobTitle={job.title}
-                          company={job.company}
-                          hasResume={resumeData?.hasResume ?? false}
-                        />
                         <Button
                           size="sm"
                           onClick={() => handleApplyClick(job)}
@@ -672,12 +665,6 @@ function CategorySection({
                             </div>
                           </div>
                           <div className="flex items-center gap-2 shrink-0">
-                            <JobComparison
-                              jobId={job.id}
-                              jobTitle={job.title}
-                              company={job.company}
-                              hasResume={hasResume}
-                            />
                             <Button
                               size="sm"
                               onClick={() => onApply(job)}

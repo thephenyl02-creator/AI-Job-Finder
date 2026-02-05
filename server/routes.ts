@@ -23,6 +23,8 @@ import {
   validateJobUrl,
 } from "./lib/law-firm-scraper";
 import { LAW_FIRMS_AND_COMPANIES } from "./lib/law-firms-list";
+import { categorizeJob } from "./lib/job-categorizer";
+import { JOB_TAXONOMY } from "@shared/schema";
 import {
   startScheduler,
   stopScheduler,
@@ -66,6 +68,54 @@ export async function registerRoutes(
 
   await storage.seedJobs();
   await storage.seedJobCategories();
+
+  // Background re-categorization of jobs with invalid/old category names
+  (async () => {
+    try {
+      const allJobs = await storage.getActiveJobs();
+      const validCategories = Object.keys(JOB_TAXONOMY);
+      const needsCategorization = allJobs.filter(
+        (j) => !j.roleCategory || !validCategories.includes(j.roleCategory)
+      );
+      if (needsCategorization.length === 0) {
+        console.log("All jobs already categorized correctly.");
+        return;
+      }
+      console.log(`Background: Re-categorizing ${needsCategorization.length} jobs...`);
+      let done = 0;
+      const batchSize = 5;
+      for (let i = 0; i < needsCategorization.length; i += batchSize) {
+        const batch = needsCategorization.slice(i, i + batchSize);
+        await Promise.all(
+          batch.map(async (job) => {
+            try {
+              const result = await categorizeJob(job.title, job.description, job.company);
+              await storage.updateJob(job.id, {
+                roleCategory: result.category,
+                roleSubcategory: result.subcategory,
+                seniorityLevel: result.seniorityLevel,
+                keySkills: result.keySkills,
+                aiSummary: result.aiSummary,
+                matchKeywords: result.matchKeywords,
+              });
+              done++;
+              if (done % 20 === 0) {
+                console.log(`Background: Categorized ${done}/${needsCategorization.length} jobs`);
+              }
+            } catch (err: any) {
+              console.error(`Failed to categorize job ${job.id}:`, err.message);
+            }
+          })
+        );
+        if (i + batchSize < needsCategorization.length) {
+          await new Promise((r) => setTimeout(r, 500));
+        }
+      }
+      console.log(`Background: Finished re-categorizing ${done}/${needsCategorization.length} jobs`);
+    } catch (err) {
+      console.error("Background re-categorization error:", err);
+    }
+  })();
 
   // Public stats endpoint (no auth required)
   app.get("/api/stats", async (req, res) => {
@@ -836,6 +886,60 @@ ${JSON.stringify(jobSummaries, null, 2)}`
     } catch (error: any) {
       console.error("Error scraping company:", error);
       res.status(500).json({ error: error.message || "Failed to scrape company" });
+    }
+  });
+
+  // Batch re-categorize all jobs
+  app.post("/api/admin/recategorize", isAuthenticated, async (req, res) => {
+    if (!(await isAdminCheck(req))) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    try {
+      const allJobs = await storage.getActiveJobs();
+      const validCategories = Object.keys(JOB_TAXONOMY);
+      const needsCategorization = allJobs.filter(
+        (j) => !j.roleCategory || !validCategories.includes(j.roleCategory)
+      );
+
+      console.log(`Re-categorizing ${needsCategorization.length} of ${allJobs.length} jobs...`);
+      res.json({
+        success: true,
+        message: `Re-categorizing ${needsCategorization.length} jobs in background...`,
+        total: needsCategorization.length,
+      });
+
+      let done = 0;
+      const batchSize = 5;
+      for (let i = 0; i < needsCategorization.length; i += batchSize) {
+        const batch = needsCategorization.slice(i, i + batchSize);
+        await Promise.all(
+          batch.map(async (job) => {
+            try {
+              const result = await categorizeJob(job.title, job.description, job.company);
+              await storage.updateJob(job.id, {
+                roleCategory: result.category,
+                roleSubcategory: result.subcategory,
+                seniorityLevel: result.seniorityLevel,
+                keySkills: result.keySkills,
+                aiSummary: result.aiSummary,
+                matchKeywords: result.matchKeywords,
+              });
+              done++;
+              if (done % 10 === 0) {
+                console.log(`Categorized ${done}/${needsCategorization.length} jobs`);
+              }
+            } catch (err) {
+              console.error(`Failed to categorize job ${job.id} (${job.title}):`, err);
+            }
+          })
+        );
+        if (i + batchSize < needsCategorization.length) {
+          await new Promise((r) => setTimeout(r, 1000));
+        }
+      }
+      console.log(`Finished re-categorizing ${done}/${needsCategorization.length} jobs`);
+    } catch (error: any) {
+      console.error("Error re-categorizing jobs:", error);
     }
   });
 
