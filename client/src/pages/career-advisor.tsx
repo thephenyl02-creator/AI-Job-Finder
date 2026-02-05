@@ -7,9 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import type { Job } from "@shared/schema";
 import { 
   Loader2, 
   Plus, 
@@ -24,7 +26,13 @@ import {
   Lightbulb,
   FileText,
   Scale,
-  Upload
+  Upload,
+  GripVertical,
+  Search,
+  MapPin,
+  Building2,
+  ChevronDown,
+  ChevronRight
 } from "lucide-react";
 
 interface JobInput {
@@ -33,6 +41,9 @@ interface JobInput {
   description: string;
   fileName?: string;
   isUploading?: boolean;
+  portalJobId?: number;
+  company?: string;
+  location?: string;
 }
 
 interface JobAnalysis {
@@ -87,11 +98,77 @@ export default function CareerAdvisor() {
   ]);
   const [result, setResult] = useState<ComparisonResult | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
+  const [showJobPicker, setShowJobPicker] = useState(false);
+  const [jobPickerTarget, setJobPickerTarget] = useState<string | null>(null);
+  const [jobSearchQuery, setJobSearchQuery] = useState("");
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
 
   const { data: resumeData } = useQuery<{ hasResume: boolean; extractedData?: any }>({
     queryKey: ["/api/resume"],
     enabled: isAuthenticated,
   });
+
+  const { data: portalJobs, isLoading: jobsLoading } = useQuery<Job[]>({
+    queryKey: ["/api/jobs"],
+    enabled: isAuthenticated,
+  });
+
+  const groupedJobs = portalJobs?.reduce((acc, job) => {
+    const category = job.roleSubcategory || job.roleCategory || "Other";
+    if (!acc[category]) acc[category] = [];
+    acc[category].push(job);
+    return acc;
+  }, {} as Record<string, Job[]>) || {};
+
+  const filteredGroupedJobs = Object.entries(groupedJobs).reduce((acc, [category, categoryJobs]) => {
+    const filtered = categoryJobs.filter(job => 
+      job.title.toLowerCase().includes(jobSearchQuery.toLowerCase()) ||
+      job.company.toLowerCase().includes(jobSearchQuery.toLowerCase())
+    );
+    if (filtered.length > 0) acc[category] = filtered;
+    return acc;
+  }, {} as Record<string, Job[]>);
+
+  const toggleCategory = (category: string) => {
+    setExpandedCategories(prev => {
+      const next = new Set(prev);
+      if (next.has(category)) next.delete(category);
+      else next.add(category);
+      return next;
+    });
+  };
+
+  const selectPortalJob = (job: Job, targetSlotId: string) => {
+    setJobs(prev => prev.map(j => 
+      j.id === targetSlotId 
+        ? { 
+            ...j, 
+            title: job.title, 
+            description: job.description, 
+            portalJobId: job.id,
+            company: job.company,
+            location: job.location || undefined,
+            fileName: undefined,
+            isUploading: undefined
+          } 
+        : j
+    ));
+    setShowJobPicker(false);
+    setJobPickerTarget(null);
+    setJobSearchQuery("");
+    toast({
+      title: "Job added",
+      description: `${job.title} at ${job.company} has been added for comparison.`,
+    });
+  };
+
+  const openJobPicker = (slotId: string) => {
+    setJobPickerTarget(slotId);
+    setShowJobPicker(true);
+    if (expandedCategories.size === 0 && Object.keys(groupedJobs).length > 0) {
+      setExpandedCategories(new Set([Object.keys(groupedJobs)[0]]));
+    }
+  };
 
   const handleFileDrop = useCallback(async (jobId: string, file: File) => {
     const validTypes = [
@@ -326,6 +403,22 @@ export default function CareerAdvisor() {
                         {job.fileName}
                       </Badge>
                     )}
+                    {job.portalJobId && job.company && (
+                      <div className="mt-2 p-2 rounded-lg bg-primary/5 border border-primary/20" data-testid={`portal-job-info-${index}`}>
+                        <p className="text-sm font-medium text-primary truncate" data-testid={`portal-job-title-${index}`}>{job.title}</p>
+                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Building2 className="h-3 w-3" />
+                          <span data-testid={`portal-job-company-${index}`}>{job.company}</span>
+                          {job.location && (
+                            <>
+                              <span className="mx-1">·</span>
+                              <MapPin className="h-3 w-3" />
+                              <span data-testid={`portal-job-location-${index}`}>{job.location}</span>
+                            </>
+                          )}
+                        </p>
+                      </div>
+                    )}
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div
@@ -365,13 +458,24 @@ export default function CareerAdvisor() {
                         </label>
                       )}
                     </div>
+
+                    <Button
+                      variant="outline"
+                      className="w-full gap-2"
+                      onClick={() => openJobPicker(job.id)}
+                      data-testid={`button-browse-jobs-${index}`}
+                    >
+                      <Briefcase className="h-4 w-4" />
+                      Browse Jobs from Portal
+                    </Button>
+
                     <div className="relative py-2">
                       <div className="absolute inset-0 flex items-center">
                         <div className="w-full border-t border-border"></div>
                       </div>
                       <div className="relative flex justify-center">
                         <span className="bg-card px-3 text-xs text-muted-foreground uppercase tracking-wider">
-                          or paste text
+                          or paste manually
                         </span>
                       </div>
                     </div>
@@ -464,6 +568,109 @@ export default function CareerAdvisor() {
           />
         )}
       </main>
+
+      {showJobPicker && (
+        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm" onClick={() => setShowJobPicker(false)}>
+          <div 
+            className="fixed right-0 top-0 h-full w-full max-w-md bg-background border-l shadow-xl flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-4 border-b">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold">Select a Job from Portal</h3>
+                <Button variant="ghost" size="icon" onClick={() => setShowJobPicker(false)} data-testid="button-close-job-picker">
+                  <XCircle className="h-5 w-5" />
+                </Button>
+              </div>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search jobs..."
+                  value={jobSearchQuery}
+                  onChange={(e) => setJobSearchQuery(e.target.value)}
+                  className="pl-9"
+                  data-testid="input-job-search"
+                />
+              </div>
+            </div>
+
+            <ScrollArea className="flex-1">
+              <div className="p-4">
+                {jobsLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : Object.keys(filteredGroupedJobs).length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <Briefcase className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                    <p>No jobs found</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {Object.entries(filteredGroupedJobs).map(([category, categoryJobs]) => (
+                      <div key={category}>
+                        <button
+                          className="w-full flex items-center gap-2 py-2 px-2 text-left hover:bg-muted/50 rounded-lg transition-colors"
+                          onClick={() => toggleCategory(category)}
+                          data-testid={`button-category-${category.replace(/\s+/g, '-').toLowerCase()}`}
+                        >
+                          {expandedCategories.has(category) ? (
+                            <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
+                          ) : (
+                            <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                          )}
+                          <span className="font-semibold text-foreground">{category}</span>
+                          <Badge variant="secondary" className="ml-auto text-xs">
+                            {categoryJobs.length}
+                          </Badge>
+                        </button>
+                        
+                        {expandedCategories.has(category) && (
+                          <div className="ml-4 mt-1 space-y-1">
+                            {categoryJobs.map((job) => (
+                              <button
+                                key={job.id}
+                                className="w-full text-left p-3 rounded-lg border border-transparent hover:border-primary/30 hover:bg-muted/30 transition-all group"
+                                onClick={() => jobPickerTarget && selectPortalJob(job, jobPickerTarget)}
+                                data-testid={`button-select-job-${job.id}`}
+                              >
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="min-w-0 flex-1">
+                                    <p className="font-medium text-primary group-hover:underline truncate">
+                                      {job.title}
+                                    </p>
+                                    <p className="text-sm text-muted-foreground flex items-center gap-1 mt-0.5">
+                                      <Building2 className="h-3 w-3 shrink-0" />
+                                      <span className="truncate">{job.company}</span>
+                                    </p>
+                                    {job.location && (
+                                      <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                                        <MapPin className="h-3 w-3 shrink-0" />
+                                        <span className="truncate">{job.location}</span>
+                                      </p>
+                                    )}
+                                  </div>
+                                  <Plus className="h-5 w-5 text-primary opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </ScrollArea>
+
+            <div className="p-4 border-t bg-muted/30">
+              <p className="text-xs text-muted-foreground text-center">
+                Click a job to add it for comparison
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

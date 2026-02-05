@@ -91,7 +91,11 @@ Preferred communication style: Simple, everyday language.
 - **Purpose**: Strategic career guidance for comparing 2-3 job opportunities
 - **Features**:
   - Compare 2-3 job descriptions side-by-side
-  - **Drag-and-drop file upload**: Upload PDF/DOCX job posting files directly
+  - **Three input methods for job descriptions**:
+    1. **Paste text**: Manually enter job title and description
+    2. **Drag-and-drop file upload**: Upload PDF/DOCX job posting files directly
+    3. **Browse from Portal**: Select jobs directly from the platform's job database via slide-in panel
+  - **Portal Job Picker**: Slide-in panel with search, category grouping (by roleSubcategory), and collapsible sections
   - AI analyzes: responsibilities, skills, work type (structured vs ambiguous), growth paths, transition difficulty
   - Personalized fit analysis when resume is uploaded (strengths, gaps, interview risks, resume positioning)
   - Strategic recommendations: best fit now, best long-term, biggest career shift
