@@ -89,7 +89,7 @@ export default function PostJob() {
               <p className="text-muted-foreground mb-6">
                 We'll review your job listing and add it to Legal AI Careers within 24-48 hours.
               </p>
-              <Button onClick={() => setSubmitted(false)} variant="outline">
+              <Button onClick={() => setSubmitted(false)} variant="outline" data-testid="button-submit-another">
                 Submit Another Job
               </Button>
             </CardContent>
