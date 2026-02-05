@@ -9,10 +9,11 @@ const openai = new OpenAI({
 
 export async function extractTextFromPDF(buffer: Buffer): Promise<string> {
   try {
-    // Dynamic import for pdf-parse CommonJS module
-    const pdfParseModule = await import("pdf-parse") as any;
-    const parser = pdfParseModule.default || pdfParseModule;
-    const data = await parser(buffer);
+    // Use createRequire to import CommonJS module in ESM context
+    const { createRequire } = await import("module");
+    const require = createRequire(import.meta.url);
+    const pdfParse = require("pdf-parse");
+    const data = await pdfParse(buffer);
     return data.text;
   } catch (error) {
     console.error("PDF parsing error:", error);
