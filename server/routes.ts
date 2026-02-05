@@ -84,6 +84,18 @@ export async function registerRoutes(
     }
   });
 
+  // Track apply button clicks for analytics
+  app.post("/api/jobs/:id/apply-click", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id as string);
+      await storage.trackApplyClick(id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error tracking apply click:", error);
+      res.status(500).json({ error: "Failed to track click" });
+    }
+  });
+
   app.post("/api/search", isAuthenticated, async (req, res) => {
     try {
       const { query } = req.body;

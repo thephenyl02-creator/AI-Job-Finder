@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { MapPin, DollarSign, Clock, ExternalLink, Sparkles, Building2, Briefcase, Brain, Scale, Zap } from "lucide-react";
 import type { JobWithScore } from "@shared/schema";
+import { apiRequest } from "@/lib/queryClient";
 
 interface JobCardProps {
   job: JobWithScore;
@@ -62,6 +63,11 @@ export function JobCard({ job, showMatchScore = false }: JobCardProps) {
 
   const salary = formatSalary(job.salaryMin, job.salaryMax);
   const experience = formatExperience(job.experienceMin, job.experienceMax);
+
+  const handleApplyClick = () => {
+    // Track the click asynchronously (fire and forget)
+    apiRequest("POST", `/api/jobs/${job.id}/apply-click`).catch(() => {});
+  };
 
   return (
     <Card className="group hover:border-primary/50 transition-all duration-200 hover-elevate" data-testid={`card-job-${job.id}`}>
@@ -168,7 +174,12 @@ export function JobCard({ job, showMatchScore = false }: JobCardProps) {
             </div>
             
             <Button asChild size="sm" className="gap-2" data-testid={`button-apply-${job.id}`}>
-              <a href={job.applyUrl} target="_blank" rel="noopener noreferrer">
+              <a 
+                href={job.applyUrl} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                onClick={handleApplyClick}
+              >
                 Apply Now
                 <ExternalLink className="h-3.5 w-3.5" />
               </a>

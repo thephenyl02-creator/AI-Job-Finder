@@ -14,6 +14,7 @@ export interface IStorage {
   upsertJobByExternalId(job: InsertJob): Promise<{ job: Job; isNew: boolean }>;
   getJobByExternalId(externalId: string): Promise<Job | undefined>;
   bulkUpsertJobs(jobsList: InsertJob[]): Promise<{ inserted: number; updated: number }>;
+  trackApplyClick(jobId: number): Promise<void>;
   // User Resume
   updateUserResume(userId: string, resumeText: string, filename: string, extractedData: ResumeExtractedData): Promise<void>;
   getUserResume(userId: string): Promise<{ resumeFilename: string | null; extractedData: ResumeExtractedData | null } | null>;
@@ -53,6 +54,13 @@ class DatabaseStorage implements IStorage {
 
   async deleteJob(id: number): Promise<void> {
     await db.delete(jobs).where(eq(jobs.id, id));
+  }
+
+  async trackApplyClick(jobId: number): Promise<void> {
+    await db
+      .update(jobs)
+      .set({ applyClickCount: sql`${jobs.applyClickCount} + 1` })
+      .where(eq(jobs.id, jobId));
   }
 
   async getActiveJobs(): Promise<Job[]> {
