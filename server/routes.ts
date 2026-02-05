@@ -1107,22 +1107,33 @@ JOB ${i + 1}: ${j.title || `Position ${i + 1}`}
 ${j.description}
 `).join("\n---\n");
 
-      const systemPrompt = `You are a senior career advisor with 20+ years of experience helping professionals make strategic career decisions. Your role is NOT to do ATS keyword matching, but to provide deep career guidance.
+      const systemPrompt = `You are a senior career advisor with 20+ years of experience helping lawyers transition into legal technology and AI careers. Your role is NOT to do ATS keyword matching, but to provide deep, actionable career guidance specifically for legal professionals moving into legal tech.
 
 Analyze the provided job opportunities and ${resumeContext ? "the candidate's resume" : "provide general analysis"}.
 
 Focus on:
-1. Strategic career implications of each role
-2. Day-to-day reality vs. job description promises
-3. Growth trajectories and ceiling potential
-4. Cultural fit indicators and red flags
-5. Transition feasibility based on typical hiring patterns
+1. How legal expertise translates to each role
+2. Day-to-day reality vs. job description promises  
+3. Growth trajectories in legal technology and AI
+4. Practical pros and cons for someone with a legal background
+5. Specific skills to develop for success in each role
 
 Return a JSON response with this exact structure:
 {
   "jobs": [
     {
       "jobTitle": "The job title",
+      "overallFitSummary": "2-3 sentence summary of how well this role fits a legal professional's background",
+      "pros": ["4-5 key advantages of this role for someone with legal experience"],
+      "cons": ["3-4 potential challenges or gaps the candidate may face"],
+      "transferableSkills": ["4-6 specific skills from legal practice that transfer well to this role"],
+      "skillsToDevelo": ["3-5 specific skills or experience the candidate needs to develop"],
+      "legalTechGrowthPotential": {
+        "shortTerm": "Where this role leads in 1-2 years",
+        "mediumTerm": "Typical progression in 3-5 years",
+        "longTerm": "Ceiling potential and senior roles (5-10 years)",
+        "aiOpportunities": "How AI trends will impact this career path"
+      },
       "mainResponsibilities": ["3-5 key responsibilities"],
       "requiredSkills": ["5-8 skills with focus on must-haves vs nice-to-haves"],
       "workType": {
@@ -1130,36 +1141,35 @@ Return a JSON response with this exact structure:
         "ambiguous": 0-100,
         "description": "Brief description of the work style"
       },
-      "growthOpportunities": ["3-4 realistic growth paths"],
       "transitionDifficulty": {
         "level": "Easy|Moderate|Challenging|Difficult",
-        "explanation": "Why this difficulty level"
+        "explanation": "Why this difficulty level for a legal professional"
       },
-      "whoSucceeds": ["3-4 traits of people who thrive in this role"]${resumeContext ? `,
+      "whoSucceeds": ["3-4 traits of lawyers who thrive in this role"]${resumeContext ? `,
       "fitAnalysis": {
         "overallFit": 0-100,
-        "strengths": ["3-4 candidate strengths for this role"],
-        "gaps": ["2-3 gaps or areas to address"],
+        "strengths": ["3-4 candidate strengths for this role based on resume"],
+        "gaps": ["2-3 gaps between resume and role requirements"],
         "resumePositioning": ["2-3 ways to position resume for this role"],
-        "interviewRisks": ["2-3 potential red flags or tough questions to prepare for"]
+        "interviewRisks": ["2-3 potential tough questions to prepare for"]
       }` : ""}
     }
   ],
   "recommendation": {
     "bestFitNow": {
       "jobTitle": "The best immediate fit",
-      "reason": "Why this is the best fit right now"
+      "reason": "Why this is the best fit right now based on current skills"
     },
     "bestLongTerm": {
-      "jobTitle": "The best for career growth",
-      "reason": "Why this offers the best long-term trajectory"
+      "jobTitle": "The best for career growth in legal tech/AI",
+      "reason": "Why this offers the best long-term trajectory in legal technology"
     },
     "biggestShift": {
       "jobTitle": "The role requiring most career change",
-      "reason": "What makes this the biggest shift"
+      "reason": "What makes this the biggest shift and what's needed to succeed"
     }
   },
-  "overallStrategy": "2-3 sentences of strategic career advice based on this comparison"
+  "overallStrategy": "3-4 sentences of strategic career advice for a legal professional considering these roles, with specific action items"
 }`;
 
       const completion = await openai.chat.completions.create({

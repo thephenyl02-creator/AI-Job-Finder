@@ -46,8 +46,21 @@ interface JobInput {
   location?: string;
 }
 
+interface LegalTechGrowthPotential {
+  shortTerm: string;
+  mediumTerm: string;
+  longTerm: string;
+  aiOpportunities: string;
+}
+
 interface JobAnalysis {
   jobTitle: string;
+  overallFitSummary?: string;
+  pros?: string[];
+  cons?: string[];
+  transferableSkills?: string[];
+  skillsToDevelop?: string[];
+  legalTechGrowthPotential?: LegalTechGrowthPotential;
   mainResponsibilities: string[];
   requiredSkills: string[];
   workType: {
@@ -55,7 +68,7 @@ interface JobAnalysis {
     ambiguous: number;
     description: string;
   };
-  growthOpportunities: string[];
+  growthOpportunities?: string[];
   transitionDifficulty: {
     level: "Easy" | "Moderate" | "Challenging" | "Difficult";
     explanation: string;
@@ -754,6 +767,142 @@ function ComparisonResults({
                 </tr>
               </thead>
               <tbody>
+                {/* Overall Fit Summary - when resume is available */}
+                {hasResume && result.jobs[0]?.overallFitSummary && (
+                  <tr className="border-b bg-primary/5">
+                    <td className="p-4 font-medium text-muted-foreground">Overall Fit</td>
+                    {result.jobs.map((job, i) => (
+                      <td key={i} className="p-4">
+                        <p className="text-sm">{job.overallFitSummary}</p>
+                      </td>
+                    ))}
+                  </tr>
+                )}
+                {/* Pros */}
+                {result.jobs[0]?.pros && (
+                  <tr className="border-b">
+                    <td className="p-4 font-medium text-muted-foreground">
+                      <div className="flex items-center gap-1">
+                        <CheckCircle2 className="h-4 w-4 text-green-500" />
+                        Advantages (Pros)
+                      </div>
+                    </td>
+                    {result.jobs.map((job, i) => (
+                      <td key={i} className="p-4">
+                        <ul className="text-sm space-y-1">
+                          {job.pros?.map((pro, j) => (
+                            <li key={j} className="flex items-start gap-1 text-green-700 dark:text-green-400">
+                              <CheckCircle2 className="h-3 w-3 mt-1 shrink-0" />
+                              <span>{pro}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </td>
+                    ))}
+                  </tr>
+                )}
+                {/* Cons */}
+                {result.jobs[0]?.cons && (
+                  <tr className="border-b">
+                    <td className="p-4 font-medium text-muted-foreground">
+                      <div className="flex items-center gap-1">
+                        <AlertTriangle className="h-4 w-4 text-amber-500" />
+                        Challenges (Cons)
+                      </div>
+                    </td>
+                    {result.jobs.map((job, i) => (
+                      <td key={i} className="p-4">
+                        <ul className="text-sm space-y-1">
+                          {job.cons?.map((con, j) => (
+                            <li key={j} className="flex items-start gap-1 text-amber-700 dark:text-amber-400">
+                              <AlertTriangle className="h-3 w-3 mt-1 shrink-0" />
+                              <span>{con}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </td>
+                    ))}
+                  </tr>
+                )}
+                {/* Transferable Skills */}
+                {hasResume && result.jobs[0]?.transferableSkills && (
+                  <tr className="border-b bg-muted/30">
+                    <td className="p-4 font-medium text-muted-foreground">
+                      <div className="flex items-center gap-1">
+                        <Target className="h-4 w-4 text-primary" />
+                        Transferable Skills
+                      </div>
+                    </td>
+                    {result.jobs.map((job, i) => (
+                      <td key={i} className="p-4">
+                        <div className="flex flex-wrap gap-1">
+                          {job.transferableSkills?.map((skill, j) => (
+                            <Badge key={j} variant="default" className="text-xs">
+                              {skill}
+                            </Badge>
+                          ))}
+                        </div>
+                      </td>
+                    ))}
+                  </tr>
+                )}
+                {/* Skills to Develop */}
+                {result.jobs[0]?.skillsToDevelop && (
+                  <tr className="border-b">
+                    <td className="p-4 font-medium text-muted-foreground">
+                      <div className="flex items-center gap-1">
+                        <Lightbulb className="h-4 w-4 text-amber-500" />
+                        Skills to Develop
+                      </div>
+                    </td>
+                    {result.jobs.map((job, i) => (
+                      <td key={i} className="p-4">
+                        <div className="flex flex-wrap gap-1">
+                          {job.skillsToDevelop?.map((skill, j) => (
+                            <Badge key={j} variant="outline" className="text-xs">
+                              {skill}
+                            </Badge>
+                          ))}
+                        </div>
+                      </td>
+                    ))}
+                  </tr>
+                )}
+                {/* Legal Tech Career Growth */}
+                {result.jobs[0]?.legalTechGrowthPotential && (
+                  <tr className="border-b">
+                    <td className="p-4 font-medium text-muted-foreground">
+                      <div className="flex items-center gap-1">
+                        <TrendingUp className="h-4 w-4 text-primary" />
+                        Career Growth Path
+                      </div>
+                    </td>
+                    {result.jobs.map((job, i) => (
+                      <td key={i} className="p-4">
+                        {job.legalTechGrowthPotential && (
+                          <div className="text-sm space-y-2">
+                            <div>
+                              <span className="font-medium text-xs text-muted-foreground">1-2 years:</span>
+                              <p className="text-muted-foreground">{job.legalTechGrowthPotential.shortTerm}</p>
+                            </div>
+                            <div>
+                              <span className="font-medium text-xs text-muted-foreground">3-5 years:</span>
+                              <p className="text-muted-foreground">{job.legalTechGrowthPotential.mediumTerm}</p>
+                            </div>
+                            <div>
+                              <span className="font-medium text-xs text-muted-foreground">5-10 years:</span>
+                              <p className="text-muted-foreground">{job.legalTechGrowthPotential.longTerm}</p>
+                            </div>
+                            <div className="pt-1 border-t">
+                              <span className="font-medium text-xs text-primary">AI Impact:</span>
+                              <p className="text-muted-foreground">{job.legalTechGrowthPotential.aiOpportunities}</p>
+                            </div>
+                          </div>
+                        )}
+                      </td>
+                    ))}
+                  </tr>
+                )}
                 <tr className="border-b">
                   <td className="p-4 font-medium text-muted-foreground">Work Type</td>
                   {result.jobs.map((job, i) => (
@@ -800,21 +949,23 @@ function ComparisonResults({
                     </td>
                   ))}
                 </tr>
-                <tr className="border-b">
-                  <td className="p-4 font-medium text-muted-foreground">Growth Path</td>
-                  {result.jobs.map((job, i) => (
-                    <td key={i} className="p-4">
-                      <ul className="text-sm space-y-1">
-                        {job.growthOpportunities.slice(0, 3).map((opp, j) => (
-                          <li key={j} className="flex items-start gap-1">
-                            <ArrowRight className="h-3 w-3 mt-1 text-muted-foreground shrink-0" />
-                            <span>{opp}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </td>
-                  ))}
-                </tr>
+                {result.jobs[0]?.growthOpportunities && (
+                  <tr className="border-b">
+                    <td className="p-4 font-medium text-muted-foreground">Growth Path</td>
+                    {result.jobs.map((job, i) => (
+                      <td key={i} className="p-4">
+                        <ul className="text-sm space-y-1">
+                          {job.growthOpportunities?.slice(0, 3).map((opp, j) => (
+                            <li key={j} className="flex items-start gap-1">
+                              <ArrowRight className="h-3 w-3 mt-1 text-muted-foreground shrink-0" />
+                              <span>{opp}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </td>
+                    ))}
+                  </tr>
+                )}
                 {hasResume && result.jobs[0].fitAnalysis && (
                   <tr className="border-b bg-muted/30">
                     <td className="p-4 font-medium text-muted-foreground">Your Fit Score</td>
