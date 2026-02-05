@@ -21,7 +21,7 @@ function delay(ms: number): Promise<void> {
 
 export async function scrapeGreenhouse(companyId: string, companyName: string): Promise<ScrapedJob[]> {
   try {
-    const url = `https://boards-api.greenhouse.io/v1/boards/${companyId}/jobs`;
+    const url = `https://boards-api.greenhouse.io/v1/boards/${companyId}/jobs?content=true`;
     const response = await axios.get(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (compatible; LegalAICareersBot/1.0)',
@@ -256,9 +256,10 @@ function inferRoleType(title: string): string {
 export function transformToJobSchema(job: ScrapedJob, categorization?: JobCategorizationResult): InsertJob {
   const companySlug = job.company.toLowerCase().replace(/\s+/g, '').replace(/[^a-z0-9]/g, '');
   
-  const cleanDescription = (job.description || `${job.title} position at ${job.company}`)
-    .replace(/<[^>]*>/g, '')
-    .trim();
+  const cleanDescription = (job.description || '')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim() || `${job.title} position at ${job.company}`;
   
   return {
     title: job.title.trim(),

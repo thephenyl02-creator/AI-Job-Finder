@@ -89,7 +89,7 @@ async function scrapeGreenhouse(name: string, id: string, orgType: string): Prom
       
       // Clean up description from HTML
       const rawContent = job.content || '';
-      const cleanDescription = stripHtml(rawContent).slice(0, 2000);
+      const cleanDescription = stripHtml(rawContent).slice(0, 10000);
       
       // Determine role category based on org type
       let roleCategory = 'Legal Tech Startup Roles';

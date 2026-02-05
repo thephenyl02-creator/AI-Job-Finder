@@ -1,4 +1,4 @@
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useLocation, useParams } from "wouter";
 import { Header } from "@/components/header";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,91 @@ import {
   Loader2,
   CheckCircle2,
 } from "lucide-react";
+
+const BULLET_PATTERN = /^(?:[-•*]\s|(?:\d+)[.)]\s)/;
+
+function isBulletLine(line: string): boolean {
+  return BULLET_PATTERN.test(line.trim());
+}
+
+function stripBulletPrefix(line: string): string {
+  return line.trim().replace(/^(?:[-•*]\s+|(?:\d+)[.)]\s+)/, '');
+}
+
+function isLikelyHeading(text: string): boolean {
+  const t = text.trim();
+  if (t.length > 80 || t.length < 2) return false;
+  if (t.endsWith(':')) return true;
+  if (t === t.toUpperCase() && t.length > 3 && /[A-Z]/.test(t)) return true;
+  return false;
+}
+
+function DescriptionContent({ text, testId }: { text?: string | null; testId: string }) {
+  if (!text) return null;
+
+  const lines = text.split('\n');
+  const blocks: { type: 'paragraph' | 'heading' | 'bullet'; content: string }[] = [];
+  let currentParagraph = '';
+
+  const flushParagraph = () => {
+    const trimmed = currentParagraph.trim();
+    if (trimmed) {
+      blocks.push({ type: 'paragraph', content: trimmed });
+    }
+    currentParagraph = '';
+  };
+
+  for (const line of lines) {
+    const trimmedLine = line.trim();
+
+    if (!trimmedLine) {
+      flushParagraph();
+      continue;
+    }
+
+    if (isBulletLine(trimmedLine)) {
+      flushParagraph();
+      blocks.push({ type: 'bullet', content: stripBulletPrefix(trimmedLine) });
+      continue;
+    }
+
+    if (isLikelyHeading(trimmedLine) && !currentParagraph.trim()) {
+      flushParagraph();
+      blocks.push({ type: 'heading', content: trimmedLine });
+      continue;
+    }
+
+    if (currentParagraph) {
+      currentParagraph += ' ' + trimmedLine;
+    } else {
+      currentParagraph = trimmedLine;
+    }
+  }
+  flushParagraph();
+
+  return (
+    <div className="max-w-none text-foreground leading-relaxed space-y-2" data-testid={testId}>
+      {blocks.map((block, i) => {
+        if (block.type === 'heading') {
+          return (
+            <p key={i} className="font-medium text-foreground pt-3 first:pt-0">
+              {block.content}
+            </p>
+          );
+        }
+        if (block.type === 'bullet') {
+          return (
+            <div key={i} className="flex gap-2 pl-1 py-0.5">
+              <span className="text-muted-foreground shrink-0">&#8226;</span>
+              <span>{block.content}</span>
+            </div>
+          );
+        }
+        return <p key={i}>{block.content}</p>;
+      })}
+    </div>
+  );
+}
 
 export default function JobDetail() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
@@ -189,12 +274,7 @@ export default function JobDetail() {
             <Card>
               <CardContent className="pt-5 pb-5">
                 <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">Full Description</h2>
-                <div
-                  className="prose prose-sm dark:prose-invert max-w-none text-foreground leading-relaxed whitespace-pre-wrap"
-                  data-testid="text-job-description"
-                >
-                  {job.description}
-                </div>
+                <DescriptionContent text={job.description} testId="text-job-description" />
               </CardContent>
             </Card>
 
@@ -202,12 +282,7 @@ export default function JobDetail() {
               <Card>
                 <CardContent className="pt-5 pb-5">
                   <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">Requirements</h2>
-                  <div
-                    className="prose prose-sm dark:prose-invert max-w-none text-foreground leading-relaxed whitespace-pre-wrap"
-                    data-testid="text-job-requirements"
-                  >
-                    {job.requirements}
-                  </div>
+                  <DescriptionContent text={job.requirements} testId="text-job-requirements" />
                 </CardContent>
               </Card>
             )}
