@@ -2,7 +2,7 @@ import axios from 'axios';
 import * as cheerio from 'cheerio';
 import { LAW_FIRMS_AND_COMPANIES, type LawFirmConfig } from './law-firms-list';
 import type { InsertJob } from '@shared/schema';
-import type { JobCategorizationResult } from './job-categorizer';
+import { categorizeJob, type JobCategorizationResult } from './job-categorizer';
 
 interface ScrapedJob {
   title: string;
@@ -72,6 +72,34 @@ export async function scrapeLever(leverUrl: string, companyName: string): Promis
     return jobs;
   } catch (error: any) {
     console.error(`Lever error for ${companyName}:`, error.message);
+    return [];
+  }
+}
+
+export async function scrapeAshby(ashbyUrl: string, companyName: string): Promise<ScrapedJob[]> {
+  try {
+    const response = await axios.get(ashbyUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; LegalAICareersBot/1.0)',
+        'Accept': 'application/json',
+      },
+      timeout: 15000,
+    });
+    
+    const jobs: ScrapedJob[] = (response.data.jobs || []).map((job: any) => ({
+      title: job.title,
+      company: companyName,
+      location: job.location?.name || job.locationName || 'Not specified',
+      description: job.descriptionPlain || job.descriptionHtml || '',
+      applyUrl: job.applicationUrl || job.jobUrl || '',
+      postedDate: job.publishedDate || new Date().toISOString(),
+      source: 'ashby',
+      externalId: `ashby_${job.id}`,
+    }));
+    
+    return jobs;
+  } catch (error: any) {
+    console.error(`Ashby error for ${companyName}:`, error.message);
     return [];
   }
 }
@@ -155,22 +183,59 @@ export async function scrapeGenericCareerPage(url: string, companyName: string, 
 }
 
 export function isLegalTechRole(title: string): boolean {
-  const legalTechKeywords = [
-    'legal engineer', 'legal technology', 'legaltech',
-    'software engineer', 'engineer', 'developer',
-    'product manager', 'product', 'pm',
-    'designer', 'ux', 'ui',
-    'legal ai', 'ai', 'machine learning', 'ml', 'data scientist',
-    'legal operations', 'legal ops', 'legalops',
-    'legal innovation', 'legal transformation',
-    'contract', 'ediscovery', 'e-discovery',
-    'legal research', 'legal knowledge', 'legal systems',
-    'customer success', 'sales', 'business development',
-    'marketing', 'content', 'writer',
+  const titleLower = title.toLowerCase();
+  
+  const highPriorityKeywords = [
+    'legal ai', 'legal engineer', 'legal technology', 'legaltech',
+    'nlp engineer', 'natural language', 'knowledge engineer',
+    'legal data scientist', 'ai product manager', 'prompt engineer',
+    'ai researcher', 'machine learning', 'legal innovation',
+    'practice technology', 'knowledge management', 'litigation technology',
+    'ediscovery', 'e-discovery', 'analytics manager',
+    'ai counsel', 'automation counsel', 'research technology',
+    'solutions engineer', 'legal operations', 'legal ops',
+    'legal tech consultant', 'growth', 'partnerships',
+    'contract manager', 'contract analyst', 'clm',
   ];
   
-  const titleLower = title.toLowerCase();
-  return legalTechKeywords.some(keyword => titleLower.includes(keyword));
+  if (highPriorityKeywords.some(keyword => titleLower.includes(keyword))) {
+    return true;
+  }
+  
+  const techRoles = [
+    'software engineer', 'engineer', 'developer', 'architect',
+    'product manager', 'product owner', 'pm',
+    'designer', 'ux', 'ui', 'design',
+    'data scientist', 'data analyst', 'data engineer',
+    'ai', 'ml', 'machine learning', 'artificial intelligence',
+    'customer success', 'sales engineer', 'account executive',
+    'business development', 'marketing', 'content',
+    'implementation', 'integration', 'technical',
+    'devops', 'sre', 'platform', 'infrastructure',
+    'qa', 'quality', 'test', 'automation',
+    'frontend', 'backend', 'fullstack', 'full stack',
+    'python', 'javascript', 'react', 'node',
+    'innovation', 'transformation', 'digital',
+  ];
+  
+  const excludeKeywords = [
+    'paralegal', 'legal secretary', 'receptionist', 'assistant',
+    'attorney', 'lawyer', 'counsel', 'associate', 'partner',
+    'litigation', 'corporate', 'real estate', 'tax',
+    'compliance officer', 'general counsel', 'in-house',
+    'administrative', 'office manager', 'hr', 'human resources',
+    'accounting', 'finance', 'controller', 'cfo',
+  ];
+  
+  if (excludeKeywords.some(keyword => titleLower.includes(keyword)) && 
+      !titleLower.includes('technology') && 
+      !titleLower.includes('innovation') &&
+      !titleLower.includes('ai') &&
+      !titleLower.includes('engineer')) {
+    return false;
+  }
+  
+  return techRoles.some(keyword => titleLower.includes(keyword));
 }
 
 function inferRoleType(title: string): string {
@@ -238,6 +303,8 @@ export async function scrapeAllLawFirms(): Promise<{
         scrapedJobs = await scrapeGreenhouse(firm.greenhouseId, firm.name);
       } else if (firm.leverPostingsUrl) {
         scrapedJobs = await scrapeLever(firm.leverPostingsUrl, firm.name);
+      } else if (firm.ashbyUrl) {
+        scrapedJobs = await scrapeAshby(firm.ashbyUrl, firm.name);
       } else {
         scrapedJobs = await scrapeGenericCareerPage(firm.careerUrl, firm.name, firm.selectors);
       }
@@ -285,10 +352,86 @@ export async function scrapeSingleCompany(companyName: string): Promise<InsertJo
     scrapedJobs = await scrapeGreenhouse(firm.greenhouseId, firm.name);
   } else if (firm.leverPostingsUrl) {
     scrapedJobs = await scrapeLever(firm.leverPostingsUrl, firm.name);
+  } else if (firm.ashbyUrl) {
+    scrapedJobs = await scrapeAshby(firm.ashbyUrl, firm.name);
   } else {
     scrapedJobs = await scrapeGenericCareerPage(firm.careerUrl, firm.name, firm.selectors);
   }
   
   const legalTechJobs = scrapedJobs.filter(job => isLegalTechRole(job.title));
   return legalTechJobs.map(job => transformToJobSchema(job));
+}
+
+export async function scrapeAllLawFirmsWithAI(
+  onProgress?: (current: number, total: number, company: string) => void
+): Promise<{
+  jobs: InsertJob[];
+  stats: { company: string; found: number; filtered: number; categorized: number }[];
+}> {
+  const allJobs: InsertJob[] = [];
+  const stats: { company: string; found: number; filtered: number; categorized: number }[] = [];
+  const total = LAW_FIRMS_AND_COMPANIES.length;
+  
+  for (let i = 0; i < LAW_FIRMS_AND_COMPANIES.length; i++) {
+    const firm = LAW_FIRMS_AND_COMPANIES[i];
+    
+    try {
+      if (onProgress) {
+        onProgress(i + 1, total, firm.name);
+      }
+      console.log(`[${i + 1}/${total}] Scraping ${firm.name}...`);
+      
+      let scrapedJobs: ScrapedJob[] = [];
+      
+      if (firm.greenhouseId) {
+        scrapedJobs = await scrapeGreenhouse(firm.greenhouseId, firm.name);
+      } else if (firm.leverPostingsUrl) {
+        scrapedJobs = await scrapeLever(firm.leverPostingsUrl, firm.name);
+      } else if (firm.ashbyUrl) {
+        scrapedJobs = await scrapeAshby(firm.ashbyUrl, firm.name);
+      } else {
+        scrapedJobs = await scrapeGenericCareerPage(firm.careerUrl, firm.name, firm.selectors);
+      }
+      
+      const legalTechJobs = scrapedJobs.filter(job => isLegalTechRole(job.title));
+      
+      let categorizedCount = 0;
+      for (const job of legalTechJobs) {
+        try {
+          const categorization = await categorizeJob(job.title, job.description, job.company);
+          const transformedJob = transformToJobSchema(job, categorization);
+          allJobs.push(transformedJob);
+          categorizedCount++;
+          
+          await delay(500);
+        } catch (catError) {
+          console.error(`Categorization failed for ${job.title}:`, catError);
+          const transformedJob = transformToJobSchema(job);
+          allJobs.push(transformedJob);
+        }
+      }
+      
+      stats.push({
+        company: firm.name,
+        found: scrapedJobs.length,
+        filtered: legalTechJobs.length,
+        categorized: categorizedCount,
+      });
+      
+      console.log(`Found ${scrapedJobs.length} jobs, ${legalTechJobs.length} legal tech roles, ${categorizedCount} categorized at ${firm.name}`);
+      
+      await delay(1500);
+      
+    } catch (error: any) {
+      console.error(`Error scraping ${firm.name}:`, error.message);
+      stats.push({
+        company: firm.name,
+        found: 0,
+        filtered: 0,
+        categorized: 0,
+      });
+    }
+  }
+  
+  return { jobs: allJobs, stats };
 }

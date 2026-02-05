@@ -14,6 +14,7 @@ import {
 import {
   scrapeAllLawFirms,
   scrapeSingleCompany,
+  scrapeAllLawFirmsWithAI,
 } from "./lib/law-firm-scraper";
 import { LAW_FIRMS_AND_COMPANIES } from "./lib/law-firms-list";
 
@@ -378,6 +379,42 @@ Only include jobs with a score above 40. Sort by score descending.`;
     } catch (error) {
       console.error("Error running scraper:", error);
       res.status(500).json({ error: "Failed to run scraper" });
+    }
+  });
+
+  // Admin: Scrape all companies with AI categorization
+  app.post("/api/admin/scraper/run-with-ai", isAuthenticated, async (req, res) => {
+    if (!isAdmin(req)) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    try {
+      console.log("Starting AI-powered job scraper...");
+      
+      const { jobs: scrapedJobs, stats } = await scrapeAllLawFirmsWithAI();
+      
+      if (scrapedJobs.length === 0) {
+        return res.json({
+          success: true,
+          message: "Scraping completed but no jobs found",
+          stats,
+          inserted: 0,
+          updated: 0,
+        });
+      }
+
+      const { inserted, updated } = await storage.bulkUpsertJobs(scrapedJobs);
+      
+      res.json({
+        success: true,
+        message: `AI scraping completed. Inserted ${inserted} new jobs, updated ${updated} existing jobs.`,
+        stats,
+        inserted,
+        updated,
+        totalScraped: scrapedJobs.length,
+      });
+    } catch (error) {
+      console.error("Error running AI scraper:", error);
+      res.status(500).json({ error: "Failed to run AI scraper" });
     }
   });
 

@@ -5,7 +5,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
-import { ArrowLeft, RefreshCw, Building2, Globe, Loader2, CheckCircle, XCircle } from "lucide-react";
+import { ArrowLeft, RefreshCw, Building2, Globe, Loader2, CheckCircle, XCircle, Sparkles } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
 interface Company {
@@ -18,7 +18,7 @@ interface Company {
 interface ScrapeResult {
   success: boolean;
   message: string;
-  stats?: { company: string; found: number; filtered: number }[];
+  stats?: { company: string; found: number; filtered: number; categorized?: number }[];
   inserted: number;
   updated: number;
   totalScraped?: number;
@@ -48,6 +48,28 @@ export default function AdminPage() {
     onError: (error: Error) => {
       toast({
         title: "Scraping Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const scrapeWithAIMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/admin/scraper/run-with-ai");
+      return res.json() as Promise<ScrapeResult>;
+    },
+    onSuccess: (data) => {
+      setLastResult(data);
+      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
+      toast({
+        title: "AI Scraping Complete",
+        description: data.message,
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "AI Scraping Failed",
         description: error.message,
         variant: "destructive",
       });
@@ -108,23 +130,44 @@ export default function AdminPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Button
-                onClick={() => scrapeAllMutation.mutate()}
-                disabled={scrapeAllMutation.isPending}
-                data-testid="button-scrape-all"
-              >
-                {scrapeAllMutation.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Scraping...
-                  </>
-                ) : (
-                  <>
-                    <RefreshCw className="mr-2 h-4 w-4" />
-                    Run Full Scrape
-                  </>
-                )}
-              </Button>
+              <div className="flex flex-wrap gap-3">
+                <Button
+                  onClick={() => scrapeAllMutation.mutate()}
+                  disabled={scrapeAllMutation.isPending || scrapeWithAIMutation.isPending}
+                  variant="outline"
+                  data-testid="button-scrape-all"
+                >
+                  {scrapeAllMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Scraping...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                      Quick Scrape (No AI)
+                    </>
+                  )}
+                </Button>
+                
+                <Button
+                  onClick={() => scrapeWithAIMutation.mutate()}
+                  disabled={scrapeAllMutation.isPending || scrapeWithAIMutation.isPending}
+                  data-testid="button-scrape-with-ai"
+                >
+                  {scrapeWithAIMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      AI Scraping... (This takes a while)
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="mr-2 h-4 w-4" />
+                      Scrape with AI Categorization
+                    </>
+                  )}
+                </Button>
+              </div>
 
               {lastResult && (
                 <div className="mt-4 p-4 bg-muted rounded-lg">
@@ -142,6 +185,7 @@ export default function AdminPage() {
                           <span>{stat.company}:</span>
                           <span className="text-muted-foreground">
                             {stat.found} found, {stat.filtered} legal tech
+                            {stat.categorized !== undefined && `, ${stat.categorized} AI categorized`}
                           </span>
                         </div>
                       ))}
