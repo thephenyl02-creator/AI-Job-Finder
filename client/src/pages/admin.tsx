@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
 import { ArrowLeft, RefreshCw, Building2, Globe, Loader2, CheckCircle, XCircle } from "lucide-react";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
 interface Company {
   name: string;
@@ -33,15 +34,12 @@ export default function AdminPage() {
 
   const scrapeAllMutation = useMutation({
     mutationFn: async () => {
-      const res = await fetch("/api/admin/scraper/run", {
-        method: "POST",
-        credentials: "include",
-      });
-      if (!res.ok) throw new Error("Failed to run scraper");
+      const res = await apiRequest("POST", "/api/admin/scraper/run");
       return res.json() as Promise<ScrapeResult>;
     },
     onSuccess: (data) => {
       setLastResult(data);
+      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
       toast({
         title: "Scraping Complete",
         description: data.message,
@@ -58,14 +56,11 @@ export default function AdminPage() {
 
   const scrapeCompanyMutation = useMutation({
     mutationFn: async (companyName: string) => {
-      const res = await fetch(`/api/admin/scraper/company/${encodeURIComponent(companyName)}`, {
-        method: "POST",
-        credentials: "include",
-      });
-      if (!res.ok) throw new Error("Failed to scrape company");
+      const res = await apiRequest("POST", `/api/admin/scraper/company/${encodeURIComponent(companyName)}`);
       return res.json() as Promise<ScrapeResult>;
     },
     onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
       toast({
         title: "Company Scraped",
         description: data.message,

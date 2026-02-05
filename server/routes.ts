@@ -310,8 +310,21 @@ Only include jobs with a score above 40. Sort by score descending.`;
     }
   });
 
+  // Simple admin check - you can customize this allowlist
+  const ADMIN_EMAILS = process.env.ADMIN_EMAILS?.split(',') || [];
+  
+  const isAdmin = (req: any): boolean => {
+    const user = req.user as any;
+    const email = user?.claims?.email;
+    // Allow if ADMIN_EMAILS not configured (dev mode) or email is in allowlist
+    return ADMIN_EMAILS.length === 0 || ADMIN_EMAILS.includes(email);
+  };
+
   // Admin: Get list of companies that can be scraped
   app.get("/api/admin/scraper/companies", isAuthenticated, (req, res) => {
+    if (!isAdmin(req)) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
     const companies = LAW_FIRMS_AND_COMPANIES.map(f => ({
       name: f.name,
       type: f.type,
@@ -323,6 +336,9 @@ Only include jobs with a score above 40. Sort by score descending.`;
 
   // Admin: Scrape all companies
   app.post("/api/admin/scraper/run", isAuthenticated, async (req, res) => {
+    if (!isAdmin(req)) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
     try {
       console.log("Starting job scraper...");
       
@@ -356,6 +372,9 @@ Only include jobs with a score above 40. Sort by score descending.`;
 
   // Admin: Scrape single company
   app.post("/api/admin/scraper/company/:name", isAuthenticated, async (req, res) => {
+    if (!isAdmin(req)) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
     try {
       const companyName = decodeURIComponent(req.params.name as string);
       console.log(`Scraping jobs from ${companyName}...`);

@@ -48,12 +48,19 @@ Preferred communication style: Simple, everyday language.
 - **AI Extraction**: Extracts skills, experience, preferred roles, salary expectations
 - **Auto-search**: Generates natural language search query from resume data
 
+### Job Scraper (Admin Feature)
+- **Sources**: Legal AI startups (Harvey, CoCounsel, etc.), Legal tech companies (Clio, Relativity, etc.)
+- **ATS Integrations**: Greenhouse API, Lever API, generic HTML scraping fallback
+- **Deduplication**: Uses externalId field to avoid duplicate jobs on re-scraping
+- **Access Control**: Admin-only via ADMIN_EMAILS environment variable (comma-separated)
+- **Admin UI**: Available at /admin route for authenticated users
+
 ### Project Structure
 ```
 client/           # Frontend React application
   src/
     components/   # UI components including shadcn/ui
-    pages/        # Route pages (landing, home, not-found)
+    pages/        # Route pages (landing, home, admin, not-found)
     hooks/        # Custom React hooks
     lib/          # Utilities and query client
 server/           # Backend Express application

@@ -190,20 +190,24 @@ function inferRoleType(title: string): string {
 export function transformToJobSchema(job: ScrapedJob): InsertJob {
   const companySlug = job.company.toLowerCase().replace(/\s+/g, '').replace(/[^a-z0-9]/g, '');
   
+  const cleanDescription = (job.description || `${job.title} position at ${job.company}`)
+    .replace(/<[^>]*>/g, '')
+    .trim();
+  
   return {
-    title: job.title,
-    company: job.company,
+    title: job.title.trim(),
+    company: job.company.trim(),
     companyLogo: `https://logo.clearbit.com/${companySlug}.com`,
-    location: job.location,
+    location: job.location?.trim() || 'Not specified',
     isRemote: job.location?.toLowerCase().includes('remote') || false,
     salaryMin: null,
     salaryMax: null,
     experienceMin: null,
     experienceMax: null,
     roleType: inferRoleType(job.title),
-    description: job.description || `${job.title} position at ${job.company}`,
+    description: cleanDescription || `${job.title} position at ${job.company}`,
     requirements: null,
-    applyUrl: job.applyUrl,
+    applyUrl: job.applyUrl?.trim() || '#',
     isActive: true,
     externalId: job.externalId,
     source: job.source,
