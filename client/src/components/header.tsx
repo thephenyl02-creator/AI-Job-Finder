@@ -11,7 +11,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, Briefcase, Info } from "lucide-react";
+import { LogOut, Briefcase, Info, Settings } from "lucide-react";
+import { Link } from "wouter";
 
 export function Header() {
   const { user, isAuthenticated } = useAuth();
@@ -73,6 +74,12 @@ export function Header() {
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link href="/admin" className="cursor-pointer" data-testid="link-admin">
+                      <Settings className="mr-2 h-4 w-4" />
+                      <span>Job Scraper</span>
+                    </Link>
+                  </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <a href="/api/logout" className="cursor-pointer" data-testid="button-logout">
                       <LogOut className="mr-2 h-4 w-4" />

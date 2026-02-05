@@ -8,6 +8,7 @@ import { useAuth } from "@/hooks/use-auth";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
 import Home from "@/pages/home";
+import Admin from "@/pages/admin";
 
 function AppRouter() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -23,6 +24,7 @@ function AppRouter() {
   return (
     <Switch>
       <Route path="/" component={isAuthenticated ? Home : Landing} />
+      <Route path="/admin">{isAuthenticated ? <Admin /> : <Landing />}</Route>
       <Route component={NotFound} />
     </Switch>
   );

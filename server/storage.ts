@@ -11,6 +11,9 @@ export interface IStorage {
   deleteJob(id: number): Promise<void>;
   getActiveJobs(): Promise<Job[]>;
   seedJobs(): Promise<void>;
+  upsertJobByExternalId(job: InsertJob): Promise<{ job: Job; isNew: boolean }>;
+  getJobByExternalId(externalId: string): Promise<Job | undefined>;
+  bulkUpsertJobs(jobsList: InsertJob[]): Promise<{ inserted: number; updated: number }>;
   // User Resume
   updateUserResume(userId: string, resumeText: string, filename: string, extractedData: ResumeExtractedData): Promise<void>;
   getUserResume(userId: string): Promise<{ resumeFilename: string | null; extractedData: ResumeExtractedData | null } | null>;
@@ -54,6 +57,47 @@ class DatabaseStorage implements IStorage {
       .from(jobs)
       .where(eq(jobs.isActive, true))
       .orderBy(desc(jobs.postedDate));
+  }
+
+  async getJobByExternalId(externalId: string): Promise<Job | undefined> {
+    const [job] = await db.select().from(jobs).where(eq(jobs.externalId, externalId));
+    return job;
+  }
+
+  async upsertJobByExternalId(job: InsertJob): Promise<{ job: Job; isNew: boolean }> {
+    if (!job.externalId) {
+      const newJob = await this.createJob(job);
+      return { job: newJob, isNew: true };
+    }
+
+    const existing = await this.getJobByExternalId(job.externalId);
+    if (existing) {
+      const [updatedJob] = await db
+        .update(jobs)
+        .set({ ...job, isActive: true })
+        .where(eq(jobs.externalId, job.externalId))
+        .returning();
+      return { job: updatedJob, isNew: false };
+    } else {
+      const [newJob] = await db.insert(jobs).values(job).returning();
+      return { job: newJob, isNew: true };
+    }
+  }
+
+  async bulkUpsertJobs(jobsList: InsertJob[]): Promise<{ inserted: number; updated: number }> {
+    let inserted = 0;
+    let updated = 0;
+
+    for (const job of jobsList) {
+      const result = await this.upsertJobByExternalId(job);
+      if (result.isNew) {
+        inserted++;
+      } else {
+        updated++;
+      }
+    }
+
+    return { inserted, updated };
   }
 
   async seedJobs(): Promise<void> {

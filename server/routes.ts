@@ -11,6 +11,11 @@ import {
   parseResumeWithAI,
   generateSearchQueryFromResume,
 } from "./lib/resume-parser";
+import {
+  scrapeAllLawFirms,
+  scrapeSingleCompany,
+} from "./lib/law-firm-scraper";
+import { LAW_FIRMS_AND_COMPANIES } from "./lib/law-firms-list";
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -302,6 +307,82 @@ Only include jobs with a score above 40. Sort by score descending.`;
     } catch (error) {
       console.error("Error updating preferences:", error);
       res.status(500).json({ error: "Failed to update preferences" });
+    }
+  });
+
+  // Admin: Get list of companies that can be scraped
+  app.get("/api/admin/scraper/companies", isAuthenticated, (req, res) => {
+    const companies = LAW_FIRMS_AND_COMPANIES.map(f => ({
+      name: f.name,
+      type: f.type,
+      careerUrl: f.careerUrl,
+      hasApi: !!(f.greenhouseId || f.leverPostingsUrl),
+    }));
+    res.json(companies);
+  });
+
+  // Admin: Scrape all companies
+  app.post("/api/admin/scraper/run", isAuthenticated, async (req, res) => {
+    try {
+      console.log("Starting job scraper...");
+      
+      const { jobs: scrapedJobs, stats } = await scrapeAllLawFirms();
+      
+      if (scrapedJobs.length === 0) {
+        return res.json({
+          success: true,
+          message: "Scraping completed but no jobs found",
+          stats,
+          inserted: 0,
+          updated: 0,
+        });
+      }
+
+      const { inserted, updated } = await storage.bulkUpsertJobs(scrapedJobs);
+      
+      res.json({
+        success: true,
+        message: `Scraping completed. Inserted ${inserted} new jobs, updated ${updated} existing jobs.`,
+        stats,
+        inserted,
+        updated,
+        totalScraped: scrapedJobs.length,
+      });
+    } catch (error) {
+      console.error("Error running scraper:", error);
+      res.status(500).json({ error: "Failed to run scraper" });
+    }
+  });
+
+  // Admin: Scrape single company
+  app.post("/api/admin/scraper/company/:name", isAuthenticated, async (req, res) => {
+    try {
+      const companyName = decodeURIComponent(req.params.name as string);
+      console.log(`Scraping jobs from ${companyName}...`);
+      
+      const scrapedJobs = await scrapeSingleCompany(companyName);
+      
+      if (scrapedJobs.length === 0) {
+        return res.json({
+          success: true,
+          message: `No jobs found at ${companyName}`,
+          inserted: 0,
+          updated: 0,
+        });
+      }
+
+      const { inserted, updated } = await storage.bulkUpsertJobs(scrapedJobs);
+      
+      res.json({
+        success: true,
+        message: `Found ${scrapedJobs.length} jobs at ${companyName}. Inserted ${inserted}, updated ${updated}.`,
+        inserted,
+        updated,
+        totalScraped: scrapedJobs.length,
+      });
+    } catch (error: any) {
+      console.error("Error scraping company:", error);
+      res.status(500).json({ error: error.message || "Failed to scrape company" });
     }
   });
 

@@ -23,6 +23,8 @@ export const jobs = pgTable("jobs", {
   applyUrl: varchar("apply_url", { length: 500 }).notNull(),
   postedDate: timestamp("posted_date").default(sql`CURRENT_TIMESTAMP`),
   isActive: boolean("is_active").default(true),
+  externalId: varchar("external_id", { length: 255 }),
+  source: varchar("source", { length: 50 }),
 });
 
 export const insertJobSchema = createInsertSchema(jobs).omit({
