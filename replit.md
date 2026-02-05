@@ -1,12 +1,15 @@
-# Legal Tech Careers - For Lawyers Interested in AI
+# Legal Tech Careers - For Lawyers Interested in Technology
 
 ## Overview
 
-A premium job search platform for legal technology careers, built specifically for attorneys, paralegals, and legal professionals interested in AI. Features AI-powered semantic search, resume analysis, job comparison tools, and strategic career guidance. The platform connects legal talent with opportunities at companies transforming the legal industry with artificial intelligence.
+A premium job search platform for legal technology careers, built specifically for attorneys, paralegals, and legal professionals. Features guided search with clarifying questions, resume analysis, job comparison tools, and strategic career guidance. The platform connects legal talent with opportunities at companies building the future of legal technology.
 
 ## User Preferences
 
-Preferred communication style: Simple, everyday language.
+- Preferred communication style: Simple, everyday language
+- Design preferences: Clean, minimal, professional. No "AI-Powered" language - keep it approachable for non-technical lawyers
+- Color palette: Deep navy/slate (authoritative, trustworthy) - not warm terracotta
+- Typography: Playfair Display serif for headings (elegant, legal feel), DM Sans for body (clean, modern)
 
 ## System Architecture
 
@@ -15,14 +18,17 @@ Preferred communication style: Simple, everyday language.
 - **Routing**: Wouter for client-side routing (lightweight React router)
 - **State Management**: TanStack React Query for server state and caching
 - **Styling**: Tailwind CSS with shadcn/ui component library (New York style)
-- **Theme**: Light/dark mode support with custom warm terracotta color palette
+- **Theme**: Light/dark mode with deep navy/slate palette (primary: 222 47% 20%)
+- **Typography**: Playfair Display (serif headings), DM Sans (body), JetBrains Mono (code)
 
 ### Page Structure
-- **Search Page (/)**: Dedicated search interface with AI-powered semantic search
+- **Search Page (/)**: Guided search interface with natural language queries
 - **Jobs Page (/jobs)**: All jobs displayed in tabular format with filtering
-- **Career Advisor (/career-advisor)**: AI-powered career comparison tool
+- **Career Advisor (/career-advisor)**: Career comparison tool for legal professionals
 - **Admin Page (/admin)**: Admin-only job scraping controls
-- **Landing Page**: Unauthenticated users see marketing/sign-in page
+- **Landing Page**: Unauthenticated users see clean marketing/sign-in page
+- **About Page (/about)**: Platform information and mission
+- **Post Job (/post-job)**: Job submission form
 
 ### Backend Architecture
 - **Runtime**: Node.js with Express
@@ -51,10 +57,10 @@ Preferred communication style: Simple, everyday language.
   - **Job Categorization**: Automatic classification into 3-tier taxonomy with AI summaries
 - **Configuration**: Uses `AI_INTEGRATIONS_OPENAI_API_KEY` and `AI_INTEGRATIONS_OPENAI_BASE_URL` environment variables
 
-### Guided Search (AI-Powered)
+### Guided Search
 - **Route**: Search page (/) for authenticated users
 - **Two Search Modes**:
-  1. **Smart Search**: Interactive flow that analyzes query, asks 2-4 clarifying questions, returns curated matches (75%+ score only)
+  1. **Guided Search**: Interactive flow that analyzes query, asks 2-4 clarifying questions, returns curated matches (75%+ score only)
   2. **Quick Search**: Traditional semantic search, faster but less precise
 - **Question Generation**: AI generates role-specific questions about seniority, work preferences, skills, salary expectations
 - **Precision Matching**: Only returns jobs scoring 75%+ match, with detailed reasons for each match

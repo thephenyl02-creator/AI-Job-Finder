@@ -227,7 +227,7 @@ export default function Jobs() {
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Search
             </Button>
-            <h1 className="text-xl font-medium text-foreground">
+            <h1 className="text-xl font-semibold text-foreground tracking-tight">
               {searchResults ? `Results for "${searchQuery}"` : "Browse Jobs"}
             </h1>
           </div>
@@ -333,7 +333,7 @@ export default function Jobs() {
                   disabled={count === 0}
                   data-testid={`button-category-${category.replace(/\s+/g, '-').toLowerCase()}`}
                 >
-                  <Icon className="h-5 w-5 text-primary mb-2" />
+                  <Icon className="h-5 w-5 text-muted-foreground mb-2" />
                   <p className="font-medium text-sm text-foreground line-clamp-2">{data.shortName}</p>
                   <p className="text-xs text-muted-foreground mt-1">{count} jobs</p>
                 </button>
@@ -585,8 +585,8 @@ function CategorySection({
         data-testid={`button-toggle-${category.replace(/\s+/g, '-').toLowerCase()}`}
       >
         <CardHeader className="flex flex-row items-center gap-3 py-4 hover:bg-muted/30 transition-colors">
-          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-            <Icon className="h-5 w-5 text-primary" />
+          <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center shrink-0">
+            <Icon className="h-5 w-5 text-foreground" />
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">

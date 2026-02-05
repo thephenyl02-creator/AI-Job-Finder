@@ -141,11 +141,11 @@ export default function PostJob() {
       
       <main className="max-w-2xl mx-auto px-4 sm:px-6 py-12">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-serif font-medium text-foreground mb-2">
+          <h1 className="text-3xl font-serif font-medium text-foreground mb-2 tracking-tight">
             Post a Job
           </h1>
           <p className="text-muted-foreground">
-            Reach legal professionals seeking roles in legal technology
+            Reach legal professionals exploring technology careers
           </p>
         </div>
 

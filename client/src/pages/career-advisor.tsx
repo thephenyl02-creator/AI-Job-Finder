@@ -417,16 +417,12 @@ export default function CareerAdvisor() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
+    <div className="min-h-screen bg-background">
       <Header />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-10">
         <div className="mb-10 text-center">
-          <div className="inline-flex items-center gap-2 bg-primary/10 text-primary rounded-full px-4 py-1.5 text-sm font-medium mb-4 border border-primary/20">
-            <Target className="h-4 w-4" />
-            AI-Powered Analysis
-          </div>
-          <h1 className="text-3xl sm:text-4xl font-bold text-foreground mb-3 tracking-tight">
+          <h1 className="text-3xl sm:text-4xl font-serif font-medium text-foreground mb-3 tracking-tight">
             Career Advisor
           </h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">

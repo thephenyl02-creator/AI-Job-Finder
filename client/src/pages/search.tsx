@@ -13,13 +13,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   Search as SearchIcon,
-  Sparkles,
   ArrowRight,
   ArrowLeft,
   Check,
   Loader2,
   Target,
-  Wand2,
+  ChevronRight,
 } from "lucide-react";
 
 interface SearchQuestion {
@@ -198,20 +197,15 @@ export default function Search() {
       <Header />
       
       <main className="max-w-3xl mx-auto px-4 sm:px-6 py-16 sm:py-24">
-        {/* Header */}
         <div className="text-center mb-10">
-          <div className="inline-flex items-center gap-2 mb-4 text-primary">
-            <Wand2 className="h-5 w-5" />
-            <span className="text-sm font-medium">AI-Powered Search</span>
-          </div>
-          <h1 className="text-3xl sm:text-4xl font-serif font-normal text-foreground mb-3 tracking-tight">
-            Find Your Perfect Role
+          <h1 className="text-3xl sm:text-4xl font-serif font-medium text-foreground mb-3 tracking-tight">
+            Find Your Next Role
           </h1>
           <p className="text-muted-foreground">
-            {step === "input" && "Tell us what you're looking for, and we'll help you find it"}
-            {step === "refining" && "Analyzing your search..."}
-            {step === "questions" && "Quick questions to curate the best matches"}
-            {step === "searching" && "Finding your perfect matches..."}
+            {step === "input" && "Describe what you're looking for in your own words"}
+            {step === "refining" && "Understanding your search..."}
+            {step === "questions" && "A few quick questions to narrow down the best matches"}
+            {step === "searching" && "Finding your best matches..."}
             {step === "results" && "Your curated results"}
           </p>
         </div>
@@ -239,8 +233,8 @@ export default function Search() {
                 className="gap-2"
                 data-testid="button-guided-search"
               >
-                <Sparkles className="h-4 w-4" />
-                Smart Search
+                <SearchIcon className="h-4 w-4" />
+                Guided Search
               </Button>
               <Button 
                 variant="outline" 
@@ -281,13 +275,13 @@ export default function Search() {
         {step === "refining" && (
           <div className="flex flex-col items-center gap-6 py-12">
             <div className="relative">
-              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-                <Sparkles className="h-8 w-8 text-primary animate-pulse" />
+              <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
+                <Loader2 className="h-8 w-8 text-muted-foreground animate-spin" />
               </div>
             </div>
             <div className="text-center">
               <p className="text-lg font-medium text-foreground mb-1">Understanding your search...</p>
-              <p className="text-sm text-muted-foreground">We're crafting the perfect questions to find your ideal role</p>
+              <p className="text-sm text-muted-foreground">Preparing a few questions to narrow down the best matches</p>
             </div>
           </div>
         )}
@@ -296,10 +290,10 @@ export default function Search() {
         {step === "questions" && analysis && (
           <div className="space-y-6">
             {analysis.refinedIntent && (
-              <Card className="bg-primary/5 border-primary/20">
+              <Card className="bg-muted/40 border-border/60">
                 <CardContent className="p-4">
                   <div className="flex items-start gap-3">
-                    <Target className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                    <Target className="h-5 w-5 text-foreground shrink-0 mt-0.5" />
                     <div>
                       <p className="text-sm font-medium text-foreground">What we understood</p>
                       <p className="text-sm text-muted-foreground mt-1">{analysis.refinedIntent}</p>
@@ -354,8 +348,8 @@ export default function Search() {
                 className="gap-2"
                 data-testid="button-find-matches"
               >
-                <Sparkles className="h-4 w-4" />
                 Find My Matches
+                <ArrowRight className="h-4 w-4" />
               </Button>
             </div>
           </div>
@@ -365,13 +359,13 @@ export default function Search() {
         {step === "searching" && (
           <div className="flex flex-col items-center gap-6 py-12">
             <div className="relative">
-              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-                <Loader2 className="h-8 w-8 text-primary animate-spin" />
+              <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
+                <Loader2 className="h-8 w-8 text-muted-foreground animate-spin" />
               </div>
             </div>
             <div className="text-center">
-              <p className="text-lg font-medium text-foreground mb-1">Curating your matches...</p>
-              <p className="text-sm text-muted-foreground">Finding roles that perfectly fit your criteria</p>
+              <p className="text-lg font-medium text-foreground mb-1">Finding your matches...</p>
+              <p className="text-sm text-muted-foreground">Searching for roles that fit your criteria</p>
             </div>
           </div>
         )}
@@ -379,11 +373,11 @@ export default function Search() {
         {/* Step: Results */}
         {step === "results" && results && (
           <div className="space-y-6">
-            <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20" data-testid="card-curated-matches">
+            <Card className="bg-muted/40 border-border/60" data-testid="card-curated-matches">
               <CardContent className="p-5">
                 <div className="flex items-center gap-3 mb-3 flex-wrap">
-                  <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
-                    <Target className="h-5 w-5 text-primary" />
+                  <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                    <Target className="h-5 w-5 text-foreground" />
                   </div>
                   <div>
                     <p className="font-semibold text-foreground" data-testid="text-match-count">
