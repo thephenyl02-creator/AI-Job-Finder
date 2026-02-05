@@ -12,9 +12,11 @@ export async function extractTextFromPDF(buffer: Buffer): Promise<string> {
     // Use createRequire to import CommonJS module in ESM context
     const { createRequire } = await import("module");
     const require = createRequire(import.meta.url);
-    const pdfParse = require("pdf-parse");
-    const data = await pdfParse(buffer);
-    return data.text;
+    const { PDFParse } = require("pdf-parse");
+    // v2 API: create parser instance with buffer data, then call getText()
+    const parser = new PDFParse({ data: buffer });
+    const result = await parser.getText();
+    return result.text;
   } catch (error) {
     console.error("PDF parsing error:", error);
     throw new Error("Failed to parse PDF");
