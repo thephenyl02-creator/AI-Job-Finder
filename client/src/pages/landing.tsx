@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { Sparkles, Search, Briefcase, TrendingUp, Shield, Zap, Scale, Brain, Users, GraduationCap, ArrowRight, FileText, Target } from "lucide-react";
+import { Sparkles, Search, Briefcase, TrendingUp, Shield, Zap, Scale, Brain, Users, GraduationCap, ArrowRight, FileText, Target, BookOpen, Rocket, RefreshCw } from "lucide-react";
 
 const features = [
   {
@@ -23,19 +23,34 @@ const features = [
 
 const audiences = [
   {
+    icon: RefreshCw,
+    title: "Career Transitioners",
+    description: "Moving from traditional practice? Your legal expertise is your superpower in legal tech.",
+  },
+  {
+    icon: BookOpen,
+    title: "Law Students",
+    description: "Start your career at the cutting edge. Find entry-level roles and internships in legal AI.",
+  },
+  {
     icon: GraduationCap,
     title: "Attorneys",
     description: "Transition from practice to legal tech product, operations, or consulting roles.",
   },
   {
     icon: Users,
-    title: "Paralegals",
-    description: "Leverage your legal expertise in AI-powered document review and legal ops positions.",
+    title: "Paralegals & Legal Ops",
+    description: "Leverage your expertise in AI-powered document review, CLM, and legal operations.",
   },
   {
-    icon: Briefcase,
-    title: "Legal Ops",
-    description: "Find director and management roles at firms and companies investing in AI.",
+    icon: TrendingUp,
+    title: "Multi-Practice Lawyers",
+    description: "Cross-functional experience? Legal tech values versatility across practice areas.",
+  },
+  {
+    icon: Rocket,
+    title: "Tech-Curious Legal Pros",
+    description: "No coding required. Product, strategy, and domain expert roles need your legal mind.",
   },
 ];
 
@@ -155,26 +170,30 @@ export default function Landing() {
           <div className="max-w-6xl mx-auto px-4 sm:px-6">
             <div className="text-center mb-14">
               <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-4 tracking-tight">
-                Built for Legal Professionals
+                Your Path Into Legal Tech
               </h2>
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                Whether you're a seasoned attorney or early in your legal career, find roles that value your expertise.
+                Whether you're transitioning from practice, starting fresh, or expanding your expertise — there's a place for you.
               </p>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
               {audiences.map((audience, index) => (
                 <Card key={index} className="bg-muted/30 border-border/50 hover-elevate">
-                  <CardContent className="p-8 text-center">
-                    <div className="w-16 h-16 bg-background rounded-full flex items-center justify-center mb-6 mx-auto shadow-sm border border-border/50">
-                      <audience.icon className="h-8 w-8 text-foreground" />
+                  <CardContent className="p-6">
+                    <div className="flex items-start gap-4">
+                      <div className="w-12 h-12 bg-background rounded-xl flex items-center justify-center shadow-sm border border-border/50 shrink-0">
+                        <audience.icon className="h-6 w-6 text-primary" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold text-foreground mb-1">
+                          {audience.title}
+                        </h3>
+                        <p className="text-sm text-muted-foreground leading-relaxed">
+                          {audience.description}
+                        </p>
+                      </div>
                     </div>
-                    <h3 className="text-xl font-semibold text-foreground mb-3">
-                      {audience.title}
-                    </h3>
-                    <p className="text-muted-foreground leading-relaxed">
-                      {audience.description}
-                    </p>
                   </CardContent>
                 </Card>
               ))}

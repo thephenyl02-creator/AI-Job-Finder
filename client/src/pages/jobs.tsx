@@ -54,10 +54,18 @@ const CATEGORY_ICONS: Record<string, typeof Brain> = {
   "Sparkles": Sparkles,
 };
 
+const SENIORITY_LEVELS = [
+  { value: "all", label: "All Levels" },
+  { value: "entry", label: "Entry Level", match: ["Entry", "Junior", "Associate"] },
+  { value: "mid", label: "Mid Level", match: ["Mid"] },
+  { value: "senior", label: "Senior+", match: ["Senior", "Lead", "Director", "VP", "Principal", "Staff"] },
+];
+
 export default function Jobs() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [, setLocation] = useLocation();
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [selectedLevel, setSelectedLevel] = useState<string>("all");
   const [filterText, setFilterText] = useState("");
   const [searchResults, setSearchResults] = useState<JobWithScore[] | null>(null);
   const [searchQuery, setSearchQuery] = useState<string | null>(null);
@@ -126,7 +134,20 @@ export default function Jobs() {
       job.title.toLowerCase().includes(filterText.toLowerCase()) ||
       job.company.toLowerCase().includes(filterText.toLowerCase()) ||
       (job.location?.toLowerCase().includes(filterText.toLowerCase()));
-    return matchesCategory && matchesText;
+    
+    let matchesLevel = true;
+    if (selectedLevel !== "all") {
+      const levelConfig = SENIORITY_LEVELS.find(l => l.value === selectedLevel);
+      if (levelConfig && "match" in levelConfig && levelConfig.match) {
+        const matchPatterns = levelConfig.match;
+        matchesLevel = matchPatterns.some(m => 
+          job.seniorityLevel?.toLowerCase().includes(m.toLowerCase()) ||
+          job.title.toLowerCase().includes(m.toLowerCase())
+        );
+      }
+    }
+    
+    return matchesCategory && matchesText && matchesLevel;
   });
 
   const getCategoryCount = (category: string) => 
@@ -200,6 +221,20 @@ export default function Jobs() {
               data-testid="input-filter"
             />
           </div>
+          <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-1">
+            {SENIORITY_LEVELS.map((level) => (
+              <Button
+                key={level.value}
+                variant={selectedLevel === level.value ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setSelectedLevel(level.value)}
+                className="text-xs h-7"
+                data-testid={`button-level-${level.value}`}
+              >
+                {level.label}
+              </Button>
+            ))}
+          </div>
           {selectedCategory !== "all" && (
             <Button
               variant="outline"
@@ -210,6 +245,18 @@ export default function Jobs() {
             >
               <X className="h-3 w-3" />
               {selectedCategory}
+            </Button>
+          )}
+          {selectedLevel !== "all" && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSelectedLevel("all")}
+              className="gap-1"
+              data-testid="button-clear-level"
+            >
+              <X className="h-3 w-3" />
+              {SENIORITY_LEVELS.find(l => l.value === selectedLevel)?.label}
             </Button>
           )}
           {searchResults && (
