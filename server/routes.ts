@@ -18,6 +18,14 @@ import {
   scrapeAllLawFirmsWithAI,
 } from "./lib/law-firm-scraper";
 import { LAW_FIRMS_AND_COMPANIES } from "./lib/law-firms-list";
+import {
+  startScheduler,
+  stopScheduler,
+  isSchedulerRunning,
+  runScheduledScrape,
+  validateJobLinks,
+} from "./lib/scheduled-scraper";
+import { getLogFiles, readLogFile, getRecentLogs, runStartupCleanup } from "./lib/logger";
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -495,6 +503,114 @@ Only include jobs with a score above 40. Sort by score descending.`;
       res.status(500).json({ error: "Failed to fetch submissions" });
     }
   });
+
+  // ==========================================
+  // MONITORING & SCHEDULER ENDPOINTS
+  // ==========================================
+
+  // Get scheduler status and job statistics
+  app.get("/api/admin/monitoring", isAuthenticated, async (req, res) => {
+    if (!isAdmin(req)) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    try {
+      const activeJobs = await storage.getActiveJobs();
+      const logFiles = getLogFiles();
+      const recentLogs = getRecentLogs(20);
+      
+      const jobsBySource: Record<string, number> = {};
+      for (const job of activeJobs) {
+        const source = job.source || 'unknown';
+        jobsBySource[source] = (jobsBySource[source] || 0) + 1;
+      }
+      
+      res.json({
+        scheduler: {
+          running: isSchedulerRunning(),
+          nextRun: isSchedulerRunning() ? 'In approximately 24 hours' : 'Not scheduled',
+        },
+        jobs: {
+          total: activeJobs.length,
+          bySource: jobsBySource,
+        },
+        logs: {
+          files: logFiles,
+          recent: recentLogs,
+        },
+      });
+    } catch (error) {
+      console.error("Error fetching monitoring data:", error);
+      res.status(500).json({ error: "Failed to fetch monitoring data" });
+    }
+  });
+
+  // Get specific log file content
+  app.get("/api/admin/logs/:filename", isAuthenticated, async (req, res) => {
+    if (!isAdmin(req)) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    try {
+      const filename = req.params.filename as string;
+      if (!filename.match(/^scraper-\d{4}-\d{2}-\d{2}\.log$/)) {
+        return res.status(400).json({ error: "Invalid log filename" });
+      }
+      
+      const content = readLogFile(filename);
+      if (content === null) {
+        return res.status(404).json({ error: "Log file not found" });
+      }
+      
+      res.json({ filename, content });
+    } catch (error) {
+      console.error("Error reading log file:", error);
+      res.status(500).json({ error: "Failed to read log file" });
+    }
+  });
+
+  // Start/stop scheduler
+  app.post("/api/admin/scheduler/:action", isAuthenticated, async (req, res) => {
+    if (!isAdmin(req)) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    
+    const action = req.params.action as string;
+    
+    if (action === 'start') {
+      startScheduler();
+      res.json({ success: true, message: 'Scheduler started', running: true });
+    } else if (action === 'stop') {
+      stopScheduler();
+      res.json({ success: true, message: 'Scheduler stopped', running: false });
+    } else if (action === 'run-now') {
+      res.json({ success: true, message: 'Scrape started in background' });
+      runScheduledScrape().catch(err => console.error('Background scrape failed:', err));
+    } else {
+      res.status(400).json({ error: 'Invalid action. Use start, stop, or run-now' });
+    }
+  });
+
+  // Validate job links
+  app.post("/api/admin/validate-links", isAuthenticated, async (req, res) => {
+    if (!isAdmin(req)) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    try {
+      const jobs = await storage.getActiveJobs();
+      const results = await validateJobLinks(jobs);
+      res.json({
+        success: true,
+        ...results,
+        message: `Checked ${results.valid + results.broken} links: ${results.valid} valid, ${results.broken} broken`,
+      });
+    } catch (error) {
+      console.error("Error validating links:", error);
+      res.status(500).json({ error: "Failed to validate links" });
+    }
+  });
+
+  // Run startup cleanup and start the scheduler when the server starts
+  runStartupCleanup();
+  startScheduler();
 
   return httpServer;
 }

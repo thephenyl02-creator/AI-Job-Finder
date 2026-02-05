@@ -5,8 +5,9 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
-import { ArrowLeft, RefreshCw, Building2, Globe, Loader2, CheckCircle, XCircle, Sparkles } from "lucide-react";
+import { ArrowLeft, RefreshCw, Building2, Globe, Loader2, CheckCircle, XCircle, Sparkles, Activity, FileText, Play, Square, LinkIcon, Clock } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface Company {
   name: string;
@@ -24,12 +25,81 @@ interface ScrapeResult {
   totalScraped?: number;
 }
 
+interface LogEntry {
+  timestamp: string;
+  level: 'INFO' | 'WARN' | 'ERROR' | 'SUCCESS';
+  category: string;
+  message: string;
+  details?: Record<string, any>;
+}
+
+interface MonitoringData {
+  scheduler: {
+    running: boolean;
+    nextRun: string;
+  };
+  jobs: {
+    total: number;
+    bySource: Record<string, number>;
+  };
+  logs: {
+    files: { filename: string; date: string; size: number }[];
+    recent: LogEntry[];
+  };
+}
+
 export default function AdminPage() {
   const { toast } = useToast();
   const [lastResult, setLastResult] = useState<ScrapeResult | null>(null);
 
   const { data: companies, isLoading: loadingCompanies } = useQuery<Company[]>({
     queryKey: ["/api/admin/scraper/companies"],
+  });
+
+  const { data: monitoring, isLoading: loadingMonitoring, refetch: refetchMonitoring } = useQuery<MonitoringData>({
+    queryKey: ["/api/admin/monitoring"],
+    refetchInterval: 30000,
+  });
+
+  const schedulerMutation = useMutation({
+    mutationFn: async (action: 'start' | 'stop' | 'run-now') => {
+      const res = await apiRequest("POST", `/api/admin/scheduler/${action}`);
+      return res.json();
+    },
+    onSuccess: (data) => {
+      refetchMonitoring();
+      toast({
+        title: data.message,
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Scheduler action failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const validateLinksMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/admin/validate-links");
+      return res.json();
+    },
+    onSuccess: (data) => {
+      refetchMonitoring();
+      toast({
+        title: "Link validation complete",
+        description: data.message,
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Validation failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
   });
 
   const scrapeAllMutation = useMutation({
@@ -119,6 +189,163 @@ export default function AdminPage() {
 
       <main className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Activity className="h-5 w-5" />
+                Scheduler & Monitoring
+              </CardTitle>
+              <CardDescription>
+                View scheduler status, job statistics, and recent logs
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {loadingMonitoring ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="p-4 border rounded-lg">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="font-medium flex items-center gap-2">
+                          <Clock className="h-4 w-4" />
+                          Scheduler Status
+                        </h4>
+                        <Badge variant={monitoring?.scheduler.running ? "default" : "secondary"}>
+                          {monitoring?.scheduler.running ? "Running" : "Stopped"}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        {monitoring?.scheduler.nextRun}
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {monitoring?.scheduler.running ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => schedulerMutation.mutate('stop')}
+                            disabled={schedulerMutation.isPending}
+                            data-testid="button-stop-scheduler"
+                          >
+                            <Square className="h-3 w-3 mr-1" />
+                            Stop
+                          </Button>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => schedulerMutation.mutate('start')}
+                            disabled={schedulerMutation.isPending}
+                            data-testid="button-start-scheduler"
+                          >
+                            <Play className="h-3 w-3 mr-1" />
+                            Start
+                          </Button>
+                        )}
+                        <Button
+                          size="sm"
+                          onClick={() => schedulerMutation.mutate('run-now')}
+                          disabled={schedulerMutation.isPending}
+                          data-testid="button-run-now"
+                        >
+                          <RefreshCw className="h-3 w-3 mr-1" />
+                          Run Now
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="p-4 border rounded-lg">
+                      <h4 className="font-medium flex items-center gap-2 mb-3">
+                        <Building2 className="h-4 w-4" />
+                        Job Statistics
+                      </h4>
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span>Total Active Jobs</span>
+                          <span className="font-medium">{monitoring?.jobs.total || 0}</span>
+                        </div>
+                        {monitoring?.jobs.bySource && Object.entries(monitoring.jobs.bySource).map(([source, count]) => (
+                          <div key={source} className="flex justify-between text-sm text-muted-foreground">
+                            <span className="capitalize">{source}</span>
+                            <span>{count}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="mt-3 w-full"
+                        onClick={() => validateLinksMutation.mutate()}
+                        disabled={validateLinksMutation.isPending}
+                        data-testid="button-validate-links"
+                      >
+                        {validateLinksMutation.isPending ? (
+                          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                        ) : (
+                          <LinkIcon className="h-3 w-3 mr-1" />
+                        )}
+                        Validate Apply Links
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="p-4 border rounded-lg">
+                    <h4 className="font-medium flex items-center gap-2 mb-3">
+                      <FileText className="h-4 w-4" />
+                      Recent Logs
+                    </h4>
+                    {monitoring?.logs.recent && monitoring.logs.recent.length > 0 ? (
+                      <ScrollArea className="h-[200px]">
+                        <div className="space-y-1 text-xs font-mono">
+                          {monitoring.logs.recent.map((log, idx) => (
+                            <div key={idx} className="flex gap-2">
+                              <span className="text-muted-foreground whitespace-nowrap">
+                                {new Date(log.timestamp).toLocaleTimeString()}
+                              </span>
+                              <Badge 
+                                variant={
+                                  log.level === 'ERROR' ? 'destructive' : 
+                                  log.level === 'WARN' ? 'secondary' : 
+                                  log.level === 'SUCCESS' ? 'default' : 
+                                  'outline'
+                                }
+                                className="text-[10px] h-4 px-1"
+                              >
+                                {log.level}
+                              </Badge>
+                              <span className="text-muted-foreground">[{log.category}]</span>
+                              <span className="truncate">{log.message}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </ScrollArea>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        No logs yet. Run the scheduler to generate logs.
+                      </p>
+                    )}
+                    {monitoring?.logs.files && monitoring.logs.files.length > 0 && (
+                      <div className="mt-3 pt-3 border-t">
+                        <p className="text-xs text-muted-foreground mb-2">
+                          Log files ({monitoring.logs.files.length}):
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {monitoring.logs.files.slice(0, 5).map((file) => (
+                            <Badge key={file.filename} variant="outline" className="text-xs">
+                              {file.date} ({(file.size / 1024).toFixed(1)}KB)
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">

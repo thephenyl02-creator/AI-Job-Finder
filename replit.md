@@ -76,6 +76,15 @@ Preferred communication style: Simple, everyday language.
 - **Access Control**: Admin-only via ADMIN_EMAILS environment variable (comma-separated)
 - **Admin UI**: Available at /admin route for authenticated users
 
+### Scheduled Scraping & Monitoring
+- **Scheduler**: Runs automatically every 24 hours on server start
+- **File Logging**: Logs stored in `/logs` directory with format `scraper-YYYY-MM-DD.log`
+- **Auto-cleanup**: Logs older than 7 days are automatically deleted on startup
+- **Link Validation**: Samples 50 jobs to check if apply URLs are still valid (HEAD requests)
+- **Monitoring Dashboard**: Admin UI shows scheduler status, job statistics by source, recent logs, and log files
+- **Scheduler Controls**: Start/stop/run-now buttons in admin dashboard
+- **Implementation**: `server/lib/logger.ts`, `server/lib/scheduled-scraper.ts`
+
 ### Project Structure
 ```
 client/           # Frontend React application
