@@ -114,11 +114,13 @@ Preferred communication style: Simple, everyday language.
 - **Purpose**: Strategic career guidance for legal professionals comparing 2-3 job opportunities
 - **Features**:
   - Compare 2-3 job descriptions side-by-side
-  - **Four input methods for job descriptions**:
-    1. **Paste URL**: Paste a job posting URL and automatically extract title and description using AI
-    2. **Paste text**: Manually enter job title and description
-    3. **Drag-and-drop file upload**: Upload PDF/DOCX job posting files directly
-    4. **Browse from Portal**: Select jobs directly from the platform's job database via slide-in panel
+  - **Five input methods for job descriptions**:
+    1. **Select from Jobs page**: Select 2-3 jobs on the Jobs page (/jobs) using checkboxes, then click "Compare Selected" to navigate to Career Advisor with pre-populated jobs
+    2. **Paste URL**: Paste a job posting URL and automatically extract title and description using AI
+    3. **Paste text**: Manually enter job title and description
+    4. **Drag-and-drop file upload**: Upload PDF/DOCX job posting files directly
+    5. **Browse from Portal**: Select jobs directly from the platform's job database via slide-in panel
+  - **Jobs Page Selection**: Checkboxes on each job row/card (max 3), floating action bar shows selection count and "Compare Selected" button
   - **Portal Job Picker**: Slide-in panel with search, category grouping (by roleSubcategory), and collapsible sections
   - **AI Analysis for Each Job**:
     - Overall fit summary for legal professionals
