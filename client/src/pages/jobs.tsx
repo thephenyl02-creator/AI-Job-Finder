@@ -228,7 +228,6 @@ export default function Jobs() {
                 variant={selectedLevel === level.value ? "default" : "ghost"}
                 size="sm"
                 onClick={() => setSelectedLevel(level.value)}
-                className="text-xs h-7"
                 data-testid={`button-level-${level.value}`}
               >
                 {level.label}
