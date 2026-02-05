@@ -16,6 +16,8 @@ import {
   scrapeAllLawFirms,
   scrapeSingleCompany,
   scrapeAllLawFirmsWithAI,
+  scrapeSingleJobUrl,
+  validateJobUrl,
 } from "./lib/law-firm-scraper";
 import { LAW_FIRMS_AND_COMPANIES } from "./lib/law-firms-list";
 import {
@@ -443,6 +445,79 @@ Only include jobs with a score above 40. Sort by score descending.`;
     } catch (error) {
       console.error("Error running AI scraper:", error);
       res.status(500).json({ error: "Failed to run AI scraper" });
+    }
+  });
+
+  // Admin: Scrape a single job URL
+  app.post("/api/admin/scraper/url", isAuthenticated, async (req, res) => {
+    if (!(await isAdminCheck(req))) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    try {
+      const { url } = req.body;
+      
+      if (!url || typeof url !== 'string') {
+        return res.status(400).json({ error: "URL is required" });
+      }
+      
+      // Validate URL format
+      try {
+        new URL(url);
+      } catch {
+        return res.status(400).json({ error: "Invalid URL format" });
+      }
+      
+      console.log(`Scraping job from URL: ${url}`);
+      
+      const job = await scrapeSingleJobUrl(url);
+      
+      if (!job) {
+        return res.status(400).json({ 
+          success: false,
+          error: "Could not extract job details from this URL. The page may not be a job posting." 
+        });
+      }
+      
+      // Insert the job
+      const { inserted, updated } = await storage.bulkUpsertJobs([job]);
+      
+      res.json({
+        success: true,
+        message: inserted > 0 ? "Job added successfully" : "Job updated successfully",
+        job: {
+          title: job.title,
+          company: job.company,
+          location: job.location,
+        },
+        inserted,
+        updated,
+      });
+    } catch (error: any) {
+      console.error("Error scraping URL:", error);
+      res.status(500).json({ error: error.message || "Failed to scrape URL" });
+    }
+  });
+
+  // Validate a job URL (public endpoint for job submission validation)
+  app.post("/api/validate-url", async (req, res) => {
+    try {
+      const { url } = req.body;
+      
+      if (!url || typeof url !== 'string') {
+        return res.status(400).json({ valid: false, error: "URL is required" });
+      }
+      
+      // Validate URL format
+      try {
+        new URL(url);
+      } catch {
+        return res.status(400).json({ valid: false, error: "Invalid URL format" });
+      }
+      
+      const result = await validateJobUrl(url);
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ valid: false, error: error.message });
     }
   });
 

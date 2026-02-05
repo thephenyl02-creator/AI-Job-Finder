@@ -3,10 +3,11 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Link } from "wouter";
-import { ArrowLeft, RefreshCw, Building2, Globe, Loader2, CheckCircle, XCircle, Sparkles, Activity, FileText, Play, Square, LinkIcon, Clock, ShieldX } from "lucide-react";
+import { ArrowLeft, RefreshCw, Building2, Globe, Loader2, CheckCircle, XCircle, Sparkles, Activity, FileText, Play, Square, LinkIcon, Clock, ShieldX, Plus } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -61,6 +62,7 @@ export default function AdminPage() {
   const { toast } = useToast();
   const { isAdmin, isLoading: authLoading } = useAuth();
   const [lastResult, setLastResult] = useState<ScrapeResult | null>(null);
+  const [customUrl, setCustomUrl] = useState("");
 
   const { data: companies, isLoading: loadingCompanies } = useQuery<Company[]>({
     queryKey: ["/api/admin/scraper/companies"],
@@ -135,6 +137,28 @@ export default function AdminPage() {
     onError: (error: Error) => {
       toast({
         title: "Failed to stop validation",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const scrapeUrlMutation = useMutation({
+    mutationFn: async (url: string) => {
+      const res = await apiRequest("POST", "/api/admin/scraper/url", { url });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      setCustomUrl("");
+      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
+      toast({
+        title: data.success ? "Job Added" : "Error",
+        description: data.message || `Added: ${data.job?.title} at ${data.job?.company}`,
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to scrape URL",
         description: error.message,
         variant: "destructive",
       });
@@ -468,6 +492,53 @@ export default function AdminPage() {
                   </div>
                 </div>
               )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Plus className="h-5 w-5" />
+                Add Job from URL
+              </CardTitle>
+              <CardDescription>
+                Paste a job posting URL to automatically scrape and add it to the database.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex gap-3">
+                <Input
+                  placeholder="https://boards.greenhouse.io/company/jobs/123..."
+                  value={customUrl}
+                  onChange={(e) => setCustomUrl(e.target.value)}
+                  className="flex-1"
+                  data-testid="input-custom-url"
+                />
+                <Button
+                  onClick={() => {
+                    if (customUrl.trim()) {
+                      scrapeUrlMutation.mutate(customUrl.trim());
+                    }
+                  }}
+                  disabled={scrapeUrlMutation.isPending || !customUrl.trim()}
+                  data-testid="button-scrape-url"
+                >
+                  {scrapeUrlMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Scraping...
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Add Job
+                    </>
+                  )}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                Supports Greenhouse, Lever, Ashby, and generic job pages.
+              </p>
             </CardContent>
           </Card>
 

@@ -12,7 +12,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Loader2, Send, Briefcase } from "lucide-react";
+import { Loader2, Send, Briefcase, CheckCircle, XCircle, AlertCircle } from "lucide-react";
 import { useState } from "react";
 
 const postJobSchema = z.object({
@@ -32,6 +32,10 @@ type PostJobFormData = z.infer<typeof postJobSchema>;
 export default function PostJob() {
   const { toast } = useToast();
   const [submitted, setSubmitted] = useState(false);
+  const [urlValidation, setUrlValidation] = useState<{
+    status: 'idle' | 'validating' | 'valid' | 'invalid';
+    error?: string;
+  }>({ status: 'idle' });
 
   const form = useForm<PostJobFormData>({
     resolver: zodResolver(postJobSchema),
@@ -45,6 +49,13 @@ export default function PostJob() {
       description: "",
       applyUrl: "",
       contactEmail: "",
+    },
+  });
+
+  const validateUrlMutation = useMutation({
+    mutationFn: async (url: string) => {
+      const response = await apiRequest("POST", "/api/validate-url", { url });
+      return response.json();
     },
   });
 
@@ -69,7 +80,32 @@ export default function PostJob() {
     },
   });
 
-  const onSubmit = (data: PostJobFormData) => {
+  const onSubmit = async (data: PostJobFormData) => {
+    // Validate the apply URL first
+    setUrlValidation({ status: 'validating' });
+    try {
+      const result = await validateUrlMutation.mutateAsync(data.applyUrl);
+      if (!result.valid) {
+        setUrlValidation({ status: 'invalid', error: result.error || 'The apply URL appears to be broken or inaccessible' });
+        toast({
+          title: "Invalid Apply URL",
+          description: "Please check that the apply URL is correct and accessible.",
+          variant: "destructive",
+        });
+        return;
+      }
+      setUrlValidation({ status: 'valid' });
+    } catch (error) {
+      setUrlValidation({ status: 'invalid', error: 'Could not validate URL' });
+      toast({
+        title: "URL Validation Failed",
+        description: "Could not verify the apply URL. Please check it's correct.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Submit the job
     submitMutation.mutate(data);
   };
 
@@ -246,11 +282,42 @@ export default function PostJob() {
                     <FormItem>
                       <FormLabel>Apply URL *</FormLabel>
                       <FormControl>
-                        <Input placeholder="https://careers.example.com/job/123" {...field} data-testid="input-apply-url" />
+                        <div className="relative">
+                          <Input 
+                            placeholder="https://careers.example.com/job/123" 
+                            {...field} 
+                            data-testid="input-apply-url"
+                            onChange={(e) => {
+                              field.onChange(e);
+                              setUrlValidation({ status: 'idle' });
+                            }}
+                          />
+                          {urlValidation.status === 'validating' && (
+                            <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                            </div>
+                          )}
+                          {urlValidation.status === 'valid' && (
+                            <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                              <CheckCircle className="h-4 w-4 text-green-500" />
+                            </div>
+                          )}
+                          {urlValidation.status === 'invalid' && (
+                            <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                              <XCircle className="h-4 w-4 text-destructive" />
+                            </div>
+                          )}
+                        </div>
                       </FormControl>
                       <FormDescription>
                         Direct link where candidates can apply for this position
                       </FormDescription>
+                      {urlValidation.status === 'invalid' && urlValidation.error && (
+                        <p className="text-sm text-destructive flex items-center gap-1">
+                          <AlertCircle className="h-3 w-3" />
+                          {urlValidation.error}
+                        </p>
+                      )}
                       <FormMessage />
                     </FormItem>
                   )}
@@ -276,10 +343,15 @@ export default function PostJob() {
                 <Button
                   type="submit"
                   className="w-full gap-2"
-                  disabled={submitMutation.isPending}
+                  disabled={submitMutation.isPending || validateUrlMutation.isPending}
                   data-testid="button-submit-job"
                 >
-                  {submitMutation.isPending ? (
+                  {validateUrlMutation.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Validating URL...
+                    </>
+                  ) : submitMutation.isPending ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin" />
                       Submitting...
