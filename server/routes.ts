@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
 import OpenAI from "openai";
+import { z } from "zod";
 import type { Job, JobWithScore, ResumeExtractedData, InsertJobSubmission } from "@shared/schema";
 import { insertJobSubmissionSchema } from "@shared/schema";
 import multer from "multer";
@@ -801,6 +802,16 @@ Only include jobs with a score above 40. Sort by score descending.`;
   });
 
   // Career Advisor - Compare multiple jobs for career guidance
+  const careerAdvisorJobSchema = z.object({
+    id: z.string(),
+    title: z.string().default(""),
+    description: z.string().min(50, "Job description must be at least 50 characters"),
+  });
+  const careerAdvisorRequestSchema = z.object({
+    jobs: z.array(careerAdvisorJobSchema).min(2, "At least 2 jobs required").max(3, "Maximum 3 jobs allowed"),
+    includeResume: z.boolean().default(false),
+  });
+
   app.post("/api/career-advisor/compare", isAuthenticated, async (req, res) => {
     try {
       const user = req.user as any;
@@ -809,14 +820,14 @@ Only include jobs with a score above 40. Sort by score descending.`;
         return res.status(401).json({ error: "Unauthorized" });
       }
 
-      const { jobs, includeResume } = req.body as {
-        jobs: Array<{ id: string; title: string; description: string }>;
-        includeResume: boolean;
-      };
-
-      if (!jobs || jobs.length < 2 || jobs.length > 3) {
-        return res.status(400).json({ error: "Please provide 2-3 job descriptions" });
+      const parseResult = careerAdvisorRequestSchema.safeParse(req.body);
+      if (!parseResult.success) {
+        return res.status(400).json({ 
+          error: "Invalid request", 
+          details: parseResult.error.flatten().fieldErrors 
+        });
       }
+      const { jobs, includeResume } = parseResult.data;
 
       let resumeContext = "";
       if (includeResume) {
@@ -907,10 +918,17 @@ Return a JSON response with this exact structure:
 
       const content = completion.choices[0]?.message?.content;
       if (!content) {
-        throw new Error("No response from AI");
+        return res.status(502).json({ error: "No response from AI service" });
       }
 
-      const result = JSON.parse(content);
+      let result;
+      try {
+        result = JSON.parse(content);
+      } catch (parseError) {
+        console.error("Failed to parse AI response:", content.substring(0, 500));
+        return res.status(502).json({ error: "Invalid response format from AI service" });
+      }
+
       res.json(result);
     } catch (error) {
       console.error("Career advisor error:", error);

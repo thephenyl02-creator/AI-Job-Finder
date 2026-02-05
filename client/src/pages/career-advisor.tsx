@@ -3,6 +3,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { Header } from "@/components/header";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -213,12 +214,11 @@ export default function CareerAdvisor() {
                       <label className="text-sm font-medium text-muted-foreground">
                         Job Title (optional)
                       </label>
-                      <input
-                        type="text"
+                      <Input
                         value={job.title}
                         onChange={(e) => updateJob(job.id, "title", e.target.value)}
                         placeholder="e.g., Senior Product Manager"
-                        className="mt-1 w-full px-3 py-2 border rounded-md bg-background text-foreground"
+                        className="mt-1"
                         data-testid={`input-job-title-${index}`}
                       />
                     </div>
@@ -243,7 +243,7 @@ export default function CareerAdvisor() {
 
               {jobs.length < 3 && (
                 <Card
-                  className="border-dashed cursor-pointer hover:border-primary/50 transition-colors flex items-center justify-center min-h-[300px]"
+                  className="border-dashed cursor-pointer hover-elevate flex items-center justify-center min-h-[300px]"
                   onClick={addJob}
                   data-testid="button-add-job"
                 >

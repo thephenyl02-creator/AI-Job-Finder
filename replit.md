@@ -20,6 +20,7 @@ Preferred communication style: Simple, everyday language.
 ### Page Structure
 - **Search Page (/)**: Dedicated search interface with AI-powered semantic search
 - **Jobs Page (/jobs)**: All jobs displayed in tabular format with filtering
+- **Career Advisor (/career-advisor)**: AI-powered career comparison tool
 - **Admin Page (/admin)**: Admin-only job scraping controls
 - **Landing Page**: Unauthenticated users see marketing/sign-in page
 
@@ -84,6 +85,17 @@ Preferred communication style: Simple, everyday language.
   - Gap analysis (skill gaps identified)
   - Recommendations (actionable advice)
 - **Implementation**: `server/lib/resume-job-comparison.ts`, `client/src/components/job-comparison.tsx`
+
+### Career Advisor (AI-Powered)
+- **Route**: `/career-advisor` (requires authentication)
+- **Purpose**: Strategic career guidance for comparing 2-3 job opportunities
+- **Features**:
+  - Compare 2-3 job descriptions side-by-side
+  - AI analyzes: responsibilities, skills, work type (structured vs ambiguous), growth paths, transition difficulty
+  - Personalized fit analysis when resume is uploaded (strengths, gaps, interview risks, resume positioning)
+  - Strategic recommendations: best fit now, best long-term, biggest career shift
+- **API**: POST `/api/career-advisor/compare` with Zod validation
+- **Implementation**: `client/src/pages/career-advisor.tsx`, API endpoint in `server/routes.ts`
 
 ### Job Scraper (Admin Feature)
 - **Sources**: Legal AI startups (Harvey, CoCounsel, etc.), Legal tech companies (Clio, Relativity, etc.)
