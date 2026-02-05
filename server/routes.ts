@@ -24,6 +24,9 @@ import {
   isSchedulerRunning,
   runScheduledScrape,
   validateJobLinks,
+  startContinuousValidation,
+  stopContinuousValidation,
+  getValidationStatus,
 } from "./lib/scheduled-scraper";
 import { getLogFiles, readLogFile, getRecentLogs, runStartupCleanup } from "./lib/logger";
 
@@ -589,7 +592,69 @@ Only include jobs with a score above 40. Sort by score descending.`;
     }
   });
 
-  // Validate job links
+  // Get validation status
+  app.get("/api/admin/validation-status", isAuthenticated, async (req, res) => {
+    if (!isAdmin(req)) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    try {
+      const status = getValidationStatus();
+      res.json(status);
+    } catch (error) {
+      console.error("Error getting validation status:", error);
+      res.status(500).json({ error: "Failed to get validation status" });
+    }
+  });
+
+  // Start continuous validation
+  app.post("/api/admin/validate-links/start", isAuthenticated, async (req, res) => {
+    if (!isAdmin(req)) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    try {
+      const status = getValidationStatus();
+      if (status.isRunning) {
+        return res.json({
+          success: false,
+          message: "Validation already in progress",
+          ...status,
+        });
+      }
+      
+      // Start validation in background
+      res.json({
+        success: true,
+        message: "Continuous validation started. Jobs will be checked one at a time with 10-second delays.",
+      });
+      
+      // Run in background
+      startContinuousValidation().catch(err => 
+        console.error('Continuous validation failed:', err)
+      );
+    } catch (error) {
+      console.error("Error starting validation:", error);
+      res.status(500).json({ error: "Failed to start validation" });
+    }
+  });
+
+  // Stop continuous validation
+  app.post("/api/admin/validate-links/stop", isAuthenticated, async (req, res) => {
+    if (!isAdmin(req)) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    try {
+      stopContinuousValidation();
+      res.json({
+        success: true,
+        message: "Validation stopping...",
+      });
+    } catch (error) {
+      console.error("Error stopping validation:", error);
+      res.status(500).json({ error: "Failed to stop validation" });
+    }
+  });
+
+  // Legacy quick validate (for backward compatibility)
   app.post("/api/admin/validate-links", isAuthenticated, async (req, res) => {
     if (!isAdmin(req)) {
       return res.status(403).json({ error: "Admin access required" });
@@ -600,7 +665,7 @@ Only include jobs with a score above 40. Sort by score descending.`;
       res.json({
         success: true,
         ...results,
-        message: `Checked ${results.valid + results.broken} links: ${results.valid} valid, ${results.broken} broken`,
+        message: `Quick check: ${results.valid + results.broken} links checked, ${results.valid} valid, ${results.broken} broken`,
       });
     } catch (error) {
       console.error("Error validating links:", error);

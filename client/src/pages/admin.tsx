@@ -33,6 +33,14 @@ interface LogEntry {
   details?: Record<string, any>;
 }
 
+interface ValidationStatus {
+  isRunning: boolean;
+  progress: { current: number; total: number };
+  stats: { valid: number; broken: number };
+  startedAt: string | null;
+  lastCheckedAt: string | null;
+}
+
 interface MonitoringData {
   scheduler: {
     running: boolean;
@@ -61,6 +69,11 @@ export default function AdminPage() {
     refetchInterval: 30000,
   });
 
+  const { data: validationStatus, refetch: refetchValidation } = useQuery<ValidationStatus>({
+    queryKey: ["/api/admin/validation-status"],
+    refetchInterval: 5000, // Check every 5 seconds for live updates
+  });
+
   const schedulerMutation = useMutation({
     mutationFn: async (action: 'start' | 'stop' | 'run-now') => {
       const res = await apiRequest("POST", `/api/admin/scheduler/${action}`);
@@ -81,21 +94,42 @@ export default function AdminPage() {
     },
   });
 
-  const validateLinksMutation = useMutation({
+  const startValidationMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/admin/validate-links");
+      const res = await apiRequest("POST", "/api/admin/validate-links/start");
       return res.json();
     },
     onSuccess: (data) => {
-      refetchMonitoring();
+      refetchValidation();
       toast({
-        title: "Link validation complete",
+        title: "Validation started",
         description: data.message,
       });
     },
     onError: (error: Error) => {
       toast({
-        title: "Validation failed",
+        title: "Failed to start validation",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const stopValidationMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/admin/validate-links/stop");
+      return res.json();
+    },
+    onSuccess: (data) => {
+      refetchValidation();
+      toast({
+        title: "Stopping validation",
+        description: data.message,
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to stop validation",
         description: error.message,
         variant: "destructive",
       });
@@ -273,21 +307,71 @@ export default function AdminPage() {
                           </div>
                         ))}
                       </div>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="mt-3 w-full"
-                        onClick={() => validateLinksMutation.mutate()}
-                        disabled={validateLinksMutation.isPending}
-                        data-testid="button-validate-links"
-                      >
-                        {validateLinksMutation.isPending ? (
-                          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                        ) : (
-                          <LinkIcon className="h-3 w-3 mr-1" />
+                      
+                      <div className="mt-3 pt-3 border-t">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-medium">Link Validation</span>
+                          {validationStatus?.isRunning && (
+                            <Badge variant="default" className="text-xs">
+                              {validationStatus.progress.current}/{validationStatus.progress.total}
+                            </Badge>
+                          )}
+                        </div>
+                        
+                        {validationStatus?.isRunning && (
+                          <div className="mb-2">
+                            <div className="h-2 bg-secondary rounded-full overflow-hidden">
+                              <div 
+                                className="h-full bg-primary transition-all duration-300"
+                                style={{ 
+                                  width: `${(validationStatus.progress.current / validationStatus.progress.total) * 100}%` 
+                                }}
+                              />
+                            </div>
+                            <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                              <span>{validationStatus.stats.valid} valid</span>
+                              <span>{validationStatus.stats.broken} broken</span>
+                            </div>
+                          </div>
                         )}
-                        Validate Apply Links
-                      </Button>
+                        
+                        <div className="flex gap-2">
+                          {validationStatus?.isRunning ? (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="flex-1"
+                              onClick={() => stopValidationMutation.mutate()}
+                              disabled={stopValidationMutation.isPending}
+                              data-testid="button-stop-validation"
+                            >
+                              <Square className="h-3 w-3 mr-1" />
+                              Stop
+                            </Button>
+                          ) : (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="flex-1"
+                              onClick={() => startValidationMutation.mutate()}
+                              disabled={startValidationMutation.isPending}
+                              data-testid="button-start-validation"
+                            >
+                              {startValidationMutation.isPending ? (
+                                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                              ) : (
+                                <LinkIcon className="h-3 w-3 mr-1" />
+                              )}
+                              Validate All Links
+                            </Button>
+                          )}
+                        </div>
+                        {validationStatus?.isRunning && (
+                          <p className="text-xs text-muted-foreground mt-2">
+                            Checking 1 job every 10 seconds. Broken links auto-deactivated.
+                          </p>
+                        )}
+                      </div>
                     </div>
                   </div>
 
