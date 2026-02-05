@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 import { Link } from "wouter";
-import { ArrowLeft, RefreshCw, Building2, Globe, Loader2, CheckCircle, XCircle, Sparkles, Activity, FileText, Play, Square, LinkIcon, Clock } from "lucide-react";
+import { ArrowLeft, RefreshCw, Building2, Globe, Loader2, CheckCircle, XCircle, Sparkles, Activity, FileText, Play, Square, LinkIcon, Clock, ShieldX } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -58,20 +59,24 @@ interface MonitoringData {
 
 export default function AdminPage() {
   const { toast } = useToast();
+  const { isAdmin, isLoading: authLoading } = useAuth();
   const [lastResult, setLastResult] = useState<ScrapeResult | null>(null);
 
   const { data: companies, isLoading: loadingCompanies } = useQuery<Company[]>({
     queryKey: ["/api/admin/scraper/companies"],
+    enabled: isAdmin,
   });
 
   const { data: monitoring, isLoading: loadingMonitoring, refetch: refetchMonitoring } = useQuery<MonitoringData>({
     queryKey: ["/api/admin/monitoring"],
     refetchInterval: 30000,
+    enabled: isAdmin,
   });
 
   const { data: validationStatus, refetch: refetchValidation } = useQuery<ValidationStatus>({
     queryKey: ["/api/admin/validation-status"],
     refetchInterval: 5000, // Check every 5 seconds for live updates
+    enabled: isAdmin,
   });
 
   const schedulerMutation = useMutation({
@@ -200,6 +205,42 @@ export default function AdminPage() {
       });
     },
   });
+
+  // Show loading state
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  // Show access denied for non-admins
+  if (!isAdmin) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Card className="max-w-md w-full mx-4">
+          <CardContent className="pt-6">
+            <div className="text-center space-y-4">
+              <div className="mx-auto w-12 h-12 bg-destructive/10 rounded-full flex items-center justify-center">
+                <ShieldX className="h-6 w-6 text-destructive" />
+              </div>
+              <h2 className="text-xl font-semibold">Access Denied</h2>
+              <p className="text-muted-foreground">
+                You don't have permission to access the admin area. This page is restricted to administrators only.
+              </p>
+              <Link href="/">
+                <Button className="mt-4" data-testid="button-go-home">
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Back to Home
+                </Button>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">

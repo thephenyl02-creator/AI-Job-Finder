@@ -17,6 +17,23 @@ async function fetchUser(): Promise<User | null> {
   return response.json();
 }
 
+async function fetchIsAdmin(): Promise<boolean> {
+  const response = await fetch("/api/auth/is-admin", {
+    credentials: "include",
+  });
+
+  if (response.status === 401) {
+    return false;
+  }
+
+  if (!response.ok) {
+    return false;
+  }
+
+  const data = await response.json();
+  return data.isAdmin === true;
+}
+
 async function logout(): Promise<void> {
   window.location.href = "/api/logout";
 }
@@ -30,10 +47,19 @@ export function useAuth() {
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
+  const { data: isAdmin } = useQuery<boolean>({
+    queryKey: ["/api/auth/is-admin"],
+    queryFn: fetchIsAdmin,
+    retry: false,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    enabled: !!user, // Only check admin status if user is logged in
+  });
+
   const logoutMutation = useMutation({
     mutationFn: logout,
     onSuccess: () => {
       queryClient.setQueryData(["/api/auth/user"], null);
+      queryClient.setQueryData(["/api/auth/is-admin"], false);
     },
   });
 
@@ -41,6 +67,7 @@ export function useAuth() {
     user,
     isLoading,
     isAuthenticated: !!user,
+    isAdmin: isAdmin === true,
     logout: logoutMutation.mutate,
     isLoggingOut: logoutMutation.isPending,
   };

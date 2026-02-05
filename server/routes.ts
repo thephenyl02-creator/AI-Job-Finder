@@ -356,6 +356,11 @@ Only include jobs with a score above 40. Sort by score descending.`;
     return ADMIN_EMAILS.length === 0 || ADMIN_EMAILS.includes(email);
   };
 
+  // Check if current user is admin
+  app.get("/api/auth/is-admin", isAuthenticated, (req, res) => {
+    res.json({ isAdmin: isAdmin(req) });
+  });
+
   // Admin: Get list of companies that can be scraped
   app.get("/api/admin/scraper/companies", isAuthenticated, (req, res) => {
     if (!isAdmin(req)) {
