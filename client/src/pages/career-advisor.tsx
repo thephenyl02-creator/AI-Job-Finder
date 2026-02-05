@@ -12,6 +12,8 @@ import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import type { Job } from "@shared/schema";
+import { motion } from "framer-motion";
+import { ScrollReveal } from "@/components/animations";
 import { 
   Loader2, 
   Plus, 
@@ -421,14 +423,16 @@ export default function CareerAdvisor() {
       <Header />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-10">
-        <div className="mb-10 text-center">
-          <h1 className="text-3xl sm:text-4xl font-serif font-medium text-foreground mb-3 tracking-tight">
-            Career Advisor
-          </h1>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Compare job opportunities side-by-side and get strategic career guidance tailored for legal professionals
-          </p>
-        </div>
+        <ScrollReveal>
+          <div className="mb-10 text-center">
+            <h1 className="text-3xl sm:text-4xl font-serif font-medium text-foreground mb-3 tracking-tight">
+              Career Advisor
+            </h1>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              Compare job opportunities side-by-side and get strategic career guidance tailored for legal professionals
+            </p>
+          </div>
+        </ScrollReveal>
 
         {!result ? (
           <div className="space-y-8">

@@ -12,6 +12,8 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
+import { motion, AnimatePresence } from "framer-motion";
+import { ScrollReveal, StaggerContainer, StaggerItem } from "@/components/animations";
 import {
   ExternalLink,
   Search,
@@ -37,6 +39,7 @@ import {
   LayoutGrid,
   List,
   Target,
+  Loader2,
 } from "lucide-react";
 
 const CATEGORY_ICONS: Record<string, typeof Brain> = {
@@ -157,7 +160,14 @@ export default function Jobs() {
   if (authLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-pulse text-muted-foreground">Loading...</div>
+        <motion.div
+          className="flex flex-col items-center gap-3"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+        >
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          <span className="text-sm text-muted-foreground">Loading...</span>
+        </motion.div>
       </div>
     );
   }
@@ -316,40 +326,57 @@ export default function Jobs() {
         </div>
 
         {selectedCategory === "all" && viewMode === "cards" && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 mb-8">
+          <StaggerContainer className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 mb-8" staggerDelay={0.06}>
             {Object.entries(JOB_TAXONOMY).map(([category, data]) => {
               const count = getCategoryCount(category);
               const Icon = getCategoryIcon(data.icon);
               return (
-                <button
-                  key={category}
-                  onClick={() => {
-                    setSelectedCategory(category);
-                    setExpandedCategories(new Set([category]));
-                  }}
-                  className={`p-4 rounded-lg border text-left transition-all hover:border-primary/50 hover:bg-muted/30 ${
-                    count === 0 ? "opacity-50" : ""
-                  }`}
-                  disabled={count === 0}
-                  data-testid={`button-category-${category.replace(/\s+/g, '-').toLowerCase()}`}
-                >
-                  <Icon className="h-5 w-5 text-muted-foreground mb-2" />
-                  <p className="font-medium text-sm text-foreground line-clamp-2">{data.shortName}</p>
-                  <p className="text-xs text-muted-foreground mt-1">{count} jobs</p>
-                </button>
+                <StaggerItem key={category}>
+                  <motion.button
+                    onClick={() => {
+                      setSelectedCategory(category);
+                      setExpandedCategories(new Set([category]));
+                    }}
+                    className={`w-full p-4 rounded-lg border text-left transition-colors hover:border-primary/50 hover:bg-muted/30 ${
+                      count === 0 ? "opacity-50" : ""
+                    }`}
+                    disabled={count === 0}
+                    whileHover={count > 0 ? { y: -2 } : undefined}
+                    whileTap={count > 0 ? { scale: 0.98 } : undefined}
+                    transition={{ duration: 0.15 }}
+                    data-testid={`button-category-${category.replace(/\s+/g, '-').toLowerCase()}`}
+                  >
+                    <div className="w-8 h-8 rounded-md bg-muted flex items-center justify-center mb-2">
+                      <Icon className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    <p className="font-medium text-sm text-foreground line-clamp-2">{data.shortName}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{count} jobs</p>
+                  </motion.button>
+                </StaggerItem>
               );
             })}
-          </div>
+          </StaggerContainer>
         )}
 
         {jobsLoading ? (
           <div className="text-center py-12">
-            <div className="animate-pulse text-muted-foreground">Loading jobs...</div>
+            <motion.div
+              className="flex flex-col items-center gap-3"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+            >
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">Loading jobs...</span>
+            </motion.div>
           </div>
         ) : filteredJobs.length === 0 ? (
-          <div className="text-center py-12">
+          <motion.div
+            className="text-center py-12"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+          >
             <div className="text-muted-foreground">No jobs found</div>
-          </div>
+          </motion.div>
         ) : viewMode === "list" ? (
           <div className="border rounded-lg overflow-hidden">
             <table className="w-full">
@@ -494,50 +521,55 @@ export default function Jobs() {
           </div>
         )}
 
-        {/* Floating Compare Action Bar */}
-        {selectedJobIds.size > 0 && (
-          <div 
-            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-4 duration-300"
-            data-testid="compare-action-bar"
-          >
-            <Card className="shadow-lg border-primary/20">
-              <CardContent className="flex items-center gap-4 py-3 px-5">
-                <div className="flex items-center gap-2">
-                  <Target className="h-5 w-5 text-primary" />
-                  <span className="font-medium">
-                    {selectedJobIds.size} job{selectedJobIds.size > 1 ? "s" : ""} selected
-                  </span>
-                  {selectedJobIds.size < 2 && (
-                    <span className="text-sm text-muted-foreground">(select at least 2)</span>
-                  )}
-                  {selectedJobIds.size >= 3 && (
-                    <span className="text-sm text-muted-foreground">(max 3)</span>
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={clearSelection}
-                    data-testid="button-clear-selection"
-                  >
-                    <X className="h-4 w-4 mr-1" />
-                    Clear
-                  </Button>
-                  <Button
-                    size="sm"
-                    onClick={handleCompareSelected}
-                    disabled={selectedJobIds.size < 2}
-                    data-testid="button-compare-selected"
-                  >
-                    <Target className="h-4 w-4 mr-1" />
-                    Compare Selected
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
+        <AnimatePresence>
+          {selectedJobIds.size > 0 && (
+            <motion.div
+              className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50"
+              initial={{ y: 80, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 80, opacity: 0 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              data-testid="compare-action-bar"
+            >
+              <Card className="shadow-lg border-primary/20">
+                <CardContent className="flex items-center gap-4 py-3 px-5">
+                  <div className="flex items-center gap-2">
+                    <Target className="h-5 w-5 text-primary" />
+                    <span className="font-medium">
+                      {selectedJobIds.size} job{selectedJobIds.size > 1 ? "s" : ""} selected
+                    </span>
+                    {selectedJobIds.size < 2 && (
+                      <span className="text-sm text-muted-foreground">(select at least 2)</span>
+                    )}
+                    {selectedJobIds.size >= 3 && (
+                      <span className="text-sm text-muted-foreground">(max 3)</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={clearSelection}
+                      data-testid="button-clear-selection"
+                    >
+                      <X className="h-4 w-4 mr-1" />
+                      Clear
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={handleCompareSelected}
+                      disabled={selectedJobIds.size < 2}
+                      data-testid="button-compare-selected"
+                    >
+                      <Target className="h-4 w-4 mr-1" />
+                      Compare Selected
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </main>
     </div>
   );
@@ -603,19 +635,27 @@ function CategorySection({
         </CardHeader>
       </button>
 
-      {expanded && (
-        <CardContent className="pt-0 pb-4">
-          <div className="space-y-4">
-            {Object.entries(jobsBySubcategory)
-              .sort((a, b) => b[1].length - a[1].length)
-              .map(([subcategory, subJobs]) => (
-                <div key={subcategory}>
-                  <div className="flex items-center gap-2 mb-2 px-2">
-                    <span className="text-sm font-medium text-muted-foreground">{subcategory}</span>
-                    <span className="text-xs text-muted-foreground">({subJobs.length})</span>
-                  </div>
-                  <div className="grid gap-2">
-                    {subJobs.map((job) => (
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.3, ease: "easeInOut" }}
+            className="overflow-hidden"
+          >
+            <CardContent className="pt-0 pb-4">
+              <div className="space-y-4">
+                {Object.entries(jobsBySubcategory)
+                  .sort((a, b) => b[1].length - a[1].length)
+                  .map(([subcategory, subJobs]) => (
+                    <div key={subcategory}>
+                      <div className="flex items-center gap-2 mb-2 px-2">
+                        <span className="text-sm font-medium text-muted-foreground">{subcategory}</span>
+                        <span className="text-xs text-muted-foreground">({subJobs.length})</span>
+                      </div>
+                      <div className="grid gap-2">
+                        {subJobs.map((job, jobIdx) => (
                       <div
                         key={job.id}
                         className={`p-3 rounded-lg border bg-card hover:bg-muted/30 transition-colors ${selectedJobIds.has(job.id) ? "ring-2 ring-primary bg-primary/5" : ""}`}
@@ -680,9 +720,11 @@ function CategorySection({
                   </div>
                 </div>
               ))}
-          </div>
-        </CardContent>
-      )}
+              </div>
+            </CardContent>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </Card>
   );
 }

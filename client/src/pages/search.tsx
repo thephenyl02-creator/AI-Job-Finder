@@ -18,8 +18,9 @@ import {
   Check,
   Loader2,
   Target,
-  ChevronRight,
 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ProgressSteps, Typewriter, ScrollReveal } from "@/components/animations";
 
 interface SearchQuestion {
   id: string;
@@ -40,6 +41,28 @@ interface RefinedSearchResult {
 
 type SearchStep = "input" | "refining" | "questions" | "searching" | "results";
 
+const STEP_MAP: Record<SearchStep, number> = {
+  input: 0,
+  refining: 1,
+  questions: 1,
+  searching: 2,
+  results: 3,
+};
+
+const SEARCH_SUGGESTIONS = [
+  "product manager at a legal tech startup, remote",
+  "compliance role at a growing company",
+  "legal operations, entry level",
+  "contract management, hybrid, senior",
+  "legal AI company, any role",
+];
+
+const pageVariants = {
+  enter: { opacity: 0, y: 16 },
+  center: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -16 },
+};
+
 export default function Search() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
@@ -51,7 +74,6 @@ export default function Search() {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [results, setResults] = useState<RefinedSearchResult | null>(null);
 
-  // Analyze query and get clarifying questions
   const analyzeMutation = useMutation({
     mutationFn: async (searchQuery: string) => {
       const response = await apiRequest("POST", "/api/search/analyze", { query: searchQuery });
@@ -62,7 +84,6 @@ export default function Search() {
       if (data.questions && data.questions.length > 0) {
         setStep("questions");
       } else {
-        // No questions, go straight to search
         refinedSearchMutation.mutate({
           originalQuery: data.originalQuery,
           refinedIntent: data.refinedIntent,
@@ -87,12 +108,10 @@ export default function Search() {
         description: "Let's try a regular search instead.",
         variant: "destructive",
       });
-      // Fall back to regular search
       regularSearchMutation.mutate(query);
     },
   });
 
-  // Refined search with answers
   const refinedSearchMutation = useMutation({
     mutationFn: async (params: { originalQuery: string; refinedIntent: string; answers: Record<string, string> }) => {
       const response = await apiRequest("POST", "/api/search/refined", params);
@@ -112,7 +131,6 @@ export default function Search() {
     },
   });
 
-  // Fallback regular search
   const regularSearchMutation = useMutation({
     mutationFn: async (searchQuery: string) => {
       const response = await apiRequest("POST", "/api/search", { query: searchQuery });
@@ -146,7 +164,6 @@ export default function Search() {
     if (!analysis) return;
     setStep("searching");
     
-    // Convert answers to question:answer format
     const formattedAnswers: Record<string, string> = {};
     analysis.questions.forEach(q => {
       if (answers[q.id]) {
@@ -183,7 +200,14 @@ export default function Search() {
   if (authLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-pulse text-muted-foreground">Loading...</div>
+        <motion.div
+          className="flex flex-col items-center gap-3"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+        >
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          <span className="text-sm text-muted-foreground">Loading...</span>
+        </motion.div>
       </div>
     );
   }
@@ -197,269 +221,377 @@ export default function Search() {
       <Header />
       
       <main className="max-w-3xl mx-auto px-4 sm:px-6 py-16 sm:py-24">
-        <div className="text-center mb-10">
-          <h1 className="text-3xl sm:text-4xl font-serif font-medium text-foreground mb-3 tracking-tight">
-            Find Your Next Role
-          </h1>
-          <p className="text-muted-foreground">
-            {step === "input" && "Describe what you're looking for in your own words"}
-            {step === "refining" && "Understanding your search..."}
-            {step === "questions" && "A few quick questions to narrow down the best matches"}
-            {step === "searching" && "Finding your best matches..."}
-            {step === "results" && "Your curated results"}
-          </p>
+        <ScrollReveal>
+          <div className="text-center mb-6">
+            <h1 className="text-3xl sm:text-4xl font-serif font-medium text-foreground mb-3 tracking-tight">
+              Find Your Next Role
+            </h1>
+            <AnimatePresence mode="wait">
+              <motion.p
+                key={step}
+                className="text-muted-foreground"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.25 }}
+              >
+                {step === "input" && "Describe what you're looking for in your own words"}
+                {step === "refining" && "Understanding your search..."}
+                {step === "questions" && "A few quick questions to narrow down the best matches"}
+                {step === "searching" && "Finding your best matches..."}
+                {step === "results" && "Your curated results"}
+              </motion.p>
+            </AnimatePresence>
+          </div>
+        </ScrollReveal>
+
+        <div className="mb-8">
+          <ProgressSteps
+            steps={["Search", "Refine", "Match", "Results"]}
+            currentStep={STEP_MAP[step]}
+          />
         </div>
 
-        {/* Step: Input */}
-        {step === "input" && (
-          <div className="space-y-6">
-            <div className="relative">
-              <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-              <Input
-                placeholder="e.g., product manager at an AI legal tech startup, remote..."
-                className="pl-12 pr-4 h-14 text-base"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleInitialSearch()}
-                data-testid="input-search-query"
-              />
-            </div>
-            
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Button 
-                size="lg" 
-                onClick={handleInitialSearch}
-                disabled={!query.trim()}
-                className="gap-2"
-                data-testid="button-guided-search"
-              >
-                <SearchIcon className="h-4 w-4" />
-                Guided Search
-              </Button>
-              <Button 
-                variant="outline" 
-                size="lg"
-                onClick={() => {
-                  if (query.trim()) {
-                    regularSearchMutation.mutate(query);
-                  }
-                }}
-                disabled={!query.trim() || regularSearchMutation.isPending}
-                className="gap-2"
-                data-testid="button-quick-search"
-              >
-                {regularSearchMutation.isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <ArrowRight className="h-4 w-4" />
-                )}
-                Quick Search
-              </Button>
-            </div>
-
-            <div className="text-center pt-4">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setLocation("/jobs")}
-                className="text-muted-foreground"
-                data-testid="link-browse-all"
-              >
-                Or browse all jobs
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* Step: Refining */}
-        {step === "refining" && (
-          <div className="flex flex-col items-center gap-6 py-12">
-            <div className="relative">
-              <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
-                <Loader2 className="h-8 w-8 text-muted-foreground animate-spin" />
+        <AnimatePresence mode="wait">
+          {step === "input" && (
+            <motion.div
+              key="input"
+              variants={pageVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={{ duration: 0.3 }}
+              className="space-y-6"
+            >
+              <div className="relative">
+                <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                <Input
+                  placeholder="e.g., product manager at an AI legal tech startup, remote..."
+                  className="pl-12 pr-4 h-14 text-base"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleInitialSearch()}
+                  data-testid="input-search-query"
+                />
               </div>
-            </div>
-            <div className="text-center">
-              <p className="text-lg font-medium text-foreground mb-1">Understanding your search...</p>
-              <p className="text-sm text-muted-foreground">Preparing a few questions to narrow down the best matches</p>
-            </div>
-          </div>
-        )}
 
-        {/* Step: Questions */}
-        {step === "questions" && analysis && (
-          <div className="space-y-6">
-            {analysis.refinedIntent && (
-              <Card className="bg-muted/40 border-border/60">
-                <CardContent className="p-4">
-                  <div className="flex items-start gap-3">
-                    <Target className="h-5 w-5 text-foreground shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium text-foreground">What we understood</p>
-                      <p className="text-sm text-muted-foreground mt-1">{analysis.refinedIntent}</p>
-                    </div>
+              {!query && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.3 }}
+                  className="space-y-3"
+                >
+                  <p className="text-xs text-muted-foreground text-center uppercase tracking-wide">
+                    Try something like
+                  </p>
+                  <div className="flex flex-wrap gap-2 justify-center">
+                    {SEARCH_SUGGESTIONS.map((suggestion) => (
+                      <Badge
+                        key={suggestion}
+                        variant="outline"
+                        className="cursor-pointer py-1.5 px-3 text-xs"
+                        onClick={() => setQuery(suggestion)}
+                        data-testid={`suggestion-${suggestion.slice(0, 20).replace(/\s+/g, "-")}`}
+                      >
+                        {suggestion}
+                      </Badge>
+                    ))}
                   </div>
-                </CardContent>
-              </Card>
-            )}
+                </motion.div>
+              )}
+              
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <Button 
+                  size="lg" 
+                  onClick={handleInitialSearch}
+                  disabled={!query.trim()}
+                  className="gap-2"
+                  data-testid="button-guided-search"
+                >
+                  <SearchIcon className="h-4 w-4" />
+                  Guided Search
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="lg"
+                  onClick={() => {
+                    if (query.trim()) {
+                      regularSearchMutation.mutate(query);
+                    }
+                  }}
+                  disabled={!query.trim() || regularSearchMutation.isPending}
+                  className="gap-2"
+                  data-testid="button-quick-search"
+                >
+                  {regularSearchMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <ArrowRight className="h-4 w-4" />
+                  )}
+                  Quick Search
+                </Button>
+              </div>
 
-            <div className="space-y-4">
-              {analysis.questions.map((question, idx) => (
-                <Card key={question.id} className="overflow-hidden">
-                  <CardContent className="p-5">
-                    <p className="font-medium text-foreground mb-4">
-                      {idx + 1}. {question.question}
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {question.options.map((option) => (
-                        <Badge
-                          key={option.value}
-                          variant={answers[question.id] === option.value ? "default" : "outline"}
-                          className="cursor-pointer py-2 px-3 text-sm"
-                          onClick={() => handleAnswerSelect(question.id, option.value)}
-                          data-testid={`option-${question.id}-${option.value}`}
-                        >
-                          {answers[question.id] === option.value && (
-                            <Check className="h-3 w-3 mr-1.5" />
-                          )}
-                          {option.label}
-                        </Badge>
-                      ))}
+              <div className="text-center pt-4">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setLocation("/jobs")}
+                  className="text-muted-foreground"
+                  data-testid="link-browse-all"
+                >
+                  Or browse all jobs
+                </Button>
+              </div>
+            </motion.div>
+          )}
+
+          {step === "refining" && (
+            <motion.div
+              key="refining"
+              variants={pageVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={{ duration: 0.3 }}
+              className="flex flex-col items-center gap-6 py-12"
+            >
+              <motion.div
+                className="relative"
+                animate={{ rotate: 360 }}
+                transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+              >
+                <div className="w-16 h-16 rounded-full border-2 border-muted border-t-primary" />
+              </motion.div>
+              <div className="text-center">
+                <p className="text-lg font-medium text-foreground mb-1">Understanding your search...</p>
+                <p className="text-sm text-muted-foreground">Preparing a few questions to narrow down the best matches</p>
+              </div>
+            </motion.div>
+          )}
+
+          {step === "questions" && analysis && (
+            <motion.div
+              key="questions"
+              variants={pageVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={{ duration: 0.3 }}
+              className="space-y-6"
+            >
+              {analysis.refinedIntent && (
+                <Card className="bg-muted/40 border-border/60">
+                  <CardContent className="p-4">
+                    <div className="flex items-start gap-3">
+                      <Target className="h-5 w-5 text-foreground shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-medium text-foreground">What we understood</p>
+                        <p className="text-sm text-muted-foreground mt-1">{analysis.refinedIntent}</p>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
-              ))}
-            </div>
+              )}
 
-            <div className="flex flex-col sm:flex-row gap-3 justify-between pt-4">
-              <Button 
-                variant="ghost" 
-                onClick={handleReset}
-                className="gap-2"
-                data-testid="button-start-over"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                Start Over
-              </Button>
-              <Button 
-                size="lg"
-                onClick={handleSubmitAnswers}
-                disabled={!allQuestionsAnswered}
-                className="gap-2"
-                data-testid="button-find-matches"
-              >
-                Find My Matches
-                <ArrowRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* Step: Searching */}
-        {step === "searching" && (
-          <div className="flex flex-col items-center gap-6 py-12">
-            <div className="relative">
-              <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
-                <Loader2 className="h-8 w-8 text-muted-foreground animate-spin" />
-              </div>
-            </div>
-            <div className="text-center">
-              <p className="text-lg font-medium text-foreground mb-1">Finding your matches...</p>
-              <p className="text-sm text-muted-foreground">Searching for roles that fit your criteria</p>
-            </div>
-          </div>
-        )}
-
-        {/* Step: Results */}
-        {step === "results" && results && (
-          <div className="space-y-6">
-            <Card className="bg-muted/40 border-border/60" data-testid="card-curated-matches">
-              <CardContent className="p-5">
-                <div className="flex items-center gap-3 mb-3 flex-wrap">
-                  <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-                    <Target className="h-5 w-5 text-foreground" />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-foreground" data-testid="text-match-count">
-                      {results.jobs.length} Curated Matches
-                    </p>
-                    <p className="text-sm text-muted-foreground" data-testid="text-search-summary">
-                      {results.searchSummary}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {results.jobs.length > 0 ? (
-              <>
-                <div className="space-y-3">
-                  {results.jobs.slice(0, 5).map((job) => (
-                    <Card 
-                      key={job.id} 
-                      className="hover-elevate cursor-pointer"
-                      onClick={() => {
-                        sessionStorage.setItem("searchResults", JSON.stringify([job]));
-                        sessionStorage.setItem("searchQuery", query);
-                        setLocation("/jobs");
-                      }}
-                      data-testid={`card-result-${job.id}`}
-                    >
-                      <CardContent className="p-4">
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1 flex-wrap">
-                              <h3 className="font-medium text-foreground truncate" data-testid={`text-job-title-${job.id}`}>{job.title}</h3>
-                              <Badge variant="secondary" className="shrink-0" data-testid={`badge-match-score-${job.id}`}>
-                                {job.matchScore}% match
+              <div className="space-y-4">
+                {analysis.questions.map((question, idx) => (
+                  <motion.div
+                    key={question.id}
+                    initial={{ opacity: 0, y: 16 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: idx * 0.12, duration: 0.35 }}
+                  >
+                    <Card className="overflow-visible">
+                      <CardContent className="p-5">
+                        <p className="font-medium text-foreground mb-4">
+                          {idx + 1}. {question.question}
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {question.options.map((option) => (
+                            <motion.div key={option.value} whileTap={{ scale: 0.97 }}>
+                              <Badge
+                                variant={answers[question.id] === option.value ? "default" : "outline"}
+                                className={`cursor-pointer py-2 px-3 text-sm transition-all duration-200 ${
+                                  answers[question.id] === option.value
+                                    ? "ring-1 ring-primary/30"
+                                    : ""
+                                }`}
+                                onClick={() => handleAnswerSelect(question.id, option.value)}
+                                data-testid={`option-${question.id}-${option.value}`}
+                              >
+                                {answers[question.id] === option.value && (
+                                  <Check className="h-3 w-3 mr-1.5" />
+                                )}
+                                {option.label}
                               </Badge>
-                            </div>
-                            <p className="text-sm text-muted-foreground mb-2" data-testid={`text-job-company-${job.id}`}>
-                              {job.company} • {job.location || "Remote"}
-                            </p>
-                            <p className="text-sm text-muted-foreground line-clamp-2" data-testid={`text-match-reason-${job.id}`}>
-                              {job.matchReason}
-                            </p>
-                          </div>
-                          <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                            </motion.div>
+                          ))}
                         </div>
                       </CardContent>
                     </Card>
-                  ))}
-                </div>
+                  </motion.div>
+                ))}
+              </div>
 
-                {results.jobs.length > 5 && (
-                  <Button 
-                    variant="outline" 
-                    className="w-full" 
-                    onClick={handleViewAllResults}
-                    data-testid="button-view-all-results"
-                  >
-                    View All {results.jobs.length} Matches
-                  </Button>
-                )}
-              </>
-            ) : (
-              <Card className="bg-muted/30" data-testid="card-no-results">
-                <CardContent className="p-8 text-center">
-                  <p className="text-muted-foreground mb-4" data-testid="text-no-results">
-                    No perfect matches found for your specific criteria. Try broadening your search.
-                  </p>
-                  <Button variant="outline" onClick={handleReset} data-testid="button-try-different">
-                    Try a Different Search
-                  </Button>
+              <div className="flex flex-col sm:flex-row gap-3 justify-between pt-4">
+                <Button 
+                  variant="ghost" 
+                  onClick={handleReset}
+                  className="gap-2"
+                  data-testid="button-start-over"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  Start Over
+                </Button>
+                <Button 
+                  size="lg"
+                  onClick={handleSubmitAnswers}
+                  disabled={!allQuestionsAnswered}
+                  className="gap-2"
+                  data-testid="button-find-matches"
+                >
+                  Find My Matches
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </motion.div>
+          )}
+
+          {step === "searching" && (
+            <motion.div
+              key="searching"
+              variants={pageVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={{ duration: 0.3 }}
+              className="flex flex-col items-center gap-6 py-12"
+            >
+              <div className="relative">
+                <motion.div
+                  className="w-16 h-16 rounded-full border-2 border-muted border-t-primary"
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+                />
+              </div>
+              <div className="text-center">
+                <p className="text-lg font-medium text-foreground mb-1">Finding your matches...</p>
+                <p className="text-sm text-muted-foreground">Searching for roles that fit your criteria</p>
+              </div>
+            </motion.div>
+          )}
+
+          {step === "results" && results && (
+            <motion.div
+              key="results"
+              variants={pageVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={{ duration: 0.3 }}
+              className="space-y-6"
+            >
+              <Card className="bg-muted/40 border-border/60" data-testid="card-curated-matches">
+                <CardContent className="p-5">
+                  <div className="flex items-center gap-3 mb-3 flex-wrap">
+                    <motion.div
+                      className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center"
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                    >
+                      <Target className="h-5 w-5 text-primary" />
+                    </motion.div>
+                    <div>
+                      <p className="font-semibold text-foreground" data-testid="text-match-count">
+                        {results.jobs.length} Curated Matches
+                      </p>
+                      <p className="text-sm text-muted-foreground" data-testid="text-search-summary">
+                        {results.searchSummary}
+                      </p>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
-            )}
 
-            <div className="flex justify-center pt-4">
-              <Button variant="ghost" onClick={handleReset} className="gap-2" data-testid="button-new-search">
-                <ArrowLeft className="h-4 w-4" />
-                New Search
-              </Button>
-            </div>
-          </div>
-        )}
+              {results.jobs.length > 0 ? (
+                <>
+                  <div className="space-y-3">
+                    {results.jobs.slice(0, 5).map((job, idx) => (
+                      <motion.div
+                        key={job.id}
+                        initial={{ opacity: 0, y: 16 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: idx * 0.08, duration: 0.35 }}
+                      >
+                        <Card 
+                          className="hover-elevate cursor-pointer"
+                          onClick={() => {
+                            sessionStorage.setItem("searchResults", JSON.stringify([job]));
+                            sessionStorage.setItem("searchQuery", query);
+                            setLocation("/jobs");
+                          }}
+                          data-testid={`card-result-${job.id}`}
+                        >
+                          <CardContent className="p-4">
+                            <div className="flex items-start justify-between gap-4">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                  <h3 className="font-medium text-foreground truncate" data-testid={`text-job-title-${job.id}`}>{job.title}</h3>
+                                  <Badge variant="secondary" className="shrink-0" data-testid={`badge-match-score-${job.id}`}>
+                                    {job.matchScore}% match
+                                  </Badge>
+                                </div>
+                                <p className="text-sm text-muted-foreground mb-2" data-testid={`text-job-company-${job.id}`}>
+                                  {job.company} {job.location ? `\u2022 ${job.location}` : "\u2022 Remote"}
+                                </p>
+                                <p className="text-sm text-muted-foreground line-clamp-2" data-testid={`text-match-reason-${job.id}`}>
+                                  {job.matchReason}
+                                </p>
+                              </div>
+                              <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </motion.div>
+                    ))}
+                  </div>
+
+                  {results.jobs.length > 5 && (
+                    <Button 
+                      variant="outline" 
+                      className="w-full" 
+                      onClick={handleViewAllResults}
+                      data-testid="button-view-all-results"
+                    >
+                      View All {results.jobs.length} Matches
+                    </Button>
+                  )}
+                </>
+              ) : (
+                <Card className="bg-muted/30" data-testid="card-no-results">
+                  <CardContent className="p-8 text-center">
+                    <p className="text-muted-foreground mb-4" data-testid="text-no-results">
+                      No perfect matches found for your specific criteria. Try broadening your search.
+                    </p>
+                    <Button variant="outline" onClick={handleReset} data-testid="button-try-different">
+                      Try a Different Search
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
+
+              <div className="flex justify-center pt-4">
+                <Button variant="ghost" onClick={handleReset} className="gap-2" data-testid="button-new-search">
+                  <ArrowLeft className="h-4 w-4" />
+                  New Search
+                </Button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </main>
     </div>
   );

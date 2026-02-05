@@ -5,6 +5,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/theme-provider";
 import { useAuth } from "@/hooks/use-auth";
+import { ScrollToTop } from "@/components/scroll-to-top";
+import { Scale } from "lucide-react";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
 import Search from "@/pages/search";
@@ -19,8 +21,18 @@ function AppRouter() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-pulse text-muted-foreground">Loading...</div>
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4">
+        <div className="flex items-center gap-3">
+          <Scale className="h-6 w-6 text-foreground animate-pulse" />
+          <span className="text-base font-semibold text-foreground tracking-tight">
+            Legal Tech Careers
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-bounce [animation-delay:0ms]" />
+          <div className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-bounce [animation-delay:150ms]" />
+          <div className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-bounce [animation-delay:300ms]" />
+        </div>
       </div>
     );
   }
@@ -44,6 +56,7 @@ function App() {
       <ThemeProvider defaultTheme="light" storageKey="legal-ai-careers-theme">
         <TooltipProvider>
           <AppRouter />
+          <ScrollToTop />
           <Toaster />
         </TooltipProvider>
       </ThemeProvider>

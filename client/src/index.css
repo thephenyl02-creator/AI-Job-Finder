@@ -285,4 +285,13 @@
   .border.hover-elevate:not(.no-hover-interaction-elevate)::after {
     inset: -1px;
   }
+
+  .dot-grid {
+    background-image: radial-gradient(circle, hsl(var(--foreground) / 0.04) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+
+  .dark .dot-grid {
+    background-image: radial-gradient(circle, hsl(var(--foreground) / 0.06) 1px, transparent 1px);
+  }
 }
