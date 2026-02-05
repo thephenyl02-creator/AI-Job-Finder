@@ -1,0 +1,712 @@
+BUILD: Real-time legal tech job intelligence platform with live scraping, AI insights, and seamless apply.
+
+This is a specialized platform for legal-tech professionals - NOT a generic job board.
+
+═══════════════════════════════════════════════════════════════════════════
+
+CORE VALUE PROPOSITION
+
+═══════════════════════════════════════════════════════════════════════════
+
+Users come here to:
+✅ Discover fresh legal-tech jobs in real-time (not stale listings)
+✅ Search with natural language OR upload resume
+✅ Get AI-powered job summaries and insights
+✅ See live hiring trends by category
+✅ Receive intelligent job matches
+✅ Apply seamlessly (one-click to company site)
+
+This is job INTELLIGENCE, not just job listings.
+
+═══════════════════════════════════════════════════════════════════════════
+
+JOB TAXONOMY (Your Competitive Moat)
+
+═══════════════════════════════════════════════════════════════════════════
+
+Three primary categories with detailed subcategories:
+
+1. 🧠 LEGAL AI JOBS
+   - Legal AI Engineer
+   - NLP Engineer (Legal)
+   - Knowledge Engineer
+   - Legal Data Scientist
+   - AI Product Manager (Legal)
+   - Prompt Engineer (Legal AI)
+   - AI Researcher (Law + ML)
+
+2. ⚖️ LEGAL TECH STARTUP ROLES
+   - Product Manager (LegalTech)
+   - Solutions Engineer
+   - Legal Operations Manager
+   - Legal Tech Consultant
+   - Customer Success (Legal SaaS)
+   - Sales Engineer (LegalTech)
+   - Growth / Partnerships (LegalTech)
+
+3. 🏢 LAW FIRM - TECH & INNOVATION ROLES
+   - Legal Innovation Manager
+   - Practice Technology Lead
+   - Knowledge Management Lawyer
+   - Litigation Technology Specialist
+   - eDiscovery / Analytics Manager
+   - AI & Automation Counsel
+   - Research Technology Attorney
+
+Each job is automatically categorized using AI.
+
+═══════════════════════════════════════════════════════════════════════════
+
+TECH STACK
+
+═══════════════════════════════════════════════════════════════════════════
+
+Frontend:
+- Next.js 14 (App Router)
+- Tailwind CSS (Claude.ai color palette)
+- React Server Components
+- Framer Motion (smooth animations)
+
+Backend:
+- Next.js API Routes
+- PostgreSQL (job storage)
+- Redis (caching + real-time data)
+- Bull Queue (background job scraping)
+
+AI/ML:
+- OpenAI GPT-4 (job categorization, summaries, matching)
+- OpenAI Embeddings (semantic search)
+- Real-time scraping (Puppeteer + Cheerio)
+
+Real-time:
+- Server-Sent Events (live job updates)
+- WebSockets (optional for chat)
+- Background workers (continuous scraping)
+
+═══════════════════════════════════════════════════════════════════════════
+
+DATABASE SCHEMA (Complete)
+
+═══════════════════════════════════════════════════════════════════════════
+
+-- Jobs table (enhanced)
+CREATE TABLE jobs (
+  id SERIAL PRIMARY KEY,
+  
+  -- Basic info
+  title VARCHAR(500) NOT NULL,
+  company VARCHAR(255) NOT NULL,
+  company_logo VARCHAR(500),
+  
+  -- Location
+  location VARCHAR(255),
+  is_remote BOOLEAN DEFAULT false,
+  location_type VARCHAR(50), -- 'remote', 'hybrid', 'onsite'
+  
+  -- Compensation
+  salary_min INTEGER,
+  salary_max INTEGER,
+  salary_currency VARCHAR(10) DEFAULT 'USD',
+  equity VARCHAR(255), -- "0.1-0.5%", "Competitive", etc.
+  
+  -- Experience
+  experience_min INTEGER,
+  experience_max INTEGER,
+  seniority_level VARCHAR(50), -- 'Entry', 'Mid', 'Senior', 'Lead', 'Director'
+  
+  -- Job details
+  description TEXT NOT NULL,
+  requirements TEXT,
+  nice_to_have TEXT,
+  responsibilities TEXT,
+  benefits TEXT,
+  
+  -- AI-generated fields
+  ai_summary TEXT, -- 3-sentence AI summary
+  key_skills TEXT[], -- ['Python', 'NLP', 'Legal Knowledge']
+  role_category VARCHAR(100), -- From taxonomy
+  role_subcategory VARCHAR(100), -- Specific role type
+  match_keywords TEXT[], -- For better matching
+  
+  -- Application
+  apply_url VARCHAR(1000) NOT NULL,
+  apply_type VARCHAR(50), -- 'external', 'greenhouse', 'lever', 'ashby'
+  
+  -- Metadata
+  external_id VARCHAR(255) UNIQUE,
+  source VARCHAR(100), -- 'greenhouse_harvey', 'lever_clio', etc.
+  posted_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  last_scraped_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  is_active BOOLEAN DEFAULT true,
+  is_featured BOOLEAN DEFAULT false,
+  view_count INTEGER DEFAULT 0,
+  apply_click_count INTEGER DEFAULT 0,
+  
+  -- Timestamps
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  
+  -- Search
+  search_vector tsvector,
+  embedding VECTOR(1536) -- OpenAI embeddings for semantic search
+);
+
+-- Indexes for performance
+CREATE INDEX idx_jobs_company ON jobs(company);
+CREATE INDEX idx_jobs_role_category ON jobs(role_category);
+CREATE INDEX idx_jobs_role_subcategory ON jobs(role_subcategory);
+CREATE INDEX idx_jobs_is_active ON jobs(is_active);
+CREATE INDEX idx_jobs_posted_date ON jobs(posted_date DESC);
+CREATE INDEX idx_jobs_search_vector ON jobs USING gin(search_vector);
+CREATE INDEX idx_jobs_embedding ON jobs USING ivfflat (embedding vector_cosine_ops);
+
+-- Update search vector trigger
+CREATE FUNCTION jobs_search_vector_update() RETURNS trigger AS $$
+BEGIN
+  NEW.search_vector :=
+    setweight(to_tsvector('english', coalesce(NEW.title, '')), 'A') ||
+    setweight(to_tsvector('english', coalesce(NEW.company, '')), 'B') ||
+    setweight(to_tsvector('english', coalesce(NEW.description, '')), 'C');
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER jobs_search_vector_trigger
+  BEFORE INSERT OR UPDATE ON jobs
+  FOR EACH ROW EXECUTE FUNCTION jobs_search_vector_update();
+
+-- Companies table (for aggregations)
+CREATE TABLE companies (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(255) UNIQUE NOT NULL,
+  logo VARCHAR(500),
+  website VARCHAR(500),
+  description TEXT,
+  company_type VARCHAR(50), -- 'startup', 'biglaw', 'legal-tech', 'tech-legal'
+  size_range VARCHAR(50), -- '1-10', '11-50', '51-200', '201-500', '500+'
+  funding_stage VARCHAR(50), -- 'Seed', 'Series A', 'Series B', 'Public'
+  total_funding VARCHAR(100),
+  location VARCHAR(255),
+  careers_url VARCHAR(500),
+  last_scraped_at TIMESTAMP,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Job categories (for taxonomy)
+CREATE TABLE job_categories (
+  id SERIAL PRIMARY KEY,
+  category_name VARCHAR(100) UNIQUE NOT NULL, -- 'Legal AI Jobs'
+  category_icon VARCHAR(10), -- '🧠'
+  subcategories TEXT[], -- ['Legal AI Engineer', 'NLP Engineer']
+  description TEXT,
+  sort_order INTEGER DEFAULT 0
+);
+
+-- Insert taxonomy
+INSERT INTO job_categories (category_name, category_icon, subcategories, sort_order) VALUES
+('Legal AI Jobs', '🧠', ARRAY[
+  'Legal AI Engineer',
+  'NLP Engineer (Legal)',
+  'Knowledge Engineer',
+  'Legal Data Scientist',
+  'AI Product Manager (Legal)',
+  'Prompt Engineer (Legal AI)',
+  'AI Researcher (Law + ML)'
+], 1),
+('Legal Tech Startup Roles', '⚖️', ARRAY[
+  'Product Manager (LegalTech)',
+  'Solutions Engineer',
+  'Legal Operations Manager',
+  'Legal Tech Consultant',
+  'Customer Success (Legal SaaS)',
+  'Sales Engineer (LegalTech)',
+  'Growth / Partnerships (LegalTech)'
+], 2),
+('Law Firm Tech & Innovation', '🏢', ARRAY[
+  'Legal Innovation Manager',
+  'Practice Technology Lead',
+  'Knowledge Management Lawyer',
+  'Litigation Technology Specialist',
+  'eDiscovery / Analytics Manager',
+  'AI & Automation Counsel',
+  'Research Technology Attorney'
+], 3);
+
+-- Trending insights (cached daily)
+CREATE TABLE job_trends (
+  id SERIAL PRIMARY KEY,
+  date DATE DEFAULT CURRENT_DATE,
+  category VARCHAR(100),
+  subcategory VARCHAR(100),
+  job_count INTEGER,
+  avg_salary_min INTEGER,
+  avg_salary_max INTEGER,
+  top_companies TEXT[],
+  top_skills TEXT[],
+  growth_percentage DECIMAL(5,2),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- User preferences (for matching)
+CREATE TABLE user_preferences (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER REFERENCES users(id),
+  preferred_categories TEXT[],
+  preferred_subcategories TEXT[],
+  skills TEXT[],
+  experience_years INTEGER,
+  min_salary INTEGER,
+  location_preferences TEXT[],
+  remote_only BOOLEAN DEFAULT false,
+  resume_embedding VECTOR(1536),
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Job scraping queue
+CREATE TABLE scraping_queue (
+  id SERIAL PRIMARY KEY,
+  company_name VARCHAR(255),
+  source_url VARCHAR(500),
+  source_type VARCHAR(50), -- 'greenhouse', 'lever', 'generic'
+  priority INTEGER DEFAULT 0,
+  status VARCHAR(50) DEFAULT 'pending', -- 'pending', 'running', 'completed', 'failed'
+  last_attempt_at TIMESTAMP,
+  attempt_count INTEGER DEFAULT 0,
+  error_message TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+═══════════════════════════════════════════════════════════════════════════
+
+NEW FILE: lib/job-categorizer.js
+
+═══════════════════════════════════════════════════════════════════════════
+
+import OpenAI from 'openai'
+
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+
+// AI-powered job categorization
+export async function categorizeJob(title, description, company) {
+  const prompt = `You are an expert at categorizing legal tech jobs.
+
+Job Title: ${title}
+Company: ${company}
+Description: ${description.substring(0, 1000)}
+
+Categorize this job into ONE of these categories and subcategories:
+
+🧠 LEGAL AI JOBS:
+- Legal AI Engineer
+- NLP Engineer (Legal)
+- Knowledge Engineer
+- Legal Data Scientist
+- AI Product Manager (Legal)
+- Prompt Engineer (Legal AI)
+- AI Researcher (Law + ML)
+
+⚖️ LEGAL TECH STARTUP ROLES:
+- Product Manager (LegalTech)
+- Solutions Engineer
+- Legal Operations Manager
+- Legal Tech Consultant
+- Customer Success (Legal SaaS)
+- Sales Engineer (LegalTech)
+- Growth / Partnerships (LegalTech)
+
+🏢 LAW FIRM TECH & INNOVATION:
+- Legal Innovation Manager
+- Practice Technology Lead
+- Knowledge Management Lawyer
+- Litigation Technology Specialist
+- eDiscovery / Analytics Manager
+- AI & Automation Counsel
+- Research Technology Attorney
+
+Also extract:
+- Seniority level (Entry/Mid/Senior/Lead/Director/VP)
+- Key skills (5-8 most important technical/domain skills)
+- Experience range if mentioned
+- Summary (3 sentences max)
+
+Return ONLY valid JSON:
+{
+  "category": "Legal AI Jobs",
+  "subcategory": "Legal AI Engineer",
+  "seniorityLevel": "Senior",
+  "keySkills": ["Python", "NLP", "Legal Domain Knowledge"],
+  "experienceMin": 5,
+  "experienceMax": 8,
+  "summary": "Brief summary here.",
+  "matchKeywords": ["ai", "machine learning", "legal"]
+}`
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini", // Faster and cheaper for categorization
+      messages: [{ role: "user", content: prompt }],
+      response_format: { type: "json_object" },
+      temperature: 0.3,
+    })
+
+    const result = JSON.parse(completion.choices[0].message.content)
+    return result
+  } catch (error) {
+    console.error('Categorization error:', error)
+    // Fallback to simple keyword matching
+    return fallbackCategorization(title, description)
+  }
+}
+
+// Fallback if AI fails
+function fallbackCategorization(title, description) {
+  const text = `${title} ${description}`.toLowerCase()
+  
+  // Simple keyword matching
+  if (text.includes('ai engineer') || text.includes('ml engineer') || text.includes('machine learning')) {
+    return {
+      category: 'Legal AI Jobs',
+      subcategory: 'Legal AI Engineer',
+      seniorityLevel: inferSeniority(title),
+      keySkills: ['AI', 'Machine Learning', 'Legal'],
+      summary: 'AI engineering role in legal technology.',
+      matchKeywords: ['ai', 'engineering', 'legal']
+    }
+  }
+  
+  if (text.includes('product manager')) {
+    return {
+      category: 'Legal Tech Startup Roles',
+      subcategory: 'Product Manager (LegalTech)',
+      seniorityLevel: inferSeniority(title),
+      keySkills: ['Product Management', 'Legal Tech'],
+      summary: 'Product management role in legal technology.',
+      matchKeywords: ['product', 'management', 'legal']
+    }
+  }
+  
+  // Default
+  return {
+    category: 'Legal Tech Startup Roles',
+    subcategory: 'Other',
+    seniorityLevel: inferSeniority(title),
+    keySkills: [],
+    summary: 'Legal technology role.',
+    matchKeywords: []
+  }
+}
+
+function inferSeniority(title) {
+  const titleLower = title.toLowerCase()
+  if (titleLower.includes('senior') || titleLower.includes('sr.')) return 'Senior'
+  if (titleLower.includes('lead') || titleLower.includes('principal')) return 'Lead'
+  if (titleLower.includes('director')) return 'Director'
+  if (titleLower.includes('vp') || titleLower.includes('vice president')) return 'VP'
+  if (titleLower.includes('junior') || titleLower.includes('jr.')) return 'Entry'
+  if (titleLower.includes('associate')) return 'Mid'
+  return 'Mid' // Default
+}
+
+// Generate AI summary
+export async function generateJobSummary(title, description, company) {
+  const prompt = `Summarize this job posting in exactly 3 concise sentences.
+Focus on: (1) What you'll do, (2) What they're looking for, (3) What makes it interesting.
+
+Job: ${title} at ${company}
+Description: ${description.substring(0, 1500)}
+
+Return ONLY the 3-sentence summary, no extra text.`
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.5,
+      max_tokens: 150,
+    })
+
+    return completion.choices[0].message.content.trim()
+  } catch (error) {
+    console.error('Summary generation error:', error)
+    return `${title} position at ${company}. Review the full description for details.`
+  }
+}
+
+// Extract skills using AI
+export async function extractSkills(description) {
+  const prompt = `Extract the 5-8 most important technical and domain skills from this job description.
+Focus on: programming languages, frameworks, tools, legal domains, and key competencies.
+
+Description: ${description.substring(0, 1000)}
+
+Return ONLY a JSON array of skill strings, e.g. ["Python", "NLP", "Contract Law"]`
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: prompt }],
+      response_format: { type: "json_object" },
+      temperature: 0.3,
+    })
+
+    const result = JSON.parse(completion.choices[0].message.content)
+    return result.skills || []
+  } catch (error) {
+    console.error('Skill extraction error:', error)
+    return []
+  }
+}
+
+═══════════════════════════════════════════════════════════════════════════
+
+NEW FILE: lib/real-time-scraper.js
+
+═══════════════════════════════════════════════════════════════════════════
+
+import { scrapeAllLawFirms } from './law-firm-scraper'
+import { categorizeJob, generateJobSummary } from './job-categorizer'
+import { query } from './db'
+import { generateEmbedding } from './openai'
+
+// Main real-time scraping orchestrator
+export async function scrapeAndProcessJobs() {
+  console.log('🚀 Starting real-time job scraping...')
+  
+  try {
+    // Step 1: Scrape all law firms
+    const scrapedJobs = await scrapeAllLawFirms()
+    console.log(`📊 Scraped ${scrapedJobs.length} jobs`)
+    
+    // Step 2: Process each job with AI
+    let processed = 0
+    let added = 0
+    let updated = 0
+    let skipped = 0
+    
+    for (const job of scrapedJobs) {
+      try {
+        // Check if already exists
+        const existing = await query(
+          'SELECT id, description FROM jobs WHERE external_id = $1 OR apply_url = $2',
+          [job.externalId, job.applyUrl]
+        )
+        
+        // Skip if recently updated (within 24 hours)
+        if (existing.rows.length > 0) {
+          const lastScraped = existing.rows[0].last_scraped_at
+          const hoursSinceUpdate = (Date.now() - new Date(lastScraped)) / (1000 * 60 * 60)
+          
+          if (hoursSinceUpdate < 24) {
+            skipped++
+            continue
+          }
+        }
+        
+        // Step 3: AI categorization
+        const categorization = await categorizeJob(
+          job.title,
+          job.description,
+          job.company
+        )
+        
+        // Step 4: Generate AI summary
+        const aiSummary = await generateJobSummary(
+          job.title,
+          job.description,
+          job.company
+        )
+        
+        // Step 5: Generate embedding for semantic search
+        const embedding = await generateEmbedding(
+          `${job.title} ${job.company} ${job.description.substring(0, 500)}`
+        )
+        
+        // Step 6: Prepare data
+        const jobData = {
+          title: job.title,
+          company: job.company,
+          company_logo: job.companyLogo,
+          location: job.location,
+          is_remote: job.isRemote,
+          description: job.description,
+          apply_url: job.applyUrl,
+          external_id: job.externalId,
+          source: job.source,
+          
+          // AI-enhanced fields
+          ai_summary: aiSummary,
+          key_skills: categorization.keySkills,
+          role_category: categorization.category,
+          role_subcategory: categorization.subcategory,
+          seniority_level: categorization.seniorityLevel,
+          experience_min: categorization.experienceMin,
+          experience_max: categorization.experienceMax,
+          match_keywords: categorization.matchKeywords,
+          embedding: `[${embedding.join(',')}]`, // PostgreSQL vector format
+          
+          posted_date: job.postedDate,
+          last_scraped_at: new Date(),
+          is_active: true,
+        }
+        
+        // Step 7: Insert or update
+        if (existing.rows.length > 0) {
+          await query(
+            `UPDATE jobs SET 
+              title = $1, location = $2, is_remote = $3, description = $4,
+              ai_summary = $5, key_skills = $6, role_category = $7, role_subcategory = $8,
+              seniority_level = $9, experience_min = $10, experience_max = $11,
+              match_keywords = $12, embedding = $13, last_scraped_at = $14, is_active = $15
+            WHERE id = $16`,
+            [
+              jobData.title, jobData.location, jobData.is_remote, jobData.description,
+              jobData.ai_summary, jobData.key_skills, jobData.role_category, jobData.role_subcategory,
+              jobData.seniority_level, jobData.experience_min, jobData.experience_max,
+              jobData.match_keywords, jobData.embedding, jobData.last_scraped_at, jobData.is_active,
+              existing.rows[0].id
+            ]
+          )
+          updated++
+        } else {
+          await query(
+            `INSERT INTO jobs (
+              title, company, company_logo, location, is_remote, description, apply_url,
+              external_id, source, ai_summary, key_skills, role_category, role_subcategory,
+              seniority_level, experience_min, experience_max, match_keywords, embedding,
+              posted_date, last_scraped_at, is_active
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)`,
+            [
+              jobData.title, jobData.company, jobData.company_logo, jobData.location,
+              jobData.is_remote, jobData.description, jobData.apply_url, jobData.external_id,
+              jobData.source, jobData.ai_summary, jobData.key_skills, jobData.role_category,
+              jobData.role_subcategory, jobData.seniority_level, jobData.experience_min,
+              jobData.experience_max, jobData.match_keywords, jobData.embedding,
+              jobData.posted_date, jobData.last_scraped_at, jobData.is_active
+            ]
+          )
+          added++
+        }
+        
+        processed++
+        
+        // Log progress every 10 jobs
+        if (processed % 10 === 0) {
+          console.log(`✅ Processed ${processed}/${scrapedJobs.length} jobs`)
+        }
+        
+        // Small delay to avoid rate limits
+        await new Promise(resolve => setTimeout(resolve, 500))
+        
+      } catch (jobError) {
+        console.error(`❌ Error processing job: ${job.title}`, jobError)
+        skipped++
+      }
+    }
+    
+    console.log(`
+🎉 Scraping complete!
+📊 Total scraped: ${scrapedJobs.length}
+✅ Processed: ${processed}
+➕ Added: ${added}
+🔄 Updated: ${updated}
+⏭️  Skipped: ${skipped}
+    `)
+    
+    // Step 8: Update trends
+    await updateJobTrends()
+    
+    return { scrapedJobs.length, processed, added, updated, skipped }
+    
+  } catch (error) {
+    console.error('❌ Scraping orchestrator error:', error)
+    throw error
+  }
+}
+
+// Update job trends (daily aggregations)
+async function updateJobTrends() {
+  try {
+    // Clear today's trends
+    await query('DELETE FROM job_trends WHERE date = CURRENT_DATE')
+    
+    // Calculate trends by category
+    const trendsQuery = `
+      INSERT INTO job_trends (date, category, subcategory, job_count, avg_salary_min, avg_salary_max, top_companies, top_skills)
+      SELECT 
+        CURRENT_DATE,
+        role_category,
+        role_subcategory,
+        COUNT(*) as job_count,
+        AVG(salary_min)::INTEGER as avg_salary_min,
+        AVG(salary_max)::INTEGER as avg_salary_max,
+        ARRAY_AGG(DISTINCT company ORDER BY company LIMIT 5) as top_companies,
+        ARRAY_AGG(DISTINCT unnest(key_skills) ORDER BY unnest(key_skills) LIMIT 10) as top_skills
+      FROM jobs
+      WHERE is_active = true AND posted_date > NOW() - INTERVAL '30 days'
+      GROUP BY role_category, role_subcategory
+    `
+    
+    await query(trendsQuery)
+    console.log('📈 Job trends updated')
+    
+  } catch (error) {
+    console.error('Trends update error:', error)
+  }
+}
+
+═══════════════════════════════════════════════════════════════════════════
+
+NEW FILE: app/api/jobs/real-time-sync/route.js
+
+═══════════════════════════════════════════════════════════════════════════
+
+import { NextResponse } from 'next/server'
+import { scrapeAndProcessJobs } from '@/lib/real-time-scraper'
+
+// This endpoint triggers the full scraping + AI processing pipeline
+export async function POST(request) {
+  try {
+    // Optional: Add auth check here for production
+    // const authHeader = request.headers.get('authorization')
+    // if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    // }
+    
+    const result = await scrapeAndProcessJobs()
+    
+    return NextResponse.json({
+      success: true,
+      ...result,
+      timestamp: new Date().toISOString()
+    })
+    
+  } catch (error) {
+    console.error('Real-time sync error:', error)
+    return NextResponse.json(
+      { error: 'Sync failed', details: error.message },
+      { status: 500 }
+    )
+  }
+}
+
+export async function GET() {
+  // Allow GET for manual testing
+  return POST({ headers: new Headers() })
+}
+
+// Configure route for long-running operations
+export const maxDuration = 300 // 5 minutes (Vercel limit)
+
+═══════════════════════════════════════════════════════════════════════════
+
+I'll continue with the frontend components in the next message to keep this organized.
+
+Should I continue with:
+1. ✅ **Homepage with live job feed**
+2. ✅ **Category browsing with taxonomy**
+3. ✅ **Trends dashboard**
+4. ✅ **Smart matching algorithm**
+5. ✅ **Real-time updates (SSE)**
+
+Or do you want me to focus on a specific part first?

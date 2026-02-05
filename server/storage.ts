@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { jobs, users, userPreferences, type Job, type InsertJob, type User, type UserPreferences, type InsertUserPreferences, type ResumeExtractedData } from "@shared/schema";
+import { jobs, users, userPreferences, jobCategories, type Job, type InsertJob, type User, type UserPreferences, type InsertUserPreferences, type ResumeExtractedData, type JobCategory, JOB_TAXONOMY } from "@shared/schema";
 import { eq, desc, and, sql } from "drizzle-orm";
 
 export interface IStorage {
@@ -21,6 +21,10 @@ export interface IStorage {
   // User Preferences
   getUserPreferences(userId: string): Promise<UserPreferences | null>;
   upsertUserPreferences(userId: string, prefs: Partial<InsertUserPreferences>): Promise<UserPreferences>;
+  // Job Categories
+  getJobCategories(): Promise<JobCategory[]>;
+  seedJobCategories(): Promise<void>;
+  getJobsByCategory(category: string): Promise<Job[]>;
 }
 
 class DatabaseStorage implements IStorage {
@@ -123,9 +127,15 @@ class DatabaseStorage implements IStorage {
         requirements: "5+ years product management experience, experience with AI/ML products, legal tech experience preferred",
         applyUrl: "https://harvey.ai/careers",
         isActive: true,
+        roleCategory: "Legal AI Jobs",
+        roleSubcategory: "AI Product Manager (Legal)",
+        seniorityLevel: "Senior",
+        keySkills: ["Product Management", "AI/ML", "Legal Tech", "Roadmapping", "User Research"],
+        aiSummary: "Lead product strategy for Harvey's AI-powered legal research tools. They're looking for experienced PMs who understand AI products and can collaborate with legal experts. Join a fast-growing startup transforming how lawyers work.",
+        matchKeywords: ["product manager", "ai", "legal", "roadmap", "strategy"],
       },
       {
-        title: "Legal Engineer",
+        title: "Legal AI Engineer",
         company: "CoCounsel",
         companyLogo: "https://logo.clearbit.com/casetext.com",
         location: "Remote",
@@ -139,6 +149,12 @@ class DatabaseStorage implements IStorage {
         requirements: "3+ years software engineering experience, Python or TypeScript, interest in legal tech",
         applyUrl: "https://casetext.com/careers",
         isActive: true,
+        roleCategory: "Legal AI Jobs",
+        roleSubcategory: "Legal AI Engineer",
+        seniorityLevel: "Mid",
+        keySkills: ["Python", "TypeScript", "NLP", "Machine Learning", "Legal Tech"],
+        aiSummary: "Build AI features for CoCounsel's legal document drafting and research platform. Looking for engineers with Python/TypeScript skills and interest in legal applications. Opportunity to work on cutting-edge LLM integrations.",
+        matchKeywords: ["engineer", "ai", "legal", "python", "typescript", "nlp"],
       },
       {
         title: "AI Research Scientist",
@@ -155,6 +171,12 @@ class DatabaseStorage implements IStorage {
         requirements: "PhD in CS/ML or equivalent, experience with NLP, publications in top venues preferred",
         applyUrl: "https://evenuplaw.com/careers",
         isActive: true,
+        roleCategory: "Legal AI Jobs",
+        roleSubcategory: "AI Researcher (Law + ML)",
+        seniorityLevel: "Senior",
+        keySkills: ["Machine Learning", "NLP", "Computer Vision", "PyTorch", "Research"],
+        aiSummary: "Research and develop ML models for analyzing millions of legal documents at EvenUp. PhD preferred with NLP expertise. High-impact role advancing the state of legal AI technology.",
+        matchKeywords: ["research", "scientist", "ml", "phd", "nlp", "ai"],
       },
       {
         title: "Product Designer",
@@ -171,6 +193,12 @@ class DatabaseStorage implements IStorage {
         requirements: "3+ years product design experience, Figma expertise, experience with complex workflows",
         applyUrl: "https://robinai.com/careers",
         isActive: true,
+        roleCategory: "Legal Tech Startup Roles",
+        roleSubcategory: "Product Manager (LegalTech)",
+        seniorityLevel: "Mid",
+        keySkills: ["Product Design", "Figma", "UX Research", "Contract Workflows"],
+        aiSummary: "Design intuitive interfaces for Robin AI's contract review tools. Work closely with lawyers to understand complex legal workflows. Remote-friendly role based in London.",
+        matchKeywords: ["design", "product", "figma", "ux", "contract"],
       },
       {
         title: "Legal Operations Manager",
@@ -187,9 +215,15 @@ class DatabaseStorage implements IStorage {
         requirements: "5+ years legal operations or customer success experience, contract management experience",
         applyUrl: "https://ironcladapp.com/careers",
         isActive: true,
+        roleCategory: "Legal Tech Startup Roles",
+        roleSubcategory: "Legal Operations Manager",
+        seniorityLevel: "Senior",
+        keySkills: ["Legal Operations", "Contract Management", "Customer Success", "Process Optimization"],
+        aiSummary: "Scale Ironclad's contract management platform by optimizing customer workflows. Bridge product and customer success teams. Fully remote with strong legal ops experience required.",
+        matchKeywords: ["operations", "legal ops", "contract", "customer success"],
       },
       {
-        title: "Full Stack Engineer",
+        title: "Solutions Engineer",
         company: "Lexion",
         companyLogo: "https://logo.clearbit.com/lexion.ai",
         location: "Seattle, WA",
@@ -203,9 +237,15 @@ class DatabaseStorage implements IStorage {
         requirements: "2+ years full stack experience, React and Node.js, Python a plus",
         applyUrl: "https://lexion.ai/careers",
         isActive: true,
+        roleCategory: "Legal Tech Startup Roles",
+        roleSubcategory: "Solutions Engineer",
+        seniorityLevel: "Mid",
+        keySkills: ["React", "Node.js", "Python", "Full Stack", "APIs"],
+        aiSummary: "Build full-stack features for Lexion's AI-powered contract platform. Work with React, Node.js, and Python. Great opportunity for engineers interested in legal tech.",
+        matchKeywords: ["solutions", "engineer", "react", "nodejs", "python"],
       },
       {
-        title: "Business Development Manager",
+        title: "Sales Engineer (LegalTech)",
         company: "vLex",
         companyLogo: "https://logo.clearbit.com/vlex.com",
         location: "Miami, FL",
@@ -219,6 +259,12 @@ class DatabaseStorage implements IStorage {
         requirements: "4+ years B2B sales experience, legal industry experience preferred, strong communication skills",
         applyUrl: "https://vlex.com/careers",
         isActive: true,
+        roleCategory: "Legal Tech Startup Roles",
+        roleSubcategory: "Sales Engineer (LegalTech)",
+        seniorityLevel: "Mid",
+        keySkills: ["B2B Sales", "Enterprise Sales", "Legal Industry", "Relationship Building"],
+        aiSummary: "Drive enterprise sales for vLex's legal research platform in Miami. Build relationships with law firms and corporate legal teams. Legal industry experience is a plus.",
+        matchKeywords: ["sales", "business development", "enterprise", "legal"],
       },
       {
         title: "Machine Learning Engineer",
@@ -235,6 +281,12 @@ class DatabaseStorage implements IStorage {
         requirements: "3+ years ML engineering experience, Python, experience with text classification",
         applyUrl: "https://csdisco.com/careers",
         isActive: true,
+        roleCategory: "Legal AI Jobs",
+        roleSubcategory: "Legal AI Engineer",
+        seniorityLevel: "Mid",
+        keySkills: ["Machine Learning", "Python", "Text Classification", "NLP", "eDiscovery"],
+        aiSummary: "Build ML models for DISCO's eDiscovery platform in Austin. Work on document classification and entity extraction. Help legal teams find critical evidence efficiently.",
+        matchKeywords: ["ml", "machine learning", "ediscovery", "classification", "nlp"],
       },
       {
         title: "Customer Success Manager",
@@ -251,22 +303,34 @@ class DatabaseStorage implements IStorage {
         requirements: "2+ years customer success experience, legal tech or SaaS experience preferred",
         applyUrl: "https://relativity.com/careers",
         isActive: true,
+        roleCategory: "Legal Tech Startup Roles",
+        roleSubcategory: "Customer Success (Legal SaaS)",
+        seniorityLevel: "Mid",
+        keySkills: ["Customer Success", "SaaS", "Training", "Account Management"],
+        aiSummary: "Drive customer success for Relativity's eDiscovery platform in Chicago. Train legal teams, troubleshoot issues, and drive renewals. Be the voice of the customer.",
+        matchKeywords: ["customer success", "saas", "legal", "training", "retention"],
       },
       {
-        title: "Legal Content Writer",
+        title: "eDiscovery Analytics Manager",
         company: "Clio",
         companyLogo: "https://logo.clearbit.com/clio.com",
         location: "Vancouver, BC",
         isRemote: true,
-        salaryMin: 70000,
-        salaryMax: 100000,
-        experienceMin: 2,
-        experienceMax: 4,
-        roleType: "Content",
-        description: "Create educational content for lawyers. Write blog posts, guides, and webinars about legal technology and practice management. Help attorneys understand how technology can transform their practice.",
-        requirements: "2+ years content writing experience, legal knowledge a plus, excellent writing skills",
+        salaryMin: 90000,
+        salaryMax: 130000,
+        experienceMin: 3,
+        experienceMax: 6,
+        roleType: "Analytics",
+        description: "Lead eDiscovery and analytics initiatives for law firm clients. Work with litigation teams to implement technology solutions and train users on best practices.",
+        requirements: "3+ years eDiscovery experience, Relativity certification preferred, strong analytical skills",
         applyUrl: "https://clio.com/careers",
         isActive: true,
+        roleCategory: "Law Firm Tech & Innovation",
+        roleSubcategory: "eDiscovery / Analytics Manager",
+        seniorityLevel: "Mid",
+        keySkills: ["eDiscovery", "Relativity", "Litigation Support", "Analytics", "Training"],
+        aiSummary: "Lead eDiscovery initiatives at Clio, working with litigation teams on technology solutions. Relativity certification preferred. Remote role based in Vancouver.",
+        matchKeywords: ["ediscovery", "analytics", "litigation", "relativity", "legal"],
       },
     ];
 
@@ -336,6 +400,36 @@ class DatabaseStorage implements IStorage {
         .returning();
       return created;
     }
+  }
+
+  // Job Categories methods
+  async getJobCategories(): Promise<JobCategory[]> {
+    return db.select().from(jobCategories).orderBy(jobCategories.sortOrder);
+  }
+
+  async seedJobCategories(): Promise<void> {
+    const existing = await db.select().from(jobCategories).limit(1);
+    if (existing.length > 0) {
+      return;
+    }
+
+    const categories = Object.entries(JOB_TAXONOMY).map(([name, data], index) => ({
+      categoryName: name,
+      categoryIcon: data.icon,
+      subcategories: [...data.subcategories],
+      sortOrder: index + 1,
+    }));
+
+    await db.insert(jobCategories).values(categories);
+    console.log("Seeded job categories");
+  }
+
+  async getJobsByCategory(category: string): Promise<Job[]> {
+    return db
+      .select()
+      .from(jobs)
+      .where(and(eq(jobs.roleCategory, category), eq(jobs.isActive, true)))
+      .orderBy(desc(jobs.postedDate));
   }
 }
 

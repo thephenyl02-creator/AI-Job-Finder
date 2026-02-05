@@ -7,9 +7,18 @@ import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/auth-utils";
 import { apiRequest } from "@/lib/queryClient";
-import type { JobWithScore, Job } from "@shared/schema";
+import type { JobWithScore, Job, JobCategory } from "@shared/schema";
+import { JOB_TAXONOMY } from "@shared/schema";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Sparkles, LayoutGrid } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Sparkles, LayoutGrid, Brain, Scale, Building2 } from "lucide-react";
+
+const categoryIcons = {
+  "Legal AI Jobs": Brain,
+  "Legal Tech Startup Roles": Scale,
+  "Law Firm Tech & Innovation": Building2,
+} as const;
 
 export default function Home() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
@@ -17,6 +26,7 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<JobWithScore[] | null>(null);
   const [activeTab, setActiveTab] = useState<"search" | "browse">("search");
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   const { data: allJobs = [], isLoading: jobsLoading } = useQuery<Job[]>({
     queryKey: ["/api/jobs"],
@@ -69,9 +79,16 @@ export default function Home() {
     return null;
   }
 
+  const filteredJobs = selectedCategory 
+    ? allJobs.filter(job => job.roleCategory === selectedCategory)
+    : allJobs;
+
   const displayedJobs = activeTab === "search" && searchResults 
     ? searchResults 
-    : allJobs.map(job => ({ ...job, matchScore: undefined, matchReason: undefined } as JobWithScore));
+    : filteredJobs.map(job => ({ ...job, matchScore: undefined, matchReason: undefined } as JobWithScore));
+
+  const getCategoryCount = (category: string) => 
+    allJobs.filter(job => job.roleCategory === category).length;
 
   return (
     <div className="min-h-screen bg-background">
@@ -80,10 +97,10 @@ export default function Home() {
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
         <div className="text-center mb-8">
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">
-            Find Your Next Opportunity
+            Legal Tech Job Intelligence
           </h1>
           <p className="text-muted-foreground">
-            Describe your ideal role and let AI find the best matches
+            Discover AI-powered job matching across legal technology careers
           </p>
         </div>
 
@@ -92,7 +109,36 @@ export default function Home() {
           isLoading={searchMutation.isPending} 
         />
 
-        <div className="mt-12">
+        <div className="mt-8 flex flex-wrap gap-2 justify-center">
+          <Button
+            variant={selectedCategory === null ? "default" : "outline"}
+            size="sm"
+            onClick={() => setSelectedCategory(null)}
+            data-testid="filter-all"
+          >
+            All Categories
+            <Badge variant="secondary" className="ml-2">{allJobs.length}</Badge>
+          </Button>
+          {Object.entries(JOB_TAXONOMY).map(([category, data]) => {
+            const Icon = categoryIcons[category as keyof typeof categoryIcons];
+            const count = getCategoryCount(category);
+            return (
+              <Button
+                key={category}
+                variant={selectedCategory === category ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSelectedCategory(category)}
+                data-testid={`filter-${category.toLowerCase().replace(/\s+/g, '-')}`}
+              >
+                <Icon className="h-4 w-4 mr-1" />
+                {category}
+                <Badge variant="secondary" className="ml-2">{count}</Badge>
+              </Button>
+            );
+          })}
+        </div>
+
+        <div className="mt-8">
           <div className="flex items-center justify-between mb-6">
             <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "search" | "browse")}>
               <TabsList>
@@ -102,7 +148,7 @@ export default function Home() {
                 </TabsTrigger>
                 <TabsTrigger value="browse" className="gap-2" data-testid="tab-all-jobs">
                   <LayoutGrid className="h-4 w-4" />
-                  All Jobs ({allJobs.length})
+                  {selectedCategory ? `${selectedCategory} (${filteredJobs.length})` : `All Jobs (${allJobs.length})`}
                 </TabsTrigger>
               </TabsList>
             </Tabs>

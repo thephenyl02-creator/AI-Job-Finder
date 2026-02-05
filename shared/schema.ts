@@ -25,11 +25,30 @@ export const jobs = pgTable("jobs", {
   isActive: boolean("is_active").default(true),
   externalId: varchar("external_id", { length: 255 }),
   source: varchar("source", { length: 50 }),
+  aiSummary: text("ai_summary"),
+  keySkills: text("key_skills").array(),
+  roleCategory: varchar("role_category", { length: 100 }),
+  roleSubcategory: varchar("role_subcategory", { length: 100 }),
+  seniorityLevel: varchar("seniority_level", { length: 50 }),
+  matchKeywords: text("match_keywords").array(),
+  viewCount: integer("view_count").default(0),
+  applyClickCount: integer("apply_click_count").default(0),
+});
+
+export const jobCategories = pgTable("job_categories", {
+  id: serial("id").primaryKey(),
+  categoryName: varchar("category_name", { length: 100 }).notNull().unique(),
+  categoryIcon: varchar("category_icon", { length: 10 }),
+  subcategories: text("subcategories").array(),
+  description: text("description"),
+  sortOrder: integer("sort_order").default(0),
 });
 
 export const insertJobSchema = createInsertSchema(jobs).omit({
   id: true,
   postedDate: true,
+  viewCount: true,
+  applyClickCount: true,
 });
 
 export type Job = typeof jobs.$inferSelect;
@@ -39,3 +58,51 @@ export interface JobWithScore extends Job {
   matchScore?: number;
   matchReason?: string;
 }
+
+export const insertJobCategorySchema = createInsertSchema(jobCategories).omit({
+  id: true,
+});
+
+export type JobCategory = typeof jobCategories.$inferSelect;
+export type InsertJobCategory = z.infer<typeof insertJobCategorySchema>;
+
+export const JOB_TAXONOMY = {
+  "Legal AI Jobs": {
+    icon: "Brain",
+    subcategories: [
+      "Legal AI Engineer",
+      "NLP Engineer (Legal)",
+      "Knowledge Engineer",
+      "Legal Data Scientist",
+      "AI Product Manager (Legal)",
+      "Prompt Engineer (Legal AI)",
+      "AI Researcher (Law + ML)",
+    ],
+  },
+  "Legal Tech Startup Roles": {
+    icon: "Scale",
+    subcategories: [
+      "Product Manager (LegalTech)",
+      "Solutions Engineer",
+      "Legal Operations Manager",
+      "Legal Tech Consultant",
+      "Customer Success (Legal SaaS)",
+      "Sales Engineer (LegalTech)",
+      "Growth / Partnerships (LegalTech)",
+    ],
+  },
+  "Law Firm Tech & Innovation": {
+    icon: "Building2",
+    subcategories: [
+      "Legal Innovation Manager",
+      "Practice Technology Lead",
+      "Knowledge Management Lawyer",
+      "Litigation Technology Specialist",
+      "eDiscovery / Analytics Manager",
+      "AI & Automation Counsel",
+      "Research Technology Attorney",
+    ],
+  },
+} as const;
+
+export type JobCategoryName = keyof typeof JOB_TAXONOMY;

@@ -2,7 +2,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { MapPin, DollarSign, Clock, ExternalLink, Sparkles, Building2, Briefcase } from "lucide-react";
+import { MapPin, DollarSign, Clock, ExternalLink, Sparkles, Building2, Briefcase, Brain, Scale, Zap } from "lucide-react";
 import type { JobWithScore } from "@shared/schema";
 
 interface JobCardProps {
@@ -42,6 +42,23 @@ export function JobCard({ job, showMatchScore = false }: JobCardProps) {
     if (score >= 70) return "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400";
     return "bg-muted text-muted-foreground";
   };
+
+  const getCategoryIcon = (category?: string | null) => {
+    if (category === "Legal AI Jobs") return Brain;
+    if (category === "Legal Tech Startup Roles") return Scale;
+    if (category === "Law Firm Tech & Innovation") return Building2;
+    return Briefcase;
+  };
+
+  const getSeniorityColor = (level?: string | null) => {
+    if (level === "Entry") return "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400";
+    if (level === "Mid") return "bg-slate-100 dark:bg-slate-900/30 text-slate-700 dark:text-slate-400";
+    if (level === "Senior") return "bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400";
+    if (level === "Lead" || level === "Director" || level === "VP") return "bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400";
+    return "bg-muted text-muted-foreground";
+  };
+
+  const CategoryIcon = getCategoryIcon(job.roleCategory);
 
   const salary = formatSalary(job.salaryMin, job.salaryMax);
   const experience = formatExperience(job.experienceMin, job.experienceMax);
@@ -84,6 +101,17 @@ export function JobCard({ job, showMatchScore = false }: JobCardProps) {
           </div>
 
           <div className="flex flex-wrap gap-2">
+            {job.roleCategory && (
+              <Badge variant="secondary" className="gap-1.5 bg-primary/10 text-primary border-primary/20">
+                <CategoryIcon className="h-3 w-3" />
+                {job.roleSubcategory || job.roleCategory}
+              </Badge>
+            )}
+            {job.seniorityLevel && (
+              <Badge variant="secondary" className={getSeniorityColor(job.seniorityLevel)}>
+                {job.seniorityLevel}
+              </Badge>
+            )}
             {job.location && (
               <Badge variant="secondary" className="gap-1.5">
                 <MapPin className="h-3 w-3" />
@@ -95,17 +123,26 @@ export function JobCard({ job, showMatchScore = false }: JobCardProps) {
                 Remote
               </Badge>
             )}
-            {job.roleType && (
-              <Badge variant="secondary" className="gap-1.5">
-                <Briefcase className="h-3 w-3" />
-                {job.roleType}
-              </Badge>
-            )}
           </div>
 
           <p className="text-sm text-muted-foreground line-clamp-2" data-testid={`text-job-description-${job.id}`}>
-            {job.description}
+            {job.aiSummary || job.description}
           </p>
+
+          {job.keySkills && job.keySkills.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {job.keySkills.slice(0, 5).map((skill, idx) => (
+                <Badge key={idx} variant="outline" className="text-xs">
+                  {skill}
+                </Badge>
+              ))}
+              {job.keySkills.length > 5 && (
+                <Badge variant="outline" className="text-xs">
+                  +{job.keySkills.length - 5} more
+                </Badge>
+              )}
+            </div>
+          )}
 
           {job.matchReason && (
             <div className="bg-primary/5 border border-primary/10 rounded-lg p-3">

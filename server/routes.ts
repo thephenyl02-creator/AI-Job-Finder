@@ -47,6 +47,17 @@ export async function registerRoutes(
   registerAuthRoutes(app);
 
   await storage.seedJobs();
+  await storage.seedJobCategories();
+
+  app.get("/api/job-categories", async (req, res) => {
+    try {
+      const categories = await storage.getJobCategories();
+      res.json(categories);
+    } catch (error) {
+      console.error("Error fetching job categories:", error);
+      res.status(500).json({ error: "Failed to fetch job categories" });
+    }
+  });
 
   app.get("/api/jobs", isAuthenticated, async (req, res) => {
     try {

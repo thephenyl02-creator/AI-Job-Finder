@@ -2,6 +2,7 @@ import axios from 'axios';
 import * as cheerio from 'cheerio';
 import { LAW_FIRMS_AND_COMPANIES, type LawFirmConfig } from './law-firms-list';
 import type { InsertJob } from '@shared/schema';
+import type { JobCategorizationResult } from './job-categorizer';
 
 interface ScrapedJob {
   title: string;
@@ -187,7 +188,7 @@ function inferRoleType(title: string): string {
   return 'Other';
 }
 
-export function transformToJobSchema(job: ScrapedJob): InsertJob {
+export function transformToJobSchema(job: ScrapedJob, categorization?: JobCategorizationResult): InsertJob {
   const companySlug = job.company.toLowerCase().replace(/\s+/g, '').replace(/[^a-z0-9]/g, '');
   
   const cleanDescription = (job.description || `${job.title} position at ${job.company}`)
@@ -202,8 +203,8 @@ export function transformToJobSchema(job: ScrapedJob): InsertJob {
     isRemote: job.location?.toLowerCase().includes('remote') || false,
     salaryMin: null,
     salaryMax: null,
-    experienceMin: null,
-    experienceMax: null,
+    experienceMin: categorization?.experienceMin || null,
+    experienceMax: categorization?.experienceMax || null,
     roleType: inferRoleType(job.title),
     description: cleanDescription || `${job.title} position at ${job.company}`,
     requirements: null,
@@ -211,6 +212,12 @@ export function transformToJobSchema(job: ScrapedJob): InsertJob {
     isActive: true,
     externalId: job.externalId,
     source: job.source,
+    roleCategory: categorization?.category || null,
+    roleSubcategory: categorization?.subcategory || null,
+    seniorityLevel: categorization?.seniorityLevel || null,
+    keySkills: categorization?.keySkills || null,
+    aiSummary: categorization?.aiSummary || null,
+    matchKeywords: categorization?.matchKeywords || null,
   };
 }
 
@@ -237,7 +244,7 @@ export async function scrapeAllLawFirms(): Promise<{
       
       const legalTechJobs = scrapedJobs.filter(job => isLegalTechRole(job.title));
       
-      const transformedJobs = legalTechJobs.map(transformToJobSchema);
+      const transformedJobs = legalTechJobs.map(job => transformToJobSchema(job));
       allJobs.push(...transformedJobs);
       
       stats.push({
@@ -283,5 +290,5 @@ export async function scrapeSingleCompany(companyName: string): Promise<InsertJo
   }
   
   const legalTechJobs = scrapedJobs.filter(job => isLegalTechRole(job.title));
-  return legalTechJobs.map(transformToJobSchema);
+  return legalTechJobs.map(job => transformToJobSchema(job));
 }
