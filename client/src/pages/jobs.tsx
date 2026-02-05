@@ -397,10 +397,14 @@ export default function Jobs() {
                 {filteredJobs.map((job) => (
                   <tr 
                     key={job.id} 
-                    className={`border-b hover:bg-muted/30 ${selectedJobIds.has(job.id) ? "bg-primary/5" : ""}`} 
+                    className={`border-b hover:bg-muted/30 cursor-pointer ${selectedJobIds.has(job.id) ? "bg-primary/5" : ""}`} 
                     data-testid={`row-job-${job.id}`}
+                    onClick={(e) => {
+                      if ((e.target as HTMLElement).closest('button, [role="checkbox"], a')) return;
+                      setLocation(`/jobs/${job.id}`);
+                    }}
                   >
-                    <td className="p-3">
+                    <td className="p-3" onClick={(e) => e.stopPropagation()}>
                       <Checkbox
                         checked={selectedJobIds.has(job.id)}
                         onCheckedChange={() => toggleJobSelection(job.id)}
@@ -451,7 +455,10 @@ export default function Jobs() {
                       <div className="flex items-center gap-2 justify-end">
                         <Button
                           size="sm"
-                          onClick={() => handleApplyClick(job)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleApplyClick(job);
+                          }}
                           data-testid={`button-apply-${job.id}`}
                         >
                           <ExternalLink className="h-3 w-3 mr-1" />
@@ -479,6 +486,7 @@ export default function Jobs() {
                 getCategoryIcon={getCategoryIcon}
                 selectedJobIds={selectedJobIds}
                 onToggleSelection={toggleJobSelection}
+                onJobClick={(id) => setLocation(`/jobs/${id}`)}
               />
             ) : (
               <>
@@ -498,6 +506,7 @@ export default function Jobs() {
                       getCategoryIcon={getCategoryIcon}
                       selectedJobIds={selectedJobIds}
                       onToggleSelection={toggleJobSelection}
+                      onJobClick={(id) => setLocation(`/jobs/${id}`)}
                     />
                   );
                 })}
@@ -514,6 +523,7 @@ export default function Jobs() {
                     getCategoryIcon={getCategoryIcon}
                     selectedJobIds={selectedJobIds}
                     onToggleSelection={toggleJobSelection}
+                    onJobClick={(id) => setLocation(`/jobs/${id}`)}
                   />
                 )}
               </>
@@ -587,6 +597,7 @@ function CategorySection({
   getCategoryIcon,
   selectedJobIds,
   onToggleSelection,
+  onJobClick,
 }: {
   category: string;
   jobs: (Job | JobWithScore)[];
@@ -599,6 +610,7 @@ function CategorySection({
   getCategoryIcon: (icon: string) => typeof Brain;
   selectedJobIds: Set<number>;
   onToggleSelection: (jobId: number) => void;
+  onJobClick: (jobId: number) => void;
 }) {
   const Icon = getCategoryIcon(taxonomy.icon);
 
@@ -655,21 +667,27 @@ function CategorySection({
                         <span className="text-xs text-muted-foreground">({subJobs.length})</span>
                       </div>
                       <div className="grid gap-2">
-                        {subJobs.map((job, jobIdx) => (
+                        {subJobs.map((job) => (
                       <div
                         key={job.id}
-                        className={`p-3 rounded-lg border bg-card hover:bg-muted/30 transition-colors ${selectedJobIds.has(job.id) ? "ring-2 ring-primary bg-primary/5" : ""}`}
+                        className={`p-3 rounded-lg border bg-card hover:bg-muted/30 transition-colors cursor-pointer ${selectedJobIds.has(job.id) ? "ring-2 ring-primary bg-primary/5" : ""}`}
                         data-testid={`card-job-${job.id}`}
+                        onClick={(e) => {
+                          if ((e.target as HTMLElement).closest('button, [role="checkbox"], a')) return;
+                          onJobClick(job.id);
+                        }}
                       >
                         <div className="flex items-start justify-between gap-4">
                           <div className="flex items-start gap-3 min-w-0 flex-1">
-                            <Checkbox
-                              checked={selectedJobIds.has(job.id)}
-                              onCheckedChange={() => onToggleSelection(job.id)}
-                              disabled={!selectedJobIds.has(job.id) && selectedJobIds.size >= 3}
-                              className="mt-1"
-                              data-testid={`checkbox-job-${job.id}`}
-                            />
+                            <div onClick={(e) => e.stopPropagation()}>
+                              <Checkbox
+                                checked={selectedJobIds.has(job.id)}
+                                onCheckedChange={() => onToggleSelection(job.id)}
+                                disabled={!selectedJobIds.has(job.id) && selectedJobIds.size >= 3}
+                                className="mt-1"
+                                data-testid={`checkbox-job-${job.id}`}
+                              />
+                            </div>
                             <div className="min-w-0 flex-1">
                               <h4 className="font-medium text-foreground" data-testid={`text-job-title-${job.id}`}>
                                 {job.title}
@@ -707,7 +725,10 @@ function CategorySection({
                           <div className="flex items-center gap-2 shrink-0">
                             <Button
                               size="sm"
-                              onClick={() => onApply(job)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onApply(job);
+                              }}
                               data-testid={`button-apply-${job.id}`}
                             >
                               <ExternalLink className="h-3 w-3 mr-1" />

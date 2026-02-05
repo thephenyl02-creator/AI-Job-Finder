@@ -11,6 +11,7 @@ import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
 import Search from "@/pages/search";
 import Jobs from "@/pages/jobs";
+import JobDetail from "@/pages/job-detail";
 import Admin from "@/pages/admin";
 import About from "@/pages/about";
 import PostJob from "@/pages/post-job";
@@ -41,6 +42,7 @@ function AppRouter() {
     <Switch>
       <Route path="/" component={isAuthenticated ? Search : Landing} />
       <Route path="/jobs">{isAuthenticated ? <Jobs /> : <Landing />}</Route>
+      <Route path="/jobs/:id">{isAuthenticated ? <JobDetail /> : <Landing />}</Route>
       <Route path="/admin">{isAuthenticated ? <Admin /> : <Landing />}</Route>
       <Route path="/career-advisor">{isAuthenticated ? <CareerAdvisor /> : <Landing />}</Route>
       <Route path="/about" component={About} />
