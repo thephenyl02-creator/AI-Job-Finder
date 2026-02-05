@@ -64,13 +64,13 @@ export default function Search() {
     <div className="min-h-screen bg-background">
       <Header />
       
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 py-16 sm:py-24">
-        <div className="text-center mb-12">
-          <h1 className="text-3xl sm:text-4xl font-bold text-foreground mb-4">
-            Legal Tech Job Intelligence
+      <main className="max-w-3xl mx-auto px-4 sm:px-6 py-20 sm:py-28">
+        <div className="text-center mb-14">
+          <h1 className="text-4xl sm:text-5xl font-serif font-normal text-foreground mb-3 tracking-tight">
+            Legal AI Careers
           </h1>
-          <p className="text-lg text-muted-foreground">
-            Discover AI-powered job matching across legal technology careers
+          <p className="text-base text-muted-foreground">
+            Find your next role in legal technology
           </p>
         </div>
 
@@ -79,13 +79,13 @@ export default function Search() {
           isLoading={searchMutation.isPending} 
         />
 
-        <div className="mt-12 text-center">
+        <div className="mt-10 text-center">
           <button
             onClick={() => setLocation("/jobs")}
-            className="text-primary hover:underline"
+            className="text-muted-foreground hover:text-foreground transition-colors text-sm"
             data-testid="link-browse-all"
           >
-            Or browse all jobs →
+            Browse all jobs
           </button>
         </div>
       </main>

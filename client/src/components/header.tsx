@@ -28,13 +28,13 @@ export function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
-      <nav className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
-        <div className="flex items-center gap-2" data-testid="logo-header">
-          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-primary-foreground text-sm font-bold">
+    <header className="sticky top-0 z-50 bg-background border-b border-border">
+      <nav className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3" data-testid="logo-header">
+          <div className="w-7 h-7 bg-foreground rounded flex items-center justify-center text-background text-xs font-medium">
             L
           </div>
-          <span className="text-lg font-semibold text-foreground hidden sm:inline">
+          <span className="text-base font-medium text-foreground hidden sm:inline">
             Legal AI Careers
           </span>
         </div>

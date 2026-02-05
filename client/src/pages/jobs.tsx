@@ -101,13 +101,13 @@ export default function Jobs() {
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Search
             </Button>
-            <h1 className="text-2xl font-bold text-foreground">
-              {searchResults ? `Search Results for "${searchQuery}"` : "All Jobs"}
+            <h1 className="text-xl font-medium text-foreground">
+              {searchResults ? `Results for "${searchQuery}"` : "All Jobs"}
             </h1>
           </div>
-          <Badge variant="secondary" className="text-base px-3 py-1">
+          <span className="text-sm text-muted-foreground">
             {filteredJobs.length} jobs
-          </Badge>
+          </span>
         </div>
 
         <div className="flex flex-wrap gap-4 mb-6">

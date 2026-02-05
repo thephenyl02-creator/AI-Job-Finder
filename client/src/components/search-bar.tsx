@@ -147,27 +147,27 @@ export function SearchBar({ onSearch, isLoading = false }: SearchBarProps) {
   };
 
   return (
-    <div className="w-full max-w-3xl mx-auto">
-      <div className="flex justify-center gap-2 mb-6">
+    <div className="w-full max-w-2xl mx-auto">
+      <div className="flex justify-center gap-3 mb-8">
         <Button
           variant={searchMode === "text" ? "default" : "outline"}
           size="sm"
           onClick={() => switchMode("text")}
-          className="rounded-full gap-2"
+          className="rounded-full gap-2 px-4"
           data-testid="button-mode-text"
         >
-          <Pencil className="h-4 w-4" />
+          <Pencil className="h-3.5 w-3.5" />
           Write prompt
         </Button>
         <Button
           variant={searchMode === "resume" ? "default" : "outline"}
           size="sm"
           onClick={() => switchMode("resume")}
-          className="rounded-full gap-2"
+          className="rounded-full gap-2 px-4"
           disabled={isUploading}
           data-testid="button-mode-resume"
         >
-          <Upload className="h-4 w-4" />
+          <Upload className="h-3.5 w-3.5" />
           Upload resume
         </Button>
         <input
@@ -181,12 +181,12 @@ export function SearchBar({ onSearch, isLoading = false }: SearchBarProps) {
       </div>
 
       {isUploading && (
-        <div className="mb-6 p-4 bg-card border border-card-border rounded-xl" data-testid="upload-progress">
+        <div className="mb-6 p-4 bg-card border border-border rounded-lg" data-testid="upload-progress">
           <div className="flex items-center gap-3 mb-3">
-            <Loader2 className="h-5 w-5 animate-spin text-primary" />
+            <Loader2 className="h-4 w-4 animate-spin text-foreground" />
             <span className="text-sm text-foreground">Analyzing your resume...</span>
           </div>
-          <Progress value={uploadProgress} className="h-2" />
+          <Progress value={uploadProgress} className="h-1.5" />
           <p className="text-xs text-muted-foreground mt-2">
             {uploadProgress < 30 && "Extracting text..."}
             {uploadProgress >= 30 && uploadProgress < 60 && "Reading experience..."}
@@ -197,99 +197,66 @@ export function SearchBar({ onSearch, isLoading = false }: SearchBarProps) {
       )}
 
       {uploadedResume && !isUploading && (
-        <div className="mb-6 p-4 bg-accent/30 border border-accent rounded-xl" data-testid="resume-status">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                <FileText className="h-5 w-5 text-primary" />
+        <div className="mb-6 p-3 bg-muted/50 border border-border rounded-lg" data-testid="resume-status">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <FileText className="h-4 w-4 text-muted-foreground" />
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-foreground">{uploadedResume}</span>
+                <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
               </div>
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-sm font-medium text-foreground">{uploadedResume}</span>
-                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+              {resumeData && (
+                <div className="flex flex-wrap gap-1.5">
+                  {resumeData.preferredRoles?.slice(0, 2).map((role, idx) => (
+                    <Badge key={idx} variant="secondary" className="text-xs">
+                      {role}
+                    </Badge>
+                  ))}
                 </div>
-                {resumeData && (
-                  <div className="flex flex-wrap gap-1.5">
-                    {resumeData.preferredRoles?.slice(0, 2).map((role, idx) => (
-                      <Badge key={idx} variant="secondary" className="text-xs">
-                        {role}
-                      </Badge>
-                    ))}
-                    {resumeData.totalYearsExperience && (
-                      <Badge variant="secondary" className="text-xs">
-                        {resumeData.totalYearsExperience} years exp
-                      </Badge>
-                    )}
-                    {resumeData.isOpenToRemote && (
-                      <Badge variant="secondary" className="text-xs">
-                        Open to remote
-                      </Badge>
-                    )}
-                  </div>
-                )}
-              </div>
+              )}
             </div>
             <Button
               variant="ghost"
               size="icon"
               onClick={removeResume}
-              className="flex-shrink-0"
+              className="h-7 w-7"
               data-testid="button-remove-resume"
             >
-              <X className="h-4 w-4" />
+              <X className="h-3.5 w-3.5" />
             </Button>
           </div>
         </div>
       )}
 
       <form onSubmit={handleSubmit}>
-        <div className="bg-card border border-card-border rounded-xl shadow-sm p-5 transition-shadow duration-200 hover:shadow-md">
-          <div className="flex items-start gap-3 mb-4">
-            <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
-              <Sparkles className="h-5 w-5 text-primary" />
-            </div>
-            <div className="flex-1">
-              <h3 className="text-sm font-medium text-foreground mb-1">
-                {uploadedResume ? "Search based on your resume" : "AI-Powered Search"}
-              </h3>
-              <p className="text-xs text-muted-foreground">
-                {uploadedResume
-                  ? "Edit the query below or let AI match you with jobs"
-                  : "Describe your ideal role in natural language"}
-              </p>
-            </div>
-          </div>
-
+        <div className="bg-card border border-border rounded-lg p-4">
           <Textarea
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder={
-              uploadedResume
-                ? "AI-generated query based on your resume. Feel free to edit..."
-                : "Example: I'm looking for a product manager role with 5-7 years experience, remote work, at a Series A or B startup in legal tech, with a salary around $150K-180K."
-            }
-            className="min-h-[100px] resize-none text-base border-border focus:border-primary focus:ring-primary/20"
+            placeholder="Describe your ideal role..."
+            className="min-h-[80px] resize-none text-base border-0 shadow-none focus-visible:ring-0 p-0"
             disabled={isLoading || isUploading}
             data-testid="input-search"
           />
 
-          <div className="flex items-center justify-between mt-4">
+          <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
             <span className="text-xs text-muted-foreground">{query.length} / 500</span>
 
             <Button
               type="submit"
               disabled={isLoading || isUploading || !query.trim()}
+              size="sm"
               className="gap-2"
               data-testid="button-search"
             >
               {isLoading ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
                   Searching...
                 </>
               ) : (
                 <>
-                  <Search className="h-4 w-4" />
+                  <Search className="h-3.5 w-3.5" />
                   Search
                 </>
               )}
@@ -299,16 +266,17 @@ export function SearchBar({ onSearch, isLoading = false }: SearchBarProps) {
       </form>
 
       {!uploadedResume && (
-        <div className="mt-6 text-center">
+        <div className="mt-8 text-center">
           <p className="text-xs text-muted-foreground mb-3">Try searching:</p>
           <div className="flex flex-wrap justify-center gap-2">
             {exampleSearches.map((example, idx) => (
               <Button
                 key={idx}
+                type="button"
                 variant="outline"
                 size="sm"
                 onClick={() => fillExample(example)}
-                className="rounded-full text-xs transition-all duration-200"
+                className="rounded-full text-xs"
                 data-testid={`button-example-${idx}`}
               >
                 {example}
