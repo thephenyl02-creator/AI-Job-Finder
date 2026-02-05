@@ -17,31 +17,63 @@ const GREENHOUSE_SOURCES = [
   { name: 'Sullivan & Cromwell', id: 'sullivancromwell' },
 ];
 
-function isLegalTechRole(title: string, desc: string = ''): boolean {
+function isLegalCareerRole(title: string, desc: string = ''): boolean {
   const text = `${title} ${desc}`.toLowerCase();
-  const keywords = [
+  
+  // Include both tech roles AND legal professional roles
+  // This is for people with JD, law degree, or legal experience
+  const legalProfessionalKeywords = [
+    'attorney', 'lawyer', 'counsel', 'paralegal', 'legal assistant',
+    'litigation', 'associate', 'legal operations', 'legal ops',
+    'contract', 'compliance', 'regulatory', 'corporate counsel',
+    'in-house', 'general counsel', 'legal analyst', 'legal specialist',
+    'legal advisor', 'legal consultant', 'jd', 'law clerk', 'legal intern'
+  ];
+  
+  const techRoleKeywords = [
     'engineer', 'developer', 'product', 'designer', 'data', 'ml', 'ai ',
     'machine learning', 'nlp', 'software', 'technical', 'solutions',
-    'implementation', 'customer success', 'sales engineer', 'operations',
+    'implementation', 'customer success', 'sales', 'operations',
     'innovation', 'technology', 'ediscovery', 'analytics', 'platform',
     'devops', 'cloud', 'security', 'qa', 'quality', 'ux', 'ui', 'frontend',
     'backend', 'full stack', 'fullstack', 'manager', 'director', 'architect',
     'marketing', 'finance', 'hr', 'people', 'business', 'admin', 'support'
   ];
-  const exclude = ['attorney', 'paralegal', 'legal assistant', 'litigation associate', 'counsel'];
+  
+  // Exclude purely administrative or unrelated roles
+  const exclude = ['janitor', 'maintenance', 'facilities', 'cafeteria'];
   
   if (exclude.some(e => text.includes(e))) return false;
-  return keywords.some(k => text.includes(k));
+  
+  // Include if it matches legal professional keywords OR tech role keywords
+  return legalProfessionalKeywords.some(k => text.includes(k)) || 
+         techRoleKeywords.some(k => text.includes(k));
+}
+
+// Strip HTML tags and clean up text
+function stripHtml(html: string): string {
+  return html
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 async function scrapeGreenhouse(name: string, id: string): Promise<InsertJob[]> {
   try {
-    const url = `https://boards-api.greenhouse.io/v1/boards/${id}/jobs`;
+    const url = `https://boards-api.greenhouse.io/v1/boards/${id}/jobs?content=true`;
     const res = await axios.get(url, { timeout: 15000 });
     const jobs: InsertJob[] = [];
     
     for (const job of res.data.jobs || []) {
-      if (!isLegalTechRole(job.title || '')) continue;
+      if (!isLegalCareerRole(job.title || '', job.content || '')) continue;
+      
+      // Clean up description from HTML
+      const rawContent = job.content || '';
+      const cleanDescription = stripHtml(rawContent).slice(0, 2000);
       
       jobs.push({
         title: job.title || 'Untitled',
@@ -49,7 +81,7 @@ async function scrapeGreenhouse(name: string, id: string): Promise<InsertJob[]> 
         companyLogo: `https://logo.clearbit.com/${name.toLowerCase().replace(/[^a-z]/g, '')}.com`,
         location: job.location?.name || 'Remote',
         isRemote: (job.location?.name || '').toLowerCase().includes('remote'),
-        description: (job.content || '').slice(0, 2000),
+        description: cleanDescription,
         applyUrl: job.absolute_url || '',
         externalId: `gh_${id}_${job.id}`,
         source: 'greenhouse',
@@ -57,7 +89,7 @@ async function scrapeGreenhouse(name: string, id: string): Promise<InsertJob[]> 
       });
     }
     
-    console.log(`${name}: ${res.data.jobs?.length || 0} jobs, ${jobs.length} tech roles`);
+    console.log(`${name}: ${res.data.jobs?.length || 0} jobs, ${jobs.length} legal/tech roles`);
     return jobs;
   } catch (e: any) {
     console.log(`${name}: Error - ${e.message?.slice(0, 50)}`);
