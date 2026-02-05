@@ -1,8 +1,9 @@
 import { db } from "./db";
-import { jobs, type Job, type InsertJob } from "@shared/schema";
+import { jobs, users, userPreferences, type Job, type InsertJob, type User, type UserPreferences, type InsertUserPreferences, type ResumeExtractedData } from "@shared/schema";
 import { eq, desc, and, sql } from "drizzle-orm";
 
 export interface IStorage {
+  // Jobs
   getJobs(): Promise<Job[]>;
   getJob(id: number): Promise<Job | undefined>;
   createJob(job: InsertJob): Promise<Job>;
@@ -10,6 +11,13 @@ export interface IStorage {
   deleteJob(id: number): Promise<void>;
   getActiveJobs(): Promise<Job[]>;
   seedJobs(): Promise<void>;
+  // User Resume
+  updateUserResume(userId: string, resumeText: string, filename: string, extractedData: ResumeExtractedData): Promise<void>;
+  getUserResume(userId: string): Promise<{ resumeFilename: string | null; extractedData: ResumeExtractedData | null } | null>;
+  updateUserLastSearch(userId: string, query: string): Promise<void>;
+  // User Preferences
+  getUserPreferences(userId: string): Promise<UserPreferences | null>;
+  upsertUserPreferences(userId: string, prefs: Partial<InsertUserPreferences>): Promise<UserPreferences>;
 }
 
 class DatabaseStorage implements IStorage {
@@ -220,6 +228,70 @@ class DatabaseStorage implements IStorage {
 
     await db.insert(jobs).values(seedData);
     console.log("Seeded database with sample jobs");
+  }
+
+  // User Resume methods
+  async updateUserResume(userId: string, resumeText: string, filename: string, extractedData: ResumeExtractedData): Promise<void> {
+    await db
+      .update(users)
+      .set({
+        resumeText,
+        resumeFilename: filename,
+        extractedData,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId));
+  }
+
+  async getUserResume(userId: string): Promise<{ resumeFilename: string | null; extractedData: ResumeExtractedData | null } | null> {
+    const [user] = await db
+      .select({
+        resumeFilename: users.resumeFilename,
+        extractedData: users.extractedData,
+      })
+      .from(users)
+      .where(eq(users.id, userId));
+    
+    if (!user) return null;
+    return {
+      resumeFilename: user.resumeFilename,
+      extractedData: user.extractedData as ResumeExtractedData | null,
+    };
+  }
+
+  async updateUserLastSearch(userId: string, query: string): Promise<void> {
+    await db
+      .update(users)
+      .set({ lastSearchQuery: query, updatedAt: new Date() })
+      .where(eq(users.id, userId));
+  }
+
+  // User Preferences methods
+  async getUserPreferences(userId: string): Promise<UserPreferences | null> {
+    const [prefs] = await db
+      .select()
+      .from(userPreferences)
+      .where(eq(userPreferences.userId, userId));
+    return prefs || null;
+  }
+
+  async upsertUserPreferences(userId: string, prefs: Partial<InsertUserPreferences>): Promise<UserPreferences> {
+    const existing = await this.getUserPreferences(userId);
+    
+    if (existing) {
+      const [updated] = await db
+        .update(userPreferences)
+        .set({ ...prefs, updatedAt: new Date() })
+        .where(eq(userPreferences.userId, userId))
+        .returning();
+      return updated;
+    } else {
+      const [created] = await db
+        .insert(userPreferences)
+        .values({ userId, ...prefs })
+        .returning();
+      return created;
+    }
   }
 }
 

@@ -3,7 +3,31 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
 import OpenAI from "openai";
-import type { Job, JobWithScore } from "@shared/schema";
+import type { Job, JobWithScore, ResumeExtractedData } from "@shared/schema";
+import multer from "multer";
+import {
+  extractTextFromPDF,
+  extractTextFromDOCX,
+  parseResumeWithAI,
+  generateSearchQueryFromResume,
+} from "./lib/resume-parser";
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = [
+      "application/pdf",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "application/msword",
+    ];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error("Invalid file type. Please upload PDF or DOCX."));
+    }
+  },
+});
 
 const openai = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
@@ -145,10 +169,134 @@ Only include jobs with a score above 40. Sort by score descending.`;
         }))
         .sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0));
 
+      // Save last search query for user
+      const user = req.user as any;
+      if (user?.id) {
+        storage.updateUserLastSearch(user.id, query).catch(console.error);
+      }
+
       res.json(scoredJobs);
     } catch (error) {
       console.error("Error in semantic search:", error);
       res.status(500).json({ error: "Search failed. Please try again." });
+    }
+  });
+
+  // Resume upload endpoint
+  app.post("/api/resume/upload", isAuthenticated, upload.single("resume"), async (req, res) => {
+    try {
+      const user = req.user as any;
+      if (!user?.id) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const file = req.file;
+      if (!file) {
+        return res.status(400).json({ error: "No file provided" });
+      }
+
+      // Extract text based on file type
+      let resumeText: string;
+      if (file.mimetype === "application/pdf") {
+        resumeText = await extractTextFromPDF(file.buffer);
+      } else {
+        resumeText = await extractTextFromDOCX(file.buffer);
+      }
+
+      if (!resumeText || resumeText.trim().length < 50) {
+        return res.status(400).json({ error: "Could not extract text from file. Please ensure your resume contains readable text." });
+      }
+
+      // Parse resume with AI
+      const parsedData = await parseResumeWithAI(resumeText);
+
+      // Generate search query from resume
+      const searchQuery = await generateSearchQueryFromResume(parsedData);
+
+      // Save to database
+      await storage.updateUserResume(user.id, resumeText, file.originalname, parsedData);
+
+      res.json({
+        success: true,
+        parsedData,
+        searchQuery,
+        message: "Resume uploaded and parsed successfully",
+      });
+    } catch (error) {
+      console.error("Resume upload error:", error);
+      res.status(500).json({ error: "Failed to process resume" });
+    }
+  });
+
+  // Get user's resume data
+  app.get("/api/resume", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      if (!user?.id) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const resumeData = await storage.getUserResume(user.id);
+
+      if (!resumeData || !resumeData.resumeFilename) {
+        return res.json({ hasResume: false });
+      }
+
+      res.json({
+        hasResume: true,
+        filename: resumeData.resumeFilename,
+        extractedData: resumeData.extractedData,
+      });
+    } catch (error) {
+      console.error("Error fetching resume:", error);
+      res.status(500).json({ error: "Failed to fetch resume data" });
+    }
+  });
+
+  // Delete user's resume
+  app.delete("/api/resume", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      if (!user?.id) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      await storage.updateUserResume(user.id, "", "", {} as ResumeExtractedData);
+      res.json({ success: true, message: "Resume deleted" });
+    } catch (error) {
+      console.error("Error deleting resume:", error);
+      res.status(500).json({ error: "Failed to delete resume" });
+    }
+  });
+
+  // User preferences endpoints
+  app.get("/api/preferences", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      if (!user?.id) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const preferences = await storage.getUserPreferences(user.id);
+      res.json(preferences || {});
+    } catch (error) {
+      console.error("Error fetching preferences:", error);
+      res.status(500).json({ error: "Failed to fetch preferences" });
+    }
+  });
+
+  app.put("/api/preferences", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      if (!user?.id) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const preferences = await storage.upsertUserPreferences(user.id, req.body);
+      res.json(preferences);
+    } catch (error) {
+      console.error("Error updating preferences:", error);
+      res.status(500).json({ error: "Failed to update preferences" });
     }
   });
 
