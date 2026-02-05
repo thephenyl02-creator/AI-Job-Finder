@@ -277,7 +277,7 @@ export default function CareerAdvisor() {
   }, [handleFileDrop]);
 
   const updateUrlInput = (id: string, url: string) => {
-    setJobs(jobs.map((j) => (j.id === id ? { ...j, urlInput: url } : j)));
+    setJobs((prev) => prev.map((j) => (j.id === id ? { ...j, urlInput: url } : j)));
   };
 
   const parseJobUrl = useCallback(async (jobId: string, url: string) => {

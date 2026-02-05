@@ -114,10 +114,11 @@ Preferred communication style: Simple, everyday language.
 - **Purpose**: Strategic career guidance for legal professionals comparing 2-3 job opportunities
 - **Features**:
   - Compare 2-3 job descriptions side-by-side
-  - **Three input methods for job descriptions**:
-    1. **Paste text**: Manually enter job title and description
-    2. **Drag-and-drop file upload**: Upload PDF/DOCX job posting files directly
-    3. **Browse from Portal**: Select jobs directly from the platform's job database via slide-in panel
+  - **Four input methods for job descriptions**:
+    1. **Paste URL**: Paste a job posting URL and automatically extract title and description using AI
+    2. **Paste text**: Manually enter job title and description
+    3. **Drag-and-drop file upload**: Upload PDF/DOCX job posting files directly
+    4. **Browse from Portal**: Select jobs directly from the platform's job database via slide-in panel
   - **Portal Job Picker**: Slide-in panel with search, category grouping (by roleSubcategory), and collapsible sections
   - **AI Analysis for Each Job**:
     - Overall fit summary for legal professionals
@@ -131,6 +132,7 @@ Preferred communication style: Simple, everyday language.
   - Personalized fit analysis when resume is uploaded (strengths, gaps, interview risks, resume positioning)
   - Strategic recommendations: best fit now, best long-term in legal tech/AI, biggest career shift
 - **API**: 
+  - POST `/api/career-advisor/parse-job-url` - Fetch and parse job posting from URL using AI extraction
   - POST `/api/career-advisor/parse-job-file` - Extract text from uploaded job posting files
   - POST `/api/career-advisor/compare` - Compare jobs with Zod validation
 - **Implementation**: `client/src/pages/career-advisor.tsx`, API endpoint in `server/routes.ts`
