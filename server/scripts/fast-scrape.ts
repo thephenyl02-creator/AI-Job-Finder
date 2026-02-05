@@ -51,10 +51,10 @@ function isLegalCareerRole(title: string, desc: string = ''): boolean {
          techRoleKeywords.some(k => text.includes(k));
 }
 
-// Strip HTML tags and decode all HTML entities
+// Decode HTML entities and strip all HTML tags
 function stripHtml(html: string): string {
-  return html
-    .replace(/<[^>]*>/g, ' ')  // Remove HTML tags
+  // First decode HTML entities (convert &lt; to <, etc.)
+  let decoded = html
     .replace(/&nbsp;/g, ' ')
     .replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<')
@@ -63,9 +63,13 @@ function stripHtml(html: string): string {
     .replace(/&#39;/g, "'")
     .replace(/&apos;/g, "'")
     .replace(/&#x27;/g, "'")
-    .replace(/&#(\d+);/g, (_, num) => String.fromCharCode(parseInt(num)))  // Decode numeric entities
-    .replace(/\s+/g, ' ')
-    .trim();
+    .replace(/&#(\d+);/g, (_, num) => String.fromCharCode(parseInt(num)));
+  
+  // Then strip all HTML tags
+  decoded = decoded.replace(/<[^>]*>/g, ' ');
+  
+  // Clean up whitespace
+  return decoded.replace(/\s+/g, ' ').trim();
 }
 
 async function scrapeGreenhouse(name: string, id: string, orgType: string): Promise<InsertJob[]> {
