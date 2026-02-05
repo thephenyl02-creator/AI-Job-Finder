@@ -1,0 +1,1304 @@
+Build a minimal, elegant job search platform with AI-powered semantic search.
+Tech stack: Next.js, Tailwind CSS, PostgreSQL, OpenAI API.
+
+═══════════════════════════════════════════════════════════════════════════
+
+PROJECT REQUIREMENTS
+
+═══════════════════════════════════════════════════════════════════════════
+
+TECH STACK:
+- Frontend: Next.js 14 (App Router)
+- Styling: Tailwind CSS
+- Database: PostgreSQL (Replit Database)
+- Authentication: NextAuth.js
+- AI: OpenAI API (GPT-4 for semantic search)
+- Deployment: Replit (auto-deploy)
+
+FEATURES TO BUILD:
+1. ✅ User authentication (login/logout)
+2. ✅ Semantic job search (natural language)
+3. ✅ Job listing display (card-based)
+4. ✅ Match scoring (AI-powered)
+5. ✅ Responsive design (mobile + desktop)
+
+═══════════════════════════════════════════════════════════════════════════
+
+DATABASE SCHEMA
+
+═══════════════════════════════════════════════════════════════════════════
+
+Create PostgreSQL tables:
+
+-- Users table
+CREATE TABLE users (
+  id SERIAL PRIMARY KEY,
+  email VARCHAR(255) UNIQUE NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  name VARCHAR(255),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Jobs table
+CREATE TABLE jobs (
+  id SERIAL PRIMARY KEY,
+  title VARCHAR(255) NOT NULL,
+  company VARCHAR(255) NOT NULL,
+  company_logo VARCHAR(500),
+  location VARCHAR(255),
+  is_remote BOOLEAN DEFAULT false,
+  salary_min INTEGER,
+  salary_max INTEGER,
+  experience_min INTEGER,
+  experience_max INTEGER,
+  role_type VARCHAR(100),
+  description TEXT NOT NULL,
+  requirements TEXT,
+  apply_url VARCHAR(500) NOT NULL,
+  posted_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  is_active BOOLEAN DEFAULT true,
+  embedding VECTOR(1536)  -- For semantic search (OpenAI embeddings)
+);
+
+-- Create index for semantic search
+CREATE INDEX ON jobs USING ivfflat (embedding vector_cosine_ops);
+
+-- Sample job data to insert
+INSERT INTO jobs (title, company, company_logo, location, is_remote, salary_min, salary_max, experience_min, experience_max, role_type, description, apply_url) VALUES
+('Senior Product Manager', 'Harvey AI', 'https://logo.clearbit.com/harvey.ai', 'San Francisco, CA', true, 150000, 200000, 5, 8, 'Product Management', 'Lead product development for our AI-powered legal research platform. Work with engineers and legal experts to build tools that transform how lawyers work.', 'https://harvey.ai/careers'),
+('Legal Engineer', 'CoCounsel', 'https://logo.clearbit.com/casetext.com', 'Remote', true, 120000, 160000, 3, 6, 'Engineering', 'Build the future of legal AI. Design and implement features that help lawyers draft documents, research cases, and automate workflows.', 'https://casetext.com/careers'),
+('AI Research Scientist', 'EvenUp', 'https://logo.clearbit.com/evenuplaw.com', 'San Francisco, CA', false, 180000, 220000, 4, 10, 'Research', 'Develop cutting-edge ML models for legal document analysis. PhD in CS/ML preferred. Work on NLP, computer vision, and generative AI.', 'https://evenuplaw.com/careers'),
+('Product Designer', 'Robin AI', 'https://logo.clearbit.com/robinai.com', 'London, UK', true, 90000, 130000, 3, 7, 'Design', 'Design beautiful, intuitive interfaces for contract review and negotiation tools. Work closely with lawyers to understand workflows.', 'https://robinai.com/careers'),
+('Legal Operations Manager', 'Ironclad', 'https://logo.clearbit.com/ironcladapp.com', 'Remote', true, 110000, 150000, 5, 8, 'Operations', 'Help scale our legal tech platform. Work with customers to optimize their contract workflows and drive adoption.', 'https://ironcladapp.com/careers'),
+('Full Stack Engineer', 'Lexion', 'https://logo.clearbit.com/lexion.ai', 'Seattle, WA', true, 130000, 180000, 2, 5, 'Engineering', 'Build features across our contract management platform. React, Node.js, Python. Work on AI-powered contract analysis.', 'https://lexion.ai/careers'),
+('Business Development Manager', 'vLex', 'https://logo.clearbit.com/vlex.com', 'Miami, FL', false, 100000, 140000, 4, 7, 'Sales', 'Drive growth of our legal research platform. Build relationships with law firms and corporate legal departments.', 'https://vlex.com/careers'),
+('Machine Learning Engineer', 'DISCO', 'https://logo.clearbit.com/csdisco.com', 'Austin, TX', true, 140000, 190000, 3, 6, 'Engineering', 'Build ML models for eDiscovery. Work on document classification, entity extraction, and legal hold automation.', 'https://csdisco.com/careers'),
+('Customer Success Manager', 'Relativity', 'https://logo.clearbit.com/relativity.com', 'Chicago, IL', false, 80000, 120000, 2, 5, 'Customer Success', 'Help legal teams succeed with our eDiscovery platform. Train users, troubleshoot issues, drive renewals.', 'https://relativity.com/careers'),
+('Legal Content Writer', 'Clio', 'https://logo.clearbit.com/clio.com', 'Vancouver, BC', true, 70000, 100000, 2, 4, 'Content', 'Create educational content for lawyers. Write blog posts, guides, and webinars about legal technology and practice management.', 'https://clio.com/careers');
+
+═══════════════════════════════════════════════════════════════════════════
+
+PROJECT STRUCTURE
+
+═══════════════════════════════════════════════════════════════════════════
+
+legal-ai-careers/
+├── app/
+│   ├── layout.js                 # Root layout with Tailwind
+│   ├── page.js                   # Main search page (requires auth)
+│   ├── login/
+│   │   └── page.js               # Login page
+│   ├── api/
+│   │   ├── auth/
+│   │   │   └── [...nextauth]/
+│   │   │       └── route.js      # NextAuth config
+│   │   ├── jobs/
+│   │   │   └── route.js          # Get all jobs
+│   │   └── search/
+│   │       └── route.js          # Semantic search endpoint
+│   └── globals.css               # Tailwind imports
+├── components/
+│   ├── Header.js                 # Navigation with logout
+│   ├── SearchBar.js              # Large semantic search input
+│   ├── JobCard.js                # Individual job card
+│   └── JobList.js                # List of job cards
+├── lib/
+│   ├── db.js                     # PostgreSQL connection
+│   ├── auth.js                   # Auth helpers
+│   └── openai.js                 # OpenAI client setup
+├── middleware.js                 # Auth middleware for protected routes
+├── tailwind.config.js            # Tailwind configuration
+├── package.json
+└── .env.local                    # Environment variables
+
+═══════════════════════════════════════════════════════════════════════════
+
+CODE IMPLEMENTATION
+
+═══════════════════════════════════════════════════════════════════════════
+
+─────────────────────────────────────────────────────────────────────────────
+FILE: package.json
+─────────────────────────────────────────────────────────────────────────────
+
+{
+  "name": "legal-ai-careers",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "next": "14.1.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "next-auth": "^4.24.5",
+    "bcryptjs": "^2.4.3",
+    "pg": "^8.11.3",
+    "openai": "^4.28.0",
+    "pgvector": "^0.1.8"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.1",
+    "postcss": "^8.4.35",
+    "autoprefixer": "^10.4.17"
+  }
+}
+
+─────────────────────────────────────────────────────────────────────────────
+FILE: tailwind.config.js
+─────────────────────────────────────────────────────────────────────────────
+
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  content: [
+    './pages/**/*.{js,ts,jsx,tsx,mdx}',
+    './components/**/*.{js,ts,jsx,tsx,mdx}',
+    './app/**/*.{js,ts,jsx,tsx,mdx}',
+  ],
+  theme: {
+    extend: {
+      colors: {
+        // Claude.ai color palette
+        primary: {
+          DEFAULT: '#CC785C',
+          dark: '#A45940',
+        },
+        surface: '#F5F5F5',
+        text: {
+          primary: '#1F1F1F',
+          secondary: '#5F5F5F',
+          tertiary: '#8F8F8F',
+        },
+        border: '#E5E5E5',
+      },
+      fontFamily: {
+        sans: ['Inter', 'SF Pro Text', 'system-ui', 'sans-serif'],
+      },
+    },
+  },
+  plugins: [],
+}
+
+─────────────────────────────────────────────────────────────────────────────
+FILE: app/globals.css
+─────────────────────────────────────────────────────────────────────────────
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-white text-text-primary;
+  }
+  
+  /* Claude.ai inspired scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    @apply bg-surface;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    @apply bg-border rounded-full;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-text-tertiary;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-primary text-white px-6 py-3 rounded-lg font-medium 
+           hover:bg-primary-dark transition-colors duration-200;
+  }
+  
+  .btn-secondary {
+    @apply bg-surface text-text-primary px-6 py-3 rounded-lg font-medium 
+           hover:bg-border transition-colors duration-200;
+  }
+  
+  .input-field {
+    @apply w-full border-2 border-border rounded-lg px-4 py-3 
+           text-text-primary placeholder-text-tertiary
+           focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/15
+           transition-all duration-200;
+  }
+  
+  .card {
+    @apply bg-white border border-border rounded-xl p-6 
+           shadow-sm hover:shadow-md transition-shadow duration-200;
+  }
+}
+
+─────────────────────────────────────────────────────────────────────────────
+FILE: lib/db.js
+─────────────────────────────────────────────────────────────────────────────
+
+import { Pool } from 'pg'
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+})
+
+export const query = async (text, params) => {
+  const start = Date.now()
+  const res = await pool.query(text, params)
+  const duration = Date.now() - start
+  console.log('Executed query', { text, duration, rows: res.rowCount })
+  return res
+}
+
+export default pool
+
+─────────────────────────────────────────────────────────────────────────────
+FILE: lib/openai.js
+─────────────────────────────────────────────────────────────────────────────
+
+import OpenAI from 'openai'
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+})
+
+export async function generateEmbedding(text) {
+  const response = await openai.embeddings.create({
+    model: "text-embedding-3-small",
+    input: text,
+  })
+  return response.data[0].embedding
+}
+
+export async function semanticSearch(searchQuery) {
+  // Generate embedding for search query
+  const queryEmbedding = await generateEmbedding(searchQuery)
+  
+  // Use GPT-4 to extract search parameters
+  const completion = await openai.chat.completions.create({
+    model: "gpt-4",
+    messages: [{
+      role: "system",
+      content: `You are a job search assistant. Extract structured information from user queries.
+      Return JSON with: roleType, experienceMin, experienceMax, location, isRemote, salaryMin, salaryMax.
+      If not mentioned, set to null.`
+    }, {
+      role: "user",
+      content: searchQuery
+    }],
+    response_format: { type: "json_object" }
+  })
+  
+  const searchParams = JSON.parse(completion.choices[0].message.content)
+  
+  return {
+    embedding: queryEmbedding,
+    params: searchParams
+  }
+}
+
+export default openai
+
+─────────────────────────────────────────────────────────────────────────────
+FILE: lib/auth.js
+─────────────────────────────────────────────────────────────────────────────
+
+import { hash, compare } from 'bcryptjs'
+import { query } from './db'
+
+export async function hashPassword(password) {
+  return await hash(password, 12)
+}
+
+export async function verifyPassword(password, hashedPassword) {
+  return await compare(password, hashedPassword)
+}
+
+export async function createUser(email, password) {
+  const hashedPassword = await hashPassword(password)
+  
+  const result = await query(
+    'INSERT INTO users (email, password_hash) VALUES ($1, $2) RETURNING id, email',
+    [email, hashedPassword]
+  )
+  
+  return result.rows[0]
+}
+
+export async function getUserByEmail(email) {
+  const result = await query(
+    'SELECT * FROM users WHERE email = $1',
+    [email]
+  )
+  
+  return result.rows[0]
+}
+
+─────────────────────────────────────────────────────────────────────────────
+FILE: app/api/auth/[...nextauth]/route.js
+─────────────────────────────────────────────────────────────────────────────
+
+import NextAuth from "next-auth"
+import CredentialsProvider from "next-auth/providers/credentials"
+import { getUserByEmail, verifyPassword, createUser } from "@/lib/auth"
+
+const handler = NextAuth({
+  providers: [
+    CredentialsProvider({
+      name: 'Credentials',
+      credentials: {
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" }
+      },
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password) {
+          throw new Error('Please enter email and password')
+        }
+
+        let user = await getUserByEmail(credentials.email)
+        
+        // For demo: Auto-create user if doesn't exist
+        if (!user) {
+          user = await createUser(credentials.email, credentials.password)
+        }
+
+        const isValid = await verifyPassword(
+          credentials.password,
+          user.password_hash
+        )
+
+        if (!isValid) {
+          throw new Error('Invalid password')
+        }
+
+        return {
+          id: user.id,
+          email: user.email,
+        }
+      }
+    })
+  ],
+  session: {
+    strategy: "jwt",
+  },
+  pages: {
+    signIn: '/login',
+  },
+  callbacks: {
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = user.id
+      }
+      return token
+    },
+    async session({ session, token }) {
+      if (token) {
+        session.user.id = token.id
+      }
+      return session
+    },
+  },
+})
+
+export { handler as GET, handler as POST }
+
+─────────────────────────────────────────────────────────────────────────────
+FILE: middleware.js
+─────────────────────────────────────────────────────────────────────────────
+
+export { default } from "next-auth/middleware"
+
+export const config = {
+  matcher: [
+    '/',
+    '/api/jobs/:path*',
+    '/api/search/:path*',
+  ]
+}
+
+─────────────────────────────────────────────────────────────────────────────
+FILE: app/login/page.js
+─────────────────────────────────────────────────────────────────────────────
+
+'use client'
+
+import { signIn } from 'next-auth/react'
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+
+export default function LoginPage() {
+  const router = useRouter()
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setError('')
+    setLoading(true)
+
+    try {
+      const result = await signIn('credentials', {
+        redirect: false,
+        email,
+        password,
+      })
+
+      if (result?.error) {
+        setError(result.error)
+      } else {
+        router.push('/')
+      }
+    } catch (err) {
+      setError('An error occurred. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-white to-surface flex items-center justify-center px-4">
+      <div className="w-full max-w-md bg-white rounded-2xl shadow-lg border border-border p-12">
+        {/* Logo */}
+        <div className="text-center mb-8">
+          <h1 className="text-2xl font-medium text-text-primary">
+            Legal AI Careers
+          </h1>
+        </div>
+
+        {/* Welcome Text */}
+        <h2 className="text-3xl font-medium text-text-primary text-center mb-8">
+          Welcome back
+        </h2>
+
+        {/* Error Message */}
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+            {error}
+          </div>
+        )}
+
+        {/* Login Form */}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Email Input */}
+          <div>
+            <label htmlFor="email" className="block text-sm font-medium text-text-secondary mb-2">
+              Email
+            </label>
+            <input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
+              className="input-field"
+              required
+            />
+          </div>
+
+          {/* Password Input */}
+          <div>
+            <label htmlFor="password" className="block text-sm font-medium text-text-secondary mb-2">
+              Password
+            </label>
+            <input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter your password"
+              className="input-field"
+              required
+            />
+          </div>
+
+          {/* Submit Button */}
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed mt-6"
+          >
+            {loading ? 'Loading...' : 'Continue'}
+          </button>
+        </form>
+
+        {/* Sign Up Link */}
+        <p className="mt-6 text-center text-sm text-text-secondary">
+          Don't have an account?{' '}
+          <span className="text-primary font-medium cursor-pointer hover:underline">
+            Sign up
+          </span>
+        </p>
+
+        {/* Footer Links */}
+        <div className="mt-8 pt-6 border-t border-border text-center">
+          <div className="text-xs text-text-tertiary space-x-3">
+            <a href="#" className="hover:text-primary transition-colors">Privacy</a>
+            <span>•</span>
+            <a href="#" className="hover:text-primary transition-colors">Terms</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+─────────────────────────────────────────────────────────────────────────────
+FILE: components/Header.js
+─────────────────────────────────────────────────────────────────────────────
+
+'use client'
+
+import { signOut, useSession } from 'next-auth/react'
+import { useState } from 'react'
+
+export default function Header() {
+  const { data: session } = useSession()
+  const [showMenu, setShowMenu] = useState(false)
+
+  const handleLogout = () => {
+    signOut({ callbackUrl: '/login' })
+  }
+
+  return (
+    <header className="sticky top-0 z-50 bg-white border-b border-border">
+      <nav className="max-w-[1120px] mx-auto px-6 h-16 flex items-center justify-between">
+        {/* Logo */}
+        <div className="flex items-center space-x-2">
+          <div className="w-7 h-7 bg-primary rounded-lg flex items-center justify-center text-white text-sm font-bold">
+            L
+          </div>
+          <span className="text-lg font-medium text-text-primary">
+            Legal AI Careers
+          </span>
+        </div>
+
+        {/* Right Side */}
+        <div className="flex items-center space-x-6">
+          <a href="#" className="text-sm text-text-secondary hover:text-primary transition-colors">
+            About
+          </a>
+          <a href="#" className="text-sm text-text-secondary hover:text-primary transition-colors">
+            Post a Job
+          </a>
+
+          {/* User Menu */}
+          <div className="relative">
+            <button
+              onClick={() => setShowMenu(!showMenu)}
+              className="w-8 h-8 rounded-full bg-surface flex items-center justify-center text-sm font-medium text-text-primary hover:bg-border transition-colors"
+            >
+              {session?.user?.email?.[0].toUpperCase() || 'U'}
+            </button>
+
+            {/* Dropdown Menu */}
+            {showMenu && (
+              <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-border py-2">
+                <div className="px-4 py-2 border-b border-border">
+                  <p className="text-xs text-text-tertiary">Signed in as</p>
+                  <p className="text-sm text-text-primary truncate">
+                    {session?.user?.email}
+                  </p>
+                </div>
+                <button
+                  onClick={handleLogout}
+                  className="w-full text-left px-4 py-2 text-sm text-text-primary hover:bg-surface transition-colors"
+                >
+                  Log out
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </nav>
+    </header>
+  )
+}
+
+─────────────────────────────────────────────────────────────────────────────
+FILE: components/SearchBar.js
+─────────────────────────────────────────────────────────────────────────────
+
+'use client'
+
+import { useState } from 'react'
+
+export default function SearchBar({ onSearch, isLoading }) {
+  const [query, setQuery] = useState('')
+
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    if (query.trim()) {
+      onSearch(query)
+    }
+  }
+
+  const exampleSearches = [
+    "Legal engineer, 3+ years",
+    "Remote product role",
+    "Contract AI specialist",
+    "Senior legal tech"
+  ]
+
+  const fillExample = (example) => {
+    setQuery(example)
+  }
+
+  return (
+    <div className="w-full max-w-[720px] mx-auto">
+      <form onSubmit={handleSubmit}>
+        <div className="bg-white border-2 border-border rounded-xl shadow-md hover:shadow-lg transition-shadow duration-200 p-5">
+          {/* Textarea */}
+          <textarea
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Example: I'm looking for a product manager role with 5-7 years experience, remote work, at a Series A or B startup in legal tech, with a salary around $150K-180K. Interested in contract AI or legal research tools."
+            className="w-full min-h-[120px] text-base text-text-primary placeholder-text-tertiary resize-none focus:outline-none"
+            disabled={isLoading}
+          />
+
+          {/* Bottom Row */}
+          <div className="flex items-center justify-between mt-4">
+            <span className="text-xs text-text-tertiary">
+              {query.length} / 500
+            </span>
+            
+            <button
+              type="submit"
+              disabled={isLoading || !query.trim()}
+              className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isLoading ? (
+                <span className="flex items-center">
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Searching...
+                </span>
+              ) : (
+                'Search'
+              )}
+            </button>
+          </div>
+        </div>
+      </form>
+
+      {/* Example Searches */}
+      <div className="mt-6 text-center">
+        <p className="text-xs text-text-tertiary mb-3">Try searching:</p>
+        <div className="flex flex-wrap justify-center gap-2">
+          {exampleSearches.map((example, idx) => (
+            <button
+              key={idx}
+              onClick={() => fillExample(example)}
+              className="px-4 py-2 bg-white border border-border rounded-full text-xs text-text-secondary hover:bg-surface hover:border-primary transition-all duration-200"
+            >
+              {example}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+─────────────────────────────────────────────────────────────────────────────
+FILE: components/JobCard.js
+─────────────────────────────────────────────────────────────────────────────
+
+export default function JobCard({ job, matchScore = null }) {
+  const formatSalary = (min, max) => {
+    if (!min && !max) return 'Salary not disclosed'
+    const formatNum = (num) => `$${(num / 1000).toFixed(0)}K`
+    if (min && max) return `${formatNum(min)} - ${formatNum(max)}`
+    if (min) return `${formatNum(min)}+`
+    return `Up to ${formatNum(max)}`
+  }
+
+  const getTimeAgo = (date) => {
+    const days = Math.floor((new Date() - new Date(date)) / (1000 * 60 * 60 * 24))
+    if (days === 0) return 'Today'
+    if (days === 1) return '1d ago'
+    if (days < 7) return `${days}d ago`
+    if (days < 30) return `${Math.floor(days / 7)}w ago`
+    return `${Math.floor(days / 30)}m ago`
+  }
+
+  return (
+    <div className="card hover:border-primary cursor-pointer group">
+      <div className="flex flex-col md:flex-row gap-6">
+        {/* Left Section */}
+        <div className="flex-1">
+          {/* Company Info */}
+          <div className="flex items-center gap-3 mb-2">
+            {job.company_logo && (
+              <img 
+                src={job.company_logo} 
+                alt={job.company}
+                className="w-10 h-10 rounded-lg"
+              />
+            )}
+            <span className="text-sm font-medium text-text-secondary">
+              {job.company}
+            </span>
+            <span className="text-xs text-text-tertiary">
+              {getTimeAgo(job.posted_date)}
+            </span>
+          </div>
+
+          {/* Job Title */}
+          <h3 className="text-xl font-medium text-text-primary mb-3 group-hover:text-primary transition-colors">
+            {job.title}
+          </h3>
+
+          {/* Tags */}
+          <div className="flex flex-wrap gap-2 mb-3">
+            {job.role_type && (
+              <span className="px-3 py-1 bg-orange-50 text-primary rounded-md text-xs font-medium">
+                {job.role_type}
+              </span>
+            )}
+            
+            {job.is_remote ? (
+              <span className="px-3 py-1 bg-green-50 text-green-700 rounded-md text-xs font-medium">
+                Remote
+              </span>
+            ) : job.location && (
+              <span className="px-3 py-1 bg-blue-50 text-blue-700 rounded-md text-xs font-medium">
+                {job.location}
+              </span>
+            )}
+            
+            {job.experience_min && job.experience_max && (
+              <span className="px-3 py-1 bg-surface text-text-secondary rounded-md text-xs font-medium">
+                {job.experience_min}-{job.experience_max} years
+              </span>
+            )}
+          </div>
+
+          {/* Description */}
+          {job.description && (
+            <p className="text-sm text-text-secondary line-clamp-2">
+              {job.description}
+            </p>
+          )}
+        </div>
+
+        {/* Right Section */}
+        <div className="flex flex-col items-end justify-between md:w-48 gap-4">
+          {/* Match Score */}
+          {matchScore !== null && (
+            <div className="px-3 py-1 bg-green-50 text-green-700 rounded-md text-sm font-medium">
+              {matchScore}% match
+            </div>
+          )}
+
+          {/* Salary */}
+          <div className="text-right">
+            <p className={`text-base font-medium ${job.salary_min || job.salary_max ? 'text-green-600' : 'text-text-tertiary'}`}>
+              {formatSalary(job.salary_min, job.salary_max)}
+            </p>
+          </div>
+
+          {/* Apply Button */}
+          
+            href={job.apply_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn-primary text-center w-full md:w-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            View job →
+          </a>
+        </div>
+      </div>
+
+      {/* Match Explanation */}
+      {matchScore !== null && (
+        <div className="mt-4 pt-4 border-t border-border">
+          <p className="text-xs text-text-tertiary flex items-center gap-2">
+            <span className="text-primary">ℹ️</span>
+            Matches: Experience level, Location preference, Role focus
+          </p>
+        </div>
+      )}
+    </div>
+  )
+}
+
+─────────────────────────────────────────────────────────────────────────────
+FILE: components/JobList.js
+─────────────────────────────────────────────────────────────────────────────
+
+import JobCard from './JobCard'
+
+export default function JobList({ jobs, matchScores = null, isLoading }) {
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="card animate-pulse">
+            <div className="h-6 bg-surface rounded w-3/4 mb-4"></div>
+            <div className="h-4 bg-surface rounded w-1/2 mb-2"></div>
+            <div className="h-4 bg-surface rounded w-2/3"></div>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  if (!jobs || jobs.length === 0) {
+    return (
+      <div className="text-center py-20">
+        <div className="text-6xl mb-4">🔍</div>
+        <h3 className="text-xl font-medium text-text-primary mb-2">
+          No jobs found
+        </h3>
+        <p className="text-sm text-text-secondary">
+          Try adjusting your search criteria
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-4">
+      {jobs.map((job, idx) => (
+        <JobCard 
+          key={job.id} 
+          job={job}
+          matchScore={matchScores?.[idx] || null}
+        />
+      ))}
+    </div>
+  )
+}
+
+─────────────────────────────────────────────────────────────────────────────
+FILE: app/api/jobs/route.js
+─────────────────────────────────────────────────────────────────────────────
+
+import { query } from '@/lib/db'
+import { NextResponse } from 'next/server'
+
+export async function GET() {
+  try {
+    const result = await query(
+      'SELECT * FROM jobs WHERE is_active = true ORDER BY posted_date DESC'
+    )
+    
+    return NextResponse.json(result.rows)
+  } catch (error) {
+    console.error('Error fetching jobs:', error)
+    return NextResponse.json(
+      { error: 'Failed to fetch jobs' },
+      { status: 500 }
+    )
+  }
+}
+
+─────────────────────────────────────────────────────────────────────────────
+FILE: app/api/search/route.js
+─────────────────────────────────────────────────────────────────────────────
+
+import { query } from '@/lib/db'
+import { semanticSearch } from '@/lib/openai'
+import { NextResponse } from 'next/server'
+
+export async function POST(request) {
+  try {
+    const { query: searchQuery } = await request.json()
+
+    if (!searchQuery || searchQuery.trim().length === 0) {
+      return NextResponse.json(
+        { error: 'Search query is required' },
+        { status: 400 }
+      )
+    }
+
+    // Get semantic search results
+    const { embedding, params } = await semanticSearch(searchQuery)
+
+    // Build SQL query with filters from AI extraction
+    let sql = 'SELECT * FROM jobs WHERE is_active = true'
+    const queryParams = []
+    let paramCount = 1
+
+    if (params.roleType) {
+      sql += ` AND LOWER(role_type) LIKE LOWER($${paramCount})`
+      queryParams.push(`%${params.roleType}%`)
+      paramCount++
+    }
+
+    if (params.isRemote !== null) {
+      sql += ` AND is_remote = $${paramCount}`
+      queryParams.push(params.isRemote)
+      paramCount++
+    }
+
+    if (params.experienceMin !== null) {
+      sql += ` AND experience_max >= $${paramCount}`
+      queryParams.push(params.experienceMin)
+      paramCount++
+    }
+
+    if (params.experienceMax !== null) {
+      sql += ` AND experience_min <= $${paramCount}`
+      queryParams.push(params.experienceMax)
+      paramCount++
+    }
+
+    if (params.salaryMin !== null) {
+      sql += ` AND salary_max >= $${paramCount}`
+      queryParams.push(params.salaryMin)
+      paramCount++
+    }
+
+    sql += ' ORDER BY posted_date DESC LIMIT 50'
+
+    const result = await query(sql, queryParams)
+
+    // Calculate simple match scores (0-100)
+    // In production, you'd use vector similarity with embeddings
+    const jobsWithScores = result.rows.map(job => {
+      let score = 70 // Base score
+      
+      if (params.roleType && job.role_type?.toLowerCase().includes(params.roleType.toLowerCase())) {
+        score += 15
+      }
+      
+      if (params.isRemote === job.is_remote) {
+        score += 10
+      }
+      
+      if (params.experienceMin && params.experienceMax) {
+        const jobExpMid = (job.experience_min + job.experience_max) / 2
+        const userExpMid = (params.experienceMin + params.experienceMax) / 2
+        if (Math.abs(jobExpMid - userExpMid) <= 2) {
+          score += 5
+        }
+      }
+
+      return {
+        ...job,
+        matchScore: Math.min(score, 98) // Cap at 98%
+      }
+    })
+
+    // Sort by match score
+    jobsWithScores.sort((a, b) => b.matchScore - a.matchScore)
+
+    return NextResponse.json({
+      jobs: jobsWithScores,
+      searchParams: params
+    })
+  } catch (error) {
+    console.error('Search error:', error)
+    return NextResponse.json(
+      { error: 'Search failed' },
+      { status: 500 }
+    )
+  }
+}
+
+─────────────────────────────────────────────────────────────────────────────
+FILE: app/page.js
+─────────────────────────────────────────────────────────────────────────────
+
+'use client'
+
+import { useState, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
+import Header from '@/components/Header'
+import SearchBar from '@/components/SearchBar'
+import JobList from '@/components/JobList'
+
+export default function HomePage() {
+  const { data: session, status } = useSession()
+  const [jobs, setJobs] = useState([])
+  const [matchScores, setMatchScores] = useState(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSearching, setIsSearching] = useState(false)
+  const [hasSearched, setHasSearched] = useState(false)
+
+  // Load all jobs on mount
+  useEffect(() => {
+    fetchAllJobs()
+  }, [])
+
+  const fetchAllJobs = async () => {
+    setIsLoading(true)
+    try {
+      const response = await fetch('/api/jobs')
+      const data = await response.json()
+      setJobs(data)
+      setMatchScores(null)
+      setHasSearched(false)
+    } catch (error) {
+      console.error('Error fetching jobs:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleSearch = async (query) => {
+    setIsSearching(true)
+    setHasSearched(true)
+    
+    try {
+      const response = await fetch('/api/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query })
+      })
+
+      const data = await response.json()
+      
+      if (data.jobs) {
+        setJobs(data.jobs)
+        setMatchScores(data.jobs.map(j => j.matchScore))
+      }
+    } catch (error) {
+      console.error('Search error:', error)
+    } finally {
+      setIsSearching(false)
+    }
+  }
+
+  if (status === 'loading') {
+    return <div className="min-h-screen flex items-center justify-center">Loading...</div>
+  }
+
+  return (
+    <div className="min-h-screen bg-white">
+      <Header />
+
+      {/* Hero Section */}
+      <section className="bg-gradient-to-b from-white to-surface py-16 px-6">
+        <div className="max-w-[800px] mx-auto text-center">
+          <h1 className="text-5xl font-medium text-text-primary mb-3 leading-tight">
+            Find your next role in legal AI
+          </h1>
+          <p className="text-lg text-text-secondary mb-8">
+            Describe what you're looking for in your own words
+          </p>
+
+          <SearchBar onSearch={handleSearch} isLoading={isSearching} />
+
+          <p className="mt-6 text-xs text-text-tertiary">
+            {jobs.length} active jobs • 127 companies • Updated daily
+          </p>
+        </div>
+      </section>
+
+      {/* Results Section */}
+      <section className="bg-surface py-12 px-6">
+        <div className="max-w-[1120px] mx-auto">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-medium text-text-primary">
+              {hasSearched 
+                ? `${jobs.length} jobs match your search` 
+                : 'All jobs'
+              }
+            </h2>
+            
+            {hasSearched && (
+              <button
+                onClick={fetchAllJobs}
+                className="text-sm text-primary hover:underline"
+              >
+                Clear search
+              </button>
+            )}
+          </div>
+
+          <JobList 
+            jobs={jobs} 
+            matchScores={matchScores}
+            isLoading={isLoading || isSearching} 
+          />
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="bg-white border-t border-border py-8 px-6">
+        <div className="max-w-[1120px] mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+          <div className="text-left">
+            <p className="text-sm font-medium text-text-primary">Legal AI Careers</p>
+            <p className="text-xs text-text-tertiary">Curated legal AI opportunities</p>
+          </div>
+          
+          <div className="flex gap-6 text-xs text-text-secondary">
+            <a href="#" className="hover:text-primary transition-colors">About</a>
+            <span>•</span>
+            <a href="#" className="hover:text-primary transition-colors">Contact</a>
+            <span>•</span>
+            <a href="#" className="hover:text-primary transition-colors">Privacy</a>
+            <span>•</span>
+            <a href="#" className="hover:text-primary transition-colors">Terms</a>
+          </div>
+        </div>
+      </footer>
+    </div>
+  )
+}
+
+─────────────────────────────────────────────────────────────────────────────
+FILE: app/layout.js
+─────────────────────────────────────────────────────────────────────────────
+
+import { Inter } from 'next/font/google'
+import './globals.css'
+import { Providers } from './providers'
+
+const inter = Inter({ subsets: ['latin'] })
+
+export const metadata = {
+  title: 'Legal AI Careers - Find Your Next Role',
+  description: 'Curated opportunities in legal technology and AI',
+}
+
+export default function RootLayout({ children }) {
+  return (
+    <html lang="en">
+      <body className={inter.className}>
+        <Providers>
+          {children}
+        </Providers>
+      </body>
+    </html>
+  )
+}
+
+─────────────────────────────────────────────────────────────────────────────
+FILE: app/providers.js
+─────────────────────────────────────────────────────────────────────────────
+
+'use client'
+
+import { SessionProvider } from 'next-auth/react'
+
+export function Providers({ children }) {
+  return (
+    <SessionProvider>
+      {children}
+    </SessionProvider>
+  )
+}
+
+─────────────────────────────────────────────────────────────────────────────
+FILE: .env.local (EXAMPLE - Don't commit this)
+─────────────────────────────────────────────────────────────────────────────
+
+DATABASE_URL=postgresql://user:password@host:5432/database
+OPENAI_API_KEY=sk-your-key-here
+NEXTAUTH_SECRET=your-secret-here-generate-with-openssl
+NEXTAUTH_URL=http://localhost:3000
+
+═══════════════════════════════════════════════════════════════════════════
+
+DEPLOYMENT STEPS ON REPLIT
+
+═══════════════════════════════════════════════════════════════════════════
+
+1. CREATE REPL:
+   - Go to replit.com
+   - Create new Repl
+   - Choose "Next.js" template
+   - Name: "legal-ai-careers"
+
+2. UPLOAD FILES:
+   - Copy all files above into Repl file structure
+   - Or use GitHub import if you have a repo
+
+3. SETUP POSTGRES:
+   - In Replit, click "Database" icon
+   - Enable PostgreSQL
+   - Copy connection string
+
+4. ADD SECRETS (Environment Variables):
+   - Click lock icon (🔒) in Replit
+   - Add these secrets:
+     * DATABASE_URL = (your Postgres connection string)
+     * OPENAI_API_KEY = (get from platform.openai.com)
+     * NEXTAUTH_SECRET = (generate with: openssl rand -base64 32)
+     * NEXTAUTH_URL = (your Repl URL, e.g. https://legal-ai-careers.username.repl.co)
+
+5. SETUP DATABASE:
+   - Open Replit Shell
+   - Run: npm install
+   - Connect to Postgres and run the CREATE TABLE commands from above
+   - Insert sample job data
+
+6. RUN:
+   - Click "Run" button in Replit
+   - App should start on port 3000
+   - Visit the URL Replit provides
+
+7. TEST:
+   - Go to /login
+   - Enter any email/password (auto-creates account)
+   - Try searching: "product manager 5 years remote"
+   - Should see filtered results with match scores
+
+═══════════════════════════════════════════════════════════════════════════
+
+WHAT THIS MVP DOES
+
+═══════════════════════════════════════════════════════════════════════════
+
+✅ User can login (auto-creates account on first login)
+✅ User can logout
+✅ Homepage with large semantic search bar
+✅ User types natural language query
+✅ AI extracts: role type, experience, location, remote, salary
+✅ System filters jobs based on extracted parameters
+✅ Shows results with match scores
+✅ Clean card-based layout
+✅ Click "View job" to apply (opens external link)
+✅ Mobile responsive
+✅ Claude.ai color scheme and design
+
+═══════════════════════════════════════════════════════════════════════════
+
+NEXT STEPS AFTER MVP
+
+═══════════════════════════════════════════════════════════════════════════
+
+Version 2 features to add:
+- Save jobs (bookmarking)
+- Job alerts (email notifications)
+- User profile (experience, preferences)
+- Company pages
+- Post a job form
+- Admin panel
+- Analytics dashboard
+- Advanced filtering UI
+- Sort options
+- Pagination
+- Vector search with pgvector (true semantic search)
+
+═══════════════════════════════════════════════════════════════════════════
+
+COST ESTIMATE
+
+═══════════════════════════════════════════════════════════════════════════
+
+Monthly costs:
+- Replit Hacker Plan: $7/month (recommended for always-on)
+- OpenAI API: $5-20/month (depends on search volume)
+- Domain (optional): $1/month
+- TOTAL: ~$13-28/month
+
+Free tier possible but app will sleep when inactive.
+
+═══════════════════════════════════════════════════════════════════════════
