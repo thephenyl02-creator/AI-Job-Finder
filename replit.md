@@ -17,6 +17,12 @@ Preferred communication style: Simple, everyday language.
 - **Styling**: Tailwind CSS with shadcn/ui component library (New York style)
 - **Theme**: Light/dark mode support with custom warm terracotta color palette
 
+### Page Structure
+- **Search Page (/)**: Dedicated search interface with AI-powered semantic search
+- **Jobs Page (/jobs)**: All jobs displayed in tabular format with filtering
+- **Admin Page (/admin)**: Admin-only job scraping controls
+- **Landing Page**: Unauthenticated users see marketing/sign-in page
+
 ### Backend Architecture
 - **Runtime**: Node.js with Express
 - **Language**: TypeScript with ES modules

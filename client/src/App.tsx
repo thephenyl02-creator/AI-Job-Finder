@@ -7,7 +7,8 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { useAuth } from "@/hooks/use-auth";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
-import Home from "@/pages/home";
+import Search from "@/pages/search";
+import Jobs from "@/pages/jobs";
 import Admin from "@/pages/admin";
 
 function AppRouter() {
@@ -23,7 +24,8 @@ function AppRouter() {
 
   return (
     <Switch>
-      <Route path="/" component={isAuthenticated ? Home : Landing} />
+      <Route path="/" component={isAuthenticated ? Search : Landing} />
+      <Route path="/jobs">{isAuthenticated ? <Jobs /> : <Landing />}</Route>
       <Route path="/admin">{isAuthenticated ? <Admin /> : <Landing />}</Route>
       <Route component={NotFound} />
     </Switch>
