@@ -22,7 +22,11 @@ export async function categorizeJob(
   description: string,
   company: string
 ): Promise<JobCategorizationResult> {
-  const prompt = `You are an expert at categorizing legal tech jobs.
+  const taxonomyText = Object.entries(JOB_TAXONOMY)
+    .map(([cat, data]) => `${cat}:\n${data.subcategories.map(s => `  - ${s}`).join('\n')}`)
+    .join('\n\n');
+
+  const prompt = `You are an expert at categorizing legal tech jobs for attorneys and legal professionals interested in AI.
 
 Job Title: ${title}
 Company: ${company}
@@ -30,32 +34,22 @@ Description: ${description.substring(0, 1500)}
 
 Categorize this job into ONE of these categories and subcategories:
 
-LEGAL AI JOBS:
-- Legal AI Engineer
-- NLP Engineer (Legal)
-- Knowledge Engineer
-- Legal Data Scientist
-- AI Product Manager (Legal)
-- Prompt Engineer (Legal AI)
-- AI Researcher (Law + ML)
+${taxonomyText}
 
-LEGAL TECH STARTUP ROLES:
-- Product Manager (LegalTech)
-- Solutions Engineer
-- Legal Operations Manager
-- Legal Tech Consultant
-- Customer Success (Legal SaaS)
-- Sales Engineer (LegalTech)
-- Growth / Partnerships (LegalTech)
-
-LAW FIRM TECH & INNOVATION:
-- Legal Innovation Manager
-- Practice Technology Lead
-- Knowledge Management Lawyer
-- Litigation Technology Specialist
-- eDiscovery / Analytics Manager
-- AI & Automation Counsel
-- Research Technology Attorney
+CATEGORIZATION GUIDANCE:
+- "Legal AI & Machine Learning": For AI/ML engineers, data scientists, NLP specialists, AI product managers
+- "Legal Product & Innovation": For product managers, innovation leaders, UX designers, digital transformation
+- "Legal Knowledge Engineering": For knowledge managers, research engineers, taxonomy/ontology specialists
+- "Legal Operations": For legal ops managers, process improvement, vendor management, implementations
+- "Contract Technology": For CLM specialists, contract automation, smart contracts, transaction tech
+- "Compliance & RegTech": For regulatory tech, compliance automation, privacy, AML/KYC
+- "Litigation & eDiscovery": For eDiscovery, litigation support, trial analytics, case strategy
+- "Legal Consulting & Strategy": For consultants, advisors, AI governance, strategy roles
+- "Legal Education & Training": For learning technology, curriculum design, training
+- "Legal Publishing & Content": For editorial tech, content platforms, publishing systems
+- "Courts & Public Legal Systems": For court tech, access to justice, government legal tech
+- "Legal Research & Academia": For academic researchers, computational law scientists
+- "Emerging LegalTech Roles": For new/cutting-edge roles like AI auditors, safety specialists
 
 Also extract:
 - Seniority level (Entry/Mid/Senior/Lead/Director/VP)
@@ -66,7 +60,7 @@ Also extract:
 
 Return ONLY valid JSON:
 {
-  "category": "Legal AI Jobs",
+  "category": "Legal AI & Machine Learning",
   "subcategory": "Legal AI Engineer",
   "seniorityLevel": "Senior",
   "keySkills": ["Python", "NLP", "Legal Domain Knowledge"],
@@ -116,10 +110,20 @@ function validateCategory(category: string): string {
     return category;
   }
   const categoryLower = category?.toLowerCase() || "";
-  if (categoryLower.includes("ai")) return "Legal AI Jobs";
-  if (categoryLower.includes("startup") || categoryLower.includes("tech")) return "Legal Tech Startup Roles";
-  if (categoryLower.includes("firm") || categoryLower.includes("innovation")) return "Law Firm Tech & Innovation";
-  return "Legal Tech Startup Roles";
+  if (categoryLower.includes("ai") || categoryLower.includes("machine learning") || categoryLower.includes("ml")) return "Legal AI & Machine Learning";
+  if (categoryLower.includes("product") || categoryLower.includes("innovation")) return "Legal Product & Innovation";
+  if (categoryLower.includes("knowledge") || categoryLower.includes("research")) return "Legal Knowledge Engineering";
+  if (categoryLower.includes("operations") || categoryLower.includes("ops")) return "Legal Operations";
+  if (categoryLower.includes("contract") || categoryLower.includes("clm")) return "Contract Technology";
+  if (categoryLower.includes("compliance") || categoryLower.includes("regtech") || categoryLower.includes("regulatory")) return "Compliance & RegTech";
+  if (categoryLower.includes("litigation") || categoryLower.includes("ediscovery") || categoryLower.includes("discovery")) return "Litigation & eDiscovery";
+  if (categoryLower.includes("consult") || categoryLower.includes("strategy")) return "Legal Consulting & Strategy";
+  if (categoryLower.includes("education") || categoryLower.includes("training")) return "Legal Education & Training";
+  if (categoryLower.includes("publish") || categoryLower.includes("content")) return "Legal Publishing & Content";
+  if (categoryLower.includes("court") || categoryLower.includes("government") || categoryLower.includes("justice")) return "Courts & Public Legal Systems";
+  if (categoryLower.includes("academic") || categoryLower.includes("research")) return "Legal Research & Academia";
+  if (categoryLower.includes("emerging") || categoryLower.includes("new")) return "Emerging LegalTech Roles";
+  return "Legal AI & Machine Learning";
 }
 
 function validateSubcategory(category: string, subcategory: string): string {
@@ -152,54 +156,69 @@ function fallbackCategorization(
 ): JobCategorizationResult {
   const text = `${title} ${description}`.toLowerCase();
   
-  let category = "Legal Tech Startup Roles";
-  let subcategory = "Other";
+  let category = "Legal AI & Machine Learning";
+  let subcategory = "Legal AI Engineer";
   const keySkills: string[] = [];
   const matchKeywords: string[] = [];
 
   if (text.includes("ai engineer") || text.includes("ml engineer") || text.includes("machine learning") || text.includes("nlp")) {
-    category = "Legal AI Jobs";
+    category = "Legal AI & Machine Learning";
     subcategory = "Legal AI Engineer";
     keySkills.push("AI", "Machine Learning", "Python");
     matchKeywords.push("ai", "ml", "machine learning", "nlp");
   } else if (text.includes("data scientist") || text.includes("data science")) {
-    category = "Legal AI Jobs";
+    category = "Legal AI & Machine Learning";
     subcategory = "Legal Data Scientist";
     keySkills.push("Data Science", "Python", "Statistics");
     matchKeywords.push("data", "analytics", "statistics");
   } else if (text.includes("product manager") || text.includes("pm")) {
     if (text.includes("ai")) {
-      category = "Legal AI Jobs";
-      subcategory = "AI Product Manager (Legal)";
+      category = "Legal AI & Machine Learning";
+      subcategory = "AI Product Manager";
     } else {
-      category = "Legal Tech Startup Roles";
-      subcategory = "Product Manager (LegalTech)";
+      category = "Legal Product & Innovation";
+      subcategory = "Legal Product Manager";
     }
     keySkills.push("Product Management", "Strategy", "User Research");
     matchKeywords.push("product", "roadmap", "strategy");
-  } else if (text.includes("solutions engineer") || text.includes("sales engineer")) {
-    category = "Legal Tech Startup Roles";
-    subcategory = text.includes("sales") ? "Sales Engineer (LegalTech)" : "Solutions Engineer";
-    keySkills.push("Technical Sales", "Demo", "Integration");
-    matchKeywords.push("solutions", "technical", "client");
-  } else if (text.includes("customer success")) {
-    category = "Legal Tech Startup Roles";
-    subcategory = "Customer Success (Legal SaaS)";
-    keySkills.push("Customer Success", "SaaS", "Relationship Management");
-    matchKeywords.push("customer", "success", "retention");
-  } else if (text.includes("innovation") || text.includes("practice technology")) {
-    category = "Law Firm Tech & Innovation";
-    subcategory = text.includes("innovation") ? "Legal Innovation Manager" : "Practice Technology Lead";
-    keySkills.push("Innovation", "Legal Technology", "Change Management");
-    matchKeywords.push("innovation", "law firm", "technology");
-  } else if (text.includes("ediscovery") || text.includes("e-discovery") || text.includes("litigation support")) {
-    category = "Law Firm Tech & Innovation";
-    subcategory = "eDiscovery / Analytics Manager";
+  } else if (text.includes("legal ops") || text.includes("legal operations")) {
+    category = "Legal Operations";
+    subcategory = "Legal Operations Manager";
+    keySkills.push("Legal Operations", "Process Improvement", "Vendor Management");
+    matchKeywords.push("legal ops", "operations", "efficiency");
+  } else if (text.includes("contract") || text.includes("clm")) {
+    category = "Contract Technology";
+    subcategory = "Contract Automation Specialist";
+    keySkills.push("CLM", "Contract Management", "Automation");
+    matchKeywords.push("contract", "clm", "automation");
+  } else if (text.includes("compliance") || text.includes("regulatory") || text.includes("regtech")) {
+    category = "Compliance & RegTech";
+    subcategory = "Compliance Technology Counsel";
+    keySkills.push("Compliance", "Regulatory", "Risk Management");
+    matchKeywords.push("compliance", "regulatory", "risk");
+  } else if (text.includes("ediscovery") || text.includes("e-discovery") || text.includes("litigation")) {
+    category = "Litigation & eDiscovery";
+    subcategory = "eDiscovery Counsel";
     keySkills.push("eDiscovery", "Litigation Support", "Relativity");
     matchKeywords.push("ediscovery", "litigation", "review");
+  } else if (text.includes("consult")) {
+    category = "Legal Consulting & Strategy";
+    subcategory = "LegalTech Consultant";
+    keySkills.push("Consulting", "Strategy", "Implementation");
+    matchKeywords.push("consulting", "advisory", "strategy");
+  } else if (text.includes("knowledge") || text.includes("taxonomy")) {
+    category = "Legal Knowledge Engineering";
+    subcategory = "Legal Knowledge Manager";
+    keySkills.push("Knowledge Management", "Taxonomy", "Information Architecture");
+    matchKeywords.push("knowledge", "taxonomy", "information");
+  } else if (text.includes("innovation") || text.includes("transformation")) {
+    category = "Legal Product & Innovation";
+    subcategory = "Head of Legal Innovation";
+    keySkills.push("Innovation", "Digital Transformation", "Change Management");
+    matchKeywords.push("innovation", "transformation", "strategy");
   } else if (text.includes("engineer") || text.includes("developer")) {
-    category = "Legal Tech Startup Roles";
-    subcategory = "Solutions Engineer";
+    category = "Legal AI & Machine Learning";
+    subcategory = "Legal AI Engineer";
     keySkills.push("Software Engineering", "Development");
     matchKeywords.push("engineering", "development", "software");
   }

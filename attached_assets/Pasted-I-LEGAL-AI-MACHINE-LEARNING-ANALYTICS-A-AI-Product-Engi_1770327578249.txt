@@ -1,0 +1,349 @@
+I. LEGAL AI, MACHINE LEARNING & ANALYTICS
+A. AI Product & Engineering Interface Roles
+
+Legal AI Product Manager
+
+AI Product Owner (Legal Domain)
+
+Legal AI Solutions Architect
+
+Legal AI Implementation Lead
+
+AI Legal Workflow Designer
+
+Legal AI Integration Specialist
+
+Legal AI Platform Manager
+
+B. AI Development & Evaluation Roles (Law-Trained)
+
+Legal AI Researcher
+
+Computational Law Researcher
+
+Legal Machine Learning Specialist
+
+Legal NLP Specialist
+
+Legal AI Evaluation Specialist
+
+Legal Model Validation Analyst
+
+Legal AI Testing & Benchmarking Specialist
+
+Legal Reasoning Engineer
+
+Legal Prompt Engineer
+
+Legal Dataset Curator
+
+Legal Training Data Specialist
+
+C. Legal Analytics & Data Roles
+
+Legal Data Analyst
+
+Legal Data Scientist
+
+Legal Analytics Consultant
+
+Litigation Analytics Specialist
+
+Judicial Analytics Analyst
+
+Contract Analytics Specialist
+
+Legal Metrics Analyst
+
+Legal Intelligence Analyst
+
+II. LEGAL PRODUCT, INNOVATION & DIGITAL TRANSFORMATION
+A. Product & Innovation Leadership
+
+Legal Product Manager
+
+Senior Legal Product Manager
+
+Director of Legal Product
+
+Head of Legal Innovation
+
+Chief Innovation Officer (Legal)
+
+Innovation Counsel
+
+Legal Digital Transformation Lead
+
+B. Workflow & Experience Design
+
+Legal Workflow Designer
+
+Legal UX / LX Designer (Legal Experience Designer)
+
+Legal Service Designer
+
+Legal Process Designer
+
+Legal Automation Designer
+
+C. Platform & Solution Development
+
+Legal Solutions Manager
+
+Legal Technology Product Owner
+
+Legal Platform Manager
+
+Legal SaaS Product Specialist
+
+III. LEGAL KNOWLEDGE, RESEARCH & INFORMATION ENGINEERING
+A. Knowledge Management
+
+Legal Knowledge Manager
+
+Senior Knowledge Lawyer
+
+Knowledge Counsel
+
+Legal Knowledge Engineer
+
+Legal Content Engineer
+
+Legal Precedent Manager
+
+B. Information Architecture & Taxonomy
+
+Legal Information Architect
+
+Legal Ontology Specialist
+
+Legal Taxonomy Specialist
+
+Legal Metadata Specialist
+
+Legal Classification Specialist
+
+C. Search & Retrieval Systems
+
+Legal Research Engineer
+
+Legal Search Specialist
+
+Legal Retrieval Engineer
+
+Legal RAG Architect
+
+Legal Document Structuring Specialist
+
+IV. LEGAL OPERATIONS & PROCESS OPTIMIZATION
+A. Legal Operations
+
+Legal Operations Manager
+
+Legal Operations Analyst
+
+Legal Process Improvement Specialist
+
+Legal Efficiency Analyst
+
+Legal Performance Analyst
+
+B. Project & Implementation
+
+Legal Project Manager
+
+Legal Technology Implementation Manager
+
+Legal Automation Implementation Specialist
+
+Legal Systems Administrator (Legal Platforms)
+
+C. Vendor & Technology Management
+
+Legal Vendor Manager
+
+Legal Technology Procurement Specialist
+
+Legal Systems Integration Manager
+
+V. CONTRACT TECHNOLOGY & TRANSACTIONAL AUTOMATION
+A. Contract Lifecycle Management (CLM)
+
+Contract Automation Specialist
+
+CLM Implementation Consultant
+
+Contract Intelligence Analyst
+
+Contract Data Specialist
+
+Smart Contract Analyst
+
+B. Transaction Technology
+
+Deal Technology Specialist
+
+Transaction Automation Manager
+
+Legal Transaction Systems Analyst
+
+VI. COMPLIANCE, REGULATORY & REGTECH
+A. Compliance Technology Roles
+
+Compliance Technology Counsel
+
+Regulatory Technology Product Manager
+
+Compliance Automation Specialist
+
+Regulatory Intelligence Analyst
+
+Legal Risk Technology Analyst
+
+B. Financial & Industry Regulation
+
+FinTech Regulatory Specialist
+
+AML/KYC Technology Counsel
+
+Privacy Technology Counsel
+
+Data Protection Technology Specialist
+
+C. Monitoring & Surveillance
+
+Regulatory Monitoring Analyst
+
+Compliance Analytics Specialist
+
+Policy Automation Specialist
+
+VII. LITIGATION TECHNOLOGY & EDISCOVERY
+A. Litigation Technology
+
+Litigation Technology Specialist
+
+eDiscovery Counsel
+
+eDiscovery Project Manager
+
+Litigation Analytics Specialist
+
+Digital Evidence Specialist
+
+B. Trial & Strategy Analytics
+
+Jury Analytics Specialist
+
+Case Strategy Analyst
+
+Litigation Data Analyst
+
+VIII. LEGAL CONSULTING & STRATEGY
+A. Consulting Roles
+
+LegalTech Consultant
+
+Legal Innovation Consultant
+
+Legal Digital Transformation Consultant
+
+Legal Process Consultant
+
+AI Adoption Consultant (Legal)
+
+B. Strategy & Governance
+
+Legal AI Governance Consultant
+
+Legal Technology Strategy Advisor
+
+Responsible AI Advisor (Legal Domain)
+
+Legal Risk Strategy Consultant
+
+IX. LEGAL EDUCATION, TRAINING & PROFESSIONAL DEVELOPMENT TECHNOLOGY
+A. Legal Education Technology
+
+Legal Learning Technology Specialist
+
+AI Curriculum Designer (Law)
+
+Legal Skills Technology Director
+
+Legal Training Innovation Manager
+
+B. Career & Skills Analytics
+
+Legal Career Analytics Specialist
+
+Legal Professional Development Technologist
+
+Legal Skills Assessment Designer
+
+X. LEGAL PUBLISHING, CONTENT & INFORMATION PLATFORMS
+A. Legal Publishing Technology
+
+Legal Editorial Technologist
+
+Legal Content Strategist (AI Platforms)
+
+Legal Data Editor
+
+Legal Information Product Manager
+
+B. Legal Content Engineering
+
+Legal Content Structuring Specialist
+
+Legal Annotation Specialist
+
+Legal Citation Data Specialist
+
+XI. GOVERNMENT, COURTS & PUBLIC LEGAL SYSTEMS
+
+Court Technology Advisor
+
+Digital Justice Systems Specialist
+
+Access to Justice Technology Lead
+
+Legal Policy Technology Advisor
+
+Judicial Technology Analyst
+
+XII. LEGAL RESEARCH & ACADEMIC (COMPUTATIONAL LAW)
+
+Legal Informatics Researcher
+
+AI & Law Researcher
+
+Computational Law Scientist
+
+Legal Empirical Researcher
+
+Legal Data Governance Researcher
+
+Algorithmic Fairness in Law Researcher
+
+XIII. EMERGING & NEXT-GENERATION LEGALTECH ROLES (FAST GROWING)
+
+Legal AI Auditor
+
+Legal AI Safety Specialist
+
+Legal Alignment Researcher
+
+Legal Systems Designer
+
+Legal Automation Architect
+
+Legal Process Intelligence Analyst
+
+Legal Decision Modeling Specialist
+
+Legal Knowledge Graph Architect
+
+Legal Digital Twin Designer (emerging)
+
+Legal AI Explainability Specialist
