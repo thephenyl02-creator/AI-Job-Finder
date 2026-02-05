@@ -55,7 +55,7 @@ export async function registerRoutes(
 
   app.get("/api/jobs/:id", isAuthenticated, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseInt(req.params.id as string);
       const job = await storage.getJob(id);
       if (!job) {
         return res.status(404).json({ error: "Job not found" });
@@ -171,8 +171,8 @@ Only include jobs with a score above 40. Sort by score descending.`;
 
       // Save last search query for user
       const user = req.user as any;
-      if (user?.id) {
-        storage.updateUserLastSearch(user.id, query).catch(console.error);
+      if (user?.claims?.sub) {
+        storage.updateUserLastSearch(user.claims.sub, query).catch(console.error);
       }
 
       res.json(scoredJobs);
@@ -186,7 +186,8 @@ Only include jobs with a score above 40. Sort by score descending.`;
   app.post("/api/resume/upload", isAuthenticated, upload.single("resume"), async (req, res) => {
     try {
       const user = req.user as any;
-      if (!user?.id) {
+      const userId = user?.claims?.sub;
+      if (!userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
 
@@ -214,7 +215,7 @@ Only include jobs with a score above 40. Sort by score descending.`;
       const searchQuery = await generateSearchQueryFromResume(parsedData);
 
       // Save to database
-      await storage.updateUserResume(user.id, resumeText, file.originalname, parsedData);
+      await storage.updateUserResume(userId, resumeText, file.originalname, parsedData);
 
       res.json({
         success: true,
@@ -232,11 +233,12 @@ Only include jobs with a score above 40. Sort by score descending.`;
   app.get("/api/resume", isAuthenticated, async (req, res) => {
     try {
       const user = req.user as any;
-      if (!user?.id) {
+      const userId = user?.claims?.sub;
+      if (!userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
 
-      const resumeData = await storage.getUserResume(user.id);
+      const resumeData = await storage.getUserResume(userId);
 
       if (!resumeData || !resumeData.resumeFilename) {
         return res.json({ hasResume: false });
@@ -257,11 +259,12 @@ Only include jobs with a score above 40. Sort by score descending.`;
   app.delete("/api/resume", isAuthenticated, async (req, res) => {
     try {
       const user = req.user as any;
-      if (!user?.id) {
+      const userId = user?.claims?.sub;
+      if (!userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
 
-      await storage.updateUserResume(user.id, "", "", {} as ResumeExtractedData);
+      await storage.updateUserResume(userId, "", "", {} as ResumeExtractedData);
       res.json({ success: true, message: "Resume deleted" });
     } catch (error) {
       console.error("Error deleting resume:", error);
@@ -273,11 +276,12 @@ Only include jobs with a score above 40. Sort by score descending.`;
   app.get("/api/preferences", isAuthenticated, async (req, res) => {
     try {
       const user = req.user as any;
-      if (!user?.id) {
+      const userId = user?.claims?.sub;
+      if (!userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
 
-      const preferences = await storage.getUserPreferences(user.id);
+      const preferences = await storage.getUserPreferences(userId);
       res.json(preferences || {});
     } catch (error) {
       console.error("Error fetching preferences:", error);
@@ -288,11 +292,12 @@ Only include jobs with a score above 40. Sort by score descending.`;
   app.put("/api/preferences", isAuthenticated, async (req, res) => {
     try {
       const user = req.user as any;
-      if (!user?.id) {
+      const userId = user?.claims?.sub;
+      if (!userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
 
-      const preferences = await storage.upsertUserPreferences(user.id, req.body);
+      const preferences = await storage.upsertUserPreferences(userId, req.body);
       res.json(preferences);
     } catch (error) {
       console.error("Error updating preferences:", error);
