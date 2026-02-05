@@ -25,6 +25,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ExternalLink, Search, ArrowLeft, MapPin, Building2, Briefcase } from "lucide-react";
+import { JobComparison } from "@/components/job-comparison";
 
 export default function Jobs() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
@@ -47,6 +48,11 @@ export default function Jobs() {
 
   const { data: allJobs = [], isLoading: jobsLoading } = useQuery<Job[]>({
     queryKey: ["/api/jobs"],
+    enabled: isAuthenticated,
+  });
+
+  const { data: resumeData } = useQuery<{ hasResume: boolean }>({
+    queryKey: ["/api/resume"],
     enabled: isAuthenticated,
   });
 
@@ -218,14 +224,22 @@ export default function Jobs() {
                       </TableCell>
                     )}
                     <TableCell className="text-right">
-                      <Button
-                        size="sm"
-                        onClick={() => handleApplyClick(job)}
-                        data-testid={`button-apply-${job.id}`}
-                      >
-                        <ExternalLink className="h-3 w-3 mr-1" />
-                        Apply
-                      </Button>
+                      <div className="flex items-center gap-2 justify-end">
+                        <JobComparison
+                          jobId={job.id}
+                          jobTitle={job.title}
+                          company={job.company}
+                          hasResume={resumeData?.hasResume ?? false}
+                        />
+                        <Button
+                          size="sm"
+                          onClick={() => handleApplyClick(job)}
+                          data-testid={`button-apply-${job.id}`}
+                        >
+                          <ExternalLink className="h-3 w-3 mr-1" />
+                          Apply
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))

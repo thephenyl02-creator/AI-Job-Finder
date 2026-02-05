@@ -7,8 +7,21 @@ const openai = new OpenAI({
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
 });
 
+export class InvalidPDFError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "InvalidPDFError";
+  }
+}
+
 export async function extractTextFromPDF(buffer: Buffer): Promise<string> {
   try {
+    // Basic PDF validation - check for PDF header
+    const header = buffer.slice(0, 8).toString("utf-8");
+    if (!header.startsWith("%PDF-")) {
+      throw new InvalidPDFError("The file is not a valid PDF. Please upload a real PDF file.");
+    }
+
     // Use createRequire to import CommonJS module in ESM context
     const { createRequire } = await import("module");
     const require = createRequire(import.meta.url);
@@ -17,9 +30,16 @@ export async function extractTextFromPDF(buffer: Buffer): Promise<string> {
     const parser = new PDFParse({ data: buffer });
     const result = await parser.getText();
     return result.text;
-  } catch (error) {
+  } catch (error: any) {
     console.error("PDF parsing error:", error);
-    throw new Error("Failed to parse PDF");
+    if (error instanceof InvalidPDFError) {
+      throw error;
+    }
+    // Check for common PDF parsing errors
+    if (error.message?.includes("Invalid") || error.name === "InvalidPDFException") {
+      throw new InvalidPDFError("The PDF file appears to be corrupted or invalid. Please try a different file.");
+    }
+    throw new InvalidPDFError("Failed to read the PDF file. Please ensure it contains readable text.");
   }
 }
 

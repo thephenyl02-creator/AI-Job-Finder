@@ -11,6 +11,7 @@ import {
   extractTextFromDOCX,
   parseResumeWithAI,
   generateSearchQueryFromResume,
+  InvalidPDFError,
 } from "./lib/resume-parser";
 import { compareResumeToJob } from "./lib/resume-job-comparison";
 import {
@@ -267,9 +268,12 @@ Only include jobs with a score above 40. Sort by score descending.`;
         searchQuery,
         message: "Resume uploaded and parsed successfully",
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Resume upload error:", error);
-      res.status(500).json({ error: "Failed to process resume" });
+      if (error instanceof InvalidPDFError) {
+        return res.status(400).json({ error: error.message });
+      }
+      res.status(500).json({ error: "Failed to process resume. Please try a different file." });
     }
   });
 
