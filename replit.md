@@ -40,7 +40,22 @@ Preferred communication style: Simple, everyday language.
   - Match scoring with explanations for job-candidate fit
   - Resume parsing and skill extraction from PDF/DOCX uploads
   - Auto-generated search queries from resume data
+  - **Job Categorization**: Automatic classification into 3-tier taxonomy with AI summaries
 - **Configuration**: Uses `AI_INTEGRATIONS_OPENAI_API_KEY` and `AI_INTEGRATIONS_OPENAI_BASE_URL` environment variables
+
+### Job Categorization (AI-Powered)
+- **Taxonomy**: 3 primary categories with 21 subcategories
+  - Legal AI Jobs (7 subcategories): AI Product Manager, Legal AI Engineer, AI Researcher, etc.
+  - Legal Tech Startup Roles (7 subcategories): Product Manager, Solutions Engineer, Sales Engineer, etc.
+  - Law Firm Tech & Innovation (7 subcategories): Legal Innovation Director, eDiscovery Manager, etc.
+- **AI Extraction**: Uses gpt-4o-mini to analyze job postings and extract:
+  - Category and subcategory classification
+  - Seniority level (Entry/Mid/Senior/Lead/Director/VP)
+  - Key skills (up to 8)
+  - AI-generated job summary (1-3 sentences)
+  - Match keywords for improved search
+- **Implementation**: `server/lib/job-categorizer.ts`
+- **Fallback**: Keyword-based classification if AI fails
 
 ### Resume Upload
 - **Supported Formats**: PDF, DOCX (max 5MB)
