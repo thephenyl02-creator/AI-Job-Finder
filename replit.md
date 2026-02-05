@@ -51,10 +51,20 @@ Preferred communication style: Simple, everyday language.
 - **Configuration**: Uses `AI_INTEGRATIONS_OPENAI_API_KEY` and `AI_INTEGRATIONS_OPENAI_BASE_URL` environment variables
 
 ### Job Categorization (AI-Powered)
-- **Taxonomy**: 3 primary categories with 21 subcategories
-  - Legal AI Jobs (7 subcategories): AI Product Manager, Legal AI Engineer, AI Researcher, etc.
-  - Legal Tech Startup Roles (7 subcategories): Product Manager, Solutions Engineer, Sales Engineer, etc.
-  - Law Firm Tech & Innovation (7 subcategories): Legal Innovation Director, eDiscovery Manager, etc.
+- **Taxonomy**: 13 primary categories with 80+ subcategories for comprehensive legal tech coverage
+  - Legal AI & Machine Learning: AI/ML engineers, data scientists, NLP specialists
+  - Legal Product & Innovation: Product managers, innovation leaders, UX designers
+  - Legal Knowledge Engineering: Knowledge managers, research engineers, taxonomy specialists
+  - Legal Operations: Legal ops managers, process improvement, vendor management
+  - Contract Technology: CLM specialists, contract automation, smart contracts
+  - Compliance & RegTech: Regulatory tech, compliance automation, privacy
+  - Litigation & eDiscovery: eDiscovery, litigation support, trial analytics
+  - Legal Consulting & Strategy: Consultants, advisors, AI governance
+  - Legal Education & Training: Learning technology, curriculum design
+  - Legal Publishing & Content: Editorial tech, content platforms
+  - Courts & Public Legal Systems: Court tech, access to justice
+  - Legal Research & Academia: Academic researchers, computational law
+  - Emerging LegalTech Roles: AI auditors, safety specialists, new roles
 - **AI Extraction**: Uses gpt-4o-mini to analyze job postings and extract:
   - Category and subcategory classification
   - Seniority level (Entry/Mid/Senior/Lead/Director/VP)
