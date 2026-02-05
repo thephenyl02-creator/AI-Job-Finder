@@ -9,23 +9,50 @@ import { JOB_TAXONOMY } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { ExternalLink, Search, ArrowLeft, MapPin, Building2, Briefcase } from "lucide-react";
+  ExternalLink,
+  Search,
+  ArrowLeft,
+  MapPin,
+  Building2,
+  ChevronRight,
+  ChevronDown,
+  Brain,
+  Lightbulb,
+  BookOpen,
+  Settings,
+  FileText,
+  Shield,
+  Scale,
+  TrendingUp,
+  GraduationCap,
+  Newspaper,
+  Landmark,
+  Microscope,
+  Sparkles,
+  X,
+  LayoutGrid,
+  List,
+} from "lucide-react";
 import { JobComparison } from "@/components/job-comparison";
+
+const CATEGORY_ICONS: Record<string, typeof Brain> = {
+  "Brain": Brain,
+  "Lightbulb": Lightbulb,
+  "BookOpen": BookOpen,
+  "Settings": Settings,
+  "FileText": FileText,
+  "Shield": Shield,
+  "Scale": Scale,
+  "TrendingUp": TrendingUp,
+  "GraduationCap": GraduationCap,
+  "Newspaper": Newspaper,
+  "Landmark": Landmark,
+  "Microscope": Microscope,
+  "Sparkles": Sparkles,
+};
 
 export default function Jobs() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
@@ -34,6 +61,8 @@ export default function Jobs() {
   const [filterText, setFilterText] = useState("");
   const [searchResults, setSearchResults] = useState<JobWithScore[] | null>(null);
   const [searchQuery, setSearchQuery] = useState<string | null>(null);
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+  const [viewMode, setViewMode] = useState<"cards" | "list">("cards");
 
   useEffect(() => {
     const stored = sessionStorage.getItem("searchResults");
@@ -65,6 +94,18 @@ export default function Jobs() {
     window.open(job.applyUrl, "_blank");
   };
 
+  const toggleCategory = (category: string) => {
+    setExpandedCategories(prev => {
+      const next = new Set(prev);
+      if (next.has(category)) {
+        next.delete(category);
+      } else {
+        next.add(category);
+      }
+      return next;
+    });
+  };
+
   if (authLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -91,6 +132,24 @@ export default function Jobs() {
   const getCategoryCount = (category: string) => 
     displayJobs.filter(job => job.roleCategory === category).length;
 
+  const jobsByCategory = Object.entries(JOB_TAXONOMY).reduce((acc, [category]) => {
+    acc[category] = filteredJobs.filter(job => job.roleCategory === category);
+    return acc;
+  }, {} as Record<string, (Job | JobWithScore)[]>);
+
+  const uncategorizedJobs = filteredJobs.filter(job => 
+    !job.roleCategory || !Object.keys(JOB_TAXONOMY).includes(job.roleCategory)
+  );
+
+  const categoriesWithJobs = Object.entries(jobsByCategory)
+    .filter(([_, jobs]) => jobs.length > 0)
+    .sort((a, b) => b[1].length - a[1].length);
+
+  const getCategoryIcon = (iconName: string) => {
+    const IconComponent = CATEGORY_ICONS[iconName] || Brain;
+    return IconComponent;
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -108,12 +167,27 @@ export default function Jobs() {
               Back to Search
             </Button>
             <h1 className="text-xl font-medium text-foreground">
-              {searchResults ? `Results for "${searchQuery}"` : "All Jobs"}
+              {searchResults ? `Results for "${searchQuery}"` : "Browse Jobs"}
             </h1>
           </div>
-          <span className="text-sm text-muted-foreground">
-            {filteredJobs.length} jobs
-          </span>
+          <div className="flex items-center gap-2">
+            <Button
+              variant={viewMode === "cards" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setViewMode("cards")}
+              data-testid="button-view-cards"
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === "list" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setViewMode("list")}
+              data-testid="button-view-list"
+            >
+              <List className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
 
         <div className="flex flex-wrap gap-4 mb-6">
@@ -126,19 +200,18 @@ export default function Jobs() {
               data-testid="input-filter"
             />
           </div>
-          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-            <SelectTrigger className="w-[280px]" data-testid="select-category">
-              <SelectValue placeholder="All Categories" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Categories ({displayJobs.length})</SelectItem>
-              {Object.keys(JOB_TAXONOMY).map((category) => (
-                <SelectItem key={category} value={category}>
-                  {category} ({getCategoryCount(category)})
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {selectedCategory !== "all" && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSelectedCategory("all")}
+              className="gap-1"
+              data-testid="button-clear-category"
+            >
+              <X className="h-3 w-3" />
+              {selectedCategory}
+            </Button>
+          )}
           {searchResults && (
             <Button
               variant="outline"
@@ -151,37 +224,63 @@ export default function Jobs() {
               Clear Search Results
             </Button>
           )}
+          <span className="text-sm text-muted-foreground self-center">
+            {filteredJobs.length} jobs
+          </span>
         </div>
 
-        <div className="border rounded-lg overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-muted/50">
-                <TableHead className="w-[300px]">Job Title</TableHead>
-                <TableHead className="w-[180px]">Company</TableHead>
-                <TableHead className="w-[150px]">Location</TableHead>
-                <TableHead className="w-[200px]">Category</TableHead>
-                {searchResults && <TableHead className="w-[100px]">Match</TableHead>}
-                <TableHead className="w-[100px] text-right">Action</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {jobsLoading ? (
-                <TableRow>
-                  <TableCell colSpan={searchResults ? 6 : 5} className="text-center py-8">
-                    <div className="animate-pulse text-muted-foreground">Loading jobs...</div>
-                  </TableCell>
-                </TableRow>
-              ) : filteredJobs.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={searchResults ? 6 : 5} className="text-center py-8">
-                    <div className="text-muted-foreground">No jobs found</div>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredJobs.map((job) => (
-                  <TableRow key={job.id} data-testid={`row-job-${job.id}`}>
-                    <TableCell>
+        {selectedCategory === "all" && viewMode === "cards" && (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 mb-8">
+            {Object.entries(JOB_TAXONOMY).map(([category, data]) => {
+              const count = getCategoryCount(category);
+              const Icon = getCategoryIcon(data.icon);
+              return (
+                <button
+                  key={category}
+                  onClick={() => {
+                    setSelectedCategory(category);
+                    setExpandedCategories(new Set([category]));
+                  }}
+                  className={`p-4 rounded-lg border text-left transition-all hover:border-primary/50 hover:bg-muted/30 ${
+                    count === 0 ? "opacity-50" : ""
+                  }`}
+                  disabled={count === 0}
+                  data-testid={`button-category-${category.replace(/\s+/g, '-').toLowerCase()}`}
+                >
+                  <Icon className="h-5 w-5 text-primary mb-2" />
+                  <p className="font-medium text-sm text-foreground line-clamp-2">{data.shortName}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{count} jobs</p>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {jobsLoading ? (
+          <div className="text-center py-12">
+            <div className="animate-pulse text-muted-foreground">Loading jobs...</div>
+          </div>
+        ) : filteredJobs.length === 0 ? (
+          <div className="text-center py-12">
+            <div className="text-muted-foreground">No jobs found</div>
+          </div>
+        ) : viewMode === "list" ? (
+          <div className="border rounded-lg overflow-hidden">
+            <table className="w-full">
+              <thead>
+                <tr className="bg-muted/50 border-b">
+                  <th className="text-left p-3 font-medium text-sm">Job Title</th>
+                  <th className="text-left p-3 font-medium text-sm">Company</th>
+                  <th className="text-left p-3 font-medium text-sm">Location</th>
+                  <th className="text-left p-3 font-medium text-sm">Category</th>
+                  {searchResults && <th className="text-left p-3 font-medium text-sm">Match</th>}
+                  <th className="text-right p-3 font-medium text-sm">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredJobs.map((job) => (
+                  <tr key={job.id} className="border-b hover:bg-muted/30" data-testid={`row-job-${job.id}`}>
+                    <td className="p-3">
                       <div className="font-medium" data-testid={`text-job-title-${job.id}`}>
                         {job.title}
                       </div>
@@ -190,29 +289,26 @@ export default function Jobs() {
                           {job.roleSubcategory}
                         </Badge>
                       )}
-                    </TableCell>
-                    <TableCell>
+                    </td>
+                    <td className="p-3">
                       <div className="flex items-center gap-1">
                         <Building2 className="h-3 w-3 text-muted-foreground" />
                         <span data-testid={`text-job-company-${job.id}`}>{job.company}</span>
                       </div>
-                    </TableCell>
-                    <TableCell>
+                    </td>
+                    <td className="p-3">
                       <div className="flex items-center gap-1 text-muted-foreground">
                         <MapPin className="h-3 w-3" />
                         <span data-testid={`text-job-location-${job.id}`}>
                           {job.location || "Remote"}
                         </span>
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        <Briefcase className="h-3 w-3 text-muted-foreground" />
-                        <span className="text-sm">{job.roleCategory || "Uncategorized"}</span>
-                      </div>
-                    </TableCell>
+                    </td>
+                    <td className="p-3">
+                      <span className="text-sm">{job.roleCategory || "Uncategorized"}</span>
+                    </td>
                     {searchResults && (
-                      <TableCell>
+                      <td className="p-3">
                         {"matchScore" in job && (job as JobWithScore).matchScore && (
                           <Badge 
                             variant={(job as JobWithScore).matchScore! >= 80 ? "default" : "secondary"}
@@ -221,9 +317,9 @@ export default function Jobs() {
                             {(job as JobWithScore).matchScore}%
                           </Badge>
                         )}
-                      </TableCell>
+                      </td>
                     )}
-                    <TableCell className="text-right">
+                    <td className="p-3 text-right">
                       <div className="flex items-center gap-2 justify-end">
                         <JobComparison
                           jobId={job.id}
@@ -240,14 +336,200 @@ export default function Jobs() {
                           Apply
                         </Button>
                       </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {selectedCategory !== "all" ? (
+              <CategorySection
+                category={selectedCategory}
+                jobs={filteredJobs}
+                taxonomy={JOB_TAXONOMY[selectedCategory as keyof typeof JOB_TAXONOMY]}
+                expanded={true}
+                onToggle={() => {}}
+                onApply={handleApplyClick}
+                hasResume={resumeData?.hasResume ?? false}
+                searchResults={searchResults}
+                getCategoryIcon={getCategoryIcon}
+              />
+            ) : (
+              <>
+                {categoriesWithJobs.map(([category, jobs]) => {
+                  const taxonomy = JOB_TAXONOMY[category as keyof typeof JOB_TAXONOMY];
+                  return (
+                    <CategorySection
+                      key={category}
+                      category={category}
+                      jobs={jobs}
+                      taxonomy={taxonomy}
+                      expanded={expandedCategories.has(category)}
+                      onToggle={() => toggleCategory(category)}
+                      onApply={handleApplyClick}
+                      hasResume={resumeData?.hasResume ?? false}
+                      searchResults={searchResults}
+                      getCategoryIcon={getCategoryIcon}
+                    />
+                  );
+                })}
+                {uncategorizedJobs.length > 0 && (
+                  <CategorySection
+                    category="Other"
+                    jobs={uncategorizedJobs}
+                    taxonomy={{ icon: "Sparkles", shortName: "Other", description: "Uncategorized jobs", subcategories: [] }}
+                    expanded={expandedCategories.has("Other")}
+                    onToggle={() => toggleCategory("Other")}
+                    onApply={handleApplyClick}
+                    hasResume={resumeData?.hasResume ?? false}
+                    searchResults={searchResults}
+                    getCategoryIcon={getCategoryIcon}
+                  />
+                )}
+              </>
+            )}
+          </div>
+        )}
       </main>
     </div>
+  );
+}
+
+function CategorySection({
+  category,
+  jobs,
+  taxonomy,
+  expanded,
+  onToggle,
+  onApply,
+  hasResume,
+  searchResults,
+  getCategoryIcon,
+}: {
+  category: string;
+  jobs: (Job | JobWithScore)[];
+  taxonomy: { icon: string; shortName: string; description: string; subcategories: readonly string[] };
+  expanded: boolean;
+  onToggle: () => void;
+  onApply: (job: Job | JobWithScore) => void;
+  hasResume: boolean;
+  searchResults: JobWithScore[] | null;
+  getCategoryIcon: (icon: string) => typeof Brain;
+}) {
+  const Icon = getCategoryIcon(taxonomy.icon);
+
+  const jobsBySubcategory = jobs.reduce((acc, job) => {
+    const sub = job.roleSubcategory || "Other";
+    if (!acc[sub]) acc[sub] = [];
+    acc[sub].push(job);
+    return acc;
+  }, {} as Record<string, (Job | JobWithScore)[]>);
+
+  return (
+    <Card className="overflow-hidden">
+      <button
+        onClick={onToggle}
+        className="w-full text-left"
+        data-testid={`button-toggle-${category.replace(/\s+/g, '-').toLowerCase()}`}
+      >
+        <CardHeader className="flex flex-row items-center gap-3 py-4 hover:bg-muted/30 transition-colors">
+          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+            <Icon className="h-5 w-5 text-primary" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <h3 className="font-semibold text-foreground">{category}</h3>
+              <Badge variant="secondary">{jobs.length}</Badge>
+            </div>
+            <p className="text-sm text-muted-foreground truncate">{taxonomy.description}</p>
+          </div>
+          {expanded ? (
+            <ChevronDown className="h-5 w-5 text-muted-foreground shrink-0" />
+          ) : (
+            <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
+          )}
+        </CardHeader>
+      </button>
+
+      {expanded && (
+        <CardContent className="pt-0 pb-4">
+          <div className="space-y-4">
+            {Object.entries(jobsBySubcategory)
+              .sort((a, b) => b[1].length - a[1].length)
+              .map(([subcategory, subJobs]) => (
+                <div key={subcategory}>
+                  <div className="flex items-center gap-2 mb-2 px-2">
+                    <span className="text-sm font-medium text-muted-foreground">{subcategory}</span>
+                    <span className="text-xs text-muted-foreground">({subJobs.length})</span>
+                  </div>
+                  <div className="grid gap-2">
+                    {subJobs.map((job) => (
+                      <div
+                        key={job.id}
+                        className="p-3 rounded-lg border bg-card hover:bg-muted/30 transition-colors"
+                        data-testid={`card-job-${job.id}`}
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="min-w-0 flex-1">
+                            <h4 className="font-medium text-foreground" data-testid={`text-job-title-${job.id}`}>
+                              {job.title}
+                            </h4>
+                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-sm text-muted-foreground">
+                              <span className="flex items-center gap-1">
+                                <Building2 className="h-3 w-3" />
+                                <span data-testid={`text-job-company-${job.id}`}>{job.company}</span>
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <MapPin className="h-3 w-3" />
+                                <span data-testid={`text-job-location-${job.id}`}>{job.location || "Remote"}</span>
+                              </span>
+                              {job.seniorityLevel && (
+                                <Badge variant="outline" className="text-xs">
+                                  {job.seniorityLevel}
+                                </Badge>
+                              )}
+                              {searchResults && "matchScore" in job && (job as JobWithScore).matchScore && (
+                                <Badge 
+                                  variant={(job as JobWithScore).matchScore! >= 80 ? "default" : "secondary"}
+                                  data-testid={`badge-match-${job.id}`}
+                                >
+                                  {(job as JobWithScore).matchScore}% match
+                                </Badge>
+                              )}
+                            </div>
+                            {job.aiSummary && (
+                              <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
+                                {job.aiSummary}
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <JobComparison
+                              jobId={job.id}
+                              jobTitle={job.title}
+                              company={job.company}
+                              hasResume={hasResume}
+                            />
+                            <Button
+                              size="sm"
+                              onClick={() => onApply(job)}
+                              data-testid={`button-apply-${job.id}`}
+                            >
+                              <ExternalLink className="h-3 w-3 mr-1" />
+                              Apply
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+          </div>
+        </CardContent>
+      )}
+    </Card>
   );
 }
