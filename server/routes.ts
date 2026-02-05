@@ -12,6 +12,7 @@ import {
   parseResumeWithAI,
   generateSearchQueryFromResume,
 } from "./lib/resume-parser";
+import { compareResumeToJob } from "./lib/resume-job-comparison";
 import {
   scrapeAllLawFirms,
   scrapeSingleCompany,
@@ -312,6 +313,49 @@ Only include jobs with a score above 40. Sort by score descending.`;
     } catch (error) {
       console.error("Error deleting resume:", error);
       res.status(500).json({ error: "Failed to delete resume" });
+    }
+  });
+
+  // Compare resume to job (like iPhone comparison)
+  app.post("/api/compare/:jobId", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const userId = user?.claims?.sub as string;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const jobIdParam = req.params.jobId as string;
+      const jobId = parseInt(jobIdParam);
+      if (isNaN(jobId)) {
+        return res.status(400).json({ error: "Invalid job ID" });
+      }
+
+      // Get user's resume data
+      const resumeData = await storage.getUserResume(userId);
+      if (!resumeData?.extractedData || Object.keys(resumeData.extractedData).length === 0) {
+        return res.status(400).json({ 
+          error: "No resume uploaded",
+          message: "Please upload your resume first to compare against jobs"
+        });
+      }
+
+      // Get the job
+      const job = await storage.getJob(jobId);
+      if (!job) {
+        return res.status(404).json({ error: "Job not found" });
+      }
+
+      // Run the comparison
+      const comparison = await compareResumeToJob(
+        resumeData.extractedData as ResumeExtractedData,
+        job
+      );
+
+      res.json(comparison);
+    } catch (error) {
+      console.error("Error comparing resume to job:", error);
+      res.status(500).json({ error: "Failed to compare resume to job" });
     }
   });
 

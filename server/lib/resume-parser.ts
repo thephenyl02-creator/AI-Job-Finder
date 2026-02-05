@@ -1,5 +1,4 @@
 import OpenAI from "openai";
-import * as pdfParse from "pdf-parse";
 import mammoth from "mammoth";
 import type { ResumeExtractedData } from "@shared/schema";
 
@@ -10,8 +9,9 @@ const openai = new OpenAI({
 
 export async function extractTextFromPDF(buffer: Buffer): Promise<string> {
   try {
-    // pdf-parse default export workaround
-    const parser = (pdfParse as any).default || pdfParse;
+    // Dynamic import for pdf-parse CommonJS module
+    const pdfParseModule = await import("pdf-parse") as any;
+    const parser = pdfParseModule.default || pdfParseModule;
     const data = await parser(buffer);
     return data.text;
   } catch (error) {

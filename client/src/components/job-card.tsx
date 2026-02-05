@@ -5,13 +5,15 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { MapPin, DollarSign, Clock, ExternalLink, Sparkles, Building2, Briefcase, Brain, Scale, Zap } from "lucide-react";
 import type { JobWithScore } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
+import { JobComparison } from "./job-comparison";
 
 interface JobCardProps {
   job: JobWithScore;
   showMatchScore?: boolean;
+  hasResume?: boolean;
 }
 
-export function JobCard({ job, showMatchScore = false }: JobCardProps) {
+export function JobCard({ job, showMatchScore = false, hasResume = false }: JobCardProps) {
   const formatSalary = (min?: number | null, max?: number | null) => {
     if (!min && !max) return null;
     const formatNum = (num: number) => `$${(num / 1000).toFixed(0)}K`;
@@ -173,17 +175,25 @@ export function JobCard({ job, showMatchScore = false }: JobCardProps) {
               )}
             </div>
             
-            <Button asChild size="sm" className="gap-2" data-testid={`button-apply-${job.id}`}>
-              <a 
-                href={job.applyUrl} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                onClick={handleApplyClick}
-              >
-                Apply Now
-                <ExternalLink className="h-3.5 w-3.5" />
-              </a>
-            </Button>
+            <div className="flex items-center gap-2">
+              <JobComparison
+                jobId={job.id}
+                jobTitle={job.title}
+                company={job.company}
+                hasResume={hasResume}
+              />
+              <Button asChild size="sm" className="gap-2" data-testid={`button-apply-${job.id}`}>
+                <a 
+                  href={job.applyUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  onClick={handleApplyClick}
+                >
+                  Apply Now
+                  <ExternalLink className="h-3.5 w-3.5" />
+                </a>
+              </Button>
+            </div>
           </div>
         </div>
       </CardContent>

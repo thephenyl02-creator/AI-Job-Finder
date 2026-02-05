@@ -33,6 +33,11 @@ export default function Home() {
     enabled: isAuthenticated,
   });
 
+  const { data: resumeData } = useQuery<{ hasResume: boolean }>({
+    queryKey: ["/api/resume"],
+    enabled: isAuthenticated,
+  });
+
   const searchMutation = useMutation({
     mutationFn: async (query: string) => {
       const response = await apiRequest("POST", "/api/search", { query });
@@ -160,6 +165,7 @@ export default function Home() {
             showMatchScores={activeTab === "search" && searchResults !== null}
             searchQuery={activeTab === "search" ? searchQuery : undefined}
             emptyMessage={activeTab === "search" && !searchResults ? "Enter a search query to find matching jobs" : "No jobs available"}
+            hasResume={resumeData?.hasResume ?? false}
           />
         </div>
       </main>

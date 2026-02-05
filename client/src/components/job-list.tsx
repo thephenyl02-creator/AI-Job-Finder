@@ -10,6 +10,7 @@ interface JobListProps {
   showMatchScores?: boolean;
   emptyMessage?: string;
   searchQuery?: string;
+  hasResume?: boolean;
 }
 
 function JobCardSkeleton() {
@@ -49,7 +50,8 @@ export function JobList({
   isLoading = false, 
   showMatchScores = false,
   emptyMessage = "No jobs found",
-  searchQuery
+  searchQuery,
+  hasResume = false
 }: JobListProps) {
   if (isLoading) {
     return (
@@ -99,6 +101,7 @@ export function JobList({
           key={job.id} 
           job={job} 
           showMatchScore={showMatchScores}
+          hasResume={hasResume}
         />
       ))}
     </div>
