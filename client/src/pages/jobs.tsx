@@ -524,8 +524,8 @@ export default function Jobs() {
     <div className="min-h-screen bg-background">
       <Header />
       
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-        <div className="flex items-center gap-2 sm:gap-4 mb-6 flex-wrap">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+        <div className="flex items-center gap-2 sm:gap-4 mb-4 flex-wrap">
           {searchResults && (
             <Button
               variant="ghost"
@@ -555,101 +555,13 @@ export default function Jobs() {
           data-testid="input-resume-upload"
         />
 
-        {isUploadingResume && (
-          <Card className="mb-6" data-testid="card-resume-uploading">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3 mb-3">
-                <Loader2 className="h-4 w-4 animate-spin text-foreground" />
-                <span className="text-sm text-foreground">Analyzing your resume...</span>
-              </div>
-              <Progress value={uploadProgress} className="h-1.5" />
-              <p className="text-xs text-muted-foreground mt-2">
-                {uploadProgress < 30 && "Extracting text..."}
-                {uploadProgress >= 30 && uploadProgress < 60 && "Reading experience..."}
-                {uploadProgress >= 60 && uploadProgress < 90 && "Identifying skills..."}
-                {uploadProgress >= 90 && "Building your profile..."}
-              </p>
-            </CardContent>
-          </Card>
-        )}
-
-        {resumeData?.hasResume && !isUploadingResume && (
-          <Card className="mb-6 border-border/60" data-testid="card-resume-profile">
-            <CardContent className="p-3 sm:p-4">
-              <div className="flex items-start gap-3">
-                <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center shrink-0">
-                  <User className="h-4 w-4 text-foreground" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1 flex-wrap">
-                    <span className="text-sm font-medium text-foreground">Your Profile</span>
-                    <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
-                    <span className="text-xs text-muted-foreground">Searches are personalized to your background</span>
-                  </div>
-                  <div className="flex flex-wrap gap-1.5 mt-1">
-                    {resumeData.extractedData?.skills?.slice(0, 5).map((skill, i) => (
-                      <Badge key={i} variant="secondary" className="text-xs">{skill}</Badge>
-                    ))}
-                    {resumeData.extractedData?.totalYearsExperience && (
-                      <Badge variant="outline" className="text-xs">{resumeData.extractedData.totalYearsExperience}+ years exp</Badge>
-                    )}
-                    {resumeData.extractedData?.preferredRoles?.slice(0, 2).map((role, i) => (
-                      <Badge key={`role-${i}`} variant="outline" className="text-xs">{role}</Badge>
-                    ))}
-                    {(resumeData.extractedData?.skills?.length || 0) > 5 && (
-                      <span className="text-xs text-muted-foreground self-center">+{(resumeData.extractedData?.skills?.length || 0) - 5} more</span>
-                    )}
-                    {!resumeData.extractedData?.skills?.length && !resumeData.extractedData?.totalYearsExperience && (
-                      <span className="text-xs text-muted-foreground">Resume uploaded - results are being personalized</span>
-                    )}
-                  </div>
-                </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  <Button variant="ghost" size="sm" onClick={() => resumeFileInputRef.current?.click()} className="text-xs gap-1" data-testid="button-update-resume">
-                    <Upload className="h-3 w-3" />
-                    <span className="hidden sm:inline">Update</span>
-                  </Button>
-                  <Button variant="ghost" size="icon" onClick={handleRemoveResume} data-testid="button-remove-resume">
-                    <X className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {!resumeData?.hasResume && !isUploadingResume && (
-          <div
-            className="flex items-center gap-3 p-3 rounded-md bg-muted/40 border border-dashed border-border/60 mb-6 cursor-pointer hover-elevate"
-            onClick={() => resumeFileInputRef.current?.click()}
-            data-testid="banner-upload-resume"
-          >
-            <div className="w-8 h-8 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
-              <Upload className="h-4 w-4 text-primary" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-foreground">Upload your resume for personalized results</p>
-              <p className="text-xs text-muted-foreground">We'll match jobs to your skills, experience, and career goals</p>
-            </div>
-            <Button variant="outline" size="sm" className="shrink-0 gap-1" data-testid="button-upload-resume">
-              <FileText className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Upload</span>
-            </Button>
-          </div>
-        )}
-
-        <Card className="mb-6 shadow-sm" data-testid="card-smart-search">
-          <CardContent className="p-4 sm:p-5">
-            {!smartQuery && !searchResults && guidedStep === "idle" && (
-              <p className="text-xs text-muted-foreground mb-2" data-testid="text-search-hint">
-                Just type what you're looking for in your own words
-              </p>
-            )}
-            <div className="flex items-end gap-3">
+        <Card className="mb-4 shadow-sm" data-testid="card-smart-search">
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-end gap-2">
               <div className="flex-1 min-w-0">
                 <Textarea
-                  placeholder="What kind of role are you looking for? e.g. 'I'm a contracts attorney looking for a remote legal tech role' or 'entry level compliance jobs in New York'"
-                  className="resize-none border-0 text-base sm:text-lg focus-visible:ring-0 shadow-none min-h-[60px] max-h-[120px] placeholder:text-muted-foreground/50 leading-relaxed"
+                  placeholder="Describe what you're looking for in plain language, e.g. 'remote compliance role for a mid-career attorney' or 'entry level legal tech jobs in New York'"
+                  className="resize-none border-0 text-sm sm:text-base focus-visible:ring-0 shadow-none min-h-[52px] max-h-[100px] placeholder:text-muted-foreground/50 leading-relaxed"
                   rows={2}
                   value={smartQuery}
                   onChange={(e) => setSmartQuery(e.target.value)}
@@ -672,8 +584,9 @@ export default function Jobs() {
                 <span className="hidden sm:inline">Search</span>
               </Button>
             </div>
+
             {!smartQuery && !searchResults && guidedStep === "idle" && (
-              <div className="flex flex-wrap gap-1.5 mt-3">
+              <div className="flex items-center gap-1.5 mt-2 flex-wrap">
                 {SEARCH_SUGGESTIONS.map((s) => (
                   <Button
                     key={s.label}
@@ -687,6 +600,39 @@ export default function Jobs() {
                     {s.label}
                   </Button>
                 ))}
+
+                <span className="text-muted-foreground/30 mx-0.5 hidden sm:inline">|</span>
+
+                {isUploadingResume && (
+                  <span className="text-xs text-muted-foreground flex items-center gap-1.5" data-testid="text-resume-uploading">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    Analyzing resume...
+                  </span>
+                )}
+
+                {resumeData?.hasResume && !isUploadingResume && (
+                  <span className="flex items-center gap-1.5 text-xs text-muted-foreground" data-testid="text-resume-active">
+                    <CheckCircle2 className="h-3 w-3 text-green-600" />
+                    Personalized
+                    <Button variant="ghost" size="sm" onClick={() => resumeFileInputRef.current?.click()} className="text-xs h-auto py-0.5 px-1.5" data-testid="button-update-resume">
+                      Update
+                    </Button>
+                    <button onClick={handleRemoveResume} className="text-muted-foreground/50 hover:text-muted-foreground" data-testid="button-remove-resume">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                )}
+
+                {!resumeData?.hasResume && !isUploadingResume && (
+                  <button
+                    className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                    onClick={() => resumeFileInputRef.current?.click()}
+                    data-testid="button-upload-resume"
+                  >
+                    <Upload className="h-3 w-3" />
+                    Upload resume for better matches
+                  </button>
+                )}
               </div>
             )}
             {smartQuery.trim() && guidedStep === "idle" && !isSearching && !searchResults && (
@@ -863,7 +809,7 @@ export default function Jobs() {
           </Card>
         )}
 
-        <div className="flex flex-wrap gap-2 sm:gap-4 mb-6">
+        <div className="flex flex-wrap gap-2 sm:gap-3 mb-4">
           <div className="flex items-center gap-2 w-full sm:flex-1 sm:w-auto sm:min-w-[200px] sm:max-w-md">
             <Search className="h-4 w-4 text-muted-foreground shrink-0" />
             <Input
