@@ -1410,19 +1410,23 @@ Be specific and actionable. Focus on legal tech industry keywords and ATS best p
 
       if (isUrl) {
         console.log(`[Smart Input] Detected URL: ${trimmed}`);
-        const job = await scrapeSingleJobUrl(trimmed);
+        const job = await scrapeSingleJobUrl(trimmed, true);
         if (!job) {
           return res.status(400).json({
             success: false,
             inputType: 'url',
             error: "Could not extract job details from this URL. Try pasting the job description text instead.",
+            trace: null,
           });
         }
+
+        const trace = (job as any)._trace || null;
 
         return res.json({
           success: true,
           inputType: 'url',
           count: 1,
+          trace,
           jobs: [{
             title: job.title,
             company: job.company,

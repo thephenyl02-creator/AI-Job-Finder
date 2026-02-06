@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Link } from "wouter";
-import { ArrowLeft, RefreshCw, Building2, Globe, Loader2, CheckCircle, XCircle, Sparkles, Activity, FileText, Play, Square, LinkIcon, Clock, ShieldX, Plus, Upload, Pencil, Trash2, RotateCw, ToggleLeft, ToggleRight, Search, Filter, ChevronLeft, ChevronRight, Save, X as XIcon, BarChart3, ClipboardPaste, Zap, MapPin, DollarSign, Briefcase, GraduationCap, Tag } from "lucide-react";
+import { ArrowLeft, RefreshCw, Building2, Globe, Loader2, CheckCircle, XCircle, Sparkles, Activity, FileText, Play, Square, LinkIcon, Clock, ShieldX, ShieldCheck, Plus, Upload, Pencil, Trash2, RotateCw, ToggleLeft, ToggleRight, Search, Filter, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Save, X as XIcon, BarChart3, ClipboardPaste, Zap, MapPin, DollarSign, Briefcase, GraduationCap, Tag, Eye } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { Job } from "@shared/schema";
@@ -360,6 +360,8 @@ export default function AdminPage() {
   });
 
   const [smartInputResults, setSmartInputResults] = useState<Record<string, any>[]>([]);
+  const [extractionTrace, setExtractionTrace] = useState<Record<string, any> | null>(null);
+  const [showTrace, setShowTrace] = useState(false);
 
   const smartInputMutation = useMutation({
     mutationFn: async (input: string) => {
@@ -368,6 +370,13 @@ export default function AdminPage() {
     },
     onSuccess: (data) => {
       if (data.success && data.jobs?.length > 0) {
+        if (data.trace) {
+          setExtractionTrace(data.trace);
+          setShowTrace(true);
+        } else {
+          setExtractionTrace(null);
+          setShowTrace(false);
+        }
         if (data.jobs.length === 1) {
           setPreviewJob(data.jobs[0]);
           setPreviewEdits(data.jobs[0]);
@@ -1008,6 +1017,84 @@ export default function AdminPage() {
                   </>
                 )}
 
+                {extractionTrace && showTrace && (
+                  <div className="border rounded-md p-3 space-y-2 bg-muted/30" data-testid="extraction-trace">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Eye className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-xs font-medium">Extraction Details</span>
+                        <Badge variant={extractionTrace.confidence === 'high' ? 'default' : extractionTrace.confidence === 'medium' ? 'secondary' : 'destructive'} className="text-[10px] px-1.5 py-0">
+                          {extractionTrace.confidence === 'high' ? 'High Confidence' : extractionTrace.confidence === 'medium' ? 'Medium Confidence' : 'Low Confidence'}
+                        </Badge>
+                      </div>
+                      <Button size="sm" variant="ghost" onClick={() => setShowTrace(false)} data-testid="button-hide-trace">
+                        <ChevronUp className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2 text-xs">
+                      <div>
+                        <span className="text-muted-foreground">Platform:</span>
+                        <span className="ml-1 font-medium">{extractionTrace.platformLabel}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Method:</span>
+                        <span className="ml-1 font-medium">{extractionTrace.extractionMethod}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Time:</span>
+                        <span className="ml-1 font-medium">{(extractionTrace.processingTimeMs / 1000).toFixed(1)}s</span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Extraction Steps</p>
+                      {(extractionTrace.steps || []).map((step: any, idx: number) => (
+                        <div key={idx} className="flex items-start gap-2 text-xs">
+                          {step.status === 'success' ? (
+                            <CheckCircle className="h-3 w-3 text-green-500 mt-0.5 shrink-0" />
+                          ) : step.status === 'failed' ? (
+                            <XCircle className="h-3 w-3 text-red-400 mt-0.5 shrink-0" />
+                          ) : (
+                            <Clock className="h-3 w-3 text-muted-foreground mt-0.5 shrink-0" />
+                          )}
+                          <span className="font-medium min-w-[120px]">{step.method}</span>
+                          <span className="text-muted-foreground">{step.detail}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="flex gap-4 text-xs">
+                      <div>
+                        <span className="text-muted-foreground">Fields extracted:</span>
+                        <span className="ml-1 font-medium text-green-600 dark:text-green-400">{extractionTrace.fieldsExtracted?.length || 0}/{(extractionTrace.fieldsExtracted?.length || 0) + (extractionTrace.fieldsMissing?.length || 0)}</span>
+                      </div>
+                      {extractionTrace.fieldsMissing?.length > 0 && (
+                        <div>
+                          <span className="text-muted-foreground">Missing:</span>
+                          <span className="ml-1 text-amber-600 dark:text-amber-400">{extractionTrace.fieldsMissing.join(', ')}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {extractionTrace && !showTrace && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setShowTrace(true)}
+                    className="text-xs"
+                    data-testid="button-show-trace"
+                  >
+                    <Eye className="mr-1.5 h-3.5 w-3.5" />
+                    Show extraction details
+                    <Badge variant={extractionTrace.confidence === 'high' ? 'default' : extractionTrace.confidence === 'medium' ? 'secondary' : 'destructive'} className="ml-2 text-[10px] px-1.5 py-0">
+                      {extractionTrace.confidence}
+                    </Badge>
+                  </Button>
+                )}
+
                 {previewJob && (
                   <div className="space-y-4" data-testid="job-preview">
                     <div className="flex items-center justify-between">
@@ -1018,7 +1105,7 @@ export default function AdminPage() {
                       <Button
                         size="sm"
                         variant="ghost"
-                        onClick={() => { setPreviewJob(null); setPreviewEdits({}); }}
+                        onClick={() => { setPreviewJob(null); setPreviewEdits({}); setExtractionTrace(null); setShowTrace(false); }}
                         data-testid="button-cancel-preview"
                       >
                         <XIcon className="mr-1 h-4 w-4" />
