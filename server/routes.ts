@@ -406,7 +406,8 @@ Only include jobs with a score above 40. Sort by score descending.`;
   });
 
   // Guided search - analyze query and generate clarifying questions
-  app.post("/api/search/analyze", isAuthenticated, requirePro, async (req, res) => {
+  // Available to all authenticated users (free users get limited trials, tracked client-side)
+  app.post("/api/search/analyze", isAuthenticated, async (req, res) => {
     try {
       const { query } = req.body;
       
@@ -487,7 +488,8 @@ Return ONLY valid JSON in this format:
   });
 
   // Refined search - use answers to curate precise results
-  app.post("/api/search/refined", isAuthenticated, requirePro, async (req, res) => {
+  // Available to all authenticated users (free users get limited trials, tracked client-side)
+  app.post("/api/search/refined", isAuthenticated, async (req, res) => {
     try {
       const { originalQuery, answers, refinedIntent } = req.body;
       

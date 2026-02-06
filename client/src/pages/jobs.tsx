@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation, useSearch } from "wouter";
 import { Header } from "@/components/header";
 import { useAuth } from "@/hooks/use-auth";
@@ -10,14 +10,19 @@ import { JOB_TAXONOMY } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { motion, AnimatePresence } from "framer-motion";
 import { ScrollReveal } from "@/components/animations";
+import { useToast } from "@/hooks/use-toast";
+import { Link } from "wouter";
 import {
   ExternalLink,
   Search,
   ArrowLeft,
+  ArrowRight,
+  ArrowUp,
   MapPin,
   Building2,
   ChevronRight,
@@ -41,8 +46,38 @@ import {
   Loader2,
   DollarSign,
   Crown,
+  Briefcase,
+  Globe,
+  Check,
 } from "lucide-react";
 import { useSubscription } from "@/hooks/use-subscription";
+
+interface SearchQuestion {
+  id: string;
+  question: string;
+  options: Array<{ value: string; label: string }>;
+}
+
+interface AnalysisResult {
+  originalQuery: string;
+  refinedIntent: string;
+  questions: SearchQuestion[];
+}
+
+interface RefinedSearchResult {
+  jobs: JobWithScore[];
+  searchSummary: string;
+}
+
+type GuidedStep = "idle" | "refining" | "questions" | "searching";
+
+const SEARCH_SUGGESTIONS = [
+  { icon: Briefcase, label: "Compliance & Risk", query: "compliance or risk management role" },
+  { icon: Globe, label: "Remote Roles", query: "remote legal tech position" },
+  { icon: GraduationCap, label: "Entry Level", query: "entry level legal technology" },
+  { icon: Sparkles, label: "Legal AI", query: "legal AI company, any role" },
+  { icon: Building2, label: "Operations", query: "legal operations at a growing company" },
+];
 
 const CATEGORY_ICONS: Record<string, typeof Brain> = {
   "Brain": Brain,
@@ -71,6 +106,7 @@ export default function Jobs() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const { track } = useActivityTracker();
   const { isPro } = useSubscription();
+  const { toast } = useToast();
   const [, setLocation] = useLocation();
   const searchString = useSearch();
   const urlParams = new URLSearchParams(searchString);
@@ -87,6 +123,130 @@ export default function Jobs() {
   const [locationSearch, setLocationSearch] = useState("");
   const [locationDropdownOpen, setLocationDropdownOpen] = useState(false);
   const locationDropdownRef = useRef<HTMLDivElement>(null);
+
+  const [smartQuery, setSmartQuery] = useState("");
+  const [guidedStep, setGuidedStep] = useState<GuidedStep>("idle");
+  const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
+  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [refinedSummary, setRefinedSummary] = useState<string | null>(null);
+
+  const hasUsedGuidedTrial = useCallback(() => {
+    return sessionStorage.getItem("guidedSearchUsed") === "true";
+  }, []);
+
+  const markGuidedTrialUsed = useCallback(() => {
+    sessionStorage.setItem("guidedSearchUsed", "true");
+  }, []);
+
+  const canUseGuidedSearch = isPro || !hasUsedGuidedTrial();
+
+  const searchMutation = useMutation({
+    mutationFn: async (query: string) => {
+      const response = await apiRequest("POST", "/api/search", { query });
+      return response.json() as Promise<JobWithScore[]>;
+    },
+    onSuccess: (data) => {
+      setSearchResults(data);
+      setSearchQuery(smartQuery);
+      setGuidedStep("idle");
+      track({ eventType: "search", metadata: { query: smartQuery, resultCount: data.length } });
+    },
+    onError: () => {
+      toast({ title: "Search failed", description: "Please try again.", variant: "destructive" });
+      setGuidedStep("idle");
+    },
+  });
+
+  const analyzeMutation = useMutation({
+    mutationFn: async (query: string) => {
+      const response = await apiRequest("POST", "/api/search/analyze", { query });
+      return response.json() as Promise<AnalysisResult>;
+    },
+    onSuccess: (data) => {
+      setAnalysis(data);
+      if (data.questions && data.questions.length > 0) {
+        setGuidedStep("questions");
+      } else {
+        refinedSearchMutation.mutate({
+          originalQuery: data.originalQuery,
+          refinedIntent: data.refinedIntent,
+          answers: {},
+        });
+      }
+    },
+    onError: () => {
+      toast({ title: "Let's try a quick search instead", variant: "default" });
+      searchMutation.mutate(smartQuery);
+    },
+  });
+
+  const refinedSearchMutation = useMutation({
+    mutationFn: async (params: { originalQuery: string; refinedIntent: string; answers: Record<string, string> }) => {
+      const response = await apiRequest("POST", "/api/search/refined", params);
+      return response.json() as Promise<RefinedSearchResult>;
+    },
+    onSuccess: (data) => {
+      setSearchResults(data.jobs);
+      setSearchQuery(smartQuery + " (refined)");
+      setRefinedSummary(data.searchSummary);
+      setGuidedStep("idle");
+      if (!isPro) markGuidedTrialUsed();
+      track({ eventType: "search", metadata: { query: smartQuery, resultCount: data.jobs.length, guided: true } });
+    },
+    onError: () => {
+      toast({ title: "Refined search failed", description: "Showing regular results instead.", variant: "destructive" });
+      searchMutation.mutate(smartQuery);
+    },
+  });
+
+  const handleSmartSearch = useCallback(() => {
+    if (!smartQuery.trim()) return;
+    if (canUseGuidedSearch) {
+      setGuidedStep("refining");
+      setAnalysis(null);
+      setAnswers({});
+      setRefinedSummary(null);
+      analyzeMutation.mutate(smartQuery);
+    } else {
+      searchMutation.mutate(smartQuery);
+    }
+  }, [smartQuery, canUseGuidedSearch]);
+
+  const handleQuickSearch = useCallback(() => {
+    if (!smartQuery.trim()) return;
+    setGuidedStep("idle");
+    searchMutation.mutate(smartQuery);
+  }, [smartQuery]);
+
+  const handleSubmitAnswers = useCallback(() => {
+    if (!analysis) return;
+    setGuidedStep("searching");
+    const formattedAnswers: Record<string, string> = {};
+    analysis.questions.forEach(q => {
+      if (answers[q.id]) {
+        const selectedOption = q.options.find(o => o.value === answers[q.id]);
+        formattedAnswers[q.question] = selectedOption?.label || answers[q.id];
+      }
+    });
+    refinedSearchMutation.mutate({
+      originalQuery: analysis.originalQuery,
+      refinedIntent: analysis.refinedIntent,
+      answers: formattedAnswers,
+    });
+  }, [analysis, answers]);
+
+  const handleClearSearch = useCallback(() => {
+    setSearchResults(null);
+    setSearchQuery(null);
+    setSmartQuery("");
+    setGuidedStep("idle");
+    setAnalysis(null);
+    setAnswers({});
+    setRefinedSummary(null);
+  }, []);
+
+  const allQuestionsAnswered = analysis?.questions?.every(q => answers[q.id]);
+  const isSearching = searchMutation.isPending || analyzeMutation.isPending || refinedSearchMutation.isPending;
 
   useEffect(() => { track({ eventType: "page_view", pagePath: "/jobs" }); }, []);
 
@@ -310,7 +470,7 @@ export default function Jobs() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => { setSearchResults(null); setSearchQuery(null); }}
+              onClick={handleClearSearch}
               className="min-h-[44px]"
               data-testid="button-back-search"
             >
@@ -343,11 +503,228 @@ export default function Jobs() {
           </div>
         )}
 
+        <Card className="mb-6 shadow-sm" data-testid="card-smart-search">
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-end gap-2">
+              <div className="flex-1 min-w-0">
+                <Textarea
+                  placeholder="Describe your ideal role... e.g. 'remote compliance role, 3+ years experience'"
+                  className="resize-none border-0 text-sm sm:text-base focus-visible:ring-0 shadow-none min-h-[44px] max-h-[80px] placeholder:text-muted-foreground/60"
+                  rows={1}
+                  value={smartQuery}
+                  onChange={(e) => setSmartQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSmartSearch();
+                    }
+                  }}
+                  data-testid="input-smart-search"
+                />
+              </div>
+              <Button
+                size="icon"
+                onClick={handleSmartSearch}
+                disabled={!smartQuery.trim() || isSearching}
+                data-testid="button-smart-search"
+              >
+                {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowUp className="h-4 w-4" />}
+              </Button>
+            </div>
+            {!smartQuery && !searchResults && guidedStep === "idle" && (
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {SEARCH_SUGGESTIONS.map((s) => (
+                  <Button
+                    key={s.label}
+                    variant="outline"
+                    size="sm"
+                    className="gap-1 text-xs min-h-[44px]"
+                    onClick={() => setSmartQuery(s.query)}
+                    data-testid={`chip-${s.label.toLowerCase().replace(/\s+/g, "-")}`}
+                  >
+                    <s.icon className="h-3 w-3" />
+                    {s.label}
+                  </Button>
+                ))}
+              </div>
+            )}
+            {smartQuery.trim() && guidedStep === "idle" && !isSearching && !searchResults && (
+              <div className="flex items-center gap-2 mt-2 flex-wrap">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleQuickSearch}
+                  className="text-muted-foreground gap-1 text-xs min-h-[44px]"
+                  data-testid="button-quick-search"
+                >
+                  <ArrowRight className="h-3 w-3" />
+                  Quick search (skip questions)
+                </Button>
+                {!canUseGuidedSearch && (
+                  <span className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Crown className="h-3 w-3" />
+                    Guided refinement is a Pro feature
+                  </span>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <AnimatePresence>
+          {guidedStep === "refining" && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="mb-6"
+            >
+              <Card className="border-primary/20">
+                <CardContent className="p-5 flex items-center gap-3">
+                  <Loader2 className="h-4 w-4 animate-spin text-primary shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Understanding your search...</p>
+                    <p className="text-xs text-muted-foreground">Preparing a few questions to find the best matches</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+
+          {guidedStep === "questions" && analysis && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="mb-6 space-y-3"
+            >
+              {analysis.refinedIntent && (
+                <Card className="bg-muted/40 border-border/60">
+                  <CardContent className="p-3 sm:p-4">
+                    <div className="flex items-start gap-2">
+                      <Target className="h-4 w-4 text-foreground shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-xs font-medium text-foreground">What we understood</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{analysis.refinedIntent}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {analysis.questions.map((question, idx) => (
+                <motion.div
+                  key={question.id}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: idx * 0.1 }}
+                >
+                  <Card>
+                    <CardContent className="p-3 sm:p-4">
+                      <p className="text-sm font-medium text-foreground mb-2">
+                        {idx + 1}. {question.question}
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {question.options.map((option) => (
+                          <Badge
+                            key={option.value}
+                            variant={answers[question.id] === option.value ? "default" : "outline"}
+                            className={`cursor-pointer py-2 px-3 text-xs transition-all min-h-[44px] flex items-center ${
+                              answers[question.id] === option.value ? "ring-1 ring-primary/30" : ""
+                            }`}
+                            onClick={() => setAnswers(prev => ({ ...prev, [question.id]: option.value }))}
+                            data-testid={`option-${question.id}-${option.value}`}
+                          >
+                            {answers[question.id] === option.value && <Check className="h-3 w-3 mr-1" />}
+                            {option.label}
+                          </Badge>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ))}
+
+              <div className="flex items-center gap-2 justify-between flex-wrap">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleClearSearch}
+                  className="gap-1 min-h-[44px]"
+                  data-testid="button-guided-cancel"
+                >
+                  <X className="h-3.5 w-3.5" />
+                  Cancel
+                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleQuickSearch}
+                    className="text-muted-foreground gap-1 min-h-[44px]"
+                    data-testid="button-skip-questions"
+                  >
+                    Skip
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={handleSubmitAnswers}
+                    disabled={!allQuestionsAnswered}
+                    className="gap-1 min-h-[44px]"
+                    data-testid="button-find-matches"
+                  >
+                    <Target className="h-3.5 w-3.5" />
+                    Find Matches
+                  </Button>
+                </div>
+              </div>
+
+              {!isPro && (
+                <p className="text-xs text-muted-foreground text-center">
+                  You're using your free guided search trial.
+                  <Link href="/pricing" className="text-primary ml-1">Upgrade for unlimited</Link>
+                </p>
+              )}
+            </motion.div>
+          )}
+
+          {guidedStep === "searching" && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="mb-6"
+            >
+              <Card className="border-primary/20">
+                <CardContent className="p-5 flex items-center gap-3">
+                  <Loader2 className="h-4 w-4 animate-spin text-primary shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Finding your best matches...</p>
+                    <p className="text-xs text-muted-foreground">Searching for roles that fit your criteria</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {refinedSummary && searchResults && (
+          <Card className="bg-muted/40 border-border/60 mb-6" data-testid="card-refined-summary">
+            <CardContent className="p-3 sm:p-4">
+              <div className="flex items-center gap-2">
+                <Target className="h-4 w-4 text-primary shrink-0" />
+                <p className="text-sm text-muted-foreground">{refinedSummary}</p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         <div className="flex flex-wrap gap-2 sm:gap-4 mb-6">
           <div className="flex items-center gap-2 w-full sm:flex-1 sm:w-auto sm:min-w-[200px] sm:max-w-md">
             <Search className="h-4 w-4 text-muted-foreground shrink-0" />
             <Input
-              placeholder="Filter by title, company, or location..."
+              placeholder="Filter results..."
               value={filterText}
               onChange={(e) => setFilterText(e.target.value)}
               className="min-h-[44px]"
@@ -526,11 +903,67 @@ export default function Jobs() {
           </div>
         ) : filteredJobs.length === 0 ? (
           <motion.div
-            className="text-center py-12"
+            className="py-12"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
           >
-            <div className="text-muted-foreground">No jobs found</div>
+            <Card className="max-w-lg mx-auto">
+              <CardContent className="p-6 text-center">
+                <Search className="h-8 w-8 text-muted-foreground/40 mx-auto mb-3" />
+                <p className="text-sm font-medium text-foreground mb-1">No jobs match your current filters</p>
+                <p className="text-xs text-muted-foreground mb-4">
+                  {searchResults
+                    ? "Try a different search or broaden your filters."
+                    : "Try adjusting your filters or search for something specific."}
+                </p>
+                <div className="flex flex-wrap gap-2 justify-center mb-4">
+                  {(filterText || selectedCategory !== "all" || selectedLevel !== "all" || selectedLocation !== "all") && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => { setFilterText(""); setSelectedCategory("all"); setSelectedLevel("all"); setSelectedLocation("all"); }}
+                      className="gap-1 min-h-[44px]"
+                      data-testid="button-clear-all-filters"
+                    >
+                      <X className="h-3 w-3" />
+                      Clear all filters
+                    </Button>
+                  )}
+                  {searchResults && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleClearSearch}
+                      className="gap-1 min-h-[44px]"
+                      data-testid="button-show-all-jobs"
+                    >
+                      <ArrowLeft className="h-3 w-3" />
+                      Show all jobs
+                    </Button>
+                  )}
+                </div>
+                {!searchResults && (
+                  <div className="border-t pt-3">
+                    <p className="text-xs text-muted-foreground mb-2">Try searching for:</p>
+                    <div className="flex flex-wrap gap-1.5 justify-center">
+                      {SEARCH_SUGGESTIONS.slice(0, 3).map((s) => (
+                        <Button
+                          key={s.label}
+                          variant="ghost"
+                          size="sm"
+                          className="gap-1 text-xs min-h-[44px]"
+                          onClick={() => { setSmartQuery(s.query); handleClearSearch(); }}
+                          data-testid={`empty-chip-${s.label.toLowerCase().replace(/\s+/g, "-")}`}
+                        >
+                          <s.icon className="h-3 w-3" />
+                          {s.label}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </motion.div>
         ) : (
           <div className="space-y-4">
