@@ -29,7 +29,7 @@ export function UpgradePrompt({ feature, description }: UpgradePromptProps) {
             </Button>
           </Link>
           <p className="text-xs text-muted-foreground mt-3">
-            Starting at $29/month. Cancel anytime.
+            Starting at $5/month. Cancel anytime.
           </p>
         </CardContent>
       </Card>

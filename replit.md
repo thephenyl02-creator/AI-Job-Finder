@@ -44,7 +44,7 @@ A freemium SaaS job search platform for legal technology careers, built specific
 ### Payments & Subscription (Stripe)
 - **Provider**: Stripe (via Replit Stripe Integration)
 - **Model**: Freemium SaaS with Free and Pro tiers
-- **Plans**: Pro Monthly ($29/mo), Pro Yearly ($239/yr, save ~$100)
+- **Plans**: Pro Monthly ($5/mo), Pro Yearly ($30/yr, save $30)
 - **Stripe Product**: "Legal Tech Careers Pro" with monthly and yearly price objects
 - **Webhook**: Handles `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_succeeded`, `invoice.payment_failed` events
 - **Schema Fields**: `stripeCustomerId`, `stripeSubscriptionId`, `subscriptionTier` (free/pro), `subscriptionStatus` (active/canceled/past_due/inactive) on users table
@@ -61,7 +61,7 @@ A freemium SaaS job search platform for legal technology careers, built specific
 - Submit job postings
 - Upload 1 resume
 
-**Pro Tier ($29/mo or $239/yr):**
+**Pro Tier ($5/mo or $30/yr):**
 - Everything in Free
 - Resume matching & tweaks (AI-powered)
 - Career Advisor comparisons
