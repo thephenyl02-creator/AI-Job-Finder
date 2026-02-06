@@ -11,7 +11,8 @@ import { ScrollReveal } from "@/components/animations";
 import { useAuth } from "@/hooks/use-auth";
 import { useActivityTracker } from "@/hooks/use-activity-tracker";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { Job } from "@shared/schema";
+import type { Job, JobApplication } from "@shared/schema";
+import { Link } from "wouter";
 import {
   ArrowLeft,
   ExternalLink,
@@ -26,6 +27,8 @@ import {
   FileText,
   Bookmark,
   Mail,
+  ClipboardList,
+  Upload,
 } from "lucide-react";
 
 function extractContactEmails(text: string | null | undefined): string[] {
@@ -637,6 +640,53 @@ export default function JobDetail() {
     },
   });
 
+  const { data: applicationData } = useQuery<JobApplication | null>({
+    queryKey: ["/api/applications/check", jobId],
+    queryFn: async () => {
+      const res = await fetch(`/api/applications/check/${jobId}`, { credentials: "include" });
+      if (!res.ok) return null;
+      return res.json();
+    },
+    enabled: isAuthenticated && !!jobId,
+  });
+
+  const trackAppMutation = useMutation({
+    mutationFn: async () => {
+      if (!job) return;
+      await apiRequest("POST", "/api/applications", { jobId: job.id, status: "saved" });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/applications/check", jobId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/applications"] });
+    },
+    onError: (error: any) => {
+      if (error?.message?.includes("409")) {
+        queryClient.invalidateQueries({ queryKey: ["/api/applications/check", jobId] });
+      }
+    },
+  });
+
+  const { data: similarJobs = [] } = useQuery<Job[]>({
+    queryKey: ["/api/jobs", jobId, "similar"],
+    queryFn: async () => {
+      const res = await fetch(`/api/jobs/${jobId}/similar`, { credentials: "include" });
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: isAuthenticated && !!jobId,
+  });
+
+  const { data: resumeData } = useQuery<{ hasResume: boolean }>({
+    queryKey: ["/api/resume/check"],
+    queryFn: async () => {
+      const res = await fetch("/api/resume", { credentials: "include" });
+      if (!res.ok) return { hasResume: false };
+      const data = await res.json();
+      return { hasResume: !!data?.resumeFilename };
+    },
+    enabled: isAuthenticated,
+  });
+
   const handleApplyClick = async () => {
     if (!job) return;
     trackNow({ eventType: "apply_click", entityType: "job", entityId: String(job.id) });
@@ -779,6 +829,21 @@ export default function JobDetail() {
                 </Button>
                 <Button
                   variant="outline"
+                  onClick={() => {
+                    if (applicationData) {
+                      setLocation("/applications");
+                    } else {
+                      trackAppMutation.mutate();
+                    }
+                  }}
+                  disabled={trackAppMutation.isPending}
+                  data-testid="button-track-application"
+                >
+                  <ClipboardList className="h-4 w-4 mr-2" />
+                  {applicationData ? "Tracking" : "Track"}
+                </Button>
+                <Button
+                  variant="outline"
                   onClick={() => setLocation(`/resume-builder?jobId=${job.id}`)}
                   data-testid="button-optimize-resume"
                 >
@@ -911,6 +976,69 @@ export default function JobDetail() {
             <JobChat jobId={jobId || ""} />
           </div>
         </div>
+
+        {!resumeData?.hasResume && (
+          <Card className="mt-6">
+            <CardContent className="py-5 flex flex-col sm:flex-row items-center gap-4">
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                <Upload className="h-5 w-5 text-primary" />
+              </div>
+              <div className="flex-1 text-center sm:text-left">
+                <p className="font-medium text-foreground text-sm" data-testid="text-resume-prompt-title">See how well you match this role</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Upload your resume to get a personalized match score and gap analysis.</p>
+              </div>
+              <Button asChild data-testid="button-upload-resume-prompt">
+                <Link href="/resumes">
+                  <Upload className="h-4 w-4 mr-2" />
+                  Upload Resume
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        {similarJobs.length > 0 && (
+          <div className="mt-8" data-testid="section-similar-jobs">
+            <h2 className="text-lg font-serif font-medium text-foreground mb-4 tracking-tight">Similar Roles</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {similarJobs.map(sj => {
+                const sjSalary = sj.salaryMin || sj.salaryMax
+                  ? `${sj.salaryMin ? `$${(sj.salaryMin / 1000).toFixed(0)}K` : ''}${sj.salaryMin && sj.salaryMax ? ' - ' : ''}${sj.salaryMax ? `$${(sj.salaryMax / 1000).toFixed(0)}K` : ''}`
+                  : null;
+                return (
+                  <Link key={sj.id} href={`/jobs/${sj.id}`}>
+                    <Card className="hover-elevate cursor-pointer h-full" data-testid={`card-similar-job-${sj.id}`}>
+                      <CardContent className="p-4">
+                        <h3 className="font-medium text-foreground text-sm leading-snug truncate">{sj.title}</h3>
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1.5 text-xs text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <Building2 className="h-3 w-3" />
+                            {sj.company}
+                          </span>
+                          {sj.location && (
+                            <span className="flex items-center gap-1">
+                              <MapPin className="h-3 w-3" />
+                              {sj.location}
+                            </span>
+                          )}
+                          {sjSalary && (
+                            <span className="flex items-center gap-1 text-green-600 dark:text-green-400">
+                              <DollarSign className="h-3 w-3" />
+                              {sjSalary}
+                            </span>
+                          )}
+                        </div>
+                        {sj.seniorityLevel && (
+                          <Badge variant="outline" className="mt-2 text-xs">{sj.seniorityLevel}</Badge>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </main>
       <Footer />
     </div>

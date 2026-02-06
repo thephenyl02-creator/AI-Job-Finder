@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { jobs, users, userPreferences, jobCategories, jobSubmissions, jobAlerts, notifications, resumes, builtResumes, userActivities, userPersonas, savedJobs, type Job, type InsertJob, type User, type UserPreferences, type InsertUserPreferences, type ResumeExtractedData, type JobCategory, type JobSubmission, type InsertJobSubmission, type JobAlert, type InsertJobAlert, type Notification, type InsertNotification, type Resume, type InsertResume, type BuiltResume, type InsertBuiltResume, type UserActivity, type InsertUserActivity, type UserPersona, type InsertUserPersona, type SavedJob, type InsertSavedJob, JOB_TAXONOMY } from "@shared/schema";
+import { jobs, users, userPreferences, jobCategories, jobSubmissions, jobAlerts, notifications, resumes, builtResumes, userActivities, userPersonas, savedJobs, jobApplications, type Job, type InsertJob, type User, type UserPreferences, type InsertUserPreferences, type ResumeExtractedData, type JobCategory, type JobSubmission, type InsertJobSubmission, type JobAlert, type InsertJobAlert, type Notification, type InsertNotification, type Resume, type InsertResume, type BuiltResume, type InsertBuiltResume, type UserActivity, type InsertUserActivity, type UserPersona, type InsertUserPersona, type SavedJob, type InsertSavedJob, type JobApplication, type InsertJobApplication, type JobApplicationWithJob, JOB_TAXONOMY } from "@shared/schema";
 import { eq, desc, and, sql, inArray, lt, gte, count } from "drizzle-orm";
 
 export interface IStorage {
@@ -93,6 +93,14 @@ export interface IStorage {
   getUserSavedJobIds(userId: string): Promise<number[]>;
   getExpiringSavedJobs(userId: string, daysThreshold: number): Promise<(SavedJob & { job: Job })[]>;
   markReminderShown(savedJobId: number, userId: string): Promise<void>;
+  // Job Applications
+  createJobApplication(app: InsertJobApplication): Promise<JobApplication>;
+  getUserApplications(userId: string): Promise<JobApplicationWithJob[]>;
+  updateJobApplication(id: number, userId: string, data: Partial<InsertJobApplication>): Promise<JobApplication | undefined>;
+  deleteJobApplication(id: number, userId: string): Promise<void>;
+  getApplicationByUserAndJob(userId: string, jobId: number): Promise<JobApplication | undefined>;
+  // Similar Jobs
+  getSimilarJobs(jobId: number, limit?: number): Promise<Job[]>;
 }
 
 class DatabaseStorage implements IStorage {
@@ -1611,6 +1619,90 @@ class DatabaseStorage implements IStorage {
       } : null,
       recommendations: recommendations.slice(0, 4),
     };
+  }
+
+  async createJobApplication(app: InsertJobApplication): Promise<JobApplication> {
+    const [result] = await db.insert(jobApplications).values(app).returning();
+    return result;
+  }
+
+  async getUserApplications(userId: string): Promise<JobApplicationWithJob[]> {
+    const results = await db
+      .select()
+      .from(jobApplications)
+      .where(eq(jobApplications.userId, userId))
+      .orderBy(desc(jobApplications.updatedAt));
+
+    const jobIds = results.map(r => r.jobId);
+    if (jobIds.length === 0) return [];
+
+    const jobsList = await db.select().from(jobs).where(inArray(jobs.id, jobIds));
+    const jobMap = new Map(jobsList.map(j => [j.id, j]));
+
+    return results
+      .filter(r => jobMap.has(r.jobId))
+      .map(r => ({ ...r, job: jobMap.get(r.jobId)! }));
+  }
+
+  async updateJobApplication(id: number, userId: string, data: Partial<InsertJobApplication>): Promise<JobApplication | undefined> {
+    const [result] = await db
+      .update(jobApplications)
+      .set({ ...data, updatedAt: new Date() })
+      .where(and(eq(jobApplications.id, id), eq(jobApplications.userId, userId)))
+      .returning();
+    return result;
+  }
+
+  async deleteJobApplication(id: number, userId: string): Promise<void> {
+    await db.delete(jobApplications).where(
+      and(eq(jobApplications.id, id), eq(jobApplications.userId, userId))
+    );
+  }
+
+  async getApplicationByUserAndJob(userId: string, jobId: number): Promise<JobApplication | undefined> {
+    const [result] = await db
+      .select()
+      .from(jobApplications)
+      .where(and(eq(jobApplications.userId, userId), eq(jobApplications.jobId, jobId)));
+    return result;
+  }
+
+  async getSimilarJobs(jobId: number, limit: number = 4): Promise<Job[]> {
+    const job = await this.getJob(jobId);
+    if (!job) return [];
+
+    const conditions = [
+      sql`${jobs.id} != ${jobId}`,
+      eq(jobs.isActive, true),
+    ];
+
+    if (job.roleCategory) {
+      conditions.push(eq(jobs.roleCategory, job.roleCategory));
+    }
+
+    let results = await db
+      .select()
+      .from(jobs)
+      .where(and(...conditions))
+      .orderBy(desc(jobs.postedDate))
+      .limit(limit);
+
+    if (results.length < limit) {
+      const excludeIds = [jobId, ...results.map(r => r.id)];
+      const fallback = await db
+        .select()
+        .from(jobs)
+        .where(and(
+          sql`${jobs.id} NOT IN (${sql.join(excludeIds.map(id => sql`${id}`), sql`, `)})`,
+          eq(jobs.isActive, true),
+          job.seniorityLevel ? eq(jobs.seniorityLevel, job.seniorityLevel) : sql`true`,
+        ))
+        .orderBy(desc(jobs.postedDate))
+        .limit(limit - results.length);
+      results = [...results, ...fallback];
+    }
+
+    return results;
   }
 }
 

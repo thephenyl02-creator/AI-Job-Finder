@@ -4138,6 +4138,161 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
     }
   });
 
+  // Job Applications (Application Tracker)
+  app.get("/api/applications", isAuthenticated, async (req: any, res) => {
+    try {
+      const apps = await storage.getUserApplications(req.user.id);
+      res.json(apps);
+    } catch (error) {
+      console.error("Get applications error:", error);
+      res.status(500).json({ error: "Failed to get applications" });
+    }
+  });
+
+  app.get("/api/applications/check/:jobId", isAuthenticated, async (req: any, res) => {
+    const jobId = parseInt(req.params.jobId);
+    if (isNaN(jobId)) return res.status(400).json({ error: "Invalid job ID" });
+    try {
+      const app = await storage.getApplicationByUserAndJob(req.user.id, jobId);
+      res.json(app || null);
+    } catch (error) {
+      console.error("Check application error:", error);
+      res.status(500).json({ error: "Failed to check application" });
+    }
+  });
+
+  app.post("/api/applications", isAuthenticated, async (req: any, res) => {
+    const userId = req.user.id;
+    const { jobId, status, notes } = req.body;
+    if (!jobId) return res.status(400).json({ error: "Job ID required" });
+    try {
+      const existing = await storage.getApplicationByUserAndJob(userId, jobId);
+      if (existing) return res.status(409).json({ error: "Application already tracked", application: existing });
+      const app = await storage.createJobApplication({
+        userId,
+        jobId,
+        status: status || "saved",
+        notes: notes || null,
+        appliedDate: status === "applied" ? new Date() : null,
+      });
+      res.json(app);
+    } catch (error) {
+      console.error("Create application error:", error);
+      res.status(500).json({ error: "Failed to create application" });
+    }
+  });
+
+  app.patch("/api/applications/:id", isAuthenticated, async (req: any, res) => {
+    const userId = req.user.id;
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: "Invalid ID" });
+    try {
+      const updateData: any = {};
+      if (req.body.status) updateData.status = req.body.status;
+      if (req.body.notes !== undefined) updateData.notes = req.body.notes;
+      if (req.body.status === "applied" && !req.body.appliedDate) {
+        updateData.appliedDate = new Date();
+      }
+      const updated = await storage.updateJobApplication(id, userId, updateData);
+      if (!updated) return res.status(404).json({ error: "Application not found" });
+      res.json(updated);
+    } catch (error) {
+      console.error("Update application error:", error);
+      res.status(500).json({ error: "Failed to update application" });
+    }
+  });
+
+  app.delete("/api/applications/:id", isAuthenticated, async (req: any, res) => {
+    const userId = req.user.id;
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: "Invalid ID" });
+    try {
+      await storage.deleteJobApplication(id, userId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Delete application error:", error);
+      res.status(500).json({ error: "Failed to delete application" });
+    }
+  });
+
+  // Similar Jobs
+  app.get("/api/jobs/:id/similar", isAuthenticated, async (req: any, res) => {
+    const jobId = parseInt(req.params.id);
+    if (isNaN(jobId)) return res.status(400).json({ error: "Invalid job ID" });
+    try {
+      const similar = await storage.getSimilarJobs(jobId, 4);
+      res.json(similar);
+    } catch (error) {
+      console.error("Similar jobs error:", error);
+      res.status(500).json({ error: "Failed to get similar jobs" });
+    }
+  });
+
+  // Onboarding completion
+  app.post("/api/onboarding/complete", isAuthenticated, async (req: any, res) => {
+    const userId = req.user.id;
+    const { currentRole, targetRoleTypes, experienceLevel, locationPreferences, remoteOnly } = req.body;
+    try {
+      const prefs = await storage.upsertUserPreferences(userId, {
+        userId,
+        currentRole: currentRole || null,
+        targetRoleTypes: targetRoleTypes || null,
+        experienceLevel: experienceLevel || null,
+        locationPreferences: locationPreferences || null,
+        remoteOnly: remoteOnly || false,
+        onboardingCompleted: true,
+      });
+
+      // Seed persona with onboarding data
+      const personaData: any = {};
+      if (targetRoleTypes?.length) {
+        const categoryMap: Record<string, string> = {};
+        const taxonomy = (await import("@shared/schema")).JOB_TAXONOMY;
+        for (const [cat, val] of Object.entries(taxonomy)) {
+          for (const sub of (val as any).subcategories || []) {
+            categoryMap[sub.toLowerCase()] = cat;
+          }
+        }
+        const categories = targetRoleTypes
+          .map((r: string) => {
+            for (const [cat] of Object.entries(taxonomy)) {
+              if (cat.toLowerCase().includes(r.toLowerCase()) || r.toLowerCase().includes(cat.toLowerCase())) return cat;
+            }
+            return null;
+          })
+          .filter(Boolean);
+        if (categories.length) personaData.topCategories = categories;
+      }
+      if (experienceLevel) {
+        personaData.careerStage = experienceLevel;
+      }
+      if (locationPreferences?.length) {
+        personaData.preferredLocations = locationPreferences;
+      }
+      if (remoteOnly) {
+        personaData.remotePreference = "remote";
+      }
+      if (Object.keys(personaData).length) {
+        personaData.userId = userId;
+        await storage.upsertUserPersona(userId, personaData);
+      }
+
+      res.json({ success: true, preferences: prefs });
+    } catch (error) {
+      console.error("Onboarding completion error:", error);
+      res.status(500).json({ error: "Failed to save onboarding" });
+    }
+  });
+
+  app.get("/api/onboarding/status", isAuthenticated, async (req: any, res) => {
+    try {
+      const prefs = await storage.getUserPreferences(req.user.id);
+      res.json({ completed: prefs?.onboardingCompleted || false });
+    } catch (error) {
+      res.json({ completed: false });
+    }
+  });
+
   // Run startup cleanup and start the scheduler when the server starts
   runStartupCleanup();
   startScheduler();

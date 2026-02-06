@@ -61,6 +61,10 @@ export const userPreferences = pgTable("user_preferences", {
   experienceYears: integer("experience_years"),
   salaryMin: integer("salary_min"),
   salaryMax: integer("salary_max"),
+  onboardingCompleted: boolean("onboarding_completed").default(false),
+  currentRole: varchar("current_role", { length: 100 }),
+  targetRoleTypes: text("target_role_types").array(),
+  experienceLevel: varchar("experience_level", { length: 50 }),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 

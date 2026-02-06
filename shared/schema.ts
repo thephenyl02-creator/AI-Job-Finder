@@ -417,6 +417,31 @@ export const insertBuiltResumeSchema = createInsertSchema(builtResumes).omit({
 export type BuiltResume = typeof builtResumes.$inferSelect;
 export type InsertBuiltResume = z.infer<typeof insertBuiltResumeSchema>;
 
+export const APPLICATION_STATUSES = ["saved", "applied", "interviewing", "offer", "rejected"] as const;
+export type ApplicationStatus = typeof APPLICATION_STATUSES[number];
+
+export const jobApplications = pgTable("job_applications", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id", { length: 255 }).notNull(),
+  jobId: integer("job_id").notNull(),
+  status: varchar("status", { length: 50 }).notNull().default("saved"),
+  notes: text("notes"),
+  appliedDate: timestamp("applied_date"),
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: timestamp("updated_at").default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const insertJobApplicationSchema = createInsertSchema(jobApplications).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type JobApplication = typeof jobApplications.$inferSelect;
+export type InsertJobApplication = z.infer<typeof insertJobApplicationSchema>;
+
+export type JobApplicationWithJob = JobApplication & { job: Job };
+
 export interface ResumeSections {
   contact: {
     fullName: string;
