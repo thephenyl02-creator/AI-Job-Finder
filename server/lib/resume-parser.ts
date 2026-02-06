@@ -16,17 +16,13 @@ export class InvalidPDFError extends Error {
 
 export async function extractTextFromPDF(buffer: Buffer): Promise<string> {
   try {
-    // Basic PDF validation - check for PDF header
     const header = buffer.slice(0, 8).toString("utf-8");
     if (!header.startsWith("%PDF-")) {
       throw new InvalidPDFError("The file is not a valid PDF. Please upload a real PDF file.");
     }
 
-    // Use createRequire to import CommonJS module in ESM context
-    const { createRequire } = await import("module");
-    const require = createRequire(import.meta.url);
-    const { PDFParse } = require("pdf-parse");
-    // v2 API: create parser instance with buffer data, then call getText()
+    const pdfParse = await import("pdf-parse");
+    const { PDFParse } = pdfParse;
     const parser = new PDFParse({ data: buffer });
     const result = await parser.getText();
     return result.text;
