@@ -8,21 +8,26 @@ import { isUnauthorizedError } from "@/lib/auth-utils";
 import { apiRequest } from "@/lib/queryClient";
 import type { JobWithScore, ResumeExtractedData } from "@shared/schema";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Search as SearchIcon,
   ArrowRight,
+  ArrowUp,
   ArrowLeft,
   Check,
   Loader2,
   Target,
   Upload,
-  FileText,
   CheckCircle2,
   X,
+  Briefcase,
+  Globe,
+  GraduationCap,
+  Sparkles,
+  Building2,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ProgressSteps, Typewriter, ScrollReveal } from "@/components/animations";
@@ -56,11 +61,11 @@ const STEP_MAP: Record<SearchStep, number> = {
 };
 
 const SEARCH_SUGGESTIONS = [
-  "product manager at a legal tech startup, remote",
-  "compliance role at a growing company",
-  "legal operations, entry level",
-  "contract management, hybrid, senior",
-  "legal AI company, any role",
+  { icon: Briefcase, label: "Compliance & Risk", query: "compliance or risk management role" },
+  { icon: Globe, label: "Remote Roles", query: "remote legal tech position" },
+  { icon: GraduationCap, label: "Entry Level", query: "entry level legal technology" },
+  { icon: Sparkles, label: "Legal AI", query: "legal AI company, any role" },
+  { icon: Building2, label: "Operations", query: "legal operations at a growing company" },
 ];
 
 const pageVariants = {
@@ -406,66 +411,96 @@ export default function Search() {
               animate="center"
               exit="exit"
               transition={{ duration: 0.3 }}
-              className="space-y-5"
+              className="space-y-6"
             >
-              <div className="relative">
-                <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                <Input
-                  placeholder="e.g., product manager at a legal tech startup, remote..."
-                  className="pl-12 pr-4 h-14 text-base"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleInitialSearch()}
-                  data-testid="input-search-query"
-                />
-              </div>
+              <Card className="shadow-sm">
+                <CardContent className="p-4 sm:p-5">
+                  <Textarea
+                    placeholder="What kind of role are you looking for?"
+                    className="resize-none border-0 text-base sm:text-lg focus-visible:ring-0 shadow-none min-h-[60px] placeholder:text-muted-foreground/60"
+                    rows={2}
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        handleInitialSearch();
+                      }
+                    }}
+                    data-testid="input-search-query"
+                  />
+                  <div className="flex items-center justify-between gap-3 mt-2 flex-wrap">
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="text-muted-foreground"
+                        data-testid="button-upload-resume-inline"
+                      >
+                        <Upload className="h-4 w-4" />
+                      </Button>
+                      {resumeStatus?.hasResume && (
+                        <span className="text-xs text-muted-foreground flex items-center gap-1.5" data-testid="text-resume-inline-status">
+                          <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
+                          {resumeStatus.filename}
+                        </span>
+                      )}
+                    </div>
+                    <Button
+                      size="icon"
+                      onClick={handleInitialSearch}
+                      disabled={!query.trim()}
+                      data-testid="button-guided-search"
+                    >
+                      <ArrowUp className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
 
               {!query && !isUploading && (
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: 0.15 }}
-                  className="space-y-2.5"
                 >
-                  <p className="text-xs text-muted-foreground text-center uppercase tracking-wide">
-                    Try something like
-                  </p>
                   <div className="flex flex-wrap gap-2 justify-center">
                     {SEARCH_SUGGESTIONS.map((suggestion) => (
-                      <Badge
-                        key={suggestion}
+                      <Button
+                        key={suggestion.label}
                         variant="outline"
-                        className="cursor-pointer py-1.5 px-3 text-xs"
-                        onClick={() => setQuery(suggestion)}
-                        data-testid={`suggestion-${suggestion.slice(0, 20).replace(/\s+/g, "-")}`}
+                        size="sm"
+                        className="gap-1.5 cursor-pointer"
+                        onClick={() => {
+                          setQuery(suggestion.query);
+                        }}
+                        data-testid={`chip-${suggestion.label.toLowerCase().replace(/\s+/g, "-")}`}
                       >
-                        {suggestion}
-                      </Badge>
+                        <suggestion.icon className="h-3.5 w-3.5" />
+                        {suggestion.label}
+                      </Button>
                     ))}
                   </div>
                 </motion.div>
               )}
 
-              <div className="flex flex-col items-center gap-3 pt-1">
-                <Button 
-                  size="lg" 
-                  onClick={handleInitialSearch}
-                  disabled={!query.trim()}
-                  className="gap-2 w-full sm:w-auto sm:min-w-[200px]"
-                  data-testid="button-guided-search"
+              {query.trim() && !isUploading && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="text-center"
                 >
-                  <SearchIcon className="h-4 w-4" />
-                  Search
-                </Button>
-                {query.trim() && (
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={() => {
                       if (query.trim()) {
                         regularSearchMutation.mutate(query);
                       }
                     }}
                     disabled={regularSearchMutation.isPending}
-                    className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                    className="text-muted-foreground gap-1.5"
                     data-testid="button-quick-search"
                   >
                     {regularSearchMutation.isPending ? (
@@ -474,9 +509,9 @@ export default function Search() {
                       <ArrowRight className="h-3.5 w-3.5" />
                     )}
                     Skip questions, show results now
-                  </button>
-                )}
-              </div>
+                  </Button>
+                </motion.div>
+              )}
 
               <input
                 ref={fileInputRef}
@@ -565,10 +600,10 @@ export default function Search() {
                   transition={{ delay: 0.25 }}
                 >
                   <div
-                    className={`rounded-lg p-3 text-center cursor-pointer transition-colors border ${
+                    className={`rounded-md p-3 text-center cursor-pointer transition-colors border border-dashed ${
                       isDragOver
                         ? "border-primary bg-primary/5"
-                        : "border-border hover:border-muted-foreground/40"
+                        : "border-border/60 hover:border-muted-foreground/40"
                     }`}
                     onDragOver={handleDragOver}
                     onDragLeave={handleDragLeave}
@@ -579,7 +614,7 @@ export default function Search() {
                     <div className="flex items-center justify-center gap-2">
                       <Upload className="h-4 w-4 text-muted-foreground" />
                       <span className="text-sm text-muted-foreground">
-                        Have a resume? <span className="text-foreground font-medium">Upload it</span> for better matches
+                        Drop your resume here for personalized matches
                       </span>
                     </div>
                   </div>
@@ -596,15 +631,16 @@ export default function Search() {
                 </motion.div>
               )}
 
-              <div className="text-center pt-2">
+              <div className="text-center">
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => setLocation("/jobs")}
-                  className="text-muted-foreground"
+                  className="text-muted-foreground gap-1.5"
                   data-testid="link-browse-all"
                 >
                   Or browse all jobs by category
+                  <ArrowRight className="h-3.5 w-3.5" />
                 </Button>
               </div>
             </motion.div>
