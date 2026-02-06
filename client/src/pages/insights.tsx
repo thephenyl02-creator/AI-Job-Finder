@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { usePageTitle } from "@/hooks/use-page-title";
 import { Header } from "@/components/header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -399,6 +400,7 @@ function SkeletonDashboard() {
 }
 
 export default function Insights() {
+  usePageTitle("Market Insights");
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const { track } = useActivityTracker();
   const { isPro, isLoading: subLoading } = useSubscription();

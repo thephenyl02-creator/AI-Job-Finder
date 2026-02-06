@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { usePageTitle } from "@/hooks/use-page-title";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -84,6 +85,7 @@ interface AdminJobsResponse {
 }
 
 export default function AdminPage() {
+  usePageTitle("Admin Dashboard");
   const { toast } = useToast();
   const { isAdmin, isLoading: authLoading } = useAuth();
   const [lastResult, setLastResult] = useState<ScrapeResult | null>(null);

@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { usePageTitle } from "@/hooks/use-page-title";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -70,6 +71,7 @@ function shortenLocation(location: string): string {
 }
 
 export default function Landing() {
+  usePageTitle();
   const { data: stats } = useQuery<Stats>({
     queryKey: ["/api/stats"],
     refetchInterval: 30000,

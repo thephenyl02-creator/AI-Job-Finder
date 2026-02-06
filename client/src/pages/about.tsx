@@ -1,4 +1,5 @@
 import { Header } from "@/components/header";
+import { usePageTitle } from "@/hooks/use-page-title";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
@@ -6,6 +7,7 @@ import { ArrowRight, Target, Lightbulb, Shield } from "lucide-react";
 import { Logo } from "@/components/logo";
 
 export default function About() {
+  usePageTitle("About");
   return (
     <div className="min-h-screen bg-background">
       <Header />

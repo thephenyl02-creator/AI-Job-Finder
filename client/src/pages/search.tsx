@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { usePageTitle } from "@/hooks/use-page-title";
 import { useLocation } from "wouter";
 import { Header } from "@/components/header";
 import { useAuth } from "@/hooks/use-auth";
@@ -75,6 +76,7 @@ const pageVariants = {
 };
 
 export default function Search() {
+  usePageTitle("Search");
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
   const [, setLocation] = useLocation();

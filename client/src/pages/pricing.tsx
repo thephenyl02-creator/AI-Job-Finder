@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { usePageTitle } from "@/hooks/use-page-title";
 import { useAuth } from "@/hooks/use-auth";
 import { useSubscription } from "@/hooks/use-subscription";
 import { Header } from "@/components/header";
@@ -90,6 +91,7 @@ const FAQ_ITEMS = [
 ];
 
 export default function Pricing() {
+  usePageTitle("Pricing");
   const { isAuthenticated } = useAuth();
   const { isPro } = useSubscription();
   const { toast } = useToast();

@@ -1,4 +1,5 @@
 import { Header } from "@/components/header";
+import { usePageTitle } from "@/hooks/use-page-title";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,6 +31,7 @@ const postJobSchema = z.object({
 type PostJobFormData = z.infer<typeof postJobSchema>;
 
 export default function PostJob() {
+  usePageTitle("Post a Job");
   const { toast } = useToast();
   const [submitted, setSubmitted] = useState(false);
   const [urlValidation, setUrlValidation] = useState<{

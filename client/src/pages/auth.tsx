@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
+import { usePageTitle } from "@/hooks/use-page-title";
 import { useLocation, useSearch } from "wouter";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -25,6 +26,7 @@ function GoogleIcon({ className }: { className?: string }) {
 type AuthView = "login" | "register" | "forgot" | "reset";
 
 export default function Auth() {
+  usePageTitle("Sign In");
   const [mode, setMode] = useState<"login" | "register">("login");
   const [view, setView] = useState<AuthView>("login");
   const [showEmailForm, setShowEmailForm] = useState(false);

@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { usePageTitle } from "@/hooks/use-page-title";
 import { useLocation } from "wouter";
 import { Header } from "@/components/header";
 import { Button } from "@/components/ui/button";
@@ -1021,6 +1022,7 @@ function ATSReviewPanel({ review, onClose }: { review: ATSReview; onClose: () =>
 }
 
 export default function Resumes() {
+  usePageTitle("My Resumes");
   const { isAuthenticated } = useAuth();
   const { track } = useActivityTracker();
   const { toast } = useToast();

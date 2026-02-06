@@ -1,9 +1,11 @@
+import { usePageTitle } from "@/hooks/use-page-title";
 import { Button } from "@/components/ui/button";
 import { LogoMark } from "@/components/logo";
 import { ArrowLeft, Search } from "lucide-react";
 import { Link } from "wouter";
 
 export default function NotFound() {
+  usePageTitle("Page Not Found");
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4">
       <div className="max-w-md w-full text-center">

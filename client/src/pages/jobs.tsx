@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { usePageTitle } from "@/hooks/use-page-title";
 import { useLocation, useSearch } from "wouter";
 import { Header } from "@/components/header";
 import { useAuth } from "@/hooks/use-auth";
@@ -103,6 +104,7 @@ const SENIORITY_LEVELS = [
 ];
 
 export default function Jobs() {
+  usePageTitle("Browse Jobs");
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const { track } = useActivityTracker();
   const { isPro } = useSubscription();

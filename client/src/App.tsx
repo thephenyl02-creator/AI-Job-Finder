@@ -21,6 +21,7 @@ import Insights from "@/pages/insights";
 import Alerts from "@/pages/alerts";
 import Resumes from "@/pages/resumes";
 import Pricing from "@/pages/pricing";
+import { AssistantWidget } from "@/components/assistant-widget";
 
 function AppRouter() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -69,6 +70,7 @@ function App() {
       <ThemeProvider defaultTheme="light" storageKey="legal-ai-careers-theme">
         <TooltipProvider>
           <AppRouter />
+          <AssistantWidget />
           <ScrollToTop />
           <Toaster />
         </TooltipProvider>

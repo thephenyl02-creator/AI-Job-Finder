@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { usePageTitle } from "@/hooks/use-page-title";
 import { Header } from "@/components/header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -316,6 +317,7 @@ function AlertCard({ alert }: { alert: JobAlert }) {
 }
 
 export default function Alerts() {
+  usePageTitle("Job Alerts");
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const { track } = useActivityTracker();
   const { isPro, isLoading: subLoading } = useSubscription();

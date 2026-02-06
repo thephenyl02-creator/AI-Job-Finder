@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { usePageTitle } from "@/hooks/use-page-title";
 import { useLocation, useParams } from "wouter";
 import { Header } from "@/components/header";
 import { Button } from "@/components/ui/button";
@@ -458,6 +459,7 @@ function JobChat({ jobId }: { jobId: string }) {
 }
 
 export default function JobDetail() {
+  usePageTitle("Job Details");
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const { trackNow } = useActivityTracker();
   const [, setLocation] = useLocation();

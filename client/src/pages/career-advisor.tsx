@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { usePageTitle } from "@/hooks/use-page-title";
 import { Header } from "@/components/header";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -116,6 +117,7 @@ interface ComparisonResult {
 }
 
 export default function CareerAdvisor() {
+  usePageTitle("Career Advisor");
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const { track } = useActivityTracker();
   const { isPro, isLoading: subLoading } = useSubscription();
