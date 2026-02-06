@@ -39,7 +39,7 @@ A freemium SaaS job search platform for legal technology careers, built specific
 
 ### AI Integration
 - **Provider**: OpenAI API (via Replit AI Integrations)
-- **Features**: Guided Search (multi-step, clarifying questions, semantic search), Job Categorization (taxonomy classification, skill extraction, summaries), Resume Parsing, and Resume-Job Comparison.
+- **Features**: Guided Search (multi-step, clarifying questions, semantic search), Job Categorization (taxonomy classification, skill extraction, summaries), Resume Parsing, Resume-Job Comparison, and Conversational Assistant.
 
 ### Payments & Subscription (Stripe)
 - **Provider**: Stripe (via Replit Stripe Integration)
@@ -86,6 +86,8 @@ A freemium SaaS job search platform for legal technology careers, built specific
 - **Job Alerts & Notifications**: Users can create named alerts based on criteria (categories, keywords, seniority, remote). New matching jobs trigger in-app notifications with an unread count badge and a notification bell in the header. Pro-only feature with upgrade prompt for free users.
 - **Market Insights**: Analytics dashboard with job market trends, category breakdowns, salary data, and hiring activity. Includes a conversational Q&A interface where users can ask natural language questions about the legal tech job market and get data-backed answers with cited sources (powered by OpenAI + platform job data). Pro-only feature with upgrade prompt for free users.
 - **Pricing Page**: Displays Free vs Pro comparison with monthly/yearly toggle. Integrates with Stripe Checkout for subscription purchases and Stripe Billing Portal for management.
+- **Conversational Assistant**: Floating chat widget available on all authenticated pages. Context-aware: detects current job page and user resume data. Provides plain-language explanations of job postings, career guidance, and resume-based recommendations. Uses GPT-4o-mini with temperature 0.6. Inline "Ask About This Job" chat section on job detail pages with pre-populated question chips. Key files: `client/src/components/assistant-widget.tsx`, `server/routes.ts` (POST /api/assistant/chat).
+- **Location-Based Filtering**: Searchable location dropdown on the jobs page with job counts per location, "Remote Only" option, and click-outside/Escape handling. Backend normalizes locations by extracting city names. Key files: `client/src/pages/jobs.tsx`.
 
 ### API Routes (Stripe/Subscription)
 - `GET /api/stripe/prices` - Fetch Pro plan pricing (public)
