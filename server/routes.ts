@@ -184,6 +184,25 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/featured-jobs", async (req, res) => {
+    try {
+      const jobs = await storage.getActiveJobs();
+      const featured = jobs.slice(0, 6).map(j => ({
+        id: j.id,
+        title: j.title,
+        company: j.company,
+        location: j.location,
+        isRemote: j.isRemote,
+        roleCategory: j.roleCategory,
+        seniorityLevel: j.seniorityLevel,
+      }));
+      res.json(featured);
+    } catch (error) {
+      console.error("Error fetching featured jobs:", error);
+      res.status(500).json({ error: "Failed to fetch featured jobs" });
+    }
+  });
+
   app.get("/api/jobs", isAuthenticated, async (req, res) => {
     try {
       const jobs = await storage.getActiveJobs();

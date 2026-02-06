@@ -20,6 +20,9 @@ import {
   Bell,
   BarChart3,
   Target,
+  MapPin,
+  Building2,
+  Briefcase,
 } from "lucide-react";
 import {
   ScrollReveal,
@@ -36,10 +39,24 @@ interface Stats {
   totalCategories: number;
 }
 
+interface FeaturedJob {
+  id: number;
+  title: string;
+  company: string;
+  location: string | null;
+  isRemote: boolean | null;
+  roleCategory: string | null;
+  seniorityLevel: string | null;
+}
+
 export default function Landing() {
   const { data: stats } = useQuery<Stats>({
     queryKey: ["/api/stats"],
     refetchInterval: 30000,
+  });
+
+  const { data: featuredJobs } = useQuery<FeaturedJob[]>({
+    queryKey: ["/api/featured-jobs"],
   });
 
   return (
@@ -73,89 +90,149 @@ export default function Landing() {
           <GradientOrb className="w-[600px] h-[600px] bg-primary -top-48 -right-48" />
           <GradientOrb className="w-[400px] h-[400px] bg-chart-2 top-32 -left-32" />
 
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-20 sm:pt-32 pb-16 sm:pb-24 relative">
-            <div className="max-w-3xl">
-              <ScrollReveal delay={0.1} direction="none">
-                <p className="text-sm font-medium text-muted-foreground tracking-wide uppercase mb-6" data-testid="text-hero-label">
-                  The Job Board That Actually Gets Lawyers
-                </p>
-              </ScrollReveal>
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-16 sm:pt-24 pb-16 sm:pb-20 relative">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-start">
+              <div>
+                <ScrollReveal delay={0.1} direction="none">
+                  <p className="text-sm font-medium text-muted-foreground tracking-wide uppercase mb-5" data-testid="text-hero-label">
+                    The Job Board That Actually Gets Lawyers
+                  </p>
+                </ScrollReveal>
 
-              <ScrollReveal delay={0.2}>
-                <h1 className="text-4xl sm:text-5xl lg:text-6xl font-serif font-medium text-foreground mb-6 leading-[1.15] tracking-tight" data-testid="text-hero-title">
-                  Your legal mind.
-                  <br />
-                  <span className="relative">
-                    Their next hire.
-                    <motion.span
-                      className="absolute -bottom-1 left-0 h-[3px] bg-primary/30 rounded-full"
-                      initial={{ width: 0 }}
-                      animate={{ width: "100%" }}
-                      transition={{ delay: 1, duration: 0.8, ease: "easeOut" }}
-                    />
-                  </span>
-                </h1>
-              </ScrollReveal>
+                <ScrollReveal delay={0.2}>
+                  <h1 className="text-4xl sm:text-5xl lg:text-[3.25rem] xl:text-5xl font-serif font-medium text-foreground mb-5 leading-[1.15] tracking-tight" data-testid="text-hero-title">
+                    Your legal mind.
+                    <br />
+                    <span className="relative">
+                      Their next hire.
+                      <motion.span
+                        className="absolute -bottom-1 left-0 h-[3px] bg-primary/30 rounded-full"
+                        initial={{ width: 0 }}
+                        animate={{ width: "100%" }}
+                        transition={{ delay: 1, duration: 0.8, ease: "easeOut" }}
+                      />
+                    </span>
+                  </h1>
+                </ScrollReveal>
 
-              <ScrollReveal delay={0.35}>
-                <p className="text-lg sm:text-xl text-muted-foreground mb-10 max-w-xl leading-relaxed" data-testid="text-hero-subtitle">
-                  Legal tech companies need people who understand the law <em>and</em> technology. That's you. We collect the roles, match them to your experience, and show you exactly where you fit.
-                </p>
-              </ScrollReveal>
+                <ScrollReveal delay={0.35}>
+                  <p className="text-lg text-muted-foreground mb-8 leading-relaxed" data-testid="text-hero-subtitle">
+                    Legal tech companies need people who understand the law <em>and</em> technology. That's you. We collect the roles, match them to your experience, and show you exactly where you fit.
+                  </p>
+                </ScrollReveal>
 
-              <ScrollReveal delay={0.5}>
-                <div className="flex flex-col sm:flex-row items-start gap-3 mb-6">
-                  <Button size="lg" asChild className="text-base px-8" data-testid="button-hero-get-started">
-                    <a href="/api/login">
-                      Browse Open Roles
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </a>
-                  </Button>
-                  <Link href="/pricing">
-                    <Button size="lg" variant="outline" className="text-base" data-testid="button-hero-pricing">
-                      See Pricing
+                <ScrollReveal delay={0.5}>
+                  <div className="flex flex-col sm:flex-row items-start gap-3 mb-4">
+                    <Button size="lg" asChild className="text-base px-8" data-testid="button-hero-get-started">
+                      <a href="/api/login">
+                        Browse Open Roles
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </a>
                     </Button>
-                  </Link>
+                    <Link href="/pricing">
+                      <Button size="lg" variant="outline" className="text-base" data-testid="button-hero-pricing">
+                        See Pricing
+                      </Button>
+                    </Link>
+                  </div>
+                  <p className="text-sm text-muted-foreground" data-testid="text-hero-free-note">
+                    Free to browse. No credit card required.
+                  </p>
+                </ScrollReveal>
+              </div>
+
+              <ScrollReveal delay={0.4} direction="none">
+                <div className="hidden lg:block" data-testid="hero-job-preview">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Live roles</p>
+                    {stats?.totalJobs ? (
+                      <Badge variant="secondary" className="text-xs" data-testid="badge-job-count">
+                        {stats.totalJobs}+ open
+                      </Badge>
+                    ) : null}
+                  </div>
+                  <div className="space-y-2.5">
+                    {featuredJobs?.slice(0, 5).map((job, i) => (
+                      <motion.div
+                        key={job.id}
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.6 + i * 0.1, duration: 0.4 }}
+                      >
+                        <Card className="bg-background/80 backdrop-blur-sm border-border/50" data-testid={`hero-job-card-${i}`}>
+                          <CardContent className="p-3.5">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0 flex-1">
+                                <p className="text-sm font-semibold text-foreground truncate">{job.title}</p>
+                                <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+                                  <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                                    <Building2 className="h-3 w-3 shrink-0" />
+                                    <span className="truncate">{job.company}</span>
+                                  </span>
+                                  {job.location && (
+                                    <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                                      <MapPin className="h-3 w-3 shrink-0" />
+                                      <span className="truncate">{job.isRemote ? "Remote" : job.location}</span>
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              {job.roleCategory && (
+                                <Badge variant="outline" className="text-[10px] shrink-0 whitespace-nowrap">
+                                  {job.roleCategory}
+                                </Badge>
+                              )}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </motion.div>
+                    ))}
+                    {(!featuredJobs || featuredJobs.length === 0) && (
+                      <div className="space-y-2.5">
+                        {[...Array(5)].map((_, i) => (
+                          <div key={i} className="h-16 rounded-md bg-muted/40 animate-pulse" />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground text-center mt-3">
+                    Sign in to see all roles and apply
+                  </p>
                 </div>
-                <p className="text-sm text-muted-foreground" data-testid="text-hero-free-note">
-                  Free to browse. No credit card required.
-                </p>
               </ScrollReveal>
             </div>
 
             <ScrollReveal delay={0.6}>
-              <div className="flex items-center gap-6 sm:gap-10 mt-16 sm:mt-20 border-t border-border/40 pt-10" data-testid="stats-section">
-                <div data-testid="stat-jobs">
-                  <div className="text-4xl sm:text-5xl font-serif font-semibold text-foreground tabular-nums">
+              <div className="grid grid-cols-3 gap-6 sm:gap-8 mt-12 sm:mt-16 border-t border-border/40 pt-8" data-testid="stats-section">
+                <div className="text-center" data-testid="stat-jobs">
+                  <div className="text-3xl sm:text-4xl font-serif font-semibold text-foreground tabular-nums">
                     {stats?.totalJobs ? (
                       <AnimatedCounter value={stats.totalJobs} duration={2} />
                     ) : (
                       "\u2014"
                     )}
                   </div>
-                  <div className="text-sm text-muted-foreground mt-1">Open positions</div>
+                  <div className="text-xs sm:text-sm text-muted-foreground mt-1">Open positions</div>
                 </div>
-                <div className="w-px h-12 bg-border/60" />
-                <div data-testid="stat-companies">
-                  <div className="text-4xl sm:text-5xl font-serif font-semibold text-foreground tabular-nums">
+                <div className="text-center border-x border-border/40" data-testid="stat-companies">
+                  <div className="text-3xl sm:text-4xl font-serif font-semibold text-foreground tabular-nums">
                     {stats?.totalCompanies ? (
                       <AnimatedCounter value={stats.totalCompanies} duration={1.6} />
                     ) : (
                       "\u2014"
                     )}
                   </div>
-                  <div className="text-sm text-muted-foreground mt-1">Companies hiring</div>
+                  <div className="text-xs sm:text-sm text-muted-foreground mt-1">Companies hiring</div>
                 </div>
-                <div className="w-px h-12 bg-border/60" />
-                <div data-testid="stat-categories">
-                  <div className="text-4xl sm:text-5xl font-serif font-semibold text-foreground tabular-nums">
+                <div className="text-center" data-testid="stat-categories">
+                  <div className="text-3xl sm:text-4xl font-serif font-semibold text-foreground tabular-nums">
                     {stats?.totalCategories ? (
                       <AnimatedCounter value={stats.totalCategories} duration={1.2} />
                     ) : (
                       "\u2014"
                     )}
                   </div>
-                  <div className="text-sm text-muted-foreground mt-1">Career paths</div>
+                  <div className="text-xs sm:text-sm text-muted-foreground mt-1">Career paths</div>
                 </div>
               </div>
             </ScrollReveal>
