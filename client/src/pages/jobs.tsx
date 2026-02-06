@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import { Header } from "@/components/header";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
@@ -68,14 +68,25 @@ const SENIORITY_LEVELS = [
 export default function Jobs() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [, setLocation] = useLocation();
+  const searchString = useSearch();
+  const urlParams = new URLSearchParams(searchString);
+  const levelParam = urlParams.get("level");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
-  const [selectedLevel, setSelectedLevel] = useState<string>("all");
+  const [selectedLevel, setSelectedLevel] = useState<string>(levelParam && ["entry", "mid", "senior"].includes(levelParam) ? levelParam : "all");
   const [filterText, setFilterText] = useState("");
   const [searchResults, setSearchResults] = useState<JobWithScore[] | null>(null);
   const [searchQuery, setSearchQuery] = useState<string | null>(null);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<"cards" | "list">("cards");
   const [selectedJobIds, setSelectedJobIds] = useState<Set<number>>(new Set());
+
+  useEffect(() => {
+    const params = new URLSearchParams(searchString);
+    const level = params.get("level");
+    if (level && ["entry", "mid", "senior"].includes(level)) {
+      setSelectedLevel(level);
+    }
+  }, [searchString]);
 
   const toggleJobSelection = (jobId: number) => {
     setSelectedJobIds((prev) => {

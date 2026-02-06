@@ -34,6 +34,7 @@ interface Stats {
   totalJobs: number;
   totalCompanies: number;
   totalCategories: number;
+  entryLevelJobs: number;
 }
 
 interface FeaturedJob {
@@ -423,6 +424,62 @@ export default function Landing() {
         </section>
 
         <section className="border-t border-border/40 bg-muted/30">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
+            <ScrollReveal>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center">
+                <div>
+                  <Badge variant="secondary" className="text-xs font-medium mb-4" data-testid="badge-law-students">
+                    For law students
+                  </Badge>
+                  <h2 className="text-2xl sm:text-3xl font-serif font-medium text-foreground mb-4 tracking-tight" data-testid="text-law-student-title">
+                    Start your legal tech career before you graduate
+                  </h2>
+                  <p className="text-muted-foreground leading-relaxed mb-6" data-testid="text-law-student-description">
+                    You don't have to wait until you pass the bar to explore legal tech. Companies building the future of law need people who understand the legal system from the inside. Your 1L summer, clinic experience, and law review skills are more relevant than you think.
+                  </p>
+                  <div className="flex flex-col sm:flex-row items-start gap-3">
+                    <Button asChild data-testid="button-browse-entry-level">
+                      <Link href="/jobs?level=entry">
+                        Browse Entry-Level Roles
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </Link>
+                    </Button>
+                    {stats?.entryLevelJobs ? (
+                      <p className="text-sm text-muted-foreground self-center" data-testid="text-entry-level-count">
+                        {stats.entryLevelJobs} entry-level positions open now
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+                <div className="space-y-3" data-testid="law-student-highlights">
+                  {[
+                    {
+                      title: "No experience required",
+                      description: "Many legal tech roles value your legal training over years of practice. Product, sales, and operations teams actively recruit from law schools.",
+                    },
+                    {
+                      title: "Roles that match your studies",
+                      description: "Upload your resume and see which open positions align with your coursework, journal focus, or clinic work.",
+                    },
+                    {
+                      title: "Get alerts for new opportunities",
+                      description: "Set up notifications for entry-level and internship roles so you're first to know when something opens up.",
+                    },
+                  ].map((item, i) => (
+                    <Card key={item.title} className="bg-background border-border/50" data-testid={`law-student-card-${i}`}>
+                      <CardContent className="p-4">
+                        <h3 className="font-semibold text-foreground text-sm mb-1">{item.title}</h3>
+                        <p className="text-sm text-muted-foreground leading-relaxed">{item.description}</p>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            </ScrollReveal>
+          </div>
+        </section>
+
+        <section className="border-t border-border/40">
           <div className="max-w-5xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
             <ScrollReveal>
               <div className="max-w-3xl mx-auto text-center">

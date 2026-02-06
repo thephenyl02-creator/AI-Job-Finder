@@ -163,10 +163,12 @@ export async function registerRoutes(
       const jobs = await storage.getActiveJobs();
       const uniqueCompanies = new Set(jobs.map(j => j.company)).size;
       const uniqueCategories = new Set(jobs.map(j => j.roleCategory).filter(Boolean)).size;
+      const entryLevelJobs = jobs.filter(j => ["Entry", "Junior", "Associate"].includes(j.seniorityLevel || "")).length;
       res.json({
         totalJobs: jobs.length,
         totalCompanies: uniqueCompanies,
         totalCategories: uniqueCategories,
+        entryLevelJobs,
       });
     } catch (error) {
       console.error("Error fetching stats:", error);
