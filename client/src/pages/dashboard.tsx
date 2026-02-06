@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { usePageTitle } from "@/hooks/use-page-title";
 import { Header } from "@/components/header";
@@ -178,9 +178,16 @@ export default function DashboardPage() {
   usePageTitle("My Dashboard");
   const [timeRange, setTimeRange] = useState("30");
 
-  const { data, isLoading, error } = useQuery<DashboardData>({
+  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+
+  const { data, isLoading, error, dataUpdatedAt } = useQuery<DashboardData>({
     queryKey: [`/api/dashboard?days=${timeRange}`],
+    refetchInterval: 30000,
   });
+
+  useEffect(() => {
+    if (dataUpdatedAt) setLastUpdated(new Date(dataUpdatedAt));
+  }, [dataUpdatedAt]);
 
   if (isLoading) {
     return (
@@ -234,17 +241,26 @@ export default function DashboardPage() {
                 Track your job search progress and discover next steps
               </p>
             </div>
-            <Select value={timeRange} onValueChange={setTimeRange}>
-              <SelectTrigger className="w-[140px]" data-testid="select-time-range">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="7">Last 7 days</SelectItem>
-                <SelectItem value="14">Last 14 days</SelectItem>
-                <SelectItem value="30">Last 30 days</SelectItem>
-                <SelectItem value="90">Last 90 days</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground" data-testid="dashboard-live-indicator">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                </span>
+                <span className="hidden sm:inline">Updated {lastUpdated.toLocaleTimeString()}</span>
+              </div>
+              <Select value={timeRange} onValueChange={setTimeRange}>
+                <SelectTrigger className="w-[140px]" data-testid="select-time-range">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="7">Last 7 days</SelectItem>
+                  <SelectItem value="14">Last 14 days</SelectItem>
+                  <SelectItem value="30">Last 30 days</SelectItem>
+                  <SelectItem value="90">Last 90 days</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {recommendations.length > 0 && recommendations[0].type !== "streak" && (

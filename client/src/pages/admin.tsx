@@ -125,13 +125,13 @@ export default function AdminPage() {
 
   const { data: monitoring, isLoading: loadingMonitoring, refetch: refetchMonitoring } = useQuery<MonitoringData>({
     queryKey: ["/api/admin/monitoring"],
-    refetchInterval: 30000,
+    refetchInterval: 15000,
     enabled: isAdmin,
   });
 
   const { data: validationStatus, refetch: refetchValidation } = useQuery<ValidationStatus>({
     queryKey: ["/api/admin/validation-status"],
-    refetchInterval: 5000, // Check every 5 seconds for live updates
+    refetchInterval: 5000,
     enabled: isAdmin,
   });
 

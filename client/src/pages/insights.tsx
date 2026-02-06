@@ -407,10 +407,10 @@ export default function Insights() {
 
   useEffect(() => { track({ eventType: "page_view", pagePath: "/insights" }); }, []);
 
-  const { data, isLoading } = useQuery<MarketAnalytics>({
+  const { data, isLoading, dataUpdatedAt } = useQuery<MarketAnalytics>({
     queryKey: ["/api/analytics/market"],
     enabled: isAuthenticated,
-    staleTime: 5 * 60 * 1000,
+    refetchInterval: 30000,
   });
 
   if (authLoading || subLoading || isLoading) {
@@ -442,12 +442,26 @@ export default function Insights() {
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-10">
         <div className="mb-8">
-          <h1 className="text-2xl sm:text-3xl font-serif font-medium text-foreground tracking-tight mb-2" data-testid="text-insights-title">
-            Market Insights
-          </h1>
-          <p className="text-muted-foreground max-w-xl">
-            Real-time statistics from our legal technology job database. Ask questions or explore the data below.
-          </p>
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-serif font-medium text-foreground tracking-tight mb-2" data-testid="text-insights-title">
+                Market Insights
+              </h1>
+              <p className="text-muted-foreground max-w-xl">
+                Live statistics from our legal technology job database. Ask questions or explore the data below.
+              </p>
+            </div>
+            {dataUpdatedAt && (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground" data-testid="insights-live-indicator">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                </span>
+                <span>Live</span>
+                <span className="hidden sm:inline">{new Date(dataUpdatedAt).toLocaleTimeString()}</span>
+              </div>
+            )}
+          </div>
         </div>
 
         {isPro ? (

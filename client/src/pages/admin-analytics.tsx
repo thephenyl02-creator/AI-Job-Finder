@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { usePageTitle } from "@/hooks/use-page-title";
 import { useAuth } from "@/hooks/use-auth";
@@ -161,10 +161,12 @@ export default function AdminAnalyticsPage() {
   const [userSortDir, setUserSortDir] = useState<"asc" | "desc">("desc");
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
 
-  const { data: kpis, isLoading: loadingKpis } = useQuery<KpiData>({
+  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+
+  const { data: kpis, isLoading: loadingKpis, dataUpdatedAt: kpiUpdatedAt } = useQuery<KpiData>({
     queryKey: ["/api/admin/analytics/kpis"],
     enabled: isAdmin,
-    refetchInterval: 60000,
+    refetchInterval: 15000,
   });
 
   const { data: engagement, isLoading: loadingEngagement } = useQuery<EngagementData>({
@@ -175,32 +177,42 @@ export default function AdminAnalyticsPage() {
       return res.json();
     },
     enabled: isAdmin,
+    refetchInterval: 30000,
   });
 
   const { data: features, isLoading: loadingFeatures } = useQuery<FeatureData>({
     queryKey: ["/api/admin/analytics/features"],
     enabled: isAdmin,
+    refetchInterval: 30000,
   });
 
   const { data: cohorts, isLoading: loadingCohorts } = useQuery<CohortData>({
     queryKey: ["/api/admin/analytics/cohorts"],
     enabled: isAdmin,
+    refetchInterval: 30000,
   });
 
   const { data: topContent, isLoading: loadingContent } = useQuery<TopContentData>({
     queryKey: ["/api/admin/analytics/top-content"],
     enabled: isAdmin,
+    refetchInterval: 30000,
   });
 
   const { data: userList, isLoading: loadingUsers } = useQuery<UserAnalytics[]>({
     queryKey: ["/api/admin/analytics/users"],
     enabled: isAdmin,
+    refetchInterval: 30000,
   });
 
   const { data: funnel, isLoading: loadingFunnel } = useQuery<FunnelData>({
     queryKey: ["/api/admin/analytics/funnel"],
     enabled: isAdmin,
+    refetchInterval: 30000,
   });
+
+  useEffect(() => {
+    if (kpiUpdatedAt) setLastUpdated(new Date(kpiUpdatedAt));
+  }, [kpiUpdatedAt]);
 
   if (authLoading) {
     return (
@@ -296,11 +308,23 @@ export default function AdminAnalyticsPage() {
                 </p>
               </div>
             </div>
-            <Link href="/admin">
-              <Button variant="outline" size="sm" data-testid="link-back-admin">
-                Back to Admin
-              </Button>
-            </Link>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground" data-testid="live-indicator">
+                <span className="relative flex h-2.5 w-2.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
+                </span>
+                <span>Live</span>
+                <span className="hidden sm:inline">
+                  {lastUpdated.toLocaleTimeString()}
+                </span>
+              </div>
+              <Link href="/admin">
+                <Button variant="outline" size="sm" data-testid="link-back-admin">
+                  Back to Admin
+                </Button>
+              </Link>
+            </div>
           </div>
 
           {loadingKpis ? (
