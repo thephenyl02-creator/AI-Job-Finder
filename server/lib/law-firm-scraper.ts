@@ -183,59 +183,89 @@ export async function scrapeGenericCareerPage(url: string, companyName: string, 
 }
 
 export function isLegalTechRole(title: string): boolean {
-  const titleLower = title.toLowerCase();
-  
-  const highPriorityKeywords = [
-    'legal ai', 'legal engineer', 'legal technology', 'legaltech',
-    'nlp engineer', 'natural language', 'knowledge engineer',
-    'legal data scientist', 'ai product manager', 'prompt engineer',
-    'ai researcher', 'machine learning', 'legal innovation',
-    'practice technology', 'knowledge management', 'litigation technology',
-    'ediscovery', 'e-discovery', 'analytics manager',
-    'ai counsel', 'automation counsel', 'research technology',
-    'solutions engineer', 'legal operations', 'legal ops',
-    'legal tech consultant', 'growth', 'partnerships',
-    'contract manager', 'contract analyst', 'clm',
+  const t = title.toLowerCase();
+
+  const rejectPatterns = [
+    /general application/i, /career opportunities/i, /talent pool/i,
+    /don.t see what/i, /join our team/i,
   ];
-  
-  if (highPriorityKeywords.some(keyword => titleLower.includes(keyword))) {
-    return true;
-  }
-  
-  const techRoles = [
-    'software engineer', 'engineer', 'developer', 'architect',
-    'product manager', 'product owner', 'pm',
-    'designer', 'ux', 'ui', 'design',
-    'data scientist', 'data analyst', 'data engineer',
-    'ai', 'ml', 'machine learning', 'artificial intelligence',
-    'customer success', 'sales engineer', 'account executive',
-    'business development', 'marketing', 'content',
-    'implementation', 'integration', 'technical',
-    'devops', 'sre', 'platform', 'infrastructure',
-    'qa', 'quality', 'test', 'automation',
-    'frontend', 'backend', 'fullstack', 'full stack',
-    'python', 'javascript', 'react', 'node',
-    'innovation', 'transformation', 'digital',
+  if (rejectPatterns.some(p => p.test(t))) return false;
+
+  const hardExclude = [
+    'software engineer', 'backend engineer', 'frontend engineer',
+    'full-stack engineer', 'full stack engineer', 'fullstack engineer',
+    'platform engineer', 'infrastructure engineer', 'site reliability',
+    'devops', 'sre ', 'cloud engineer', 'systems engineer',
+    'data engineer', 'ml engineer', 'mlops', 'machine learning engineer',
+    'ai engineer', 'deep learning', 'computer vision engineer',
+    'firmware engineer', 'embedded engineer', 'hardware engineer',
+    'electronics engineer', 'rf engineer', 'optical engineer',
+    'mechanical engineer', 'spacecraft', 'avionics', 'gnc engineer',
+    'remote sensing engineer', 'telecommunications engineer',
+    'qa engineer', 'test engineer', 'quality engineer', 'sdet',
+    'ux designer', 'ui designer', 'product designer', 'graphic designer',
+    'brand designer', 'visual designer', 'web designer',
+    'it administrator', 'system administrator', 'it engineer',
+    'network engineer', 'security engineer', 'cyber security engineer',
+    'endpoint engineer', 'it support',
+    'react native', 'react engineer', 'node.js', 'python developer',
+    'java developer', 'golang', 'rust engineer',
+    'receptionist', 'office manager', 'janitor', 'facilities',
+    'senior accountant', 'accounting manager', 'controller',
+    'payroll manager', 'global payroll', 'bookkeeper',
+    'recruiter', 'recruiting', 'talent acquisition',
+    'people enablement', 'people program', 'people tech',
+    'people operations', 'human resources', ' hr ',
+    'organizing strategist', 'campaign strategist', 'electoral strategist',
+    'social media manager', 'community manager',
+    'commodity manager', 'supply chain',
+    'global workplace lead', 'reward manager',
+    'engineering manager', 'engineering operations',
   ];
-  
-  const excludeKeywords = [
-    'paralegal', 'legal secretary', 'receptionist', 'assistant',
-    'attorney', 'lawyer', 'counsel', 'associate', 'partner',
-    'litigation', 'corporate', 'real estate', 'tax',
-    'compliance officer', 'general counsel', 'in-house',
-    'administrative', 'office manager', 'hr', 'human resources',
-    'accounting', 'finance', 'controller', 'cfo',
+  if (hardExclude.some(k => t.includes(k))) return false;
+
+  const strongInclude = [
+    'attorney', 'lawyer', 'counsel', 'legal director',
+    'legal engineer', 'legal associate', 'legal analyst',
+    'legal operations', 'legal ops', 'legal project',
+    'legal innovation', 'legal technology', 'legaltech',
+    'paralegal', 'legal secretary', 'legal assistant',
+    'compliance', 'regulatory', 'policy',
+    'contract manager', 'contract analyst', 'contract specialist', 'clm',
+    'ediscovery', 'e-discovery', 'litigation support',
+    'ip specialist', 'brand protection', 'trademark',
+    'patent', 'intellectual property',
+    'knowledge management', 'practice technology',
+    'legal writer', 'legal content', 'editorial manager',
+    'deal desk', 'commercial operations',
+    'tax manager', 'tax director', 'tax counsel',
+    'investment manager', 'investment associate',
+    'risk', 'governance', 'audit',
+    'privacy', 'data protection', 'gdpr', 'ccpa',
+    'government affairs', 'public policy', 'legislative',
+    'threat intelligence', 'investigations',
+    'chief legal', 'deputy director', 'deputy project director',
   ];
-  
-  if (excludeKeywords.some(keyword => titleLower.includes(keyword)) && 
-      !titleLower.includes('technology') && 
-      !titleLower.includes('innovation') &&
-      !titleLower.includes('ai') &&
-      !titleLower.includes('engineer')) {
-    return false;
-  }
-  
-  return techRoles.some(keyword => titleLower.includes(keyword));
+  if (strongInclude.some(k => t.includes(k))) return true;
+
+  const lawyerFriendly = [
+    'customer success', 'customer enablement', 'customer onboarding',
+    'engagement manager', 'engagement associate',
+    'implementation', 'solutions consultant', 'solutions architect',
+    'product manager', 'product lead', 'product owner',
+    'product operations', 'program manager',
+    'enablement manager', 'enablement specialist', 'enablement director',
+    'account executive', 'account manager',
+    'gtm manager', 'gtm director', 'gtm team lead',
+    'business development manager', 'business development director',
+    'chief of staff', 'content strategy', 'content lead',
+    'technical delivery', 'delivery manager',
+    'field enablement', 'sales engineer',
+    'senior program manager',
+  ];
+  if (lawyerFriendly.some(k => t.includes(k))) return true;
+
+  return false;
 }
 
 function inferRoleType(title: string): string {

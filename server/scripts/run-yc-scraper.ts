@@ -12,6 +12,26 @@ const YC_API_TAGS = [
   'https://yc-oss.github.io/api/tags/regtech.json',
 ];
 
+const COMPANY_BLOCKLIST = new Set([
+  'spire', 'cognition', 'pointone', 'point one',
+]);
+
+function isBlockedCompany(name: string, slug: string, description: string): boolean {
+  const n = name.toLowerCase();
+  const d = (description || '').toLowerCase();
+  if (COMPANY_BLOCKLIST.has(n.replace(/[^a-z0-9]/g, '')) || COMPANY_BLOCKLIST.has(slug)) return true;
+
+  const nonLegalIndicators = [
+    'satellite', 'spacecraft', 'space data', 'weather data',
+    'autonomous driving', 'self-driving', 'robotics',
+    'cryptocurrency exchange', 'crypto trading',
+    'game engine', 'video game', 'gaming platform',
+  ];
+  if (nonLegalIndicators.some(ind => d.includes(ind))) return true;
+
+  return false;
+}
+
 function delay(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
@@ -121,10 +141,14 @@ async function main() {
   for (let i = 0; i < companies.length; i++) {
     const c = companies[i];
     const nameNorm = c.name.toLowerCase().replace(/[^a-z0-9]/g, '');
-    const isCoreLegal = (c.tags || []).some((t: string) => ['LegalTech', 'Legal'].includes(t));
 
     if (existingNames.has(nameNorm)) {
       skippedCount++;
+      continue;
+    }
+
+    if (isBlockedCompany(c.name, c.slug, c.one_liner || '')) {
+      console.log(`[${i+1}/${companies.length}] ${c.name}... blocked (not legal tech)`);
       continue;
     }
 
@@ -170,7 +194,7 @@ async function main() {
         }));
       }
 
-      const relevant = isCoreLegal ? scraped : scraped.filter(j => isLegalTechRole(j.title));
+      const relevant = scraped.filter(j => isLegalTechRole(j.title));
 
       if (relevant.length === 0) {
         console.log(`${scraped.length} jobs, 0 relevant (${ats.type})`);
