@@ -2,7 +2,7 @@ import axios from 'axios';
 import * as cheerio from 'cheerio';
 import { LAW_FIRMS_AND_COMPANIES, type LawFirmConfig } from './law-firms-list';
 import type { InsertJob } from '@shared/schema';
-import { categorizeJob, type JobCategorizationResult } from './job-categorizer';
+import { categorizeJob, parseSalaryFromText, type JobCategorizationResult } from './job-categorizer';
 
 interface ScrapedJob {
   title: string;
@@ -291,14 +291,28 @@ export function transformToJobSchema(job: ScrapedJob, categorization?: JobCatego
     .replace(/\s+/g, ' ')
     .trim() || `${job.title} position at ${job.company}`;
   
+  const locationText = job.location?.trim() || 'Not specified';
+  const fullText = `${job.title} ${cleanDescription} ${locationText}`.toLowerCase();
+  const negativeRemote = /\bnot remote\b|\bon[- ]?site only\b|\bin[- ]?office only\b|\bno remote\b/.test(fullText);
+  const hasRemoteSignal = /\bremote\b/.test(fullText) || /\bwork from home\b/.test(fullText) || /\bhybrid\b/.test(fullText) || /\bwfh\b/.test(fullText);
+  const isRemoteDetected = !negativeRemote && (hasRemoteSignal || categorization?.isRemote === true);
+
+  let salaryMin = categorization?.salaryMin || null;
+  let salaryMax = categorization?.salaryMax || null;
+  if (!salaryMin && !salaryMax) {
+    const parsed = parseSalaryFromText(cleanDescription);
+    salaryMin = parsed.min ?? null;
+    salaryMax = parsed.max ?? null;
+  }
+
   return {
     title: job.title.trim(),
     company: job.company.trim(),
     companyLogo: `https://logo.clearbit.com/${companySlug}.com`,
-    location: job.location?.trim() || 'Not specified',
-    isRemote: job.location?.toLowerCase().includes('remote') || false,
-    salaryMin: null,
-    salaryMax: null,
+    location: locationText,
+    isRemote: isRemoteDetected,
+    salaryMin,
+    salaryMax,
     experienceMin: categorization?.experienceMin || null,
     experienceMax: categorization?.experienceMax || null,
     roleType: inferRoleType(job.title),
@@ -580,6 +594,10 @@ export async function scrapeSingleJobUrl(url: string): Promise<InsertJob | null>
     
     if (!scrapedJob) {
       return null;
+    }
+
+    if (!scrapedJob.description || scrapedJob.description.length < 20) {
+      scrapedJob.description = `${scrapedJob.title} position at ${scrapedJob.company}. Location: ${scrapedJob.location || 'Not specified'}.`;
     }
     
     // Categorize the job

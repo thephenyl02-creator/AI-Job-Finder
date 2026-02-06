@@ -10,6 +10,10 @@ export interface JobCategorizationResult {
   matchKeywords: string[];
   experienceMin?: number;
   experienceMax?: number;
+  isRemote?: boolean;
+  salaryMin?: number;
+  salaryMax?: number;
+  employmentType?: string;
 }
 
 export async function categorizeJob(
@@ -65,6 +69,9 @@ Also extract:
   - NEVER combine levels (e.g. never return "Senior/Lead" — pick the single best match)
 - Key skills (5-8 most important technical/domain skills)
 - Experience range: set experienceMin and experienceMax if the posting mentions years of experience. If NOT mentioned, set BOTH to null — do NOT guess or invent experience numbers.
+- Salary: Extract salary/compensation if mentioned. Convert to annual USD amounts. Handle formats like "$120K-$150K", "$120,000 - $150,000/year", "$55/hr". If hourly, multiply by 2080 for annual. Set salaryMin and salaryMax. If only one number, set both to that number. If NOT mentioned, set both to null.
+- Remote: Set isRemote to true if the job is remote, hybrid-remote, or remote-first. Look for "remote", "work from home", "distributed", "hybrid" in both the title AND description. If not mentioned, set to false.
+- Employment type: Set employmentType to one of: "full-time", "part-time", "contract", "temporary", "internship". Default to "full-time" if not specified.
 - Summary (3 sentences max, focus on: what you'll do, what they're looking for, what makes it interesting)
 - Match keywords for search (5-10 relevant terms)
 
@@ -76,11 +83,19 @@ Return ONLY valid JSON:
   "keySkills": ["Python", "NLP", "Legal Domain Knowledge"],
   "experienceMin": 5,
   "experienceMax": 8,
+  "salaryMin": 120000,
+  "salaryMax": 150000,
+  "isRemote": false,
+  "employmentType": "full-time",
   "aiSummary": "Brief 3-sentence summary here.",
   "matchKeywords": ["ai", "machine learning", "legal", "nlp"]
 }
 
-IMPORTANT: experienceMin and experienceMax MUST be null if the job posting does not explicitly state years of experience. Do not infer or assume.`;
+CRITICAL RULES:
+- experienceMin/experienceMax: MUST be null if NOT explicitly stated. Do not guess.
+- salaryMin/salaryMax: MUST be null if NOT explicitly stated. Convert all amounts to annual USD.
+- isRemote: Check BOTH title and description for remote indicators.
+- If the description is very short or empty, rely more heavily on the title for categorization.`;
 
   try {
     const completion = await getOpenAIClient().chat.completions.create({
@@ -112,6 +127,10 @@ IMPORTANT: experienceMin and experienceMax MUST be null if the job posting does 
       matchKeywords: Array.isArray(result.matchKeywords) ? result.matchKeywords.slice(0, 10) : [],
       experienceMin: typeof result.experienceMin === "number" ? result.experienceMin : undefined,
       experienceMax: typeof result.experienceMax === "number" ? result.experienceMax : undefined,
+      isRemote: result.isRemote === true || detectRemote(title, description),
+      salaryMin: typeof result.salaryMin === "number" && result.salaryMin > 0 ? result.salaryMin : undefined,
+      salaryMax: typeof result.salaryMax === "number" && result.salaryMax > 0 ? result.salaryMax : undefined,
+      employmentType: result.employmentType || "full-time",
     };
   } catch (error) {
     console.error("AI categorization error:", error);
@@ -150,6 +169,66 @@ function validateSubcategory(category: string, subcategory: string): string {
     return subcategory;
   }
   return validSubs[0] || subcategory || "Other";
+}
+
+function detectRemote(title: string, description: string): boolean {
+  const text = `${title} ${description}`.toLowerCase();
+  const negativePatterns = /\bnot remote\b|\bon[- ]?site only\b|\bin[- ]?office only\b|\bno remote\b/;
+  if (negativePatterns.test(text)) return false;
+  return /\bremote\b/.test(text) || 
+    /\bwork from home\b/.test(text) || 
+    /\bremote[- ]first\b/.test(text) ||
+    /\bfully remote\b/.test(text) ||
+    /\bhybrid\b/.test(text) ||
+    /\bwfh\b/.test(text);
+}
+
+export function parseSalaryFromText(text: string): { min: number | undefined; max: number | undefined } {
+  const isHourly = /\/\s*h(ou)?r|per\s*hour/i.test(text);
+
+  const hourlyRange = text.match(/\$\s*([\d,.]+)\s*[-–—to]+\s*\$?\s*([\d,.]+)\s*(?:\/\s*h(?:ou)?r|per\s*hour)/i);
+  if (hourlyRange) {
+    const min = Math.round(parseFloat(hourlyRange[1].replace(/,/g, '')) * 2080);
+    const max = Math.round(parseFloat(hourlyRange[2].replace(/,/g, '')) * 2080);
+    if (min >= 20000 && max <= 1000000) return { min, max: max >= min ? max : min };
+  }
+
+  const hourlySingle = text.match(/\$\s*([\d,.]+)\s*(?:\/\s*h(?:ou)?r|per\s*hour)/i);
+  if (hourlySingle) {
+    const val = Math.round(parseFloat(hourlySingle[1].replace(/,/g, '')) * 2080);
+    if (val >= 20000 && val <= 1000000) return { min: val, max: val };
+  }
+
+  const kRange = text.match(/\$\s*([\d,.]+)\s*[kK]\s*[-–—to]+\s*\$?\s*([\d,.]+)\s*[kK]/);
+  if (kRange) {
+    const min = parseFloat(kRange[1].replace(/,/g, '')) * 1000;
+    const max = parseFloat(kRange[2].replace(/,/g, '')) * 1000;
+    if (min >= 20000 && max <= 1000000) return { min, max: max >= min ? max : min };
+  }
+
+  const annualRange = text.match(/\$\s*([\d,]+(?:\.\d+)?)\s*[-–—to]+\s*\$?\s*([\d,]+(?:\.\d+)?)/);
+  if (annualRange && !isHourly) {
+    let min = parseFloat(annualRange[1].replace(/,/g, ''));
+    let max = parseFloat(annualRange[2].replace(/,/g, ''));
+    if (min < 1000) min *= 1000;
+    if (max < 1000) max *= 1000;
+    if (min >= 20000 && max <= 1000000) return { min, max: max >= min ? max : min };
+  }
+
+  const kSingle = text.match(/\$\s*([\d,.]+)\s*[kK]\b/);
+  if (kSingle) {
+    const val = parseFloat(kSingle[1].replace(/,/g, '')) * 1000;
+    if (val >= 20000 && val <= 1000000) return { min: val, max: val };
+  }
+
+  const annualSingle = text.match(/\$\s*([\d,]+(?:\.\d+)?)/);
+  if (annualSingle && !isHourly) {
+    let val = parseFloat(annualSingle[1].replace(/,/g, ''));
+    if (val < 1000) val *= 1000;
+    if (val >= 20000 && val <= 1000000) return { min: val, max: val };
+  }
+
+  return { min: undefined, max: undefined };
 }
 
 const VALID_SENIORITY_LEVELS = ["Intern", "Fellowship", "Entry", "Mid", "Senior", "Lead", "Director", "VP"];
@@ -281,6 +360,7 @@ function fallbackCategorization(
   }
 
   const seniorityLevel = inferSeniority(title, description);
+  const salary = parseSalaryFromText(`${title} ${description}`);
 
   return {
     category,
@@ -289,6 +369,10 @@ function fallbackCategorization(
     keySkills,
     aiSummary: `${title} position at ${company}. Review the full description for detailed requirements and responsibilities.`,
     matchKeywords,
+    isRemote: detectRemote(title, description),
+    salaryMin: salary.min,
+    salaryMax: salary.max,
+    employmentType: "full-time",
   };
 }
 
