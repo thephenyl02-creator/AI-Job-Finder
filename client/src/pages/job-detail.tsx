@@ -215,10 +215,43 @@ function parseFlatText(text: string): Block[] {
   return blocks;
 }
 
+function decodeHtmlEntities(text: string): string {
+  return text
+    .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&')
+    .replace(/&nbsp;/g, ' ').replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'").replace(/&#x27;/g, "'")
+    .replace(/&mdash;/g, '\u2014').replace(/&ndash;/g, '\u2013')
+    .replace(/&ldquo;/g, '\u201C').replace(/&rdquo;/g, '\u201D')
+    .replace(/&lsquo;/g, '\u2018').replace(/&rsquo;/g, '\u2019')
+    .replace(/&bull;/g, '\u2022').replace(/&hellip;/g, '\u2026')
+    .replace(/&trade;/g, '\u2122').replace(/&copy;/g, '\u00A9').replace(/&reg;/g, '\u00AE')
+    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(parseInt(n, 10)))
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, h) => String.fromCharCode(parseInt(h, 16)));
+}
+
+function stripHtmlToText(html: string): string {
+  let text = decodeHtmlEntities(html);
+  text = text.replace(/<br\s*\/?>/gi, '\n');
+  text = text.replace(/<\/(?:p|div|h[1-6]|li|tr|section|article)>/gi, '\n');
+  text = text.replace(/<(?:p|div|h[1-6]|ul|ol|table|tbody|thead|section|article)(?:\s[^>]*)?>/gi, '\n');
+  text = text.replace(/<li(?:\s[^>]*)?>/gi, '- ');
+  text = text.replace(/<[^>]+>/g, '');
+  text = text.replace(/&[a-z]+;/gi, ' ');
+  text = text.replace(/\n{3,}/g, '\n\n');
+  return text.trim();
+}
+
+function cleanDescription(text: string): string {
+  if (text.includes('&lt;') || text.includes('&gt;') || text.includes('&amp;') || /<[a-z][^>]*>/i.test(text)) {
+    return stripHtmlToText(text);
+  }
+  return text;
+}
+
 function DescriptionContent({ text, testId }: { text?: string | null; testId: string }) {
   if (!text) return null;
 
-  const blocks = parseTextIntoBlocks(text);
+  const blocks = parseTextIntoBlocks(cleanDescription(text));
 
   return (
     <div className="max-w-none text-foreground leading-relaxed space-y-2" data-testid={testId}>
