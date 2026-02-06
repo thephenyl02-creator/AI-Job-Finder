@@ -20,6 +20,7 @@ import {
   Target,
   MapPin,
   Building2,
+  Crown,
 } from "lucide-react";
 import {
   ScrollReveal,
@@ -333,8 +334,14 @@ export default function Landing() {
                   <div className="w-9 h-9 rounded-md bg-muted flex items-center justify-center shrink-0">
                     <Target className="h-4 w-4 text-muted-foreground" />
                   </div>
-                  <div>
-                    <h3 className="font-semibold text-foreground mb-1">Resume Matching</h3>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                      <h3 className="font-semibold text-foreground">Resume Matching</h3>
+                      <Badge variant="secondary" className="text-[10px]">
+                        <Crown className="h-2.5 w-2.5 mr-0.5" />
+                        Pro
+                      </Badge>
+                    </div>
                     <p className="text-sm text-muted-foreground leading-relaxed">
                       See a percentage score for every job. Know instantly if your litigation background transfers to that compliance tech role, and get specific suggestions to improve your odds.
                     </p>
@@ -346,8 +353,14 @@ export default function Landing() {
                   <div className="w-9 h-9 rounded-md bg-muted flex items-center justify-center shrink-0">
                     <Bell className="h-4 w-4 text-muted-foreground" />
                   </div>
-                  <div>
-                    <h3 className="font-semibold text-foreground mb-1">Job Alerts</h3>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                      <h3 className="font-semibold text-foreground">Job Alerts</h3>
+                      <Badge variant="secondary" className="text-[10px]">
+                        <Crown className="h-2.5 w-2.5 mr-0.5" />
+                        Pro
+                      </Badge>
+                    </div>
                     <p className="text-sm text-muted-foreground leading-relaxed">
                       Set your criteria once. When a new role matches, you'll know about it before the posting gets buried. Filter by category, seniority, remote, or keywords.
                     </p>
@@ -359,8 +372,14 @@ export default function Landing() {
                   <div className="w-9 h-9 rounded-md bg-muted flex items-center justify-center shrink-0">
                     <BarChart3 className="h-4 w-4 text-muted-foreground" />
                   </div>
-                  <div>
-                    <h3 className="font-semibold text-foreground mb-1">Market Insights</h3>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                      <h3 className="font-semibold text-foreground">Market Insights</h3>
+                      <Badge variant="secondary" className="text-[10px]">
+                        <Crown className="h-2.5 w-2.5 mr-0.5" />
+                        Pro
+                      </Badge>
+                    </div>
                     <p className="text-sm text-muted-foreground leading-relaxed">
                       Understand which legal tech categories are hiring the most, what salary ranges look like, and where demand is growing. Real data, not guesswork.
                     </p>
@@ -372,8 +391,14 @@ export default function Landing() {
                   <div className="w-9 h-9 rounded-md bg-muted flex items-center justify-center shrink-0">
                     <Zap className="h-4 w-4 text-muted-foreground" />
                   </div>
-                  <div>
-                    <h3 className="font-semibold text-foreground mb-1">Resume Tweaks</h3>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                      <h3 className="font-semibold text-foreground">Resume Tweaks</h3>
+                      <Badge variant="secondary" className="text-[10px]">
+                        <Crown className="h-2.5 w-2.5 mr-0.5" />
+                        Pro
+                      </Badge>
+                    </div>
                     <p className="text-sm text-muted-foreground leading-relaxed">
                       Don't rewrite your resume from scratch for every application. See exactly what to adjust for each specific role so your experience reads the way hiring managers expect.
                     </p>

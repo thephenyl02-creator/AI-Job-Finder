@@ -40,7 +40,9 @@ import {
   Target,
   Loader2,
   DollarSign,
+  Crown,
 } from "lucide-react";
+import { useSubscription } from "@/hooks/use-subscription";
 
 const CATEGORY_ICONS: Record<string, typeof Brain> = {
   "Brain": Brain,
@@ -68,6 +70,7 @@ const SENIORITY_LEVELS = [
 export default function Jobs() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const { track } = useActivityTracker();
+  const { isPro } = useSubscription();
   const [, setLocation] = useLocation();
   const searchString = useSearch();
   const urlParams = new URLSearchParams(searchString);
@@ -322,6 +325,23 @@ export default function Jobs() {
             {filteredJobs.length} jobs
           </span>
         </div>
+
+        {!isPro && !resumeData?.hasResume && (
+          <div className="flex items-center gap-3 p-3 rounded-md bg-muted/40 border border-border/50 mb-6" data-testid="banner-pro-teaser">
+            <div className="w-8 h-8 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
+              <Sparkles className="h-4 w-4 text-primary" />
+            </div>
+            <p className="text-sm text-muted-foreground flex-1 min-w-0">
+              Upload your resume to see a match score for every job listed here.
+            </p>
+            <Button variant="ghost" size="sm" asChild className="shrink-0 gap-1">
+              <a href="/pricing">
+                <Crown className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Learn more</span>
+              </a>
+            </Button>
+          </div>
+        )}
 
         <div className="flex flex-wrap gap-2 sm:gap-4 mb-6">
           <div className="flex items-center gap-2 w-full sm:flex-1 sm:w-auto sm:min-w-[200px] sm:max-w-md">

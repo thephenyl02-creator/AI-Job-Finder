@@ -23,7 +23,10 @@ import {
   Pause,
   Play,
   X,
+  Crown,
+  ArrowRight,
 } from "lucide-react";
+import { Link } from "wouter";
 
 const SENIORITY_OPTIONS = ["Intern", "Fellowship", "Entry", "Mid", "Senior", "Lead", "Director", "VP"];
 const CATEGORY_NAMES = Object.keys(JOB_TAXONOMY);
@@ -328,18 +331,6 @@ export default function Alerts() {
   if (authLoading || subLoading) return null;
   if (!isAuthenticated) return null;
 
-  if (!isPro) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Header />
-        <UpgradePrompt
-          feature="Job Alerts"
-          description="Create custom alerts based on categories, keywords, seniority, and remote preferences. Get notified instantly when matching jobs are posted."
-        />
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -354,7 +345,7 @@ export default function Alerts() {
               Get notified when new jobs matching your interests are posted.
             </p>
           </div>
-          {!showForm && (
+          {isPro && !showForm && (
             <Button onClick={() => setShowForm(true)} data-testid="button-new-alert">
               <Plus className="h-4 w-4 mr-2" />
               New Alert
@@ -362,17 +353,56 @@ export default function Alerts() {
           )}
         </div>
 
-        {showForm && (
+        {!isPro && (
+          <Card className="mb-6" data-testid="card-alerts-pro-teaser">
+            <CardContent className="pt-6 pb-6">
+              <div className="text-center mb-5">
+                <div className="w-14 h-14 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Bell className="h-6 w-6 text-primary" />
+                </div>
+                <h2 className="text-lg font-medium text-foreground mb-2">
+                  Never miss a new role
+                </h2>
+                <p className="text-sm text-muted-foreground max-w-md mx-auto mb-1">
+                  Set up alerts for specific categories, keywords, seniority levels, or remote-only roles. We'll notify you the moment a match is posted.
+                </p>
+              </div>
+
+              <div className="rounded-md bg-muted/40 border border-border/50 p-4 mb-5">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">Example alert criteria</p>
+                <div className="flex flex-wrap gap-1.5">
+                  <Badge variant="secondary" className="text-xs">Legal AI & Machine Learning</Badge>
+                  <Badge variant="secondary" className="text-xs">Remote Only</Badge>
+                  <Badge variant="secondary" className="text-xs">Senior+</Badge>
+                  <Badge variant="outline" className="text-xs">Keywords: compliance, product</Badge>
+                </div>
+              </div>
+
+              <div className="text-center">
+                <Link href="/pricing">
+                  <Button className="gap-2" data-testid="button-alerts-upgrade">
+                    <Crown className="h-4 w-4" />
+                    Upgrade to Pro
+                    <ArrowRight className="h-4 w-4" />
+                  </Button>
+                </Link>
+                <p className="text-xs text-muted-foreground mt-2">Starting at $5/month</p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {isPro && showForm && (
           <div className="mb-6">
             <CreateAlertForm onClose={() => setShowForm(false)} />
           </div>
         )}
 
-        {isLoading ? (
+        {isPro && isLoading ? (
           <div className="flex items-center justify-center py-16">
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
           </div>
-        ) : alerts.length === 0 ? (
+        ) : isPro && alerts.length === 0 ? (
           <Card>
             <CardContent className="pt-8 pb-8 text-center">
               <div className="w-14 h-14 bg-muted/60 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -392,13 +422,13 @@ export default function Alerts() {
               )}
             </CardContent>
           </Card>
-        ) : (
+        ) : isPro ? (
           <div className="space-y-3" data-testid="section-alerts-list">
             {alerts.map((alert) => (
               <AlertCard key={alert.id} alert={alert} />
             ))}
           </div>
-        )}
+        ) : null}
 
       </main>
     </div>

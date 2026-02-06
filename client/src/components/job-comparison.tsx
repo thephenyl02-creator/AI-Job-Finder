@@ -23,9 +23,11 @@ import {
   Briefcase,
   TrendingUp,
   Lightbulb,
-  FileText
+  FileText,
+  Crown,
 } from "lucide-react";
 import { useState } from "react";
+import { Link } from "wouter";
 
 interface SkillMatch {
   skill: string;
@@ -152,16 +154,18 @@ export function JobComparison({ jobId, jobTitle, company, hasResume }: JobCompar
 
   if (!hasResume) {
     return (
-      <Button 
-        variant="outline" 
-        size="sm" 
-        disabled 
-        className="gap-1"
-        data-testid="button-compare-disabled"
-      >
-        <Scale className="h-4 w-4" />
-        <span className="hidden sm:inline">Compare</span>
-      </Button>
+      <Link href="/pricing">
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className="gap-1"
+          data-testid="button-compare-teaser"
+        >
+          <Scale className="h-4 w-4" />
+          <span className="hidden sm:inline">See Match</span>
+          <Crown className="h-3 w-3 text-muted-foreground" />
+        </Button>
+      </Link>
     );
   }
 

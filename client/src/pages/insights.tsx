@@ -27,6 +27,8 @@ import {
   MessageSquare,
   BookOpen,
   Loader2,
+  Crown,
+  Lock,
 } from "lucide-react";
 
 interface MarketAnalytics {
@@ -405,24 +407,12 @@ export default function Insights() {
 
   const { data, isLoading } = useQuery<MarketAnalytics>({
     queryKey: ["/api/analytics/market"],
-    enabled: isAuthenticated && isPro,
+    enabled: isAuthenticated,
     staleTime: 5 * 60 * 1000,
   });
 
   if (authLoading || subLoading || isLoading) {
     return <SkeletonDashboard />;
-  }
-
-  if (!isPro) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Header />
-        <UpgradePrompt
-          feature="Market Insights"
-          description="Access comprehensive analytics on the legal tech job market including salary trends, in-demand skills, company breakdowns, and seniority distribution. Ask questions and get data-backed answers from our job listings."
-        />
-      </div>
-    );
   }
 
   if (!data) {
@@ -458,7 +448,56 @@ export default function Insights() {
           </p>
         </div>
 
-        <InsightsChat />
+        {isPro ? (
+          <InsightsChat />
+        ) : (
+          <Card className="mb-10 relative" data-testid="section-insights-chat-locked">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base font-medium flex items-center gap-2">
+                <MessageSquare className="h-4 w-4 text-muted-foreground" />
+                Ask about the market
+                <Badge variant="secondary" className="text-[10px]">
+                  <Crown className="h-2.5 w-2.5 mr-0.5" />
+                  Pro
+                </Badge>
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Ask questions about the legal tech job market. Answers are backed by real data from our job listings.
+              </p>
+            </CardHeader>
+            <CardContent>
+              <div className="relative">
+                <div className="opacity-40 pointer-events-none select-none">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
+                    Try asking
+                  </p>
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {SUGGESTED_QUESTIONS.slice(0, 4).map((q, i) => (
+                      <div key={i} className="text-xs py-2.5 px-3 rounded-md border border-border/60 text-muted-foreground">
+                        {q}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="absolute inset-0 flex items-center justify-center bg-background/60 backdrop-blur-[2px] rounded-md">
+                  <div className="text-center">
+                    <Lock className="h-5 w-5 text-muted-foreground mx-auto mb-2" />
+                    <p className="text-sm font-medium text-foreground mb-1">Ask data-backed questions</p>
+                    <p className="text-xs text-muted-foreground mb-3 max-w-xs">
+                      Pro members can ask natural language questions and get answers backed by real job market data.
+                    </p>
+                    <Link href="/pricing">
+                      <Button size="sm" className="gap-1.5" data-testid="button-insights-upgrade">
+                        <Crown className="h-3.5 w-3.5" />
+                        Upgrade to Pro
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-10">
           <StatCard

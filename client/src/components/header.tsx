@@ -77,6 +77,14 @@ export function Header() {
         <div className="flex items-center gap-2">
           {isAuthenticated ? (
             <>
+              {!isPro && (
+                <Link href="/pricing">
+                  <Button variant="ghost" size="sm" className="hidden sm:inline-flex gap-1.5 text-muted-foreground" data-testid="link-upgrade-pro">
+                    <Crown className="h-3.5 w-3.5" />
+                    Upgrade
+                  </Button>
+                </Link>
+              )}
               <NotificationBell />
               <ThemeToggle />
               <DropdownMenu>

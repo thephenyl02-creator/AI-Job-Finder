@@ -2144,8 +2144,8 @@ Return a JSON response with this exact structure:
     }
   });
 
-  // ===== Market Analytics (Pro only) =====
-  app.get("/api/analytics/market", isAuthenticated, requirePro, async (req, res) => {
+  // ===== Market Analytics (accessible to all authenticated users for soft paywall) =====
+  app.get("/api/analytics/market", isAuthenticated, async (req, res) => {
     try {
       const allJobs = await storage.getActiveJobs();
 

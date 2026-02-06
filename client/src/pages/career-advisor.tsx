@@ -40,8 +40,10 @@ import {
   ChevronDown,
   ChevronRight,
   Link2,
-  ExternalLink
+  ExternalLink,
+  Crown,
 } from "lucide-react";
+import { Link } from "wouter";
 
 interface JobInput {
   id: string;
@@ -479,18 +481,6 @@ export default function CareerAdvisor() {
     return null;
   }
 
-  if (!isPro) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Header />
-        <UpgradePrompt
-          feature="Career Advisor"
-          description="Compare 2-3 job opportunities side-by-side with strategic analysis, fit scoring, and personalized recommendations based on your resume."
-        />
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -798,28 +788,45 @@ export default function CareerAdvisor() {
             </div>
 
             <div className="flex flex-col items-center gap-4 pt-8">
-              <Button
-                size="lg"
-                onClick={handleCompare}
-                disabled={compareMutation.isPending || jobs.filter((j) => j.description.length > 50).length < 2}
-                className="gap-2 px-10 h-12 shadow-lg text-base"
-                data-testid="button-compare-jobs"
-              >
-                {compareMutation.isPending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Analyzing careers...
-                  </>
-                ) : (
-                  <>
-                    <Scale className="h-4 w-4" />
-                    Analyze & Compare
-                  </>
-                )}
-              </Button>
-              <p className="text-sm text-muted-foreground">
-                Get strategic insights in under 30 seconds
-              </p>
+              {isPro ? (
+                <>
+                  <Button
+                    size="lg"
+                    onClick={handleCompare}
+                    disabled={compareMutation.isPending || jobs.filter((j) => j.description.length > 50).length < 2}
+                    className="gap-2 px-10 h-12 shadow-lg text-base"
+                    data-testid="button-compare-jobs"
+                  >
+                    {compareMutation.isPending ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Analyzing careers...
+                      </>
+                    ) : (
+                      <>
+                        <Scale className="h-4 w-4" />
+                        Analyze & Compare
+                      </>
+                    )}
+                  </Button>
+                  <p className="text-sm text-muted-foreground">
+                    Get strategic insights in under 30 seconds
+                  </p>
+                </>
+              ) : (
+                <div className="text-center max-w-md">
+                  <p className="text-sm text-muted-foreground mb-3">
+                    Add your jobs above, then upgrade to run the comparison and get strategic analysis.
+                  </p>
+                  <Link href="/pricing">
+                    <Button size="lg" className="gap-2 px-10 h-12 text-base" data-testid="button-advisor-upgrade">
+                      <Crown className="h-4 w-4" />
+                      Upgrade to Compare
+                    </Button>
+                  </Link>
+                  <p className="text-xs text-muted-foreground mt-2">Starting at $5/month</p>
+                </div>
+              )}
             </div>
           </div>
         ) : (
