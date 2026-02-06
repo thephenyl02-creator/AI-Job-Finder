@@ -33,9 +33,13 @@ A freemium SaaS job search platform for legal technology careers, built specific
 - **Migrations**: Drizzle Kit
 
 ### Authentication
-- **Provider**: Replit Auth (OpenID Connect)
-- **Session Storage**: PostgreSQL-backed sessions using `connect-pg-simple`
-- **Implementation**: Passport.js with custom Replit OIDC strategy
+- **Provider**: Custom email/password auth + Google OAuth 2.0 (optional)
+- **Email/Password**: bcryptjs hashing (12 salt rounds), registration with validation
+- **Google OAuth**: Authorization code flow, account linking by verified email, CSRF protection via state parameter. Requires GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET secrets. Gracefully disabled when credentials not set.
+- **Session Storage**: PostgreSQL-backed sessions using `connect-pg-simple` (7-day TTL)
+- **Schema Fields**: `password` (hashed), `googleId` (for OAuth linking) on users table
+- **Auth Endpoints**: `/api/auth/register`, `/api/auth/login`, `/api/auth/logout`, `/api/auth/user`, `/api/auth/is-admin`, `/api/auth/providers`, `/api/auth/google`, `/api/auth/google/callback`
+- **Key Files**: `server/replit_integrations/auth/replitAuth.ts`, `server/replit_integrations/auth/storage.ts`, `client/src/pages/auth.tsx`, `client/src/hooks/use-auth.ts`
 
 ### AI Integration
 - **Provider**: OpenAI API (via Replit AI Integrations)

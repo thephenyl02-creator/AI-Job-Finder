@@ -2,6 +2,7 @@ import session from "express-session";
 import type { Express, RequestHandler } from "express";
 import connectPg from "connect-pg-simple";
 import bcrypt from "bcryptjs";
+import { randomBytes } from "crypto";
 import { authStorage } from "./storage";
 
 declare module "express-session" {
@@ -34,9 +35,7 @@ export function getSession() {
 }
 
 function generateState(): string {
-  const array = new Uint8Array(32);
-  crypto.getRandomValues(array);
-  return Array.from(array, (b) => b.toString(16).padStart(2, "0")).join("");
+  return randomBytes(32).toString("hex");
 }
 
 export async function setupAuth(app: Express) {
@@ -163,8 +162,12 @@ export async function setupAuth(app: Express) {
 
       delete req.session.oauthState;
 
-      const clientId = process.env.GOOGLE_CLIENT_ID!;
-      const clientSecret = process.env.GOOGLE_CLIENT_SECRET!;
+      const clientId = process.env.GOOGLE_CLIENT_ID;
+      const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+      if (!clientId || !clientSecret) {
+        console.error("Google OAuth credentials not configured");
+        return res.redirect("/auth?error=google_failed");
+      }
       const redirectUri = `${getBaseUrl(req)}/api/auth/google/callback`;
 
       const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
@@ -196,14 +199,19 @@ export async function setupAuth(app: Express) {
       }
 
       const googleUser = await userInfoResponse.json();
-      const { id: googleId, email, given_name: firstName, family_name: lastName, picture: profileImageUrl } = googleUser;
+      const { id: googleId, email, verified_email, given_name: firstName, family_name: lastName, picture: profileImageUrl } = googleUser;
+
+      if (!email || !verified_email) {
+        console.error("Google account email not verified");
+        return res.redirect("/auth?error=google_failed");
+      }
 
       // Account linking logic:
       // 1. Check if user exists with this Google ID
       let user = await authStorage.getUserByGoogleId(googleId);
 
-      if (!user && email) {
-        // 2. Check if user exists with this email - link accounts
+      if (!user) {
+        // 2. Check if user exists with this email - link accounts (only if email is verified)
         const existingUser = await authStorage.getUserByEmail(email);
         if (existingUser) {
           user = await authStorage.linkGoogleAccount(existingUser.id, googleId, {
