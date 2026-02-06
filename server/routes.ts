@@ -2515,6 +2515,121 @@ ${platformContext}`;
     }
   });
 
+  app.post("/api/match/discuss", isAuthenticated, requirePro, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const userId = user?.claims?.sub;
+      const { message, history, matchContext } = req.body;
+
+      if (!message || typeof message !== "string" || message.trim().length < 2) {
+        return res.status(400).json({ error: "Please provide a message." });
+      }
+
+      if (!matchContext?.jobId) {
+        return res.status(400).json({ error: "Match context required." });
+      }
+
+      const conversationHistory: { role: "user" | "assistant"; content: string }[] = Array.isArray(history)
+        ? history.slice(-8).map((h: any) => ({
+            role: h.role === "assistant" ? "assistant" as const : "user" as const,
+            content: String(h.content).slice(0, 2000),
+          }))
+        : [];
+
+      const job = await storage.getJob(Number(matchContext.jobId));
+      if (!job) {
+        return res.status(404).json({ error: "Job not found." });
+      }
+
+      let resumeContext = "";
+      if (userId) {
+        const primaryResume = await storage.getPrimaryResume(userId);
+        if (primaryResume) {
+          const extracted = primaryResume.extractedData as any;
+          resumeContext = `
+USER'S RESUME:
+${extracted?.skills?.length ? `Skills: ${extracted.skills.join(", ")}` : ""}
+${extracted?.experience ? `Experience: ${JSON.stringify(extracted.experience).slice(0, 1200)}` : ""}
+${extracted?.education ? `Education: ${JSON.stringify(extracted.education).slice(0, 500)}` : ""}
+${extracted?.yearsOfExperience ? `Years of Experience: ${extracted.yearsOfExperience}` : ""}
+${primaryResume.resumeText ? `Full Resume:\n${primaryResume.resumeText.slice(0, 2000)}` : ""}`;
+        }
+      }
+
+      const salaryInfo = job.salaryMin || job.salaryMax
+        ? `Salary: ${job.salaryMin ? `$${job.salaryMin.toLocaleString()}` : ""}${job.salaryMin && job.salaryMax ? " - " : ""}${job.salaryMax ? `$${job.salaryMax.toLocaleString()}` : ""}`
+        : "Salary: Not disclosed";
+
+      const matchDetails = `
+MATCH ANALYSIS RESULTS:
+Match Score: ${matchContext.matchScore}%
+Tweak Needed: ${matchContext.tweakPercentage}%
+Verdict: ${matchContext.brutalVerdict}
+${matchContext.matchHighlights?.length ? `Strengths: ${matchContext.matchHighlights.join("; ")}` : ""}
+${matchContext.gapSummary ? `Gaps: ${matchContext.gapSummary}` : ""}
+${matchContext.topMissingSkills?.length ? `Missing Skills: ${matchContext.topMissingSkills.join(", ")}` : ""}`;
+
+      const jobDetails = `
+JOB DETAILS:
+Title: ${job.title}
+Company: ${job.company}
+Location: ${job.location || "Not specified"}
+${job.isRemote ? "Remote: Yes" : ""}
+${salaryInfo}
+Seniority: ${job.seniorityLevel || "Not specified"}
+Category: ${job.roleCategory || "Not specified"}
+${job.roleSubcategory ? `Specialization: ${job.roleSubcategory}` : ""}
+${job.keySkills?.length ? `Key Skills: ${job.keySkills.join(", ")}` : ""}
+Summary: ${job.aiSummary || "No summary available"}
+Description:
+${(job.description || "").slice(0, 3000)}
+${job.requirements ? `Requirements:\n${job.requirements.slice(0, 1500)}` : ""}`;
+
+      const systemPrompt = `You are a career advisor helping a legal professional understand how well they match with a specific job opportunity. You have their resume, the full job details, and the match analysis results.
+
+YOUR ROLE:
+- Help the user understand their match with this specific job
+- Explain what parts of their background align well and what gaps exist
+- Give honest, actionable advice on whether to apply and how to position themselves
+- Suggest specific ways to strengthen their application
+- Answer any questions about the role, company, or what the job involves day-to-day
+
+GUIDELINES:
+- Be direct and honest but constructive. Don't sugarcoat, but always offer a path forward
+- Use plain language. If you use a technical term, explain it
+- Keep responses focused and practical. Short paragraphs, bullet points for lists
+- Reference specific details from their resume and the job posting
+- Never say "based on the data" or "according to the analysis" - speak naturally as a knowledgeable advisor
+- Use **bold** for key points. Use - for bullet points
+- If the user asks something you don't have data for, say so honestly
+
+${resumeContext}
+
+${jobDetails}
+
+${matchDetails}`;
+
+      const messages: { role: "system" | "user" | "assistant"; content: string }[] = [
+        { role: "system", content: systemPrompt },
+        ...conversationHistory,
+        { role: "user", content: message.trim() },
+      ];
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages,
+        temperature: 0.6,
+        max_tokens: 1200,
+      });
+
+      const reply = completion.choices[0]?.message?.content || "I'm sorry, I couldn't generate a response. Please try again.";
+      res.json({ reply });
+    } catch (error) {
+      console.error("Match discussion error:", error);
+      res.status(500).json({ error: "Failed to process your question. Please try again." });
+    }
+  });
+
   // =============================================
   // User Activity & Persona Routes
   // =============================================

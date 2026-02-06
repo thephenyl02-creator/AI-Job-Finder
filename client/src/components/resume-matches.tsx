@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useLocation } from "wouter";
@@ -37,6 +37,8 @@ import {
   Eye,
   MapPin,
   Building2,
+  MessageCircle,
+  Send,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -153,14 +155,278 @@ function ImpactBadge({ impact }: { impact: string }) {
   );
 }
 
+interface DiscussChatMessage {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+}
+
+function formatMarkdown(text: string) {
+  const parts: (string | JSX.Element)[] = [];
+  const lines = text.split("\n");
+  let key = 0;
+
+  for (const line of lines) {
+    if (line.trim().startsWith("- ")) {
+      parts.push(
+        <div key={key++} className="flex gap-2 pl-2 py-0.5">
+          <span className="text-muted-foreground shrink-0 mt-0.5">&bull;</span>
+          <span>{renderInlineBold(line.trim().slice(2), key)}</span>
+        </div>
+      );
+    } else if (line.trim() === "") {
+      parts.push(<div key={key++} className="h-2" />);
+    } else {
+      parts.push(<p key={key++} className="leading-relaxed">{renderInlineBold(line, key)}</p>);
+    }
+  }
+  return parts;
+}
+
+function renderInlineBold(text: string, parentKey: number) {
+  const boldPattern = /\*\*(.*?)\*\*/g;
+  const parts: (string | JSX.Element)[] = [];
+  let lastIndex = 0;
+  let match;
+  let i = 0;
+
+  while ((match = boldPattern.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(text.slice(lastIndex, match.index));
+    }
+    parts.push(<strong key={`${parentKey}-b-${i++}`} className="font-semibold">{match[1]}</strong>);
+    lastIndex = match.index + match[0].length;
+  }
+
+  if (lastIndex < text.length) {
+    parts.push(text.slice(lastIndex));
+  }
+
+  return parts.length === 1 && typeof parts[0] === "string" ? parts[0] : <>{parts}</>;
+}
+
+function MatchDiscussPanel({
+  match,
+  isOpen,
+  onClose,
+}: {
+  match: BatchMatchResult;
+  isOpen: boolean;
+  onClose: () => void;
+}) {
+  const [messages, setMessages] = useState<DiscussChatMessage[]>([]);
+  const [input, setInput] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages]);
+
+  useEffect(() => {
+    if (isOpen && inputRef.current) {
+      setTimeout(() => inputRef.current?.focus(), 300);
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setMessages([]);
+      setInput("");
+    }
+  }, [isOpen]);
+
+  const sendMessage = async (text?: string) => {
+    const msgText = text || input.trim();
+    if (!msgText || isLoading) return;
+
+    const userMsg: DiscussChatMessage = {
+      id: `user-${Date.now()}`,
+      role: "user",
+      content: msgText,
+    };
+
+    setMessages((prev) => [...prev, userMsg]);
+    setInput("");
+    setIsLoading(true);
+
+    try {
+      const history = [...messages, userMsg].map((m) => ({ role: m.role, content: m.content }));
+
+      const res = await apiRequest("POST", "/api/match/discuss", {
+        message: msgText,
+        history,
+        matchContext: {
+          jobId: match.jobId,
+          matchScore: match.matchScore,
+          tweakPercentage: match.tweakPercentage,
+          brutalVerdict: match.brutalVerdict,
+          matchHighlights: match.matchHighlights,
+          gapSummary: match.gapSummary,
+          topMissingSkills: match.topMissingSkills,
+        },
+      });
+
+      const data = await res.json();
+
+      const assistantMsg: DiscussChatMessage = {
+        id: `assistant-${Date.now()}`,
+        role: "assistant",
+        content: data.reply || "Sorry, I couldn't process that. Please try again.",
+      };
+
+      setMessages((prev) => [...prev, assistantMsg]);
+    } catch {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `error-${Date.now()}`,
+          role: "assistant",
+          content: "Something went wrong. Please try again in a moment.",
+        },
+      ]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  };
+
+  const chips = [
+    "Why did I get this score?",
+    "Should I apply?",
+    "How do I close the gaps?",
+    "What does this role involve day-to-day?",
+  ];
+
+  return (
+    <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <SheetContent className="w-full sm:max-w-lg flex flex-col" data-testid={`sheet-discuss-match-${match.jobId}`}>
+        <SheetHeader className="shrink-0">
+          <SheetTitle className="flex items-center gap-2 text-left">
+            <MessageCircle className="h-5 w-5" />
+            Discuss This Match
+          </SheetTitle>
+          <SheetDescription className="text-left">
+            {match.title} at {match.company} &middot; {match.matchScore}% match
+          </SheetDescription>
+        </SheetHeader>
+
+        <div className="flex-1 flex flex-col min-h-0 mt-4">
+          <div ref={scrollRef} className="flex-1 overflow-y-auto space-y-3 pr-1">
+            {messages.length === 0 && (
+              <div className="flex flex-col items-center text-center py-8 space-y-4">
+                <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
+                  <MessageCircle className="h-6 w-6 text-muted-foreground" />
+                </div>
+                <div>
+                  <p className="font-medium text-foreground text-sm" data-testid="text-discuss-greeting">
+                    Ask anything about this match
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1 max-w-sm">
+                    I have your resume, the full job posting, and the match analysis. Ask me why you scored {match.matchScore}%, what to do about gaps, or whether this role is right for you.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2 justify-center">
+                  {chips.map((chip) => (
+                    <Badge
+                      key={chip}
+                      variant="outline"
+                      onClick={() => sendMessage(chip)}
+                      className="cursor-pointer text-xs"
+                      data-testid={`button-discuss-chip-${chip.slice(0, 15).replace(/\s+/g, '-').toLowerCase()}`}
+                    >
+                      {chip}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {messages.map((msg) => (
+              <div
+                key={msg.id}
+                className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                data-testid={`discuss-message-${msg.role}-${msg.id}`}
+              >
+                <div
+                  className={`max-w-[85%] rounded-lg px-3 py-2 text-sm ${
+                    msg.role === "user"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-foreground"
+                  }`}
+                >
+                  {msg.role === "assistant" ? (
+                    <div className="space-y-1">{formatMarkdown(msg.content)}</div>
+                  ) : (
+                    msg.content
+                  )}
+                </div>
+              </div>
+            ))}
+
+            {isLoading && (
+              <div className="flex justify-start">
+                <div className="bg-muted rounded-lg px-3 py-2 flex items-center gap-2">
+                  <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground">Analyzing...</span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="border-t pt-3 mt-3 shrink-0">
+            <div className="flex items-end gap-2">
+              <textarea
+                ref={inputRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Ask about this match..."
+                rows={1}
+                className="flex-1 resize-none bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none min-h-[36px] max-h-[80px] py-2 border-b border-border"
+                style={{ height: "36px" }}
+                onInput={(e) => {
+                  const target = e.target as HTMLTextAreaElement;
+                  target.style.height = "36px";
+                  target.style.height = Math.min(target.scrollHeight, 80) + "px";
+                }}
+                data-testid={`input-discuss-message-${match.jobId}`}
+              />
+              <Button
+                size="icon"
+                onClick={() => sendMessage()}
+                disabled={!input.trim() || isLoading}
+                data-testid={`button-send-discuss-${match.jobId}`}
+              >
+                <Send className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
 function MatchCard({
   match,
   onTweak,
   onViewJob,
+  onDiscuss,
 }: {
   match: BatchMatchResult;
   onTweak: () => void;
   onViewJob: () => void;
+  onDiscuss: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
 
@@ -269,18 +535,28 @@ function MatchCard({
             </CollapsibleContent>
           </Collapsible>
 
-          <div className="flex items-center gap-2 pt-1">
+          <div className="flex items-center gap-2 pt-1 flex-wrap">
             <Button
+              size="sm"
+              onClick={onDiscuss}
+              className="gap-1.5"
+              data-testid={`button-discuss-match-${match.jobId}`}
+            >
+              <MessageCircle className="h-3.5 w-3.5" />
+              Discuss This Match
+            </Button>
+            <Button
+              variant="outline"
               size="sm"
               onClick={onTweak}
               className="gap-1.5"
               data-testid={`button-tweak-resume-${match.jobId}`}
             >
               <Wrench className="h-3.5 w-3.5" />
-              Tweak Resume for This Job
+              Tweak Resume
             </Button>
             <Button
-              variant="outline"
+              variant="ghost"
               size="sm"
               onClick={onViewJob}
               className="gap-1.5"
@@ -562,6 +838,8 @@ export function ResumeMatches({ hasResume }: { hasResume: boolean }) {
   const [, setLocation] = useLocation();
   const [selectedJob, setSelectedJob] = useState<BatchMatchResult | null>(null);
   const [tweakSheetOpen, setTweakSheetOpen] = useState(false);
+  const [discussMatch, setDiscussMatch] = useState<BatchMatchResult | null>(null);
+  const [discussSheetOpen, setDiscussSheetOpen] = useState(false);
 
   const {
     data: matchData,
@@ -592,6 +870,11 @@ export function ResumeMatches({ hasResume }: { hasResume: boolean }) {
 
   const handleViewJob = (jobId: number) => {
     setLocation(`/jobs/${jobId}`);
+  };
+
+  const handleDiscuss = (match: BatchMatchResult) => {
+    setDiscussMatch(match);
+    setDiscussSheetOpen(true);
   };
 
   if (!hasResume) return null;
@@ -669,6 +952,7 @@ export function ResumeMatches({ hasResume }: { hasResume: boolean }) {
                   match={match}
                   onTweak={() => handleTweak(match)}
                   onViewJob={() => handleViewJob(match.jobId)}
+                  onDiscuss={() => handleDiscuss(match)}
                 />
               </motion.div>
             ))}
@@ -702,6 +986,17 @@ export function ResumeMatches({ hasResume }: { hasResume: boolean }) {
           </ScrollArea>
         </SheetContent>
       </Sheet>
+
+      {discussMatch && (
+        <MatchDiscussPanel
+          match={discussMatch}
+          isOpen={discussSheetOpen}
+          onClose={() => {
+            setDiscussSheetOpen(false);
+            setDiscussMatch(null);
+          }}
+        />
+      )}
     </div>
   );
 }

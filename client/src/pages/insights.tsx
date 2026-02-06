@@ -12,7 +12,6 @@ import { UpgradePrompt } from "@/components/upgrade-prompt";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Link } from "wouter";
-import { ContextualPrompt } from "@/components/contextual-prompt";
 import {
   Briefcase,
   Building2,
@@ -745,7 +744,6 @@ export default function Insights() {
           </div>
         </div>
 
-        <ContextualPrompt pageContext="insights" className="mt-6" />
       </main>
     </div>
   );

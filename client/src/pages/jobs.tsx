@@ -15,7 +15,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
 import { motion, AnimatePresence } from "framer-motion";
 import { ScrollReveal, StaggerContainer, StaggerItem } from "@/components/animations";
-import { ContextualPrompt } from "@/components/contextual-prompt";
 import {
   ExternalLink,
   Search,
@@ -688,8 +687,6 @@ export default function Jobs() {
             )}
           </div>
         )}
-
-        <ContextualPrompt pageContext="search" searchQuery={searchQuery || undefined} className="mt-4" />
 
         <AnimatePresence>
           {selectedJobIds.size > 0 && (

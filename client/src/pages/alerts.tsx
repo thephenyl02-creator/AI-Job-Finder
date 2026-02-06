@@ -15,7 +15,6 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { JOB_TAXONOMY } from "@shared/schema";
 import type { JobAlert } from "@shared/schema";
-import { ContextualPrompt } from "@/components/contextual-prompt";
 import {
   Bell,
   Plus,
@@ -401,7 +400,6 @@ export default function Alerts() {
           </div>
         )}
 
-        <ContextualPrompt pageContext="alerts" className="mt-6" />
       </main>
     </div>
   );

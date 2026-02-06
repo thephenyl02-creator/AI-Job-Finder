@@ -18,7 +18,6 @@ import { apiRequest } from "@/lib/queryClient";
 import type { Job } from "@shared/schema";
 import { motion } from "framer-motion";
 import { ScrollReveal } from "@/components/animations";
-import { ContextualPrompt } from "@/components/contextual-prompt";
 import { 
   Loader2, 
   Plus, 
@@ -831,7 +830,6 @@ export default function CareerAdvisor() {
           />
         )}
 
-        <ContextualPrompt pageContext="career-advisor" className="mt-6" />
       </main>
 
       {showJobPicker && (

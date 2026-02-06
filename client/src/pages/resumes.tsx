@@ -13,7 +13,6 @@ import { useActivityTracker } from "@/hooks/use-activity-tracker";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Resume, ResumeExtractedData } from "@shared/schema";
-import { ContextualPrompt } from "@/components/contextual-prompt";
 import {
   FileText,
   Upload,
@@ -1016,7 +1015,6 @@ export default function Resumes() {
           </div>
         </div>
 
-        <ContextualPrompt pageContext="resumes" className="mt-6" />
       </main>
     </div>
   );
