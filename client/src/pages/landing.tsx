@@ -72,9 +72,9 @@ function shortenLocation(location: string): string {
 
 export default function Landing() {
   usePageTitle();
-  const { data: stats } = useQuery<Stats>({
+  const { data: stats, dataUpdatedAt } = useQuery<Stats>({
     queryKey: ["/api/stats"],
-    refetchInterval: 15000,
+    refetchInterval: 10000,
   });
 
   const { data: featuredJobs } = useQuery<FeaturedJob[]>({
@@ -277,40 +277,55 @@ export default function Landing() {
               </ScrollReveal>
             </div>
 
-            <ScrollReveal delay={0.6}>
-              <div className="grid grid-cols-3 gap-2 sm:gap-4 mt-10 sm:mt-14" data-testid="stats-section">
-                <div className="rounded-md bg-primary/10 dark:bg-primary/15 p-3 sm:p-5 text-center" data-testid="stat-jobs">
-                  <div className="text-xl sm:text-3xl font-serif font-semibold text-primary tabular-nums">
-                    {stats?.totalJobs ? (
-                      <AnimatedCounter value={stats.totalJobs} duration={2} />
-                    ) : (
-                      "\u2014"
-                    )}
-                  </div>
-                  <div className="text-xs sm:text-sm text-primary/70 dark:text-primary/60 mt-0.5 font-medium">Open positions</div>
+          </div>
+        </section>
+
+        <section className="border-t border-border/40 bg-primary/[0.04] dark:bg-primary/[0.08]" data-testid="stats-section">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
+            <div className="flex items-center justify-center gap-2 mb-5">
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
+              </span>
+              <span className="text-sm font-medium text-foreground/80" data-testid="stats-live-label">Live Platform Stats</span>
+              {dataUpdatedAt ? (
+                <span className="text-xs text-muted-foreground ml-1">
+                  Updated {new Date(dataUpdatedAt).toLocaleTimeString()}
+                </span>
+              ) : null}
+            </div>
+            <div className="grid grid-cols-3 gap-4 sm:gap-8">
+              <div className="text-center" data-testid="stat-jobs">
+                <div className="text-3xl sm:text-5xl font-serif font-bold text-foreground tabular-nums tracking-tight">
+                  {stats?.totalJobs ? (
+                    <AnimatedCounter value={stats.totalJobs} duration={2} />
+                  ) : (
+                    <span className="text-muted-foreground/40">&mdash;</span>
+                  )}
                 </div>
-                <div className="rounded-md bg-chart-2/10 dark:bg-chart-2/15 p-3 sm:p-5 text-center" data-testid="stat-companies">
-                  <div className="text-xl sm:text-3xl font-serif font-semibold text-chart-2 tabular-nums">
-                    {stats?.totalCompanies ? (
-                      <AnimatedCounter value={stats.totalCompanies} duration={1.6} />
-                    ) : (
-                      "\u2014"
-                    )}
-                  </div>
-                  <div className="text-xs sm:text-sm text-chart-2/70 dark:text-chart-2/60 mt-0.5 font-medium">Companies hiring</div>
-                </div>
-                <div className="rounded-md bg-chart-4/10 dark:bg-chart-4/15 p-3 sm:p-5 text-center" data-testid="stat-categories">
-                  <div className="text-xl sm:text-3xl font-serif font-semibold text-chart-4 tabular-nums">
-                    {stats?.totalCategories ? (
-                      <AnimatedCounter value={stats.totalCategories} duration={1.2} />
-                    ) : (
-                      "\u2014"
-                    )}
-                  </div>
-                  <div className="text-xs sm:text-sm text-chart-4/70 dark:text-chart-4/60 mt-0.5 font-medium">Career paths</div>
-                </div>
+                <div className="text-xs sm:text-sm text-muted-foreground mt-1.5 font-medium uppercase tracking-wide">Open Positions</div>
               </div>
-            </ScrollReveal>
+              <div className="text-center border-x border-border/40" data-testid="stat-companies">
+                <div className="text-3xl sm:text-5xl font-serif font-bold text-foreground tabular-nums tracking-tight">
+                  {stats?.totalCompanies ? (
+                    <AnimatedCounter value={stats.totalCompanies} duration={1.6} />
+                  ) : (
+                    <span className="text-muted-foreground/40">&mdash;</span>
+                  )}
+                </div>
+                <div className="text-xs sm:text-sm text-muted-foreground mt-1.5 font-medium uppercase tracking-wide">Companies Hiring</div>
+              </div>
+              <div className="text-center" data-testid="stat-categories">
+                <div className="text-3xl sm:text-5xl font-serif font-bold text-foreground tabular-nums tracking-tight">
+                  {stats?.totalCategories ? (
+                    <AnimatedCounter value={stats.totalCategories} duration={1.2} />
+                  ) : (
+                    <span className="text-muted-foreground/40">&mdash;</span>
+                  )}
+                </div>
+                <div className="text-xs sm:text-sm text-muted-foreground mt-1.5 font-medium uppercase tracking-wide">Career Paths</div>
+              </div>
+            </div>
           </div>
         </section>
 
