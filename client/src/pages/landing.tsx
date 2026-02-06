@@ -46,12 +46,14 @@ export default function Landing() {
     <div className="min-h-screen bg-background overflow-hidden">
       <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border/40">
         <nav className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3" data-testid="logo-landing">
-            <Scale className="h-6 w-6 text-foreground" />
-            <span className="text-base font-semibold text-foreground tracking-tight">
-              Legal Tech Careers
-            </span>
-          </div>
+          <Link href="/">
+            <div className="flex items-center gap-3 cursor-pointer" data-testid="logo-landing">
+              <Scale className="h-6 w-6 text-foreground" />
+              <span className="text-base font-semibold text-foreground tracking-tight">
+                Legal Tech Careers
+              </span>
+            </div>
+          </Link>
           <div className="flex items-center gap-3">
             <Link href="/pricing">
               <Button variant="ghost" size="sm" className="text-muted-foreground" data-testid="link-landing-pricing">
@@ -102,19 +104,22 @@ export default function Landing() {
               </ScrollReveal>
 
               <ScrollReveal delay={0.5}>
-                <div className="flex flex-col sm:flex-row items-start gap-3 mb-16">
+                <div className="flex flex-col sm:flex-row items-start gap-3 mb-6">
                   <Button size="lg" asChild className="text-base px-8" data-testid="button-hero-get-started">
                     <a href="/api/login">
                       Browse Open Roles
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </a>
                   </Button>
-                  <Button size="lg" variant="outline" asChild className="text-base" data-testid="button-hero-post-job">
-                    <a href="/post-job">
-                      Post a Job
-                    </a>
-                  </Button>
+                  <Link href="/pricing">
+                    <Button size="lg" variant="outline" className="text-base" data-testid="button-hero-pricing">
+                      See Pricing
+                    </Button>
+                  </Link>
                 </div>
+                <p className="text-sm text-muted-foreground mb-16" data-testid="text-hero-free-note">
+                  Free to browse. No credit card required.
+                </p>
               </ScrollReveal>
 
               <ScrollReveal delay={0.6}>
@@ -357,29 +362,77 @@ export default function Landing() {
           <div className="max-w-5xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
             <ScrollReveal>
               <div className="max-w-3xl mx-auto text-center">
+                <p className="text-sm font-medium text-muted-foreground tracking-wide uppercase mb-4">
+                  How it works
+                </p>
+                <h2 className="text-3xl sm:text-4xl font-serif font-medium text-foreground mb-12 tracking-tight">
+                  Three steps. Five minutes.
+                </h2>
+              </div>
+            </ScrollReveal>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-3xl mx-auto mb-12">
+              <ScrollReveal delay={0.1}>
+                <div className="text-center" data-testid="step-1">
+                  <div className="w-10 h-10 rounded-full bg-primary/10 text-primary font-semibold text-sm flex items-center justify-center mx-auto mb-4">
+                    1
+                  </div>
+                  <h3 className="font-semibold text-foreground mb-1">Create a free account</h3>
+                  <p className="text-sm text-muted-foreground">Sign in with one click. No forms, no credit card.</p>
+                </div>
+              </ScrollReveal>
+              <ScrollReveal delay={0.2}>
+                <div className="text-center" data-testid="step-2">
+                  <div className="w-10 h-10 rounded-full bg-primary/10 text-primary font-semibold text-sm flex items-center justify-center mx-auto mb-4">
+                    2
+                  </div>
+                  <h3 className="font-semibold text-foreground mb-1">Upload your resume</h3>
+                  <p className="text-sm text-muted-foreground">We extract your skills and experience to find the best matches.</p>
+                </div>
+              </ScrollReveal>
+              <ScrollReveal delay={0.3}>
+                <div className="text-center" data-testid="step-3">
+                  <div className="w-10 h-10 rounded-full bg-primary/10 text-primary font-semibold text-sm flex items-center justify-center mx-auto mb-4">
+                    3
+                  </div>
+                  <h3 className="font-semibold text-foreground mb-1">See your top matches</h3>
+                  <p className="text-sm text-muted-foreground">Get a ranked list of roles with fit scores and resume tweaks for each.</p>
+                </div>
+              </ScrollReveal>
+            </div>
+
+            <ScrollReveal delay={0.4}>
+              <div className="text-center">
+                <Button size="lg" asChild className="text-base px-10" data-testid="button-cta-sign-up">
+                  <a href="/api/login">
+                    Get Started Free
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </a>
+                </Button>
+              </div>
+            </ScrollReveal>
+          </div>
+        </section>
+
+        <section className="border-t border-border/40">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
+            <ScrollReveal>
+              <div className="max-w-3xl mx-auto text-center">
                 <div className="flex items-center justify-center gap-3 mb-6">
-                  <Badge variant="secondary" className="text-xs font-medium">Free to start</Badge>
+                  <Badge variant="secondary" className="text-xs font-medium">Free forever</Badge>
                   <Badge variant="outline" className="text-xs font-medium">Pro from $5/mo</Badge>
                 </div>
                 <h2 className="text-3xl sm:text-4xl font-serif font-medium text-foreground mb-4 tracking-tight">
-                  Start for free. Upgrade when it's worth it.
+                  Less than a coffee. More than a job board.
                 </h2>
-                <p className="text-lg text-muted-foreground mb-4 max-w-xl mx-auto">
-                  Browse every job and search for free. When you want resume matching, career comparisons, and personalized alerts, Pro is $5 a month.
-                </p>
-                <p className="text-sm text-muted-foreground mb-8">
-                  No credit card required to get started. Cancel anytime.
+                <p className="text-lg text-muted-foreground mb-8 max-w-xl mx-auto">
+                  Browse and apply for free. Upgrade to Pro for resume matching, career comparisons, and personalized alerts. Cancel anytime.
                 </p>
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-                  <Button size="lg" asChild className="text-base px-10" data-testid="button-cta-sign-up">
-                    <a href="/api/login">
-                      Get Started Free
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </a>
-                  </Button>
                   <Link href="/pricing">
-                    <Button size="lg" variant="outline" className="text-base" data-testid="button-cta-pricing">
-                      See Full Pricing
+                    <Button size="lg" className="text-base px-10" data-testid="button-cta-pricing">
+                      See Plans & Pricing
+                      <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>
                   </Link>
                 </div>
@@ -388,7 +441,7 @@ export default function Landing() {
           </div>
         </section>
 
-        <section className="border-t border-border/40">
+        <section className="border-t border-border/40 bg-muted/30">
           <div className="max-w-5xl mx-auto px-4 sm:px-6 py-20 sm:py-28">
             <ScrollReveal>
               <div className="max-w-2xl mx-auto text-center">
@@ -412,16 +465,73 @@ export default function Landing() {
         </section>
       </main>
 
-      <footer className="border-t border-border/40 py-8">
+      <footer className="border-t border-border/40 py-10">
         <div className="max-w-5xl mx-auto px-4 sm:px-6">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-8 mb-8">
+            <div>
+              <p className="text-sm font-medium text-foreground mb-3">Product</p>
+              <ul className="space-y-2">
+                <li>
+                  <Button variant="ghost" size="sm" asChild className="text-muted-foreground h-auto p-0 text-sm font-normal">
+                    <a href="/api/login" data-testid="footer-link-browse">Browse Jobs</a>
+                  </Button>
+                </li>
+                <li>
+                  <Link href="/pricing">
+                    <Button variant="ghost" size="sm" className="text-muted-foreground h-auto p-0 text-sm font-normal" data-testid="footer-link-pricing">
+                      Pricing
+                    </Button>
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/post-job">
+                    <Button variant="ghost" size="sm" className="text-muted-foreground h-auto p-0 text-sm font-normal" data-testid="footer-link-post-job">
+                      Post a Job
+                    </Button>
+                  </Link>
+                </li>
+              </ul>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-foreground mb-3">Pro Features</p>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li>Resume Matching</li>
+                <li>Career Advisor</li>
+                <li>Market Insights</li>
+                <li>Job Alerts</li>
+              </ul>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-foreground mb-3">Resources</p>
+              <ul className="space-y-2">
+                <li>
+                  <Link href="/about">
+                    <Button variant="ghost" size="sm" className="text-muted-foreground h-auto p-0 text-sm font-normal" data-testid="footer-link-about">
+                      About
+                    </Button>
+                  </Link>
+                </li>
+              </ul>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-foreground mb-3">Account</p>
+              <ul className="space-y-2">
+                <li>
+                  <Button variant="ghost" size="sm" asChild className="text-muted-foreground h-auto p-0 text-sm font-normal">
+                    <a href="/api/login" data-testid="footer-link-signin">Sign In</a>
+                  </Button>
+                </li>
+              </ul>
+            </div>
+          </div>
+          <div className="border-t border-border/40 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
               <Scale className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm text-muted-foreground">
                 Legal Tech Careers
               </span>
             </div>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               Where legal professionals find their next move in technology.
             </p>
           </div>
