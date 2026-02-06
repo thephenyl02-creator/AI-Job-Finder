@@ -246,16 +246,33 @@ function stripHtmlToText(html: string): string {
 function stripBoilerplate(text: string): string {
   let cleaned = text;
 
-  cleaned = cleaned.replace(/^[A-Z][\w\s&.'()-]{2,40} is committed to providing an excellent candidate experience[^.]*\.\s*/i, '');
+  cleaned = cleaned.replace(/^[A-Z][\w\s&.'()-]{2,60} is committed to providing an excellent candidate experience[^\n]*\.\s*\n*/i, '');
 
-  cleaned = cleaned.replace(/^ABOUT\s+(?:US|THE COMPANY)\s+/i, '');
-  cleaned = cleaned.replace(/^About (?:the company|us)\s+/i, '');
+  cleaned = cleaned.replace(/^Summary:\s*/i, '');
+
+  cleaned = cleaned.replace(/^ABOUT\s+(?:US|THE COMPANY|THE JOB|FIRSTBASE|NOTABENE)\s*/i, '');
+  cleaned = cleaned.replace(/^About\s+(?:the company|us|the job|Axiom|Rocket Lawyer|the role)\s*:?\s*/i, '');
+  cleaned = cleaned.replace(/^About\s+[\w\s&.'()-]{2,30}\s+(?:We\s)/i, 'We ');
+  cleaned = cleaned.replace(/^(?:Intro description|Job Description|Role Description|Position Description)\s*:?\s*/i, '');
+
+  const companyIntroWithSeparator = /^(?:[\w\s&.'()-]{2,50})\s+(?:is|are)\s+(?:a|an|the|on a|where|building)\s+[^]*?\n\n/;
+  const introSepMatch = cleaned.match(companyIntroWithSeparator);
+  if (introSepMatch && introSepMatch[0].length < cleaned.length * 0.35) {
+    const afterIntro = cleaned.slice(introSepMatch[0].length).trim();
+    if (afterIntro.length > 100) {
+      cleaned = afterIntro;
+    }
+  }
+
+  cleaned = cleaned.replace(/^(?:The Opportunity|The Role|Overview|Position Summary|Job Summary|Role Summary|Position Overview)\s*:?\s*\n*/i, '');
 
   const trailingPatterns = [
     /\n*(?:Equal\s+(?:Opportunity|Employment)|EEO|EOE)\s*(?:Statement|Employer|Policy)?[^\n]*(?:\n[^\n]*){0,10}$/i,
-    /\n*(?:We are (?:an|a) (?:equal opportunity|EEO) employer)[^\n]*(?:\n[^\n]*){0,5}$/i,
+    /\n*(?:We are (?:an?|committed to being an?) (?:equal opportunity|EEO) employer)[^\n]*(?:\n[^\n]*){0,5}$/i,
     /\n*(?:Disclaimer|Notice|Legal Notice):?\s*(?:This job (?:posting|description|ad))[^\n]*(?:\n[^\n]*){0,5}$/i,
     /\n*(?:This (?:employer|company|organization) is an equal opportunity employer)[^\n]*/i,
+    /\n*(?:[\w\s&.'()-]{2,50} is an? (?:equal opportunity|affirmative action) employer)[^\n]*(?:\n[^\n]*){0,5}$/i,
+    /\n*(?:[\w\s&.'()-]{2,50} provides equal employment)[^\n]*(?:\n[^\n]*){0,5}$/i,
   ];
   for (const p of trailingPatterns) {
     cleaned = cleaned.replace(p, '');

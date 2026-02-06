@@ -283,6 +283,35 @@ function inferRoleType(title: string): string {
   return 'Other';
 }
 
+function decodeHtmlEntities(text: string): string {
+  return text
+    .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&')
+    .replace(/&nbsp;/g, ' ').replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'").replace(/&#x27;/g, "'")
+    .replace(/&mdash;/g, '\u2014').replace(/&ndash;/g, '\u2013')
+    .replace(/&ldquo;/g, '\u201C').replace(/&rdquo;/g, '\u201D')
+    .replace(/&lsquo;/g, '\u2018').replace(/&rsquo;/g, '\u2019')
+    .replace(/&bull;/g, '\u2022').replace(/&hellip;/g, '\u2026')
+    .replace(/&trade;/g, '\u2122').replace(/&copy;/g, '\u00A9').replace(/&reg;/g, '\u00AE')
+    .replace(/&#(\d+);/g, (_: string, n: string) => String.fromCharCode(parseInt(n, 10)))
+    .replace(/&#x([0-9a-fA-F]+);/g, (_: string, h: string) => String.fromCharCode(parseInt(h, 16)));
+}
+
+function cleanDescriptionText(raw: string): string {
+  let text = raw;
+  text = decodeHtmlEntities(text);
+  text = text.replace(/<br\s*\/?>/gi, '\n');
+  text = text.replace(/<\/(?:p|div|h[1-6]|li|tr|section|article)>/gi, '\n');
+  text = text.replace(/<(?:p|div|h[1-6]|ul|ol|table|tbody|thead|section|article)(?:\s[^>]*)?>/gi, '\n');
+  text = text.replace(/<li(?:\s[^>]*)?>/gi, '- ');
+  text = text.replace(/<[^>]+>/g, '');
+  text = text.replace(/&[a-z]+;/gi, ' ');
+  text = text.replace(/[ \t]+/g, ' ');
+  text = text.replace(/\n /g, '\n');
+  text = text.replace(/\n{3,}/g, '\n\n');
+  return text.trim();
+}
+
 function cleanCompanyName(name: string): string {
   return name
     .replace(/\s*\(formerly\s+[^)]+\)/gi, '')
@@ -295,10 +324,7 @@ export function transformToJobSchema(job: ScrapedJob, categorization?: JobCatego
   const companyClean = cleanCompanyName(job.company);
   const companySlug = companyClean.toLowerCase().replace(/\s+/g, '').replace(/[^a-z0-9]/g, '');
   
-  const cleanDescription = (job.description || '')
-    .replace(/<[^>]*>/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim() || `${job.title} position at ${companyClean}`;
+  const cleanDescription = cleanDescriptionText(job.description || '') || `${job.title} position at ${companyClean}`;
   
   const locationText = job.location?.trim() || 'Not specified';
   const fullText = `${job.title} ${cleanDescription} ${locationText}`.toLowerCase();
