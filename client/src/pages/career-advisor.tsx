@@ -1,5 +1,5 @@
-import { useState, useCallback, useEffect } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useState, useCallback, useEffect, useRef } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Header } from "@/components/header";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -112,6 +113,7 @@ interface ComparisonResult {
 export default function CareerAdvisor() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [jobs, setJobs] = useState<JobInput[]>([
     { id: "1", title: "", description: "" },
     { id: "2", title: "", description: "" },
@@ -122,6 +124,57 @@ export default function CareerAdvisor() {
   const [jobPickerTarget, setJobPickerTarget] = useState<string | null>(null);
   const [jobSearchQuery, setJobSearchQuery] = useState("");
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+
+  const [isUploadingResume, setIsUploadingResume] = useState(false);
+  const [resumeUploadProgress, setResumeUploadProgress] = useState(0);
+  const resumeFileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleResumeUpload = useCallback(async (file: File) => {
+    const allowedTypes = [
+      "application/pdf",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "application/msword",
+    ];
+    if (!allowedTypes.includes(file.type)) {
+      toast({ title: "Invalid file type", description: "Please upload a PDF or Word document.", variant: "destructive" });
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: "File too large", description: "Please upload a file smaller than 5 MB.", variant: "destructive" });
+      return;
+    }
+
+    setIsUploadingResume(true);
+    setResumeUploadProgress(0);
+
+    const progressInterval = setInterval(() => {
+      setResumeUploadProgress((prev) => {
+        if (prev >= 85) { clearInterval(progressInterval); return 85; }
+        return prev + 12;
+      });
+    }, 300);
+
+    try {
+      const formData = new FormData();
+      formData.append("resume", file);
+      const response = await fetch("/api/resume/upload", { method: "POST", body: formData });
+      const data = await response.json();
+      if (response.ok && data.success) {
+        clearInterval(progressInterval);
+        setResumeUploadProgress(100);
+        queryClient.invalidateQueries({ queryKey: ["/api/resume"] });
+        toast({ title: "Resume uploaded", description: "Your analysis will now include personalized fit scores." });
+      } else {
+        throw new Error(data.error || "Upload failed");
+      }
+    } catch (error: any) {
+      clearInterval(progressInterval);
+      toast({ title: "Upload failed", description: error.message || "Failed to upload resume.", variant: "destructive" });
+    } finally {
+      setTimeout(() => { setIsUploadingResume(false); setResumeUploadProgress(0); }, 500);
+      if (resumeFileInputRef.current) resumeFileInputRef.current.value = "";
+    }
+  }, [toast, queryClient]);
 
   // Check for pre-populated jobs from Jobs page
   useEffect(() => {
@@ -454,16 +507,57 @@ export default function CareerAdvisor() {
 
             {!resumeData?.hasResume && (
               <Card className="bg-gradient-to-r from-amber-50 to-orange-50/50 dark:from-amber-950/30 dark:to-orange-950/20 border-amber-200/50 dark:border-amber-900/50 max-w-2xl mx-auto">
-                <CardContent className="flex items-center gap-4 py-5 px-6">
-                  <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center shrink-0">
-                    <FileText className="h-5 w-5 text-amber-600" />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-amber-800 dark:text-amber-200">No Resume Uploaded</p>
-                    <p className="text-sm text-amber-600 dark:text-amber-400">
-                      Upload your resume from the search page to unlock personalized fit analysis
-                    </p>
-                  </div>
+                <CardContent className="py-5 px-6">
+                  <input
+                    ref={resumeFileInputRef}
+                    type="file"
+                    accept=".pdf,.docx,.doc,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleResumeUpload(file);
+                    }}
+                    className="hidden"
+                    data-testid="input-file-resume-advisor"
+                  />
+                  {isUploadingResume ? (
+                    <div>
+                      <div className="flex items-center gap-3 mb-3">
+                        <Loader2 className="h-4 w-4 animate-spin text-amber-600" />
+                        <span className="text-sm font-medium text-amber-800 dark:text-amber-200">Analyzing your resume...</span>
+                      </div>
+                      <Progress value={resumeUploadProgress} className="h-1.5" />
+                      <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">
+                        {resumeUploadProgress < 30 && "Extracting text..."}
+                        {resumeUploadProgress >= 30 && resumeUploadProgress < 60 && "Reading experience..."}
+                        {resumeUploadProgress >= 60 && resumeUploadProgress < 90 && "Identifying skills..."}
+                        {resumeUploadProgress >= 90 && "Almost done..."}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between gap-4 flex-wrap">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center shrink-0">
+                          <FileText className="h-5 w-5 text-amber-600" />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-amber-800 dark:text-amber-200">No Resume Uploaded</p>
+                          <p className="text-sm text-amber-600 dark:text-amber-400">
+                            Upload your resume to unlock personalized fit analysis
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-2 border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-200 shrink-0"
+                        onClick={() => resumeFileInputRef.current?.click()}
+                        data-testid="button-upload-resume-advisor"
+                      >
+                        <Upload className="h-3.5 w-3.5" />
+                        Upload Resume
+                      </Button>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             )}

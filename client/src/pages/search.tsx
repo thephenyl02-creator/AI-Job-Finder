@@ -1,16 +1,17 @@
-import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Header } from "@/components/header";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/auth-utils";
 import { apiRequest } from "@/lib/queryClient";
-import type { JobWithScore } from "@shared/schema";
+import type { JobWithScore, ResumeExtractedData } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import {
   Search as SearchIcon,
   ArrowRight,
@@ -18,6 +19,10 @@ import {
   Check,
   Loader2,
   Target,
+  Upload,
+  FileText,
+  CheckCircle2,
+  X,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ProgressSteps, Typewriter, ScrollReveal } from "@/components/animations";
@@ -67,12 +72,138 @@ export default function Search() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+  const queryClient = useQueryClient();
   
   const [step, setStep] = useState<SearchStep>("input");
   const [query, setQuery] = useState("");
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [results, setResults] = useState<RefinedSearchResult | null>(null);
+
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const { data: resumeStatus } = useQuery<{ hasResume: boolean; filename?: string; extractedData?: ResumeExtractedData }>({
+    queryKey: ["/api/resume"],
+    enabled: isAuthenticated,
+  });
+
+  const handleFileUpload = useCallback(async (file: File) => {
+    const allowedTypes = [
+      "application/pdf",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "application/msword",
+    ];
+    if (!allowedTypes.includes(file.type)) {
+      toast({
+        title: "Invalid file type",
+        description: "Please upload a PDF or Word document (.pdf, .docx, .doc).",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Please upload a file smaller than 5 MB.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsUploading(true);
+    setUploadProgress(0);
+
+    const progressInterval = setInterval(() => {
+      setUploadProgress((prev) => {
+        if (prev >= 85) {
+          clearInterval(progressInterval);
+          return 85;
+        }
+        return prev + 12;
+      });
+    }, 300);
+
+    try {
+      const formData = new FormData();
+      formData.append("resume", file);
+      const response = await fetch("/api/resume/upload", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        clearInterval(progressInterval);
+        setUploadProgress(100);
+        queryClient.invalidateQueries({ queryKey: ["/api/resume"] });
+
+        if (data.searchQuery) {
+          setQuery(data.searchQuery);
+        }
+
+        toast({
+          title: "Resume uploaded",
+          description: "We've analyzed your resume and generated a search query.",
+        });
+      } else {
+        throw new Error(data.error || "Upload failed");
+      }
+    } catch (error: any) {
+      clearInterval(progressInterval);
+      toast({
+        title: "Upload failed",
+        description: error.message || "Failed to upload resume. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setTimeout(() => {
+        setIsUploading(false);
+        setUploadProgress(0);
+      }, 500);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  }, [toast, queryClient]);
+
+  const handleRemoveResume = async () => {
+    try {
+      await fetch("/api/resume", { method: "DELETE" });
+      queryClient.invalidateQueries({ queryKey: ["/api/resume"] });
+      setQuery("");
+      toast({
+        title: "Resume removed",
+        description: "You can upload a new resume anytime.",
+      });
+    } catch (error) {
+      console.error("Error removing resume:", error);
+    }
+  };
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    const file = e.dataTransfer.files[0];
+    if (file) handleFileUpload(file);
+  }, [handleFileUpload]);
+
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) handleFileUpload(file);
+  };
 
   const analyzeMutation = useMutation({
     mutationFn: async (searchQuery: string) => {
@@ -275,7 +406,124 @@ export default function Search() {
                 />
               </div>
 
-              {!query && (
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,.docx,.doc,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword"
+                onChange={handleFileInputChange}
+                className="hidden"
+                data-testid="input-file-resume"
+              />
+
+              {isUploading && (
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                >
+                  <Card>
+                    <CardContent className="py-5 px-6">
+                      <div className="flex items-center gap-3 mb-3">
+                        <Loader2 className="h-4 w-4 animate-spin text-foreground" />
+                        <span className="text-sm text-foreground">Analyzing your resume...</span>
+                      </div>
+                      <Progress value={uploadProgress} className="h-1.5" data-testid="upload-progress" />
+                      <p className="text-xs text-muted-foreground mt-2">
+                        {uploadProgress < 30 && "Extracting text..."}
+                        {uploadProgress >= 30 && uploadProgress < 60 && "Reading experience and skills..."}
+                        {uploadProgress >= 60 && uploadProgress < 90 && "Building your search profile..."}
+                        {uploadProgress >= 90 && "Generating search query..."}
+                      </p>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              )}
+
+              {!isUploading && resumeStatus?.hasResume && (
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                >
+                  <Card className="bg-muted/40">
+                    <CardContent className="py-4 px-5">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3 min-w-0 flex-wrap">
+                          <div className="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/40 flex items-center justify-center shrink-0">
+                            <CheckCircle2 className="h-4 w-4 text-green-600" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-foreground" data-testid="text-resume-filename">
+                              {resumeStatus.filename}
+                            </p>
+                            <p className="text-xs text-muted-foreground">Resume uploaded</p>
+                          </div>
+                          {resumeStatus.extractedData?.preferredRoles && (
+                            <div className="flex flex-wrap gap-1.5">
+                              {resumeStatus.extractedData.preferredRoles.slice(0, 2).map((role: string, idx: number) => (
+                                <Badge key={idx} variant="secondary" className="text-xs">
+                                  {role}
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => fileInputRef.current?.click()}
+                            className="text-xs text-muted-foreground"
+                            data-testid="button-replace-resume"
+                          >
+                            Replace
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={handleRemoveResume}
+                            data-testid="button-remove-resume"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              )}
+
+              {!isUploading && !resumeStatus?.hasResume && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.2 }}
+                >
+                  <div
+                    className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
+                      isDragOver
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:border-muted-foreground/40"
+                    }`}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                    onClick={() => fileInputRef.current?.click()}
+                    data-testid="dropzone-resume"
+                  >
+                    <Upload className="h-6 w-6 text-muted-foreground mx-auto mb-2" />
+                    <p className="text-sm font-medium text-foreground mb-1">
+                      Upload your resume
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Drop a PDF or Word file here, or click to browse
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      We'll match you with the best roles based on your experience
+                    </p>
+                  </div>
+                </motion.div>
+              )}
+
+              {!query && !resumeStatus?.hasResume && !isUploading && (
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
