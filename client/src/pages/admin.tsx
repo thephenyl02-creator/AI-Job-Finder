@@ -374,6 +374,28 @@ export default function AdminPage() {
     },
   });
 
+  const scrapeYCMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/admin/scraper/yc");
+      return res.json() as Promise<ScrapeResult>;
+    },
+    onSuccess: (data) => {
+      setLastResult(data);
+      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
+      toast({
+        title: "YC Scraping Complete",
+        description: data.message,
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "YC Scraping Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const scrapeCompanyMutation = useMutation({
     mutationFn: async (companyName: string) => {
       const res = await apiRequest("POST", `/api/admin/scraper/company/${encodeURIComponent(companyName)}`);
@@ -818,7 +840,7 @@ export default function AdminPage() {
                 
                 <Button
                   onClick={() => scrapeWithAIMutation.mutate()}
-                  disabled={scrapeAllMutation.isPending || scrapeWithAIMutation.isPending}
+                  disabled={scrapeAllMutation.isPending || scrapeWithAIMutation.isPending || scrapeYCMutation.isPending}
                   data-testid="button-scrape-with-ai"
                 >
                   {scrapeWithAIMutation.isPending ? (
@@ -830,6 +852,25 @@ export default function AdminPage() {
                     <>
                       <Sparkles className="mr-2 h-4 w-4" />
                       Scrape with AI Categorization
+                    </>
+                  )}
+                </Button>
+
+                <Button
+                  onClick={() => scrapeYCMutation.mutate()}
+                  disabled={scrapeAllMutation.isPending || scrapeWithAIMutation.isPending || scrapeYCMutation.isPending}
+                  variant="outline"
+                  data-testid="button-scrape-yc"
+                >
+                  {scrapeYCMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Scraping YC Companies... (5-10 min)
+                    </>
+                  ) : (
+                    <>
+                      <Globe className="mr-2 h-4 w-4" />
+                      Scrape YC Legal Tech Companies
                     </>
                   )}
                 </Button>

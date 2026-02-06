@@ -39,6 +39,7 @@ import {
   getValidationStatus,
 } from "./lib/scheduled-scraper";
 import { getLogFiles, readLogFile, getRecentLogs, runStartupCleanup } from "./lib/logger";
+import { scrapeYCCompanies } from "./lib/yc-scraper";
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -1086,6 +1087,44 @@ ${JSON.stringify(jobSummaries, null, 2)}`
     } catch (error) {
       console.error("Error running AI scraper:", error);
       res.status(500).json({ error: "Failed to run AI scraper" });
+    }
+  });
+
+  app.post("/api/admin/scraper/yc", isAuthenticated, async (req, res) => {
+    if (!(await isAdminCheck(req))) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    try {
+      console.log("Starting YC legal tech companies scraper...");
+
+      const { jobs: scrapedJobs, stats } = await scrapeYCCompanies();
+
+      if (scrapedJobs.length === 0) {
+        return res.json({
+          success: true,
+          message: "YC scraping completed but no jobs found",
+          stats,
+          inserted: 0,
+          updated: 0,
+        });
+      }
+
+      const { inserted, updated, newJobs } = await storage.bulkUpsertJobs(scrapedJobs);
+      if (newJobs.length > 0) {
+        matchNewJobsAgainstAlerts(newJobs).catch(err => console.error("Alert matching error:", err));
+      }
+
+      res.json({
+        success: true,
+        message: `YC scraping completed. Found ${scrapedJobs.length} jobs from ${stats.filter(s => s.status === 'success').length} companies. Inserted ${inserted} new, updated ${updated} existing.`,
+        stats,
+        inserted,
+        updated,
+        totalScraped: scrapedJobs.length,
+      });
+    } catch (error) {
+      console.error("Error running YC scraper:", error);
+      res.status(500).json({ error: "Failed to run YC scraper" });
     }
   });
 
