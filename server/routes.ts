@@ -1974,6 +1974,18 @@ Be specific and actionable. Focus on legal tech industry keywords and ATS best p
     }
   });
 
+  // --- User Dashboard ---
+  app.get("/api/dashboard", isAuthenticated, async (req, res) => {
+    try {
+      const days = parseInt(req.query.days as string) || 30;
+      const data = await storage.getUserDashboard(req.user!.id, Math.min(days, 90));
+      res.json(data);
+    } catch (error) {
+      console.error("Error fetching user dashboard:", error);
+      res.status(500).json({ error: "Failed to load dashboard" });
+    }
+  });
+
   // --- Admin Analytics ---
 
   app.get("/api/admin/analytics/kpis", isAuthenticated, async (req, res) => {

@@ -83,6 +83,8 @@ export interface IStorage {
   getAnalyticsTopContent(): Promise<any>;
   getAnalyticsUserList(): Promise<any>;
   getAnalyticsFunnel(): Promise<any>;
+  // User Dashboard
+  getUserDashboard(userId: string, days?: number): Promise<any>;
   // Saved Jobs
   saveJob(userId: string, jobId: number, notes?: string): Promise<SavedJob>;
   unsaveJob(userId: string, jobId: number): Promise<void>;
@@ -1353,6 +1355,261 @@ class DatabaseStorage implements IStorage {
       usersWhoUploadedResume: Number(resumeUsers.cnt),
       usersWhoBuiltResume: Number(builtResumeUsers.cnt),
       usersWhoPurchasedPro: Number(proUsers.cnt),
+    };
+  }
+
+  async getUserDashboard(userId: string, days: number = 30): Promise<any> {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - days);
+
+    const activityCounts = await db.select({
+      eventType: userActivities.eventType,
+      cnt: sql<number>`count(*)`,
+    }).from(userActivities)
+      .where(and(eq(userActivities.userId, userId), gte(userActivities.createdAt, cutoff)))
+      .groupBy(userActivities.eventType);
+
+    const activityMap: Record<string, number> = {};
+    for (const a of activityCounts) activityMap[a.eventType] = Number(a.cnt);
+
+    const dailyActivity = await db.select({
+      date: sql<string>`date_trunc('day', ${userActivities.createdAt})::date::text`,
+      cnt: sql<number>`count(*)`,
+      types: sql<string>`string_agg(distinct ${userActivities.eventType}, ',')`,
+    }).from(userActivities)
+      .where(and(eq(userActivities.userId, userId), gte(userActivities.createdAt, cutoff)))
+      .groupBy(sql`date_trunc('day', ${userActivities.createdAt})::date`)
+      .orderBy(sql`date_trunc('day', ${userActivities.createdAt})::date`);
+
+    const allTimeCounts = await db.select({
+      eventType: userActivities.eventType,
+      cnt: sql<number>`count(*)`,
+    }).from(userActivities)
+      .where(eq(userActivities.userId, userId))
+      .groupBy(userActivities.eventType);
+
+    const allTimeMap: Record<string, number> = {};
+    for (const a of allTimeCounts) allTimeMap[a.eventType] = Number(a.cnt);
+
+    let currentStreak = 0;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const activeDaysArr = dailyActivity.map(d => d.date);
+    const activeDays = new Set(activeDaysArr);
+    for (let i = 0; i < days; i++) {
+      const checkDate = new Date(today);
+      checkDate.setDate(checkDate.getDate() - i);
+      const dateStr = checkDate.toISOString().split('T')[0];
+      if (activeDays.has(dateStr)) {
+        currentStreak++;
+      } else if (i > 0) {
+        break;
+      }
+    }
+
+    const topViewedCategories = await db.select({
+      category: sql<string>`${userActivities.metadata}->>'roleCategory'`,
+      cnt: sql<number>`count(*)`,
+    }).from(userActivities)
+      .where(and(
+        eq(userActivities.userId, userId),
+        eq(userActivities.eventType, 'job_view'),
+        sql`${userActivities.metadata}->>'roleCategory' is not null`,
+      ))
+      .groupBy(sql`${userActivities.metadata}->>'roleCategory'`)
+      .orderBy(sql`count(*) desc`)
+      .limit(5);
+
+    const recentSearches = await db.select({
+      query: sql<string>`${userActivities.metadata}->>'query'`,
+      createdAt: userActivities.createdAt,
+    }).from(userActivities)
+      .where(and(
+        eq(userActivities.userId, userId),
+        eq(userActivities.eventType, 'search'),
+        sql`${userActivities.metadata}->>'query' is not null`,
+      ))
+      .orderBy(desc(userActivities.createdAt))
+      .limit(10);
+
+    const uniqueSearchTerms = [...new Set(recentSearches.map(s => s.query))].slice(0, 5);
+
+    const topViewedCompanies = await db.select({
+      company: sql<string>`${userActivities.metadata}->>'company'`,
+      cnt: sql<number>`count(*)`,
+    }).from(userActivities)
+      .where(and(
+        eq(userActivities.userId, userId),
+        eq(userActivities.eventType, 'job_view'),
+        sql`${userActivities.metadata}->>'company' is not null`,
+      ))
+      .groupBy(sql`${userActivities.metadata}->>'company'`)
+      .orderBy(sql`count(*) desc`)
+      .limit(5);
+
+    const userSavedJobsList = await db.select({ cnt: count() }).from(savedJobs).where(eq(savedJobs.userId, userId));
+    const savedJobsCount = Number(userSavedJobsList[0]?.cnt || 0);
+
+    const expiringSoonCount = await db.select({ cnt: count() }).from(savedJobs)
+      .innerJoin(jobs, eq(savedJobs.jobId, jobs.id))
+      .where(and(
+        eq(savedJobs.userId, userId),
+        lt(savedJobs.savedAt, new Date(Date.now() - 14 * 24 * 60 * 60 * 1000)),
+        eq(savedJobs.reminderShown, false),
+      ));
+
+    const userResumesList = await db.select({ cnt: count() }).from(resumes).where(eq(resumes.userId, userId));
+    const resumeCount = Number(userResumesList[0]?.cnt || 0);
+
+    const builtResumesList = await db.select({ cnt: count() }).from(builtResumes).where(eq(builtResumes.userId, userId));
+    const builtResumeCount = Number(builtResumesList[0]?.cnt || 0);
+
+    const alertsList = await db.select({ cnt: count() }).from(jobAlerts)
+      .where(and(eq(jobAlerts.userId, userId), eq(jobAlerts.isActive, true)));
+    const activeAlertsCount = Number(alertsList[0]?.cnt || 0);
+
+    const persona = await db.select().from(userPersonas).where(eq(userPersonas.userId, userId)).limit(1);
+    const userPersona = persona[0] || null;
+
+    const topCats = topViewedCategories.map(c => c.category).filter(Boolean);
+    let marketAlignment: { category: string; availableJobs: number }[] = [];
+    if (topCats.length > 0) {
+      const rawAlignment = await db.select({
+        category: jobs.roleCategory,
+        availableJobs: sql<number>`count(*)`,
+      }).from(jobs)
+        .where(and(
+          eq(jobs.isActive, true),
+          inArray(jobs.roleCategory, topCats),
+        ))
+        .groupBy(jobs.roleCategory);
+      marketAlignment = rawAlignment.filter(m => m.category !== null) as { category: string; availableJobs: number }[];
+    }
+
+    const [totalActiveJobs] = await db.select({ cnt: count() }).from(jobs).where(eq(jobs.isActive, true));
+
+    const recommendations: { type: string; title: string; description: string; action: string; priority: number }[] = [];
+
+    if (resumeCount === 0 && builtResumeCount === 0) {
+      recommendations.push({
+        type: "resume",
+        title: "Upload your resume",
+        description: "Get personalized job matches and see how your skills align with opportunities.",
+        action: "/resumes",
+        priority: 1,
+      });
+    }
+
+    if (activeAlertsCount === 0) {
+      recommendations.push({
+        type: "alerts",
+        title: "Set up job alerts",
+        description: "Get notified when new jobs match your interests so you never miss an opportunity.",
+        action: "/alerts",
+        priority: 2,
+      });
+    }
+
+    if ((allTimeMap["apply_click"] || 0) === 0 && (allTimeMap["job_view"] || 0) > 3) {
+      recommendations.push({
+        type: "apply",
+        title: "Start applying",
+        description: "You've been exploring jobs. Take the next step and apply to roles that interest you.",
+        action: "/jobs",
+        priority: 3,
+      });
+    }
+
+    if (savedJobsCount === 0 && (allTimeMap["job_view"] || 0) > 0) {
+      recommendations.push({
+        type: "save",
+        title: "Save jobs you like",
+        description: "Bookmark interesting opportunities to compare them later and track deadlines.",
+        action: "/jobs",
+        priority: 4,
+      });
+    }
+
+    if ((activityMap["search"] || 0) === 0 && (activityMap["job_view"] || 0) < 3) {
+      recommendations.push({
+        type: "explore",
+        title: "Explore opportunities",
+        description: "Search for legal tech roles that match your background and interests.",
+        action: "/search",
+        priority: 5,
+      });
+    }
+
+    if (currentStreak >= 3) {
+      recommendations.push({
+        type: "streak",
+        title: `${currentStreak}-day streak!`,
+        description: "You're on a roll. Keep the momentum going with your job search.",
+        action: "/jobs",
+        priority: 10,
+      });
+    }
+
+    recommendations.sort((a, b) => a.priority - b.priority);
+
+    return {
+      activityMetrics: {
+        period: {
+          jobViews: activityMap["job_view"] || 0,
+          searches: activityMap["search"] || 0,
+          applyClicks: activityMap["apply_click"] || 0,
+          pageViews: activityMap["page_view"] || 0,
+          filterChanges: activityMap["filter_change"] || 0,
+        },
+        allTime: {
+          jobViews: allTimeMap["job_view"] || 0,
+          searches: allTimeMap["search"] || 0,
+          applyClicks: allTimeMap["apply_click"] || 0,
+        },
+        currentStreak,
+        activeDaysInPeriod: activeDays.size,
+      },
+      dailyActivity: dailyActivity.map(d => ({
+        date: d.date,
+        count: Number(d.cnt),
+        types: d.types,
+      })),
+      patterns: {
+        topCategories: topViewedCategories.filter(c => c.category).map(c => ({ name: c.category, count: Number(c.cnt) })),
+        topCompanies: topViewedCompanies.filter(c => c.company).map(c => ({ name: c.company, count: Number(c.cnt) })),
+        recentSearches: uniqueSearchTerms,
+      },
+      readiness: {
+        hasResume: resumeCount > 0,
+        resumeCount,
+        hasBuiltResume: builtResumeCount > 0,
+        builtResumeCount,
+        hasActiveAlerts: activeAlertsCount > 0,
+        activeAlertsCount,
+        hasPersona: !!userPersona,
+        savedJobsCount,
+        expiringSoonCount: Number(expiringSoonCount[0]?.cnt || 0),
+        score: Math.min(100, (
+          (resumeCount > 0 ? 25 : 0) +
+          (activeAlertsCount > 0 ? 20 : 0) +
+          (savedJobsCount > 0 ? 15 : 0) +
+          ((allTimeMap["search"] || 0) > 0 ? 15 : 0) +
+          ((allTimeMap["apply_click"] || 0) > 0 ? 25 : 0)
+        )),
+      },
+      marketAlignment: marketAlignment.map(m => ({
+        category: m.category,
+        availableJobs: Number(m.availableJobs),
+      })),
+      totalActiveJobs: Number(totalActiveJobs.cnt),
+      persona: userPersona ? {
+        topCategories: userPersona.topCategories,
+        topSkills: userPersona.topSkills,
+        careerStage: userPersona.careerStage,
+        engagementLevel: userPersona.engagementLevel,
+        summary: userPersona.personaSummary,
+      } : null,
+      recommendations: recommendations.slice(0, 4),
     };
   }
 }

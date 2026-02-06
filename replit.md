@@ -54,6 +54,9 @@ A freemium SaaS job search platform specifically designed for legal professional
 - **User Memory & Persona System**: Tracks user activity to build behavioral personas for personalized AI interactions.
 - **Resume Builder**: Structured resume creation with real-time ATS scoring and AI assistance (Pro-only for advanced features).
 - **Saved Jobs**: Bookmark jobs for later, with expiry reminders on login for older postings to encourage timely applications.
+- **User Dashboard** (`/dashboard`): Dynamic analytics showing job search activity metrics, daily activity trends, streak tracking, top categories/companies explored, search readiness score, market alignment, career profile, and personalized next-step recommendations.
+- **Admin Analytics** (`/admin/analytics`): Comprehensive admin dashboard with KPIs, engagement metrics, feature adoption, user cohorts, top content, user list, and conversion funnel.
+- **Legal Pages**: Terms of Service (`/terms`) and Privacy Policy (`/privacy`) with footer links on landing page.
 
 ## External Dependencies
 

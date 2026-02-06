@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuGroup,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, Briefcase, Info, Settings, Compass, BarChart3, Bell, FileText, Crown, Search, Wrench, Bookmark } from "lucide-react";
+import { LogOut, Briefcase, Info, Settings, Compass, BarChart3, Bell, FileText, Crown, Search, Wrench, Bookmark, LayoutDashboard } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { Link, useLocation } from "wouter";
 import { NotificationBell } from "@/components/notification-bell";
@@ -134,6 +134,12 @@ export function Header() {
                   </DropdownMenuGroup>
                   <DropdownMenuSeparator className="sm:hidden" />
                   <DropdownMenuGroup>
+                    <DropdownMenuItem asChild>
+                      <Link href="/dashboard" className="cursor-pointer" data-testid="link-dashboard">
+                        <LayoutDashboard className="mr-2 h-4 w-4" />
+                        <span>My Dashboard</span>
+                      </Link>
+                    </DropdownMenuItem>
                     <DropdownMenuItem asChild>
                       <Link href="/resumes" className="cursor-pointer" data-testid="link-resumes">
                         <FileText className="mr-2 h-4 w-4" />
