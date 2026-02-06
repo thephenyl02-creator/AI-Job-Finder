@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
-import OpenAI from "openai";
+
 
 declare global {
   namespace Express {
@@ -86,10 +86,7 @@ const adminUpload = multer({
   },
 });
 
-const openai = new OpenAI({
-  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
-  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
-});
+import { getOpenAIClient } from "./lib/openai-client";
 
 async function requirePro(req: any, res: any, next: any) {
   const user = req.user as any;
@@ -351,7 +348,7 @@ Only include jobs with a score above 40. Sort by score descending.`;
 
       let response;
       try {
-        response = await openai.chat.completions.create({
+        response = await getOpenAIClient().chat.completions.create({
           model: "gpt-5-mini",
           messages: [
             { role: "system", content: systemPrompt },
@@ -469,7 +466,7 @@ Return ONLY valid JSON in this format:
   ]
 }`;
 
-      const response = await openai.chat.completions.create({
+      const response = await getOpenAIClient().chat.completions.create({
         model: "gpt-4o-mini",
         messages: [
           { role: "system", content: systemPrompt },
@@ -571,7 +568,7 @@ Return ONLY valid JSON:
 
 Sort by score descending. Include maximum 15 jobs.`;
 
-      const response = await openai.chat.completions.create({
+      const response = await getOpenAIClient().chat.completions.create({
         model: "gpt-4o-mini",
         messages: [
           { role: "system", content: systemPrompt },
@@ -757,15 +754,10 @@ ${JSON.stringify(jobSummaries, null, 2)}`
         return res.status(400).json({ error: "Resume text is too short to analyze." });
       }
 
-      const openai = new (await import("openai")).default({
-        apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
-        baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
-      });
-
       const skillsSummary = extractedData?.skills?.join(", ") || "Not extracted";
       const experienceSummary = extractedData?.experience?.map(e => `${e.title} at ${e.company}`).join("; ") || "Not extracted";
 
-      const completion = await openai.chat.completions.create({
+      const completion = await getOpenAIClient().chat.completions.create({
         model: "gpt-4o-mini",
         messages: [
           {
@@ -2206,7 +2198,7 @@ If this doesn't appear to be a job posting, return:
   "error": "This page doesn't appear to be a job posting"
 }`;
 
-      const completion = await openai.chat.completions.create({
+      const completion = await getOpenAIClient().chat.completions.create({
         model: "gpt-4o-mini",
         messages: [
           { role: "system", content: "You are a job posting parser. Extract job information from webpage content accurately." },
@@ -2354,7 +2346,7 @@ Return a JSON response with this exact structure:
   "overallStrategy": "3-4 sentences of strategic career advice for a legal professional considering these roles, with specific action items"
 }`;
 
-      const completion = await openai.chat.completions.create({
+      const completion = await getOpenAIClient().chat.completions.create({
         model: "gpt-5-mini",
         messages: [
           { role: "system", content: systemPrompt },
@@ -2603,7 +2595,7 @@ Do not mention that you are an AI or use phrases like "AI-powered". Speak natura
 
 After your analysis, list 2-4 key data points you referenced as "Sources" - each should be a specific fact from the data (e.g., "45 active listings in Legal AI & Machine Learning").`;
 
-      const completion = await openai.chat.completions.create({
+      const completion = await getOpenAIClient().chat.completions.create({
         model: "gpt-4o-mini",
         messages: [
           { role: "system", content: systemPrompt },
@@ -2767,7 +2759,7 @@ ${platformContext}`;
         { role: "user", content: message.trim() },
       ];
 
-      const completion = await openai.chat.completions.create({
+      const completion = await getOpenAIClient().chat.completions.create({
         model: "gpt-4o-mini",
         messages,
         temperature: 0.6,
@@ -2883,7 +2875,7 @@ ${matchDetails}`;
         { role: "user", content: message.trim() },
       ];
 
-      const completion = await openai.chat.completions.create({
+      const completion = await getOpenAIClient().chat.completions.create({
         model: "gpt-4o-mini",
         messages,
         temperature: 0.6,
@@ -3172,7 +3164,7 @@ ${matchDetails}`;
         await storage.updateUserSubscription(userId, { stripeCustomerId: customerId });
       }
 
-      const baseUrl = `https://${process.env.REPLIT_DOMAINS?.split(',')[0]}`;
+      const baseUrl = process.env.APP_URL || `https://${process.env.REPLIT_DOMAINS?.split(',')[0] || 'localhost:5000'}`;
       const session = await stripe.checkout.sessions.create({
         customer: customerId,
         payment_method_types: ['card'],
@@ -3206,7 +3198,7 @@ ${matchDetails}`;
       const { getUncachableStripeClient } = await import("./stripeClient");
       const stripe = await getUncachableStripeClient();
 
-      const baseUrl = `https://${process.env.REPLIT_DOMAINS?.split(',')[0]}`;
+      const baseUrl = process.env.APP_URL || `https://${process.env.REPLIT_DOMAINS?.split(',')[0] || 'localhost:5000'}`;
       const session = await stripe.billingPortal.sessions.create({
         customer: subData.stripeCustomerId,
         return_url: `${baseUrl}/pricing`,
@@ -3400,10 +3392,6 @@ ${matchDetails}`;
       const { section, currentContent, targetJobTitle, targetJobDescription, resumeContext } = req.body;
       if (!section) return res.status(400).json({ error: "Section is required" });
 
-      const openai = new OpenAI({
-        apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
-        baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
-      });
 
       const jobContext = targetJobTitle ? `\nTarget Job: ${targetJobTitle}\nJob Description: ${(targetJobDescription || "").substring(0, 2000)}` : "";
       const existingContext = resumeContext ? `\nExisting Resume Context: ${JSON.stringify(resumeContext).substring(0, 2000)}` : "";
@@ -3424,7 +3412,7 @@ Return JSON: { "mustHave": ["<keyword>", ...], "niceToHave": ["<keyword>", ...],
       const prompt = prompts[section] || `Improve this resume section "${section}" for a legal tech professional. Current: ${currentContent || "empty"}.${jobContext}${existingContext}
 Return JSON: { "suggestion": "<improved content>", "tips": ["<tip>"] }`;
 
-      const completion = await openai.chat.completions.create({
+      const completion = await getOpenAIClient().chat.completions.create({
         model: "gpt-4o-mini",
         messages: [
           { role: "system", content: "You are an expert legal tech resume writer and career coach. Provide specific, actionable advice optimized for ATS systems. Always return valid JSON." },
@@ -3478,12 +3466,8 @@ Return JSON: { "suggestion": "<improved content>", "tips": ["<tip>"] }`;
         ...(sections.certifications || []).map((c: any) => `${c.name} - ${c.issuer}`),
       ].filter(Boolean).join("\n");
 
-      const openai = new OpenAI({
-        apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
-        baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
-      });
 
-      const completion = await openai.chat.completions.create({
+      const completion = await getOpenAIClient().chat.completions.create({
         model: "gpt-4o-mini",
         messages: [
           {
@@ -3570,12 +3554,8 @@ Return valid JSON:
         extractedData = primaryResume.extractedData as ResumeExtractedData;
       }
 
-      const openai = new OpenAI({
-        apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
-        baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
-      });
 
-      const completion = await openai.chat.completions.create({
+      const completion = await getOpenAIClient().chat.completions.create({
         model: "gpt-4o-mini",
         messages: [
           {
@@ -3639,12 +3619,8 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
 
       const sections = builtResume.sections as any;
 
-      const openai = new OpenAI({
-        apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
-        baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
-      });
 
-      const completion = await openai.chat.completions.create({
+      const completion = await getOpenAIClient().chat.completions.create({
         model: "gpt-4o-mini",
         messages: [
           {

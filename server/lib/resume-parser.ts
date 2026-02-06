@@ -1,11 +1,6 @@
-import OpenAI from "openai";
 import mammoth from "mammoth";
 import type { ResumeExtractedData } from "@shared/schema";
-
-const openai = new OpenAI({
-  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
-  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
-});
+import { getOpenAIClient } from "./openai-client";
 
 export class InvalidPDFError extends Error {
   constructor(message: string) {
@@ -84,7 +79,7 @@ Return JSON with:
 }`;
 
   try {
-    const completion = await openai.chat.completions.create({
+    const completion = await getOpenAIClient().chat.completions.create({
       model: "gpt-5-mini",
       messages: [
         { role: "system", content: systemPrompt },
@@ -115,7 +110,7 @@ Return JSON with:
 
 export async function generateSearchQueryFromResume(parsedData: ResumeExtractedData): Promise<string> {
   try {
-    const completion = await openai.chat.completions.create({
+    const completion = await getOpenAIClient().chat.completions.create({
       model: "gpt-5-mini",
       messages: [
         {

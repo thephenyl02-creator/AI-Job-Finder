@@ -1,10 +1,5 @@
-import OpenAI from "openai";
 import { JOB_TAXONOMY } from "@shared/schema";
-
-const openai = new OpenAI({
-  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
-  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
-});
+import { getOpenAIClient } from "./openai-client";
 
 export interface JobCategorizationResult {
   category: string;
@@ -71,7 +66,7 @@ Return ONLY valid JSON:
 }`;
 
   try {
-    const completion = await openai.chat.completions.create({
+    const completion = await getOpenAIClient().chat.completions.create({
       model: "gpt-4o-mini",
       messages: [{ role: "user", content: prompt }],
       response_format: { type: "json_object" },
@@ -251,7 +246,7 @@ Description: ${description.substring(0, 1500)}
 
 Return ONLY the 3-sentence summary, no extra text.`;
 
-    const completion = await openai.chat.completions.create({
+    const completion = await getOpenAIClient().chat.completions.create({
       model: "gpt-4o-mini",
       messages: [{ role: "user", content: prompt }],
       temperature: 0.5,

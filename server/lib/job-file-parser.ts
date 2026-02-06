@@ -1,13 +1,8 @@
-import OpenAI from "openai";
 import * as cheerio from "cheerio";
 import { extractTextFromPDF, extractTextFromDOCX } from "./resume-parser";
 import { categorizeJob } from "./job-categorizer";
 import type { InsertJob } from "@shared/schema";
-
-const openai = new OpenAI({
-  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
-  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
-});
+import { getOpenAIClient } from "./openai-client";
 
 interface ParsedJobData {
   title: string;
@@ -29,7 +24,7 @@ export function extractTextFromHTML(html: string): string {
 async function parseJobFromText(rawText: string, sourceHint?: string): Promise<ParsedJobData> {
   const truncated = rawText.substring(0, 6000);
 
-  const completion = await openai.chat.completions.create({
+  const completion = await getOpenAIClient().chat.completions.create({
     model: "gpt-4o-mini",
     messages: [
       {

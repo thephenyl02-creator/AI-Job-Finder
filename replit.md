@@ -58,10 +58,17 @@ A freemium SaaS job search platform specifically designed for legal professional
 - **Admin Analytics** (`/admin/analytics`): Comprehensive admin dashboard with KPIs, engagement metrics, feature adoption, user cohorts, top content, user list, and conversion funnel.
 - **Legal Pages**: Terms of Service (`/terms`) and Privacy Policy (`/privacy`) with footer links on landing page.
 
+## Deployment
+
+- **Self-hosting guide**: See `DEPLOYMENT.md` for complete step-by-step instructions
+- **Environment template**: See `.env.example` for all required variables
+- **Extraction-ready**: The codebase is fully portable - no Replit-specific dependencies required for production
+- **Key env vars**: `DATABASE_URL`, `OPENAI_API_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET`, `SESSION_SECRET`, `APP_URL`
+
 ## External Dependencies
 
-- **Database**: PostgreSQL
-- **AI Services**: OpenAI API
-- **Authentication**: Replit OIDC provider
-- **Payments**: Stripe (for subscriptions)
+- **Database**: PostgreSQL (any provider - local, Neon, Supabase, AWS RDS, etc.)
+- **AI Services**: OpenAI API (standard `OPENAI_API_KEY`)
+- **Authentication**: Custom email/password + optional Google OAuth 2.0
+- **Payments**: Stripe (standard SDK with `STRIPE_SECRET_KEY`)
 - **UI Components**: shadcn/ui (built on Radix UI)
