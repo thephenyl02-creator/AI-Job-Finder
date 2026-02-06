@@ -18,6 +18,7 @@ export interface IStorage {
   // User Resume
   updateUserResume(userId: string, resumeText: string, filename: string, extractedData: ResumeExtractedData): Promise<void>;
   getUserResume(userId: string): Promise<{ resumeFilename: string | null; extractedData: ResumeExtractedData | null } | null>;
+  getUserResumeWithText(userId: string): Promise<{ resumeFilename: string | null; resumeText: string | null; extractedData: ResumeExtractedData | null } | null>;
   updateUserLastSearch(userId: string, query: string): Promise<void>;
   // User Preferences
   getUserPreferences(userId: string): Promise<UserPreferences | null>;
@@ -377,6 +378,24 @@ class DatabaseStorage implements IStorage {
     if (!user) return null;
     return {
       resumeFilename: user.resumeFilename,
+      extractedData: user.extractedData as ResumeExtractedData | null,
+    };
+  }
+
+  async getUserResumeWithText(userId: string): Promise<{ resumeFilename: string | null; resumeText: string | null; extractedData: ResumeExtractedData | null } | null> {
+    const [user] = await db
+      .select({
+        resumeFilename: users.resumeFilename,
+        resumeText: users.resumeText,
+        extractedData: users.extractedData,
+      })
+      .from(users)
+      .where(eq(users.id, userId));
+    
+    if (!user) return null;
+    return {
+      resumeFilename: user.resumeFilename,
+      resumeText: user.resumeText,
       extractedData: user.extractedData as ResumeExtractedData | null,
     };
   }

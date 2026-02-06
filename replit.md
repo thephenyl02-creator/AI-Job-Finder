@@ -115,6 +115,26 @@ A premium job search platform for legal technology careers, built specifically f
   - Recommendations (actionable advice)
 - **Implementation**: `server/lib/resume-job-comparison.ts`, `client/src/components/job-comparison.tsx`
 
+### Resume Match & Tweak (Brutally Honest)
+- **Auto-matching**: After resume upload, automatically matches resume against all active jobs
+- **Two-stage process**:
+  1. **Batch Match** (POST `/api/resume/match-jobs`): Pre-filters jobs by skill/category overlap (top 30), then AI ranks top 10 with brutal honesty
+  2. **Resume Tweaker** (POST `/api/resume/tweak/:jobId`): Deep analysis for a specific job with line-by-line alignment and resume editing suggestions
+- **Batch Match Results** show for each job:
+  - Match score (0-100%, harsh scoring - 100 is nearly impossible)
+  - Tweak percentage (how much resume needs changing)
+  - Brutal verdict (direct, no-BS assessment)
+  - Match highlights (what's working)
+  - Gap summary and top missing skills
+- **Resume Tweaker** (slide-out panel) shows:
+  - Requirements alignment: each job requirement mapped to resume evidence (match/partial/missing)
+  - Suggested resume edits: before/after text changes with impact ratings (high/medium/low)
+  - Skills to consider: realistic vs. needs-development classification
+  - Overall strategy and honest warnings
+- **Pre-filter algorithm**: Scores jobs by skill word overlap, role title match, legal/tech background alignment, experience range fit, and remote preference
+- **UI**: Integrated into Search page (/), appears below search bar when resume is uploaded
+- **Implementation**: `server/lib/resume-matcher.ts`, `client/src/components/resume-matches.tsx`
+
 ### Career Advisor (AI-Powered)
 - **Route**: `/career-advisor` (requires authentication)
 - **Purpose**: Strategic career guidance for legal professionals comparing 2-3 job opportunities

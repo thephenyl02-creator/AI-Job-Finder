@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ProgressSteps, Typewriter, ScrollReveal } from "@/components/animations";
+import { ResumeMatches } from "@/components/resume-matches";
 
 interface SearchQuestion {
   id: string;
@@ -139,6 +140,7 @@ export default function Search() {
         clearInterval(progressInterval);
         setUploadProgress(100);
         queryClient.invalidateQueries({ queryKey: ["/api/resume"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/resume/match-jobs"] });
 
         if (data.searchQuery) {
           setQuery(data.searchQuery);
@@ -146,7 +148,7 @@ export default function Search() {
 
         toast({
           title: "Resume uploaded",
-          description: "We've analyzed your resume and generated a search query.",
+          description: "We've matched your resume against open positions. See your matches below.",
         });
       } else {
         throw new Error(data.error || "Upload failed");
@@ -173,6 +175,8 @@ export default function Search() {
     try {
       await fetch("/api/resume", { method: "DELETE" });
       queryClient.invalidateQueries({ queryKey: ["/api/resume"] });
+      queryClient.removeQueries({ queryKey: ["/api/resume/match-jobs"] });
+      queryClient.removeQueries({ queryKey: ["resume-tweak"] });
       setQuery("");
       toast({
         title: "Resume removed",
@@ -580,6 +584,16 @@ export default function Search() {
                   Quick Search
                 </Button>
               </div>
+
+              {resumeStatus?.hasResume && !isUploading && (
+                <motion.div
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                >
+                  <ResumeMatches hasResume={true} />
+                </motion.div>
+              )}
 
               <div className="text-center pt-4">
                 <Button

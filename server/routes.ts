@@ -15,6 +15,7 @@ import {
   InvalidPDFError,
 } from "./lib/resume-parser";
 import { compareResumeToJob } from "./lib/resume-job-comparison";
+import { batchMatchResume, generateResumeTweaks } from "./lib/resume-matcher";
 import {
   scrapeAllLawFirms,
   scrapeSingleCompany,
@@ -602,6 +603,75 @@ ${JSON.stringify(jobSummaries, null, 2)}`
     } catch (error) {
       console.error("Error deleting resume:", error);
       res.status(500).json({ error: "Failed to delete resume" });
+    }
+  });
+
+  // Batch match resume against all jobs
+  app.post("/api/resume/match-jobs", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const userId = user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const resumeData = await storage.getUserResume(userId);
+      if (!resumeData?.extractedData || Object.keys(resumeData.extractedData).length === 0) {
+        return res.status(400).json({ error: "No resume uploaded" });
+      }
+
+      const allJobs = await storage.getActiveJobs();
+      if (allJobs.length === 0) {
+        return res.json({ matches: [] });
+      }
+
+      const matches = await batchMatchResume(
+        resumeData.extractedData as ResumeExtractedData,
+        allJobs
+      );
+
+      res.json({ matches });
+    } catch (error) {
+      console.error("Error batch matching resume:", error);
+      res.status(500).json({ error: "Failed to match resume against jobs" });
+    }
+  });
+
+  // Generate resume tweaks for a specific job
+  app.post("/api/resume/tweak/:jobId", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const userId = user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const jobIdParam = req.params.jobId as string;
+      const jobId = parseInt(jobIdParam);
+      if (isNaN(jobId)) {
+        return res.status(400).json({ error: "Invalid job ID" });
+      }
+
+      const resumeData = await storage.getUserResumeWithText(userId);
+      if (!resumeData?.extractedData || Object.keys(resumeData.extractedData).length === 0) {
+        return res.status(400).json({ error: "No resume uploaded" });
+      }
+
+      const job = await storage.getJob(jobId);
+      if (!job) {
+        return res.status(404).json({ error: "Job not found" });
+      }
+
+      const tweaks = await generateResumeTweaks(
+        resumeData.extractedData as ResumeExtractedData,
+        resumeData.resumeText || "",
+        job
+      );
+
+      res.json(tweaks);
+    } catch (error) {
+      console.error("Error generating resume tweaks:", error);
+      res.status(500).json({ error: "Failed to generate resume tweaks" });
     }
   });
 
