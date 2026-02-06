@@ -51,6 +51,11 @@ Also extract:
   - Use "Intern" for internships, co-ops, student positions, summer programs, and any role explicitly for current students
   - Use "Fellowship" for fellowships, rotational programs, post-grad programs, and academic/industry bridge roles
   - Use "Entry" for entry-level, junior, and associate professional roles (NOT student roles)
+  - IMPORTANT: "Associate" in the title (e.g. "Legal Engineer Associate", "Engagement Associate", "Strategic Programs Associate") means ENTRY level, NOT Mid
+  - Only use "Mid" when there's no title indicator AND the role clearly requires 2-5+ years experience
+  - Use "Senior" for roles with "Senior", "Sr.", or "Staff" in the title
+  - Use "Lead" for roles with "Lead" or "Principal" in the title
+  - Use "Director" for roles with "Director" in the title
   - NEVER combine levels (e.g. never return "Senior/Lead" — pick the single best match)
 - Key skills (5-8 most important technical/domain skills)
 - Experience range if mentioned
@@ -87,10 +92,13 @@ Return ONLY valid JSON:
     const validCategory = validateCategory(result.category);
     const validSubcategory = validateSubcategory(validCategory, result.subcategory);
 
+    const aiSeniority = result.seniorityLevel || "Mid";
+    const validatedSeniority = validateSeniority(aiSeniority, title, description);
+
     return {
       category: validCategory,
       subcategory: validSubcategory,
-      seniorityLevel: result.seniorityLevel || inferSeniority(title, description),
+      seniorityLevel: validatedSeniority,
       keySkills: Array.isArray(result.keySkills) ? result.keySkills.slice(0, 8) : [],
       aiSummary: result.aiSummary || `${title} position at ${company}.`,
       matchKeywords: Array.isArray(result.matchKeywords) ? result.matchKeywords.slice(0, 10) : [],
@@ -134,6 +142,40 @@ function validateSubcategory(category: string, subcategory: string): string {
     return subcategory;
   }
   return validSubs[0] || subcategory || "Other";
+}
+
+const VALID_SENIORITY_LEVELS = ["Intern", "Fellowship", "Entry", "Mid", "Senior", "Lead", "Director", "VP"];
+
+function validateSeniority(aiSeniority: string, title: string, description?: string): string {
+  if (!VALID_SENIORITY_LEVELS.includes(aiSeniority)) {
+    return inferSeniority(title, description);
+  }
+
+  const titleLower = title.toLowerCase();
+  const titleInferred = inferSeniority(title, description);
+
+  if (titleInferred === "Intern" || titleInferred === "Fellowship") {
+    return titleInferred;
+  }
+
+  const hasDirector = titleLower.includes("director");
+  const hasVP = titleLower.includes("vp") || titleLower.includes("vice president");
+  const hasLead = titleLower.includes("lead") || titleLower.includes("principal");
+  const hasSenior = titleLower.includes("senior") || titleLower.includes("sr.") || titleLower.includes("sr ") || titleLower.includes("staff");
+  const hasAssociate = titleLower.includes("associate") && !hasSenior && !hasDirector && !hasVP && !hasLead;
+  const hasJunior = titleLower.includes("junior") || titleLower.includes("jr.") || titleLower.includes("jr ");
+  const hasEntry = titleLower.includes("entry");
+
+  if (hasVP) return "VP";
+  if (hasDirector) return "Director";
+  if (hasLead) return "Lead";
+  if (hasSenior) return "Senior";
+
+  if (aiSeniority === "Mid" && (hasAssociate || hasJunior || hasEntry)) {
+    return "Entry";
+  }
+
+  return aiSeniority;
 }
 
 function inferSeniority(title: string, description?: string): string {
