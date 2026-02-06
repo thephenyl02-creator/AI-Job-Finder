@@ -1331,6 +1331,15 @@ Be specific and actionable. Focus on legal tech industry keywords and ATS best p
           title: job.title,
           company: job.company,
           location: job.location,
+          isRemote: job.isRemote,
+          salaryMin: job.salaryMin,
+          salaryMax: job.salaryMax,
+          roleCategory: job.roleCategory,
+          roleSubcategory: job.roleSubcategory,
+          seniorityLevel: job.seniorityLevel,
+          keySkills: job.keySkills,
+          aiSummary: job.aiSummary,
+          description: job.description?.substring(0, 300),
         },
         inserted,
         updated,
@@ -1338,6 +1347,178 @@ Be specific and actionable. Focus on legal tech industry keywords and ATS best p
     } catch (error: any) {
       console.error("Error scraping URL:", error);
       res.status(500).json({ error: error.message || "Failed to scrape URL" });
+    }
+  });
+
+  app.post("/api/admin/jobs/parse-text", isAuthenticated, async (req, res) => {
+    if (!(await isAdminCheck(req))) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    try {
+      const { text } = req.body;
+      if (!text || typeof text !== 'string' || text.trim().length < 20) {
+        return res.status(400).json({ error: "Please paste at least a few lines of job posting text." });
+      }
+
+      const buffer = Buffer.from(text.trim(), 'utf-8');
+      const jobData = await parseJobFile(buffer, 'text/plain', 'pasted-text.txt');
+
+      res.json({
+        success: true,
+        parsed: {
+          title: jobData.title,
+          company: jobData.company,
+          location: jobData.location,
+          isRemote: jobData.isRemote,
+          salaryMin: jobData.salaryMin,
+          salaryMax: jobData.salaryMax,
+          roleCategory: jobData.roleCategory,
+          roleSubcategory: jobData.roleSubcategory,
+          seniorityLevel: jobData.seniorityLevel,
+          keySkills: jobData.keySkills,
+          aiSummary: jobData.aiSummary,
+          description: jobData.description,
+          applyUrl: jobData.applyUrl,
+          source: "upload",
+        },
+      });
+    } catch (error: any) {
+      console.error("Error parsing pasted text:", error);
+      res.status(500).json({ error: error.message || "Failed to parse job text" });
+    }
+  });
+
+  app.post("/api/admin/jobs/preview-file", isAuthenticated, adminUpload.single("file"), async (req, res) => {
+    if (!(await isAdminCheck(req))) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    try {
+      const file = req.file;
+      if (!file) {
+        return res.status(400).json({ error: "No file provided" });
+      }
+
+      const jobData = await parseJobFile(file.buffer, file.mimetype, file.originalname);
+
+      res.json({
+        success: true,
+        parsed: {
+          title: jobData.title,
+          company: jobData.company,
+          location: jobData.location,
+          isRemote: jobData.isRemote,
+          salaryMin: jobData.salaryMin,
+          salaryMax: jobData.salaryMax,
+          roleCategory: jobData.roleCategory,
+          roleSubcategory: jobData.roleSubcategory,
+          seniorityLevel: jobData.seniorityLevel,
+          keySkills: jobData.keySkills,
+          aiSummary: jobData.aiSummary,
+          description: jobData.description,
+          applyUrl: jobData.applyUrl,
+          source: "upload",
+        },
+      });
+    } catch (error: any) {
+      console.error("Error previewing file:", error);
+      res.status(500).json({ error: error.message || "Failed to parse file" });
+    }
+  });
+
+  app.post("/api/admin/jobs/preview-url", isAuthenticated, async (req, res) => {
+    if (!(await isAdminCheck(req))) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    try {
+      const { url } = req.body;
+      if (!url || typeof url !== 'string') {
+        return res.status(400).json({ error: "URL is required" });
+      }
+      try { new URL(url); } catch { return res.status(400).json({ error: "Invalid URL format" }); }
+
+      const job = await scrapeSingleJobUrl(url);
+      if (!job) {
+        return res.status(400).json({ success: false, error: "Could not extract job details from this URL." });
+      }
+
+      res.json({
+        success: true,
+        parsed: {
+          title: job.title,
+          company: job.company,
+          location: job.location,
+          isRemote: job.isRemote,
+          salaryMin: job.salaryMin,
+          salaryMax: job.salaryMax,
+          roleCategory: job.roleCategory,
+          roleSubcategory: job.roleSubcategory,
+          seniorityLevel: job.seniorityLevel,
+          keySkills: job.keySkills,
+          aiSummary: job.aiSummary,
+          description: job.description,
+          applyUrl: job.applyUrl,
+          source: job.source,
+          externalId: job.externalId,
+        },
+      });
+    } catch (error: any) {
+      console.error("Error previewing URL:", error);
+      res.status(500).json({ error: error.message || "Failed to preview URL" });
+    }
+  });
+
+  app.post("/api/admin/jobs/confirm", isAuthenticated, async (req, res) => {
+    if (!(await isAdminCheck(req))) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    try {
+      const jobData = req.body;
+      if (!jobData.title || !jobData.company) {
+        return res.status(400).json({ error: "Title and company are required" });
+      }
+
+      const companySlug = jobData.company.toLowerCase().replace(/[^a-z0-9]/g, "");
+
+      const insertData: any = {
+        title: jobData.title?.substring(0, 255),
+        company: jobData.company?.substring(0, 255),
+        companyLogo: companySlug ? `https://logo.clearbit.com/${companySlug}.com` : null,
+        location: jobData.location || "Not specified",
+        isRemote: Boolean(jobData.isRemote),
+        salaryMin: jobData.salaryMin ? Number(jobData.salaryMin) : null,
+        salaryMax: jobData.salaryMax ? Number(jobData.salaryMax) : null,
+        experienceMin: jobData.experienceMin ? Number(jobData.experienceMin) : null,
+        experienceMax: jobData.experienceMax ? Number(jobData.experienceMax) : null,
+        roleType: jobData.roleType || null,
+        description: jobData.description || `${jobData.title} at ${jobData.company}`,
+        requirements: null,
+        applyUrl: jobData.applyUrl || "#",
+        isActive: true,
+        externalId: jobData.externalId || `admin_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
+        source: jobData.source || "admin",
+        roleCategory: jobData.roleCategory || null,
+        roleSubcategory: jobData.roleSubcategory || null,
+        seniorityLevel: jobData.seniorityLevel || null,
+        keySkills: jobData.keySkills || null,
+        aiSummary: jobData.aiSummary || null,
+        matchKeywords: jobData.matchKeywords || null,
+      };
+
+      const { inserted, updated, newJobs } = await storage.bulkUpsertJobs([insertData]);
+
+      if (newJobs.length > 0) {
+        matchNewJobsAgainstAlerts(newJobs).catch(err => console.error("Alert matching error:", err));
+      }
+
+      res.json({
+        success: true,
+        message: inserted > 0 ? "Job added successfully" : "Job updated successfully",
+        inserted,
+        updated,
+      });
+    } catch (error: any) {
+      console.error("Error confirming job:", error);
+      res.status(500).json({ error: error.message || "Failed to save job" });
     }
   });
 

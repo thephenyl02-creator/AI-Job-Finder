@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Link } from "wouter";
-import { ArrowLeft, RefreshCw, Building2, Globe, Loader2, CheckCircle, XCircle, Sparkles, Activity, FileText, Play, Square, LinkIcon, Clock, ShieldX, Plus, Upload, Pencil, Trash2, RotateCw, ToggleLeft, ToggleRight, Search, Filter, ChevronLeft, ChevronRight, Save, X as XIcon, BarChart3 } from "lucide-react";
+import { ArrowLeft, RefreshCw, Building2, Globe, Loader2, CheckCircle, XCircle, Sparkles, Activity, FileText, Play, Square, LinkIcon, Clock, ShieldX, Plus, Upload, Pencil, Trash2, RotateCw, ToggleLeft, ToggleRight, Search, Filter, ChevronLeft, ChevronRight, Save, X as XIcon, BarChart3, ClipboardPaste, Zap, MapPin, DollarSign, Briefcase, GraduationCap, Tag } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { Job } from "@shared/schema";
@@ -98,6 +98,12 @@ export default function AdminPage() {
   const { isAdmin, isLoading: authLoading } = useAuth();
   const [lastResult, setLastResult] = useState<ScrapeResult | null>(null);
   const [customUrl, setCustomUrl] = useState("");
+  const [pasteText, setPasteText] = useState("");
+  const [addJobMode, setAddJobMode] = useState<"url" | "paste" | "file">("url");
+  const [previewJob, setPreviewJob] = useState<Record<string, any> | null>(null);
+  const [previewEdits, setPreviewEdits] = useState<Record<string, any>>({});
+  const [addJobError, setAddJobError] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadResults, setUploadResults] = useState<UploadFileResult[]>([]);
@@ -149,25 +155,46 @@ export default function AdminPage() {
     setIsUploading(true);
     setUploadResults([]);
     try {
-      const formData = new FormData();
-      for (let i = 0; i < files.length; i++) {
-        formData.append("files", files[i]);
+      if (files.length === 1) {
+        const file = files[0];
+        const formData = new FormData();
+        formData.append("file", file);
+        const res = await fetch("/api/admin/jobs/preview-file", {
+          method: "POST",
+          body: formData,
+          credentials: "include",
+        });
+        if (!res.ok) throw new Error("File processing failed");
+        const data = await res.json();
+        if (data.success && data.parsed) {
+          setPreviewJob(data.parsed);
+          setPreviewEdits(data.parsed);
+          setAddJobError(null);
+        } else {
+          setAddJobError(data.error || "Could not extract job details from file.");
+        }
+      } else {
+        const formData = new FormData();
+        for (let i = 0; i < files.length; i++) {
+          formData.append("files", files[i]);
+        }
+        const res = await fetch("/api/admin/scraper/upload", {
+          method: "POST",
+          body: formData,
+          credentials: "include",
+        });
+        if (!res.ok) throw new Error("Upload failed");
+        const data: UploadResponse = await res.json();
+        setUploadResults(data.results);
+        queryClient.invalidateQueries({ predicate: (query) => (query.queryKey[0] as string).startsWith("/api/admin/jobs") });
+        queryClient.invalidateQueries({ predicate: (query) => (query.queryKey[0] as string).startsWith("/api/jobs") });
+        toast({
+          title: data.success ? "Upload Complete" : "Upload Had Issues",
+          description: data.message,
+        });
       }
-      const res = await fetch("/api/admin/scraper/upload", {
-        method: "POST",
-        body: formData,
-        credentials: "include",
-      });
-      if (!res.ok) throw new Error("Upload failed");
-      const data: UploadResponse = await res.json();
-      setUploadResults(data.results);
-      queryClient.invalidateQueries({ predicate: (query) => (query.queryKey[0] as string).startsWith("/api/admin/jobs") });
-      queryClient.invalidateQueries({ predicate: (query) => (query.queryKey[0] as string).startsWith("/api/jobs") });
-      toast({
-        title: data.success ? "Upload Complete" : "Upload Had Issues",
-        description: data.message,
-      });
     } catch (error: any) {
+      setAddJobError(error.message);
       toast({
         title: "Upload Failed",
         description: error.message,
@@ -331,25 +358,62 @@ export default function AdminPage() {
     },
   });
 
-  const scrapeUrlMutation = useMutation({
+  const previewUrlMutation = useMutation({
     mutationFn: async (url: string) => {
-      const res = await apiRequest("POST", "/api/admin/scraper/url", { url });
+      const res = await apiRequest("POST", "/api/admin/jobs/preview-url", { url });
       return res.json();
     },
     onSuccess: (data) => {
-      setCustomUrl("");
-      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
-      toast({
-        title: data.success ? "Job Added" : "Error",
-        description: data.message || `Added: ${data.job?.title} at ${data.job?.company}`,
-      });
+      if (data.success && data.parsed) {
+        setPreviewJob(data.parsed);
+        setPreviewEdits(data.parsed);
+        setAddJobError(null);
+        setCustomUrl("");
+      } else {
+        setAddJobError(data.error || "Could not extract job details.");
+      }
     },
     onError: (error: Error) => {
-      toast({
-        title: "Failed to scrape URL",
-        description: error.message,
-        variant: "destructive",
-      });
+      setAddJobError(error.message);
+      toast({ title: "Failed to scrape URL", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const parseTextMutation = useMutation({
+    mutationFn: async (text: string) => {
+      const res = await apiRequest("POST", "/api/admin/jobs/parse-text", { text });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      if (data.success && data.parsed) {
+        setPreviewJob(data.parsed);
+        setPreviewEdits(data.parsed);
+        setAddJobError(null);
+        setPasteText("");
+      } else {
+        setAddJobError(data.error || "Could not parse text.");
+      }
+    },
+    onError: (error: Error) => {
+      setAddJobError(error.message);
+      toast({ title: "Failed to parse text", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const confirmJobMutation = useMutation({
+    mutationFn: async (jobData: Record<string, any>) => {
+      const res = await apiRequest("POST", "/api/admin/jobs/confirm", jobData);
+      return res.json();
+    },
+    onSuccess: (data) => {
+      setPreviewJob(null);
+      setPreviewEdits({});
+      queryClient.invalidateQueries({ predicate: (query) => (query.queryKey[0] as string).startsWith("/api/admin/jobs") });
+      queryClient.invalidateQueries({ predicate: (query) => (query.queryKey[0] as string).startsWith("/api/jobs") });
+      toast({ title: data.message || "Job added successfully" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Failed to save job", description: error.message, variant: "destructive" });
     },
   });
 
@@ -716,125 +780,413 @@ export default function AdminPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Plus className="h-5 w-5" />
-                Add Job from URL
+                <Zap className="h-5 w-5" />
+                Add Job
               </CardTitle>
               <CardDescription>
-                Paste a job posting URL to automatically scrape and add it to the database.
+                Paste a URL, drop in a file, or paste the job text directly. The system auto-extracts everything.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex gap-3">
-                <Input
-                  placeholder="https://boards.greenhouse.io/company/jobs/123..."
-                  value={customUrl}
-                  onChange={(e) => setCustomUrl(e.target.value)}
-                  className="flex-1"
-                  data-testid="input-custom-url"
-                />
-                <Button
-                  onClick={() => {
-                    if (customUrl.trim()) {
-                      scrapeUrlMutation.mutate(customUrl.trim());
-                    }
-                  }}
-                  disabled={scrapeUrlMutation.isPending || !customUrl.trim()}
-                  data-testid="button-scrape-url"
-                >
-                  {scrapeUrlMutation.isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Scraping...
-                    </>
-                  ) : (
-                    <>
-                      <Plus className="mr-2 h-4 w-4" />
-                      Add Job
-                    </>
-                  )}
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground mt-2">
-                Supports Greenhouse, Lever, Ashby, and generic job pages.
-              </p>
-            </CardContent>
-          </Card>
+              <div className="space-y-4">
+                {!previewJob && (
+                  <>
+                    <div className="flex gap-1 p-1 bg-muted rounded-md w-fit">
+                      <Button
+                        size="sm"
+                        variant={addJobMode === "url" ? "default" : "ghost"}
+                        onClick={() => { setAddJobMode("url"); setAddJobError(null); }}
+                        data-testid="button-mode-url"
+                      >
+                        <LinkIcon className="mr-1.5 h-3.5 w-3.5" />
+                        URL
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant={addJobMode === "paste" ? "default" : "ghost"}
+                        onClick={() => { setAddJobMode("paste"); setAddJobError(null); }}
+                        data-testid="button-mode-paste"
+                      >
+                        <ClipboardPaste className="mr-1.5 h-3.5 w-3.5" />
+                        Paste Text
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant={addJobMode === "file" ? "default" : "ghost"}
+                        onClick={() => { setAddJobMode("file"); setAddJobError(null); }}
+                        data-testid="button-mode-file"
+                      >
+                        <Upload className="mr-1.5 h-3.5 w-3.5" />
+                        File
+                      </Button>
+                    </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Upload className="h-5 w-5" />
-                Upload Job Files
-              </CardTitle>
-              <CardDescription>
-                Upload PDF, HTML, DOCX, or TXT files containing job postings. Each file will be parsed, categorized, and saved.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <input
-                ref={fileInputRef}
-                type="file"
-                multiple
-                accept=".pdf,.html,.htm,.docx,.txt"
-                className="hidden"
-                data-testid="input-file-upload"
-                onChange={(e) => handleFileUpload(e.target.files)}
-              />
-              <div className="flex flex-wrap gap-3">
-                <Button
-                  variant="outline"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={isUploading}
-                  data-testid="button-select-files"
-                >
-                  {isUploading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Uploading...
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="mr-2 h-4 w-4" />
-                      Select Files
-                    </>
-                  )}
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground mt-2">
-                Accepted formats: PDF, HTML, DOCX, TXT. Multiple files supported.
-              </p>
-
-              {uploadResults.length > 0 && (
-                <div className="mt-4 space-y-2" data-testid="upload-results">
-                  <h4 className="font-medium text-sm">Upload Results</h4>
-                  {uploadResults.map((result, idx) => (
-                    <div
-                      key={idx}
-                      className="flex items-start gap-2 p-3 border rounded-lg text-sm"
-                      data-testid={`upload-result-${idx}`}
-                    >
-                      {result.success ? (
-                        <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 shrink-0" />
-                      ) : (
-                        <XCircle className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
-                      )}
-                      <div className="min-w-0">
-                        <p className="font-medium truncate">{result.filename}</p>
-                        {result.success && result.job ? (
-                          <p className="text-muted-foreground">
-                            {result.job.title} at {result.job.company}
-                            {result.job.category && (
-                              <Badge variant="secondary" className="ml-2 text-xs">{result.job.category}</Badge>
+                    {addJobMode === "url" && (
+                      <div className="space-y-2">
+                        <div className="flex gap-3">
+                          <Input
+                            placeholder="https://boards.greenhouse.io/company/jobs/123..."
+                            value={customUrl}
+                            onChange={(e) => setCustomUrl(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" && customUrl.trim()) {
+                                setAddJobError(null);
+                                previewUrlMutation.mutate(customUrl.trim());
+                              }
+                            }}
+                            className="flex-1"
+                            data-testid="input-custom-url"
+                          />
+                          <Button
+                            onClick={() => {
+                              if (customUrl.trim()) {
+                                setAddJobError(null);
+                                previewUrlMutation.mutate(customUrl.trim());
+                              }
+                            }}
+                            disabled={previewUrlMutation.isPending || !customUrl.trim()}
+                            data-testid="button-scrape-url"
+                          >
+                            {previewUrlMutation.isPending ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Scraping...
+                              </>
+                            ) : (
+                              <>
+                                <Search className="mr-2 h-4 w-4" />
+                                Extract
+                              </>
                             )}
+                          </Button>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Supports Greenhouse, Lever, Ashby, and any generic job page.
+                        </p>
+                      </div>
+                    )}
+
+                    {addJobMode === "paste" && (
+                      <div className="space-y-2">
+                        <Textarea
+                          placeholder={"Paste the full job posting text here...\n\nExample:\nSenior Legal Engineer\nCompany: Clio\nLocation: Remote, US\nSalary: $120K - $160K\n\nWe are looking for a Senior Legal Engineer to join our team..."}
+                          value={pasteText}
+                          onChange={(e) => setPasteText(e.target.value)}
+                          rows={8}
+                          data-testid="input-paste-text"
+                        />
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs text-muted-foreground">
+                            Paste any format: job description, email, LinkedIn post, etc.
                           </p>
-                        ) : result.error ? (
-                          <p className="text-destructive">{result.error}</p>
-                        ) : null}
+                          <Button
+                            onClick={() => {
+                              if (pasteText.trim()) {
+                                setAddJobError(null);
+                                parseTextMutation.mutate(pasteText.trim());
+                              }
+                            }}
+                            disabled={parseTextMutation.isPending || pasteText.trim().length < 20}
+                            data-testid="button-parse-text"
+                          >
+                            {parseTextMutation.isPending ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Processing...
+                              </>
+                            ) : (
+                              <>
+                                <Zap className="mr-2 h-4 w-4" />
+                                Extract
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
+                    {addJobMode === "file" && (
+                      <div className="space-y-3">
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          multiple
+                          accept=".pdf,.html,.htm,.docx,.txt"
+                          className="hidden"
+                          data-testid="input-file-upload"
+                          onChange={(e) => handleFileUpload(e.target.files)}
+                        />
+                        <div
+                          className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer ${
+                            isDragging ? "border-primary bg-primary/5" : "border-muted-foreground/25 hover:border-muted-foreground/50"
+                          }`}
+                          onClick={() => fileInputRef.current?.click()}
+                          onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                          onDragLeave={() => setIsDragging(false)}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            setIsDragging(false);
+                            handleFileUpload(e.dataTransfer.files);
+                          }}
+                          data-testid="drop-zone"
+                        >
+                          {isUploading ? (
+                            <div className="flex flex-col items-center gap-2">
+                              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                              <p className="text-sm text-muted-foreground">Processing files...</p>
+                            </div>
+                          ) : (
+                            <div className="flex flex-col items-center gap-2">
+                              <Upload className="h-8 w-8 text-muted-foreground" />
+                              <p className="text-sm font-medium">Drop files here or click to browse</p>
+                              <p className="text-xs text-muted-foreground">PDF, HTML, DOCX, TXT</p>
+                            </div>
+                          )}
+                        </div>
+
+                        {uploadResults.length > 0 && (
+                          <div className="space-y-2" data-testid="upload-results">
+                            {uploadResults.map((result, idx) => (
+                              <div
+                                key={idx}
+                                className="flex items-start gap-2 p-3 border rounded-md text-sm"
+                                data-testid={`upload-result-${idx}`}
+                              >
+                                {result.success ? (
+                                  <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 shrink-0" />
+                                ) : (
+                                  <XCircle className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
+                                )}
+                                <div className="min-w-0">
+                                  <p className="font-medium truncate">{result.filename}</p>
+                                  {result.success && result.job ? (
+                                    <p className="text-muted-foreground">
+                                      {result.job.title} at {result.job.company}
+                                      {result.job.category && (
+                                        <Badge variant="secondary" className="ml-2 text-xs">{result.job.category}</Badge>
+                                      )}
+                                    </p>
+                                  ) : result.error ? (
+                                    <p className="text-destructive">{result.error}</p>
+                                  ) : null}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {addJobError && (
+                      <div className="border border-destructive/50 rounded-lg p-4 bg-destructive/5" data-testid="add-job-error">
+                        <div className="flex items-start gap-3">
+                          <XCircle className="h-5 w-5 text-destructive mt-0.5 shrink-0" />
+                          <div>
+                            <p className="font-medium text-sm">Failed to extract job</p>
+                            <p className="text-sm text-muted-foreground">{addJobError}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {previewJob && (
+                  <div className="space-y-4" data-testid="job-preview">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-medium text-sm flex items-center gap-2">
+                        <Sparkles className="h-4 w-4" />
+                        Review extracted job before saving
+                      </h4>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => { setPreviewJob(null); setPreviewEdits({}); }}
+                        data-testid="button-cancel-preview"
+                      >
+                        <XIcon className="mr-1 h-4 w-4" />
+                        Cancel
+                      </Button>
+                    </div>
+
+                    <div className="grid gap-3">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1.5">
+                          <Label className="text-xs">Title</Label>
+                          <Input
+                            value={previewEdits.title || ""}
+                            onChange={(e) => setPreviewEdits(p => ({ ...p, title: e.target.value }))}
+                            data-testid="input-preview-title"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-xs">Company</Label>
+                          <Input
+                            value={previewEdits.company || ""}
+                            onChange={(e) => setPreviewEdits(p => ({ ...p, company: e.target.value }))}
+                            data-testid="input-preview-company"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1.5">
+                          <Label className="text-xs">Location</Label>
+                          <Input
+                            value={previewEdits.location || ""}
+                            onChange={(e) => setPreviewEdits(p => ({ ...p, location: e.target.value }))}
+                            data-testid="input-preview-location"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-xs">Apply URL</Label>
+                          <Input
+                            value={previewEdits.applyUrl || ""}
+                            onChange={(e) => setPreviewEdits(p => ({ ...p, applyUrl: e.target.value }))}
+                            data-testid="input-preview-applyUrl"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-4 gap-3">
+                        <div className="space-y-1.5">
+                          <Label className="text-xs">Category</Label>
+                          <Select
+                            value={previewEdits.roleCategory || "_none"}
+                            onValueChange={(v) => setPreviewEdits(p => ({
+                              ...p,
+                              roleCategory: v === "_none" ? null : v,
+                              roleSubcategory: v === "_none" ? null : (p.roleSubcategory && getSubcategoriesForCategory(v).includes(p.roleSubcategory) ? p.roleSubcategory : null),
+                            }))}
+                          >
+                            <SelectTrigger data-testid="select-preview-category">
+                              <SelectValue placeholder="Category" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="_none">None</SelectItem>
+                              {TAXONOMY_CATEGORIES.map((cat) => (
+                                <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-xs">Subcategory</Label>
+                          <Select
+                            value={previewEdits.roleSubcategory || "_none"}
+                            onValueChange={(v) => setPreviewEdits(p => ({ ...p, roleSubcategory: v === "_none" ? null : v }))}
+                          >
+                            <SelectTrigger data-testid="select-preview-subcategory">
+                              <SelectValue placeholder="Sub" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="_none">None</SelectItem>
+                              {getSubcategoriesForCategory(previewEdits.roleCategory).map((sub) => (
+                                <SelectItem key={sub} value={sub}>{sub}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-xs">Seniority</Label>
+                          <Select
+                            value={previewEdits.seniorityLevel || "_none"}
+                            onValueChange={(v) => setPreviewEdits(p => ({ ...p, seniorityLevel: v === "_none" ? null : v }))}
+                          >
+                            <SelectTrigger data-testid="select-preview-seniority">
+                              <SelectValue placeholder="Level" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="_none">None</SelectItem>
+                              {SENIORITY_OPTIONS.map((level) => (
+                                <SelectItem key={level} value={level}>{level}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-xs">Remote</Label>
+                          <div className="pt-0.5">
+                            <Button
+                              variant={previewEdits.isRemote ? "default" : "outline"}
+                              size="sm"
+                              className="w-full"
+                              onClick={() => setPreviewEdits(p => ({ ...p, isRemote: !p.isRemote }))}
+                              data-testid="button-preview-remote"
+                            >
+                              {previewEdits.isRemote ? (
+                                <><Globe className="mr-1 h-3.5 w-3.5" /> Remote</>
+                              ) : "On-site"}
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1.5">
+                          <Label className="text-xs">Salary Min</Label>
+                          <Input
+                            type="number"
+                            value={previewEdits.salaryMin ?? ""}
+                            onChange={(e) => setPreviewEdits(p => ({ ...p, salaryMin: e.target.value ? Number(e.target.value) : null }))}
+                            placeholder="e.g. 80000"
+                            data-testid="input-preview-salaryMin"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-xs">Salary Max</Label>
+                          <Input
+                            type="number"
+                            value={previewEdits.salaryMax ?? ""}
+                            onChange={(e) => setPreviewEdits(p => ({ ...p, salaryMax: e.target.value ? Number(e.target.value) : null }))}
+                            placeholder="e.g. 150000"
+                            data-testid="input-preview-salaryMax"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Skills (comma-separated)</Label>
+                        <Input
+                          value={(previewEdits.keySkills || []).join(", ")}
+                          onChange={(e) => setPreviewEdits(p => ({
+                            ...p,
+                            keySkills: e.target.value.split(",").map((s: string) => s.trim()).filter(Boolean),
+                          }))}
+                          placeholder="e.g. Python, NLP, Contract Review"
+                          data-testid="input-preview-skills"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Description</Label>
+                        <Textarea
+                          value={previewEdits.description || ""}
+                          onChange={(e) => setPreviewEdits(p => ({ ...p, description: e.target.value }))}
+                          rows={4}
+                          data-testid="input-preview-description"
+                        />
                       </div>
                     </div>
-                  ))}
-                </div>
-              )}
+
+                    <div className="flex justify-end gap-2 pt-2 border-t">
+                      <Button
+                        variant="outline"
+                        onClick={() => { setPreviewJob(null); setPreviewEdits({}); }}
+                        data-testid="button-discard-preview"
+                      >
+                        Discard
+                      </Button>
+                      <Button
+                        onClick={() => confirmJobMutation.mutate(previewEdits)}
+                        disabled={confirmJobMutation.isPending || !previewEdits.title || !previewEdits.company}
+                        data-testid="button-confirm-job"
+                      >
+                        {confirmJobMutation.isPending ? (
+                          <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</>
+                        ) : (
+                          <><CheckCircle className="mr-2 h-4 w-4" /> Confirm & Save</>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
 
