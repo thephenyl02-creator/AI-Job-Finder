@@ -1,3 +1,4 @@
+import { useState, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation, useParams } from "wouter";
 import { Header } from "@/components/header";
@@ -18,6 +19,8 @@ import {
   Clock,
   Loader2,
   CheckCircle2,
+  MessageCircle,
+  Send,
 } from "lucide-react";
 
 const BULLET_PATTERN = /^(?:[-•*]\s|(?:\d+)[.)]\s)/;
@@ -237,6 +240,186 @@ function DescriptionContent({ text, testId }: { text?: string | null; testId: st
         return <p key={i}>{block.content}</p>;
       })}
     </div>
+  );
+}
+
+interface ChatMsg {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+}
+
+function formatChatMarkdown(text: string) {
+  const lines = text.split("\n");
+  let key = 0;
+  return lines.map((line) => {
+    if (line.trim().startsWith("- ")) {
+      return (
+        <div key={key++} className="flex gap-2 pl-2 py-0.5">
+          <span className="text-muted-foreground shrink-0">&bull;</span>
+          <span>{renderBoldText(line.trim().slice(2), key)}</span>
+        </div>
+      );
+    }
+    if (line.trim() === "") return <div key={key++} className="h-1.5" />;
+    return <p key={key++} className="leading-relaxed">{renderBoldText(line, key)}</p>;
+  });
+}
+
+function renderBoldText(text: string, pk: number) {
+  const parts: (string | JSX.Element)[] = [];
+  let last = 0;
+  let i = 0;
+  const re = /\*\*(.*?)\*\*/g;
+  let m;
+  while ((m = re.exec(text)) !== null) {
+    if (m.index > last) parts.push(text.slice(last, m.index));
+    parts.push(<strong key={`${pk}-${i++}`} className="font-semibold">{m[1]}</strong>);
+    last = m.index + m[0].length;
+  }
+  if (last < text.length) parts.push(text.slice(last));
+  return parts.length === 1 && typeof parts[0] === "string" ? parts[0] : <>{parts}</>;
+}
+
+const JOB_QUESTION_CHIPS = [
+  "What does this role actually involve day-to-day?",
+  "Would this be a good fit for a lawyer?",
+  "Explain the requirements in simple terms",
+  "What skills do I need for this?",
+];
+
+function JobChat({ jobId }: { jobId: string }) {
+  const [messages, setMessages] = useState<ChatMsg[]>([]);
+  const [input, setInput] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+  }, [messages]);
+
+  const sendMessage = async (text?: string) => {
+    const msgText = text || input.trim();
+    if (!msgText || isLoading) return;
+
+    const userMsg: ChatMsg = { id: `u-${Date.now()}`, role: "user", content: msgText };
+    setMessages((prev) => [...prev, userMsg]);
+    setInput("");
+    setIsLoading(true);
+
+    try {
+      const history = [...messages, userMsg].map((m) => ({ role: m.role, content: m.content }));
+      const res = await apiRequest("POST", "/api/assistant/chat", {
+        message: msgText,
+        history,
+        context: { jobId },
+      });
+      const data = await res.json();
+      setMessages((prev) => [
+        ...prev,
+        { id: `a-${Date.now()}`, role: "assistant", content: data.reply || "Sorry, please try again." },
+      ]);
+    } catch {
+      setMessages((prev) => [
+        ...prev,
+        { id: `e-${Date.now()}`, role: "assistant", content: "Something went wrong. Please try again." },
+      ]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <Card>
+      <CardContent className="pt-5 pb-4">
+        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+          Ask About This Job
+        </h2>
+        <p className="text-xs text-muted-foreground mb-3">
+          Have a question about this role? Ask below and get a plain-language answer.
+        </p>
+
+        <div ref={scrollRef} className="max-h-64 overflow-y-auto space-y-2 mb-3">
+          {messages.length === 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {JOB_QUESTION_CHIPS.map((q) => (
+                <Badge
+                  key={q}
+                  variant="outline"
+                  onClick={() => sendMessage(q)}
+                  className="cursor-pointer text-xs"
+                  data-testid={`button-job-chip-${q.slice(0, 15).replace(/\s+/g, '-').toLowerCase()}`}
+                >
+                  {q}
+                </Badge>
+              ))}
+            </div>
+          )}
+
+          {messages.map((msg) => (
+            <div key={msg.id} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+              <div
+                className={`max-w-[90%] rounded-lg px-3 py-2 text-xs ${
+                  msg.role === "user"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-foreground"
+                }`}
+                data-testid={`message-job-${msg.role}-${msg.id}`}
+              >
+                {msg.role === "assistant" ? (
+                  <div className="space-y-0.5">{formatChatMarkdown(msg.content)}</div>
+                ) : (
+                  msg.content
+                )}
+              </div>
+            </div>
+          ))}
+
+          {isLoading && (
+            <div className="flex justify-start">
+              <div className="bg-muted rounded-lg px-3 py-2 flex items-center gap-2">
+                <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+                <span className="text-xs text-muted-foreground">Thinking...</span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-end gap-2">
+          <textarea
+            ref={inputRef}
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+              }
+            }}
+            placeholder="Ask a question about this job..."
+            rows={1}
+            className="flex-1 resize-none bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none min-h-[32px] max-h-[64px] py-1.5 border-b border-border focus:border-foreground transition-colors"
+            style={{ height: "32px" }}
+            onInput={(e) => {
+              const t = e.target as HTMLTextAreaElement;
+              t.style.height = "32px";
+              t.style.height = Math.min(t.scrollHeight, 64) + "px";
+            }}
+            data-testid="input-job-chat"
+          />
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={() => sendMessage()}
+            disabled={!input.trim() || isLoading}
+            data-testid="button-send-job-chat"
+          >
+            <Send className="h-4 w-4" />
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -497,6 +680,8 @@ export default function JobDetail() {
               <ExternalLink className="h-4 w-4 mr-2" />
               Apply Now
             </Button>
+
+            <JobChat jobId={jobId || ""} />
           </div>
         </div>
       </main>

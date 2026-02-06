@@ -2346,6 +2346,144 @@ After your analysis, list 2-4 key data points you referenced as "Sources" - each
   });
 
   // =============================================
+  // Assistant Chat API
+  // =============================================
+
+  app.get("/api/jobs/locations", isAuthenticated, async (req, res) => {
+    try {
+      const allJobs = await storage.getActiveJobs();
+      const locationMap: Record<string, number> = {};
+      for (const job of allJobs) {
+        if (job.location && job.location.trim()) {
+          const loc = job.location.trim();
+          locationMap[loc] = (locationMap[loc] || 0) + 1;
+        }
+      }
+      const locations = Object.entries(locationMap)
+        .sort((a, b) => b[1] - a[1])
+        .map(([location, count]) => ({ location, count }));
+      res.json(locations);
+    } catch (error) {
+      console.error("Error fetching locations:", error);
+      res.status(500).json({ error: "Failed to fetch locations" });
+    }
+  });
+
+  app.post("/api/assistant/chat", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const userId = user?.claims?.sub;
+      const { message, history, context } = req.body;
+
+      if (!message || typeof message !== "string" || message.trim().length < 2) {
+        return res.status(400).json({ error: "Please provide a message." });
+      }
+
+      const conversationHistory: { role: "user" | "assistant"; content: string }[] = Array.isArray(history)
+        ? history.slice(-8).map((h: any) => ({
+            role: h.role === "assistant" ? "assistant" as const : "user" as const,
+            content: String(h.content).slice(0, 2000),
+          }))
+        : [];
+
+      let jobContext = "";
+      let resumeContext = "";
+      let platformContext = "";
+
+      if (context?.jobId) {
+        const job = await storage.getJob(Number(context.jobId));
+        if (job) {
+          const salaryInfo = job.salaryMin || job.salaryMax
+            ? `Salary: ${job.salaryMin ? `$${job.salaryMin.toLocaleString()}` : ""}${job.salaryMin && job.salaryMax ? " - " : ""}${job.salaryMax ? `$${job.salaryMax.toLocaleString()}` : ""}`
+            : "Salary: Not disclosed";
+          jobContext = `
+CURRENT JOB BEING DISCUSSED:
+Title: ${job.title}
+Company: ${job.company}
+Location: ${job.location || "Not specified"}
+${job.isRemote ? "Remote: Yes" : ""}
+${salaryInfo}
+Seniority: ${job.seniorityLevel || "Not specified"}
+Category: ${job.roleCategory || "Not specified"}
+${job.roleSubcategory ? `Specialization: ${job.roleSubcategory}` : ""}
+${job.keySkills?.length ? `Key Skills: ${job.keySkills.join(", ")}` : ""}
+
+Summary: ${job.aiSummary || "No summary available"}
+
+Full Description:
+${(job.description || "").slice(0, 3000)}
+
+${job.requirements ? `Requirements:\n${job.requirements.slice(0, 1500)}` : ""}`;
+        }
+      }
+
+      if (userId) {
+        const primaryResume = await storage.getPrimaryResume(userId);
+        if (primaryResume) {
+          const extracted = primaryResume.extractedData as any;
+          resumeContext = `
+USER'S RESUME INFORMATION:
+${extracted?.skills?.length ? `Skills: ${extracted.skills.join(", ")}` : ""}
+${extracted?.experience ? `Experience: ${JSON.stringify(extracted.experience).slice(0, 800)}` : ""}
+${extracted?.education ? `Education: ${JSON.stringify(extracted.education).slice(0, 400)}` : ""}
+${extracted?.yearsOfExperience ? `Years of Experience: ${extracted.yearsOfExperience}` : ""}
+${primaryResume.resumeText ? `Resume Summary (first 1500 chars):\n${primaryResume.resumeText.slice(0, 1500)}` : ""}`;
+        }
+      }
+
+      const allJobs = await storage.getActiveJobs();
+      const jobSummaries = allJobs.slice(0, 30).map(j => {
+        const sal = j.salaryMin ? `$${Math.round(j.salaryMin/1000)}K${j.salaryMax ? `-$${Math.round(j.salaryMax/1000)}K` : "+"}` : "";
+        return `- "${j.title}" at ${j.company} (${j.location || "Location N/A"}) ${sal} [${j.roleCategory || ""}] ${j.seniorityLevel || ""}`;
+      }).join("\n");
+
+      platformContext = `
+PLATFORM CONTEXT:
+Legal Tech Careers is a job platform connecting legal professionals with opportunities in legal technology. There are currently ${allJobs.length} active job listings across ${new Set(allJobs.map(j => j.company)).size} companies.
+
+SAMPLE OF AVAILABLE JOBS:
+${jobSummaries}`;
+
+      const systemPrompt = `You are a friendly and knowledgeable career assistant for Legal Tech Careers, a job platform for legal professionals exploring technology careers. Your role is to help users understand job listings, evaluate their fit, and navigate their career transition.
+
+IMPORTANT GUIDELINES:
+- Use plain, everyday language. Avoid jargon. If you must use a technical term, explain it simply in parentheses.
+- Be warm but concise. Keep responses focused and helpful.
+- Never mention that you are an AI or use phrases like "AI-powered".
+- When discussing a specific job, break down what the role actually involves day-to-day.
+- When comparing the user's resume to a job, be honest but constructive. Highlight strengths first, then gaps, then actionable steps.
+- If the user asks about something you don't have data for, say so honestly rather than guessing.
+- Format responses with short paragraphs. Use **bold** for emphasis on key points.
+- When listing items, use bullet points (- item) for readability.
+${jobContext ? "\nThe user is currently looking at a specific job posting. Use the job details below to answer their questions about this role." : ""}
+${resumeContext ? "\nThe user has uploaded their resume. Use their background to personalize advice and evaluate job fit." : ""}
+${jobContext}
+${resumeContext}
+${platformContext}`;
+
+      const messages: { role: "system" | "user" | "assistant"; content: string }[] = [
+        { role: "system", content: systemPrompt },
+        ...conversationHistory,
+        { role: "user", content: message.trim() },
+      ];
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages,
+        temperature: 0.6,
+        max_tokens: 1200,
+      });
+
+      const reply = completion.choices[0]?.message?.content || "I'm sorry, I couldn't generate a response. Please try again.";
+
+      res.json({ reply });
+    } catch (error) {
+      console.error("Assistant chat error:", error);
+      res.status(500).json({ error: "Failed to process your question. Please try again." });
+    }
+  });
+
+  // =============================================
   // Stripe Subscription Routes
   // =============================================
 

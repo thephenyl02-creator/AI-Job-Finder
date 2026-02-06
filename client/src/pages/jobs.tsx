@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation, useSearch } from "wouter";
 import { Header } from "@/components/header";
@@ -74,12 +74,16 @@ export default function Jobs() {
   const levelParam = urlParams.get("level");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedLevel, setSelectedLevel] = useState<string>(levelParam && ["entry", "mid", "senior"].includes(levelParam) ? levelParam : "all");
+  const [selectedLocation, setSelectedLocation] = useState<string>("all");
   const [filterText, setFilterText] = useState("");
   const [searchResults, setSearchResults] = useState<JobWithScore[] | null>(null);
   const [searchQuery, setSearchQuery] = useState<string | null>(null);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<"cards" | "list">("cards");
   const [selectedJobIds, setSelectedJobIds] = useState<Set<number>>(new Set());
+  const [locationSearch, setLocationSearch] = useState("");
+  const [locationDropdownOpen, setLocationDropdownOpen] = useState(false);
+  const locationDropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const params = new URLSearchParams(searchString);
@@ -138,6 +142,23 @@ export default function Jobs() {
     }
   }, []);
 
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (locationDropdownRef.current && !locationDropdownRef.current.contains(e.target as Node)) {
+        setLocationDropdownOpen(false);
+      }
+    };
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setLocationDropdownOpen(false);
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, []);
+
   const { data: allJobs = [], isLoading: jobsLoading } = useQuery<Job[]>({
     queryKey: ["/api/jobs"],
     enabled: isAuthenticated,
@@ -147,6 +168,28 @@ export default function Jobs() {
     queryKey: ["/api/resume"],
     enabled: isAuthenticated,
   });
+
+  const { data: locationsData = [] } = useQuery<{ location: string; count: number }[]>({
+    queryKey: ["/api/jobs/locations"],
+    enabled: isAuthenticated,
+  });
+
+  const normalizeLocation = (loc: string) => {
+    const lower = loc.toLowerCase();
+    const city = lower.split(",")[0].trim();
+    return city;
+  };
+
+  const locationGroups = locationsData.reduce((acc, item) => {
+    const city = normalizeLocation(item.location);
+    if (!acc[city]) acc[city] = { display: item.location.split(",")[0].trim(), count: 0 };
+    acc[city].count += item.count;
+    return acc;
+  }, {} as Record<string, { display: string; count: number }>);
+
+  const uniqueLocations = Object.entries(locationGroups)
+    .sort((a, b) => b[1].count - a[1].count)
+    .map(([key, val]) => ({ key, display: val.display, count: val.count }));
 
   const handleApplyClick = async (job: Job | JobWithScore) => {
     try {
@@ -219,8 +262,16 @@ export default function Jobs() {
         );
       }
     }
+
+    let matchesLocation = true;
+    if (selectedLocation === "remote") {
+      matchesLocation = !!job.isRemote || (job.location?.toLowerCase().includes("remote") ?? false);
+    } else if (selectedLocation !== "all") {
+      const jobCity = normalizeLocation(job.location || "");
+      matchesLocation = jobCity === selectedLocation;
+    }
     
-    return matchesCategory && matchesText && matchesLevel;
+    return matchesCategory && matchesText && matchesLevel && matchesLocation;
   });
 
   const getCategoryCount = (category: string) => 
@@ -307,6 +358,62 @@ export default function Jobs() {
               </Button>
             ))}
           </div>
+          <div className="relative" ref={locationDropdownRef}>
+            <Button
+              variant={selectedLocation !== "all" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setLocationDropdownOpen(!locationDropdownOpen)}
+              className="gap-1"
+              data-testid="button-location-filter"
+            >
+              <MapPin className="h-3 w-3" />
+              {selectedLocation === "all" ? "All Locations" : selectedLocation === "remote" ? "Remote Only" : uniqueLocations.find(l => l.key === selectedLocation)?.display || selectedLocation}
+            </Button>
+            {locationDropdownOpen && (
+              <div className="absolute top-full mt-1 left-0 z-50 w-64 max-h-72 bg-card border rounded-lg shadow-lg overflow-hidden">
+                <div className="p-2 border-b">
+                  <Input
+                    placeholder="Search locations..."
+                    value={locationSearch}
+                    onChange={(e) => setLocationSearch(e.target.value)}
+                    className="h-8 text-sm"
+                    data-testid="input-location-search"
+                  />
+                </div>
+                <div className="overflow-y-auto max-h-52">
+                  <button
+                    className={`w-full text-left px-3 py-2 text-sm hover-elevate ${selectedLocation === "all" ? "bg-muted font-medium" : ""}`}
+                    onClick={() => { setSelectedLocation("all"); setLocationDropdownOpen(false); setLocationSearch(""); }}
+                    data-testid="button-location-all"
+                  >
+                    All Locations
+                  </button>
+                  <button
+                    className={`w-full text-left px-3 py-2 text-sm hover-elevate flex items-center justify-between gap-2 ${selectedLocation === "remote" ? "bg-muted font-medium" : ""}`}
+                    onClick={() => { setSelectedLocation("remote"); setLocationDropdownOpen(false); setLocationSearch(""); }}
+                    data-testid="button-location-remote"
+                  >
+                    <span>Remote Only</span>
+                    <Badge variant="secondary" className="text-xs">{allJobs.filter(j => j.isRemote).length}</Badge>
+                  </button>
+                  <div className="border-t my-1" />
+                  {uniqueLocations
+                    .filter(l => locationSearch === "" || l.display.toLowerCase().includes(locationSearch.toLowerCase()))
+                    .map((loc) => (
+                    <button
+                      key={loc.key}
+                      className={`w-full text-left px-3 py-2 text-sm hover-elevate flex items-center justify-between gap-2 ${selectedLocation === loc.key ? "bg-muted font-medium" : ""}`}
+                      onClick={() => { setSelectedLocation(loc.key); setLocationDropdownOpen(false); setLocationSearch(""); }}
+                      data-testid={`button-location-${loc.key}`}
+                    >
+                      <span className="truncate">{loc.display}</span>
+                      <Badge variant="secondary" className="text-xs shrink-0 ml-2">{loc.count}</Badge>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
           {selectedCategory !== "all" && (
             <Button
               variant="outline"
@@ -329,6 +436,18 @@ export default function Jobs() {
             >
               <X className="h-3 w-3" />
               {SENIORITY_LEVELS.find(l => l.value === selectedLevel)?.label}
+            </Button>
+          )}
+          {selectedLocation !== "all" && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSelectedLocation("all")}
+              className="gap-1"
+              data-testid="button-clear-location"
+            >
+              <X className="h-3 w-3" />
+              {selectedLocation === "remote" ? "Remote" : uniqueLocations.find(l => l.key === selectedLocation)?.display}
             </Button>
           )}
           {searchResults && (

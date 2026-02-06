@@ -7,6 +7,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { useAuth } from "@/hooks/use-auth";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { LogoMark } from "@/components/logo";
+import { AssistantWidget } from "@/components/assistant-widget";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
 import Search from "@/pages/search";
@@ -66,6 +67,7 @@ function App() {
       <ThemeProvider defaultTheme="light" storageKey="legal-ai-careers-theme">
         <TooltipProvider>
           <AppRouter />
+          <AssistantWidget />
           <ScrollToTop />
           <Toaster />
         </TooltipProvider>
