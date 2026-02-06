@@ -98,7 +98,7 @@ export function UpgradePrompt({ feature, description }: UpgradePromptProps) {
               </Button>
             ) : (
               <Button className="w-full" asChild data-testid="button-upgrade-login">
-                <a href="/api/login">
+                <a href="/auth">
                   Sign In to Upgrade
                   <ArrowRight className="h-4 w-4 ml-2" />
                 </a>

@@ -1,7 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { User } from "@shared/models/auth";
+import { apiRequest } from "@/lib/queryClient";
 
-async function fetchUser(): Promise<User | null> {
+type SafeUser = Omit<User, "password">;
+
+async function fetchUser(): Promise<SafeUser | null> {
   const response = await fetch("/api/auth/user", {
     credentials: "include",
   });
@@ -34,32 +37,53 @@ async function fetchIsAdmin(): Promise<boolean> {
   return data.isAdmin === true;
 }
 
-async function logout(): Promise<void> {
-  window.location.href = "/api/logout";
-}
-
 export function useAuth() {
   const queryClient = useQueryClient();
-  const { data: user, isLoading } = useQuery<User | null>({
+  const { data: user, isLoading } = useQuery<SafeUser | null>({
     queryKey: ["/api/auth/user"],
     queryFn: fetchUser,
     retry: false,
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: 1000 * 60 * 5,
   });
 
   const { data: isAdmin } = useQuery<boolean>({
     queryKey: ["/api/auth/is-admin"],
     queryFn: fetchIsAdmin,
     retry: false,
-    staleTime: 1000 * 60 * 5, // 5 minutes
-    enabled: !!user, // Only check admin status if user is logged in
+    staleTime: 1000 * 60 * 5,
+    enabled: !!user,
+  });
+
+  const loginMutation = useMutation({
+    mutationFn: async (data: { email: string; password: string }) => {
+      const res = await apiRequest("POST", "/api/auth/login", data);
+      return res.json() as Promise<SafeUser>;
+    },
+    onSuccess: (user) => {
+      queryClient.setQueryData(["/api/auth/user"], user);
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/is-admin"] });
+    },
+  });
+
+  const registerMutation = useMutation({
+    mutationFn: async (data: { email: string; password: string; firstName?: string; lastName?: string }) => {
+      const res = await apiRequest("POST", "/api/auth/register", data);
+      return res.json() as Promise<SafeUser>;
+    },
+    onSuccess: (user) => {
+      queryClient.setQueryData(["/api/auth/user"], user);
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/is-admin"] });
+    },
   });
 
   const logoutMutation = useMutation({
-    mutationFn: logout,
+    mutationFn: async () => {
+      await apiRequest("POST", "/api/auth/logout");
+    },
     onSuccess: () => {
       queryClient.setQueryData(["/api/auth/user"], null);
       queryClient.setQueryData(["/api/auth/is-admin"], false);
+      queryClient.clear();
     },
   });
 
@@ -68,6 +92,12 @@ export function useAuth() {
     isLoading,
     isAuthenticated: !!user,
     isAdmin: isAdmin === true,
+    login: loginMutation.mutateAsync,
+    loginError: loginMutation.error,
+    isLoggingIn: loginMutation.isPending,
+    register: registerMutation.mutateAsync,
+    registerError: registerMutation.error,
+    isRegistering: registerMutation.isPending,
     logout: logoutMutation.mutate,
     isLoggingOut: logoutMutation.isPending,
   };

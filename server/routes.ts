@@ -85,7 +85,7 @@ const openai = new OpenAI({
 
 async function requirePro(req: any, res: any, next: any) {
   const user = req.user as any;
-  const userId = user?.claims?.sub;
+  const userId = user?.id;
   if (!userId) {
     return res.status(401).json({ error: "Unauthorized" });
   }
@@ -394,8 +394,8 @@ Only include jobs with a score above 40. Sort by score descending.`;
 
       // Save last search query for user
       const user = req.user as any;
-      if (user?.claims?.sub) {
-        storage.updateUserLastSearch(user.claims.sub, query).catch(console.error);
+      if (user?.id) {
+        storage.updateUserLastSearch(user.id, query).catch(console.error);
       }
 
       res.json(scoredJobs);
@@ -418,8 +418,8 @@ Only include jobs with a score above 40. Sort by score descending.`;
       // Get user's resume data if available for personalization
       const user = req.user as any;
       let userContext = "";
-      if (user?.claims?.sub) {
-        const userData = await storage.getUserResume(user.claims.sub);
+      if (user?.id) {
+        const userData = await storage.getUserResume(user.id);
         if (userData?.extractedData) {
           const skills = userData.extractedData.skills?.join(", ") || "";
           const experience = userData.extractedData.experience || "";
@@ -505,8 +505,8 @@ Return ONLY valid JSON in this format:
       // Get user's resume data for better matching
       const user = req.user as any;
       let userContext = "";
-      if (user?.claims?.sub) {
-        const userData = await storage.getUserResume(user.claims.sub);
+      if (user?.id) {
+        const userData = await storage.getUserResume(user.id);
         if (userData?.extractedData) {
           const skills = userData.extractedData.skills?.join(", ") || "not provided";
           const experience = userData.extractedData.experience || "not provided";
@@ -610,8 +610,8 @@ ${JSON.stringify(jobSummaries, null, 2)}`
         .sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0));
 
       // Save refined search for user
-      if (user?.claims?.sub) {
-        storage.updateUserLastSearch(user.claims.sub, `${originalQuery} (refined)`).catch(console.error);
+      if (user?.id) {
+        storage.updateUserLastSearch(user.id, `${originalQuery} (refined)`).catch(console.error);
       }
 
       res.json({
@@ -628,7 +628,7 @@ ${JSON.stringify(jobSummaries, null, 2)}`
   app.post("/api/resume/upload", isAuthenticated, upload.single("resume"), async (req, res) => {
     try {
       const user = req.user as any;
-      const userId = user?.claims?.sub;
+      const userId = user?.id;
       if (!userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
@@ -678,7 +678,7 @@ ${JSON.stringify(jobSummaries, null, 2)}`
   app.get("/api/resume", isAuthenticated, async (req, res) => {
     try {
       const user = req.user as any;
-      const userId = user?.claims?.sub;
+      const userId = user?.id;
       if (!userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
@@ -704,7 +704,7 @@ ${JSON.stringify(jobSummaries, null, 2)}`
   app.delete("/api/resume", isAuthenticated, async (req, res) => {
     try {
       const user = req.user as any;
-      const userId = user?.claims?.sub;
+      const userId = user?.id;
       if (!userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
@@ -721,7 +721,7 @@ ${JSON.stringify(jobSummaries, null, 2)}`
   app.post("/api/resume/match-jobs", isAuthenticated, requirePro, async (req, res) => {
     try {
       const user = req.user as any;
-      const userId = user?.claims?.sub;
+      const userId = user?.id;
       if (!userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
@@ -752,7 +752,7 @@ ${JSON.stringify(jobSummaries, null, 2)}`
   app.post("/api/resume/tweak/:jobId", isAuthenticated, requirePro, async (req, res) => {
     try {
       const user = req.user as any;
-      const userId = user?.claims?.sub;
+      const userId = user?.id;
       if (!userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
@@ -790,7 +790,7 @@ ${JSON.stringify(jobSummaries, null, 2)}`
   app.post("/api/compare/:jobId", isAuthenticated, async (req, res) => {
     try {
       const user = req.user as any;
-      const userId = user?.claims?.sub as string;
+      const userId = user?.id as string;
       if (!userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
@@ -835,7 +835,7 @@ ${JSON.stringify(jobSummaries, null, 2)}`
 
   app.get("/api/resumes", isAuthenticated, async (req, res) => {
     try {
-      const userId = (req.user as any)?.claims?.sub;
+      const userId = (req.user as any)?.id;
       if (!userId) return res.status(401).json({ error: "Not authenticated" });
       await storage.migrateUserResumeToResumes(userId);
       const userResumes = await storage.getUserResumes(userId);
@@ -848,7 +848,7 @@ ${JSON.stringify(jobSummaries, null, 2)}`
 
   app.post("/api/resumes/upload", isAuthenticated, upload.single("resume"), async (req, res) => {
     try {
-      const userId = (req.user as any)?.claims?.sub;
+      const userId = (req.user as any)?.id;
       if (!userId) return res.status(401).json({ error: "Not authenticated" });
 
       const file = req.file;
@@ -899,7 +899,7 @@ ${JSON.stringify(jobSummaries, null, 2)}`
 
   app.patch("/api/resumes/:id", isAuthenticated, async (req, res) => {
     try {
-      const userId = (req.user as any)?.claims?.sub;
+      const userId = (req.user as any)?.id;
       if (!userId) return res.status(401).json({ error: "Not authenticated" });
       const id = parseInt(req.params.id);
       if (isNaN(id)) return res.status(400).json({ error: "Invalid resume ID" });
@@ -916,7 +916,7 @@ ${JSON.stringify(jobSummaries, null, 2)}`
 
   app.post("/api/resumes/:id/set-primary", isAuthenticated, async (req, res) => {
     try {
-      const userId = (req.user as any)?.claims?.sub;
+      const userId = (req.user as any)?.id;
       if (!userId) return res.status(401).json({ error: "Not authenticated" });
       const id = parseInt(req.params.id);
       if (isNaN(id)) return res.status(400).json({ error: "Invalid resume ID" });
@@ -930,7 +930,7 @@ ${JSON.stringify(jobSummaries, null, 2)}`
 
   app.delete("/api/resumes/:id", isAuthenticated, async (req, res) => {
     try {
-      const userId = (req.user as any)?.claims?.sub;
+      const userId = (req.user as any)?.id;
       if (!userId) return res.status(401).json({ error: "Not authenticated" });
       const id = parseInt(req.params.id);
       if (isNaN(id)) return res.status(400).json({ error: "Invalid resume ID" });
@@ -944,7 +944,7 @@ ${JSON.stringify(jobSummaries, null, 2)}`
 
   app.post("/api/resumes/:id/match-jobs", isAuthenticated, async (req, res) => {
     try {
-      const userId = (req.user as any)?.claims?.sub;
+      const userId = (req.user as any)?.id;
       if (!userId) return res.status(401).json({ error: "Not authenticated" });
       const id = parseInt(req.params.id);
       if (isNaN(id)) return res.status(400).json({ error: "Invalid resume ID" });
@@ -971,7 +971,7 @@ ${JSON.stringify(jobSummaries, null, 2)}`
 
   app.post("/api/resumes/match-all", isAuthenticated, async (req, res) => {
     try {
-      const userId = (req.user as any)?.claims?.sub;
+      const userId = (req.user as any)?.id;
       if (!userId) return res.status(401).json({ error: "Not authenticated" });
 
       const userResumes = await storage.getUserResumes(userId);
@@ -1005,7 +1005,7 @@ ${JSON.stringify(jobSummaries, null, 2)}`
   app.get("/api/preferences", isAuthenticated, async (req, res) => {
     try {
       const user = req.user as any;
-      const userId = user?.claims?.sub;
+      const userId = user?.id;
       if (!userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
@@ -1021,7 +1021,7 @@ ${JSON.stringify(jobSummaries, null, 2)}`
   app.put("/api/preferences", isAuthenticated, async (req, res) => {
     try {
       const user = req.user as any;
-      const userId = user?.claims?.sub;
+      const userId = user?.id;
       if (!userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
@@ -1037,7 +1037,7 @@ ${JSON.stringify(jobSummaries, null, 2)}`
   // Check admin status from database
   const isAdminCheck = async (req: any): Promise<boolean> => {
     const user = req.user as any;
-    const userId = user?.claims?.sub;
+    const userId = user?.id;
     if (!userId) return false;
     return storage.isUserAdmin(userId);
   };
@@ -1553,7 +1553,7 @@ ${JSON.stringify(jobSummaries, null, 2)}`
 
   app.get("/api/alerts", isAuthenticated, async (req, res) => {
     try {
-      const userId = (req.user as any)?.claims?.sub;
+      const userId = (req.user as any)?.id;
       if (!userId) return res.status(401).json({ error: "Not authenticated" });
       const alerts = await storage.getUserAlerts(userId);
       res.json(alerts);
@@ -1565,7 +1565,7 @@ ${JSON.stringify(jobSummaries, null, 2)}`
 
   app.post("/api/alerts", isAuthenticated, requirePro, async (req, res) => {
     try {
-      const userId = (req.user as any)?.claims?.sub;
+      const userId = (req.user as any)?.id;
       if (!userId) return res.status(401).json({ error: "Not authenticated" });
       const parsed = insertJobAlertSchema.safeParse({ ...req.body, userId });
       if (!parsed.success) {
@@ -1581,7 +1581,7 @@ ${JSON.stringify(jobSummaries, null, 2)}`
 
   app.patch("/api/alerts/:id", isAuthenticated, async (req, res) => {
     try {
-      const userId = (req.user as any)?.claims?.sub;
+      const userId = (req.user as any)?.id;
       if (!userId) return res.status(401).json({ error: "Not authenticated" });
       const id = parseInt(req.params.id);
       if (isNaN(id)) return res.status(400).json({ error: "Invalid alert ID" });
@@ -1596,7 +1596,7 @@ ${JSON.stringify(jobSummaries, null, 2)}`
 
   app.delete("/api/alerts/:id", isAuthenticated, async (req, res) => {
     try {
-      const userId = (req.user as any)?.claims?.sub;
+      const userId = (req.user as any)?.id;
       if (!userId) return res.status(401).json({ error: "Not authenticated" });
       const id = parseInt(req.params.id);
       if (isNaN(id)) return res.status(400).json({ error: "Invalid alert ID" });
@@ -1610,7 +1610,7 @@ ${JSON.stringify(jobSummaries, null, 2)}`
 
   app.get("/api/notifications", isAuthenticated, async (req, res) => {
     try {
-      const userId = (req.user as any)?.claims?.sub;
+      const userId = (req.user as any)?.id;
       if (!userId) return res.status(401).json({ error: "Not authenticated" });
       const notifs = await storage.getUserNotifications(userId, 50);
       res.json(notifs);
@@ -1622,7 +1622,7 @@ ${JSON.stringify(jobSummaries, null, 2)}`
 
   app.get("/api/notifications/unread-count", isAuthenticated, async (req, res) => {
     try {
-      const userId = (req.user as any)?.claims?.sub;
+      const userId = (req.user as any)?.id;
       if (!userId) return res.status(401).json({ error: "Not authenticated" });
       const count = await storage.getUnreadNotificationCount(userId);
       res.json({ count });
@@ -1634,7 +1634,7 @@ ${JSON.stringify(jobSummaries, null, 2)}`
 
   app.post("/api/notifications/:id/read", isAuthenticated, async (req, res) => {
     try {
-      const userId = (req.user as any)?.claims?.sub;
+      const userId = (req.user as any)?.id;
       if (!userId) return res.status(401).json({ error: "Not authenticated" });
       const id = parseInt(req.params.id);
       if (isNaN(id)) return res.status(400).json({ error: "Invalid notification ID" });
@@ -1648,7 +1648,7 @@ ${JSON.stringify(jobSummaries, null, 2)}`
 
   app.post("/api/notifications/mark-all-read", isAuthenticated, async (req, res) => {
     try {
-      const userId = (req.user as any)?.claims?.sub;
+      const userId = (req.user as any)?.id;
       if (!userId) return res.status(401).json({ error: "Not authenticated" });
       await storage.markAllNotificationsRead(userId);
       res.json({ success: true });
@@ -2018,7 +2018,7 @@ If this doesn't appear to be a job posting, return:
   app.post("/api/career-advisor/compare", isAuthenticated, requirePro, async (req, res) => {
     try {
       const user = req.user as any;
-      const userId = user?.claims?.sub;
+      const userId = user?.id;
       if (!userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
@@ -2402,7 +2402,7 @@ After your analysis, list 2-4 key data points you referenced as "Sources" - each
   app.post("/api/assistant/chat", isAuthenticated, async (req, res) => {
     try {
       const user = req.user as any;
-      const userId = user?.claims?.sub;
+      const userId = user?.id;
       const { message, history, context } = req.body;
 
       if (!message || typeof message !== "string" || message.trim().length < 2) {
@@ -2545,7 +2545,7 @@ ${platformContext}`;
   app.post("/api/match/discuss", isAuthenticated, requirePro, async (req, res) => {
     try {
       const user = req.user as any;
-      const userId = user?.claims?.sub;
+      const userId = user?.id;
       const { message, history, matchContext } = req.body;
 
       if (!message || typeof message !== "string" || message.trim().length < 2) {
@@ -2664,7 +2664,7 @@ ${matchDetails}`;
   app.post("/api/activities", isAuthenticated, async (req, res) => {
     try {
       const user = req.user as any;
-      const userId = user?.claims?.sub;
+      const userId = user?.id;
       if (!userId) return res.status(401).json({ error: "Not authenticated" });
 
       const { events } = req.body;
@@ -2702,7 +2702,7 @@ ${matchDetails}`;
   app.get("/api/persona", isAuthenticated, async (req, res) => {
     try {
       const user = req.user as any;
-      const userId = user?.claims?.sub;
+      const userId = user?.id;
       if (!userId) return res.status(401).json({ error: "Not authenticated" });
 
       let persona = await storage.getUserPersona(userId);
@@ -2905,7 +2905,7 @@ ${matchDetails}`;
   app.post("/api/stripe/create-checkout-session", isAuthenticated, async (req, res) => {
     try {
       const user = req.user as any;
-      const userId = user?.claims?.sub;
+      const userId = user?.id;
       if (!userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
@@ -2952,7 +2952,7 @@ ${matchDetails}`;
   app.post("/api/stripe/create-portal-session", isAuthenticated, async (req, res) => {
     try {
       const user = req.user as any;
-      const userId = user?.claims?.sub;
+      const userId = user?.id;
       if (!userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
@@ -2981,7 +2981,7 @@ ${matchDetails}`;
   app.get("/api/stripe/subscription", isAuthenticated, async (req, res) => {
     try {
       const user = req.user as any;
-      const userId = user?.claims?.sub;
+      const userId = user?.id;
       if (!userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
@@ -3015,7 +3015,7 @@ ${matchDetails}`;
   app.post("/api/stripe/sync-subscription", isAuthenticated, async (req, res) => {
     try {
       const user = req.user as any;
-      const userId = user?.claims?.sub;
+      const userId = user?.id;
       if (!userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }

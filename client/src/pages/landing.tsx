@@ -98,9 +98,9 @@ export default function Landing() {
               </Button>
             </Link>
             <ThemeToggle />
-            <Button asChild className="min-h-[44px]" data-testid="button-header-login">
-              <a href="/api/login">Sign In</a>
-            </Button>
+            <Link href="/auth">
+              <Button className="min-h-[44px]" data-testid="button-header-login">Sign In</Button>
+            </Link>
           </div>
         </nav>
       </header>
@@ -144,7 +144,7 @@ export default function Landing() {
                 <ScrollReveal delay={0.5}>
                   <div className="flex flex-col sm:flex-row items-start gap-3 mb-4">
                     <Button size="lg" asChild className="text-base px-8" data-testid="button-hero-get-started">
-                      <a href="/api/login">
+                      <a href="/auth">
                         Browse Open Roles
                         <ArrowRight className="ml-2 h-4 w-4" />
                       </a>
@@ -485,7 +485,7 @@ export default function Landing() {
                   </p>
                   <div className="flex flex-col sm:flex-row items-start gap-3">
                     <Button asChild data-testid="button-browse-entry-level">
-                      <a href="/api/login">
+                      <a href="/auth">
                         Browse Student & Entry-Level Roles
                         <ArrowRight className="ml-2 h-4 w-4" />
                       </a>
@@ -571,7 +571,7 @@ export default function Landing() {
             <ScrollReveal delay={0.4}>
               <div className="text-center">
                 <Button size="lg" asChild className="text-base px-10" data-testid="button-cta-sign-up">
-                  <a href="/api/login">
+                  <a href="/auth">
                     Get Started Free
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </a>
@@ -599,7 +599,7 @@ export default function Landing() {
                 </p>
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
                   <Button size="lg" asChild className="text-base px-10" data-testid="button-cta-final">
-                    <a href="/api/login">
+                    <a href="/auth">
                       Get Started Free
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </a>
@@ -624,7 +624,7 @@ export default function Landing() {
               <ul className="space-y-2">
                 <li>
                   <Button variant="ghost" size="sm" asChild className="text-muted-foreground h-auto p-0 text-sm font-normal">
-                    <a href="/api/login" data-testid="footer-link-browse">Browse Jobs</a>
+                    <a href="/auth" data-testid="footer-link-browse">Browse Jobs</a>
                   </Button>
                 </li>
                 <li>
@@ -669,7 +669,7 @@ export default function Landing() {
               <ul className="space-y-2">
                 <li>
                   <Button variant="ghost" size="sm" asChild className="text-muted-foreground h-auto p-0 text-sm font-normal">
-                    <a href="/api/login" data-testid="footer-link-signin">Sign In</a>
+                    <a href="/auth" data-testid="footer-link-signin">Sign In</a>
                   </Button>
                 </li>
               </ul>

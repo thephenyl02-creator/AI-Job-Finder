@@ -90,7 +90,7 @@ export default function About() {
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
               <Button size="lg" asChild className="text-base" data-testid="button-about-browse">
-                <a href="/api/login">
+                <a href="/auth">
                   Browse Jobs
                   <ArrowRight className="h-4 w-4 ml-2" />
                 </a>

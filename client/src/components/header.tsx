@@ -19,7 +19,7 @@ import { useSubscription } from "@/hooks/use-subscription";
 import { Badge } from "@/components/ui/badge";
 
 export function Header() {
-  const { user, isAuthenticated, isAdmin } = useAuth();
+  const { user, isAuthenticated, isAdmin, logout } = useAuth();
   const { isPro } = useSubscription();
   const [location] = useLocation();
 
@@ -192,11 +192,13 @@ export function Header() {
                     </>
                   )}
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <a href="/api/logout" className="cursor-pointer" data-testid="button-logout">
-                      <LogOut className="mr-2 h-4 w-4" />
-                      <span>Log out</span>
-                    </a>
+                  <DropdownMenuItem
+                    className="cursor-pointer"
+                    data-testid="button-logout"
+                    onClick={() => logout()}
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Log out</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -204,9 +206,9 @@ export function Header() {
           ) : (
             <>
               <ThemeToggle />
-              <Button asChild data-testid="button-login">
-                <a href="/api/login">Sign In</a>
-              </Button>
+              <Link href="/auth">
+                <Button data-testid="button-login">Sign In</Button>
+              </Link>
             </>
           )}
         </div>

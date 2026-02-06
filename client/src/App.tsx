@@ -7,9 +7,9 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { useAuth } from "@/hooks/use-auth";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { LogoMark } from "@/components/logo";
-import { AssistantWidget } from "@/components/assistant-widget";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
+import Auth from "@/pages/auth";
 import Search from "@/pages/search";
 import Jobs from "@/pages/jobs";
 import JobDetail from "@/pages/job-detail";
@@ -54,6 +54,7 @@ function AppRouter() {
       <Route path="/insights">{isAuthenticated ? <Insights /> : <Landing />}</Route>
       <Route path="/alerts">{isAuthenticated ? <Alerts /> : <Landing />}</Route>
       <Route path="/resumes">{isAuthenticated ? <Resumes /> : <Landing />}</Route>
+      <Route path="/auth" component={Auth} />
       <Route path="/pricing" component={Pricing} />
       <Route path="/about" component={About} />
       <Route path="/post-job" component={PostJob} />
@@ -68,7 +69,6 @@ function App() {
       <ThemeProvider defaultTheme="light" storageKey="legal-ai-careers-theme">
         <TooltipProvider>
           <AppRouter />
-          <AssistantWidget />
           <ScrollToTop />
           <Toaster />
         </TooltipProvider>

@@ -169,7 +169,7 @@ export default function Pricing() {
 
   const handleUpgrade = () => {
     if (!isAuthenticated) {
-      window.location.href = "/api/login";
+      window.location.href = "/auth";
       return;
     }
     if (selectedPrice) {
@@ -198,9 +198,9 @@ export default function Pricing() {
             </Link>
             <div className="flex items-center gap-3">
               <ThemeToggle />
-              <Button asChild data-testid="button-pricing-login">
-                <a href="/api/login">Sign In</a>
-              </Button>
+              <Link href="/auth">
+                <Button data-testid="button-pricing-login">Sign In</Button>
+              </Link>
             </div>
           </nav>
         </header>
@@ -288,7 +288,7 @@ export default function Pricing() {
                   asChild
                   data-testid="button-get-started-free"
                 >
-                  <a href="/api/login">
+                  <a href="/auth">
                     Get Started
                   </a>
                 </Button>
