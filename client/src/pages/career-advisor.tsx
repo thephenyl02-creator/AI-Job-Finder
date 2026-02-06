@@ -10,6 +10,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/hooks/use-auth";
+import { useSubscription } from "@/hooks/use-subscription";
+import { UpgradePrompt } from "@/components/upgrade-prompt";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import type { Job } from "@shared/schema";
@@ -112,6 +114,7 @@ interface ComparisonResult {
 
 export default function CareerAdvisor() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { isPro, isLoading: subLoading } = useSubscription();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [jobs, setJobs] = useState<JobInput[]>([
@@ -459,7 +462,7 @@ export default function CareerAdvisor() {
     compareMutation.mutate({ jobs: validJobs, includeResume: resumeData?.hasResume ?? false });
   };
 
-  if (authLoading) {
+  if (authLoading || subLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="animate-pulse text-muted-foreground">Loading...</div>
@@ -469,6 +472,18 @@ export default function CareerAdvisor() {
 
   if (!isAuthenticated) {
     return null;
+  }
+
+  if (!isPro) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <UpgradePrompt
+          feature="Career Advisor"
+          description="Compare 2-3 job opportunities side-by-side with strategic analysis, fit scoring, and personalized recommendations based on your resume."
+        />
+      </div>
+    );
   }
 
   return (

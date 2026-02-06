@@ -57,6 +57,10 @@ export interface IStorage {
   setPrimaryResume(id: number, userId: string): Promise<void>;
   getPrimaryResume(userId: string): Promise<Resume | undefined>;
   migrateUserResumeToResumes(userId: string): Promise<void>;
+  // Subscriptions
+  updateUserSubscription(userId: string, data: { stripeCustomerId?: string; stripeSubscriptionId?: string; subscriptionTier?: string; subscriptionStatus?: string }): Promise<void>;
+  getUserSubscription(userId: string): Promise<{ subscriptionTier: string | null; subscriptionStatus: string | null; stripeCustomerId: string | null; stripeSubscriptionId: string | null } | null>;
+  getUserByStripeCustomerId(stripeCustomerId: string): Promise<User | undefined>;
 }
 
 class DatabaseStorage implements IStorage {
@@ -689,6 +693,25 @@ class DatabaseStorage implements IStorage {
       extractedData: userData.extractedData,
       isPrimary: true,
     });
+  }
+
+  async updateUserSubscription(userId: string, data: { stripeCustomerId?: string; stripeSubscriptionId?: string; subscriptionTier?: string; subscriptionStatus?: string }): Promise<void> {
+    await db.update(users).set({ ...data, updatedAt: new Date() }).where(eq(users.id, userId));
+  }
+
+  async getUserSubscription(userId: string): Promise<{ subscriptionTier: string | null; subscriptionStatus: string | null; stripeCustomerId: string | null; stripeSubscriptionId: string | null } | null> {
+    const [user] = await db.select({
+      subscriptionTier: users.subscriptionTier,
+      subscriptionStatus: users.subscriptionStatus,
+      stripeCustomerId: users.stripeCustomerId,
+      stripeSubscriptionId: users.stripeSubscriptionId,
+    }).from(users).where(eq(users.id, userId));
+    return user || null;
+  }
+
+  async getUserByStripeCustomerId(stripeCustomerId: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.stripeCustomerId, stripeCustomerId));
+    return user;
   }
 }
 

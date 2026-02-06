@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -49,6 +50,11 @@ export default function Landing() {
             </span>
           </div>
           <div className="flex items-center gap-3">
+            <Link href="/pricing">
+              <Button variant="ghost" size="sm" className="text-muted-foreground" data-testid="link-landing-pricing">
+                Pricing
+              </Button>
+            </Link>
             <ThemeToggle />
             <Button asChild data-testid="button-header-login">
               <a href="/api/login">Sign In</a>

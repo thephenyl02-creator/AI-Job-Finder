@@ -61,6 +61,23 @@ const openai = new OpenAI({
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
 });
 
+async function requirePro(req: any, res: any, next: any) {
+  const user = req.user as any;
+  const userId = user?.claims?.sub;
+  if (!userId) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+  const subData = await storage.getUserSubscription(userId);
+  if (subData?.subscriptionTier === "pro" && subData?.subscriptionStatus === "active") {
+    return next();
+  }
+  return res.status(403).json({
+    error: "Pro subscription required",
+    upgradeUrl: "/pricing",
+    requiredTier: "pro",
+  });
+}
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
@@ -298,7 +315,7 @@ Only include jobs with a score above 40. Sort by score descending.`;
   });
 
   // Guided search - analyze query and generate clarifying questions
-  app.post("/api/search/analyze", isAuthenticated, async (req, res) => {
+  app.post("/api/search/analyze", isAuthenticated, requirePro, async (req, res) => {
     try {
       const { query } = req.body;
       
@@ -379,7 +396,7 @@ Return ONLY valid JSON in this format:
   });
 
   // Refined search - use answers to curate precise results
-  app.post("/api/search/refined", isAuthenticated, async (req, res) => {
+  app.post("/api/search/refined", isAuthenticated, requirePro, async (req, res) => {
     try {
       const { originalQuery, answers, refinedIntent } = req.body;
       
@@ -608,7 +625,7 @@ ${JSON.stringify(jobSummaries, null, 2)}`
   });
 
   // Batch match resume against all jobs
-  app.post("/api/resume/match-jobs", isAuthenticated, async (req, res) => {
+  app.post("/api/resume/match-jobs", isAuthenticated, requirePro, async (req, res) => {
     try {
       const user = req.user as any;
       const userId = user?.claims?.sub;
@@ -639,7 +656,7 @@ ${JSON.stringify(jobSummaries, null, 2)}`
   });
 
   // Generate resume tweaks for a specific job
-  app.post("/api/resume/tweak/:jobId", isAuthenticated, async (req, res) => {
+  app.post("/api/resume/tweak/:jobId", isAuthenticated, requirePro, async (req, res) => {
     try {
       const user = req.user as any;
       const userId = user?.claims?.sub;
@@ -1243,7 +1260,7 @@ ${JSON.stringify(jobSummaries, null, 2)}`
     }
   });
 
-  app.post("/api/alerts", isAuthenticated, async (req, res) => {
+  app.post("/api/alerts", isAuthenticated, requirePro, async (req, res) => {
     try {
       const userId = (req.user as any)?.claims?.sub;
       if (!userId) return res.status(401).json({ error: "Not authenticated" });
@@ -1695,7 +1712,7 @@ If this doesn't appear to be a job posting, return:
     includeResume: z.boolean().default(false),
   });
 
-  app.post("/api/career-advisor/compare", isAuthenticated, async (req, res) => {
+  app.post("/api/career-advisor/compare", isAuthenticated, requirePro, async (req, res) => {
     try {
       const user = req.user as any;
       const userId = user?.claims?.sub;
@@ -1826,8 +1843,8 @@ Return a JSON response with this exact structure:
     }
   });
 
-  // ===== Market Analytics (public for authenticated users) =====
-  app.get("/api/analytics/market", isAuthenticated, async (req, res) => {
+  // ===== Market Analytics (Pro only) =====
+  app.get("/api/analytics/market", isAuthenticated, requirePro, async (req, res) => {
     try {
       const allJobs = await storage.getActiveJobs();
 
@@ -1933,6 +1950,216 @@ Return a JSON response with this exact structure:
     } catch (error) {
       console.error("Analytics error:", error);
       res.status(500).json({ error: "Failed to generate analytics" });
+    }
+  });
+
+  // =============================================
+  // Stripe Subscription Routes
+  // =============================================
+
+  app.get("/api/stripe/publishable-key", async (req, res) => {
+    try {
+      const { getStripePublishableKey } = await import("./stripeClient");
+      const key = await getStripePublishableKey();
+      res.json({ publishableKey: key });
+    } catch (error) {
+      console.error("Error getting publishable key:", error);
+      res.status(500).json({ error: "Failed to get Stripe key" });
+    }
+  });
+
+  app.get("/api/stripe/prices", async (req, res) => {
+    try {
+      const { getUncachableStripeClient } = await import("./stripeClient");
+      const stripe = await getUncachableStripeClient();
+      const products = await stripe.products.search({ query: "name:'Legal Tech Careers Pro'" });
+      if (products.data.length === 0) {
+        return res.json({ prices: [] });
+      }
+      const prices = await stripe.prices.list({ product: products.data[0].id, active: true });
+      res.json({
+        product: {
+          id: products.data[0].id,
+          name: products.data[0].name,
+          description: products.data[0].description,
+        },
+        prices: prices.data.map(p => ({
+          id: p.id,
+          amount: p.unit_amount,
+          currency: p.currency,
+          interval: p.recurring?.interval,
+          metadata: p.metadata,
+        })),
+      });
+    } catch (error) {
+      console.error("Error fetching prices:", error);
+      res.status(500).json({ error: "Failed to fetch prices" });
+    }
+  });
+
+  app.post("/api/stripe/create-checkout-session", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const userId = user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const { priceId } = req.body;
+      if (!priceId) {
+        return res.status(400).json({ error: "Price ID is required" });
+      }
+
+      const { getUncachableStripeClient } = await import("./stripeClient");
+      const stripe = await getUncachableStripeClient();
+
+      const subData = await storage.getUserSubscription(userId);
+      let customerId = subData?.stripeCustomerId;
+
+      if (!customerId) {
+        const userEmail = user?.claims?.email;
+        const customer = await stripe.customers.create({
+          email: userEmail || undefined,
+          metadata: { userId },
+        });
+        customerId = customer.id;
+        await storage.updateUserSubscription(userId, { stripeCustomerId: customerId });
+      }
+
+      const baseUrl = `https://${process.env.REPLIT_DOMAINS?.split(',')[0]}`;
+      const session = await stripe.checkout.sessions.create({
+        customer: customerId,
+        payment_method_types: ['card'],
+        line_items: [{ price: priceId, quantity: 1 }],
+        mode: 'subscription',
+        success_url: `${baseUrl}/pricing?success=true`,
+        cancel_url: `${baseUrl}/pricing?canceled=true`,
+        metadata: { userId },
+      });
+
+      res.json({ url: session.url });
+    } catch (error: any) {
+      console.error("Checkout session error:", error);
+      res.status(500).json({ error: "Failed to create checkout session" });
+    }
+  });
+
+  app.post("/api/stripe/create-portal-session", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const userId = user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const subData = await storage.getUserSubscription(userId);
+      if (!subData?.stripeCustomerId) {
+        return res.status(400).json({ error: "No subscription found" });
+      }
+
+      const { getUncachableStripeClient } = await import("./stripeClient");
+      const stripe = await getUncachableStripeClient();
+
+      const baseUrl = `https://${process.env.REPLIT_DOMAINS?.split(',')[0]}`;
+      const session = await stripe.billingPortal.sessions.create({
+        customer: subData.stripeCustomerId,
+        return_url: `${baseUrl}/pricing`,
+      });
+
+      res.json({ url: session.url });
+    } catch (error: any) {
+      console.error("Portal session error:", error);
+      res.status(500).json({ error: "Failed to create portal session" });
+    }
+  });
+
+  app.get("/api/stripe/subscription", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const userId = user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const subData = await storage.getUserSubscription(userId);
+      if (!subData) {
+        return res.json({ tier: "free", status: "inactive" });
+      }
+
+      let currentPeriodEnd: number | null = null;
+      if (subData.stripeSubscriptionId) {
+        try {
+          const { getUncachableStripeClient } = await import("./stripeClient");
+          const stripe = await getUncachableStripeClient();
+          const sub = await stripe.subscriptions.retrieve(subData.stripeSubscriptionId);
+          currentPeriodEnd = sub.current_period_end;
+        } catch (e) {}
+      }
+
+      res.json({
+        tier: subData.subscriptionTier || "free",
+        status: subData.subscriptionStatus || "inactive",
+        currentPeriodEnd,
+      });
+    } catch (error) {
+      console.error("Error fetching subscription:", error);
+      res.status(500).json({ error: "Failed to fetch subscription" });
+    }
+  });
+
+  app.post("/api/stripe/sync-subscription", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const userId = user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const subData = await storage.getUserSubscription(userId);
+      if (!subData?.stripeCustomerId) {
+        return res.json({ tier: "free", status: "inactive" });
+      }
+
+      const { getUncachableStripeClient } = await import("./stripeClient");
+      const stripe = await getUncachableStripeClient();
+      const subscriptions = await stripe.subscriptions.list({
+        customer: subData.stripeCustomerId,
+        status: 'active',
+        limit: 1,
+      });
+
+      if (subscriptions.data.length > 0) {
+        const activeSub = subscriptions.data[0];
+        await storage.updateUserSubscription(userId, {
+          stripeSubscriptionId: activeSub.id,
+          subscriptionTier: "pro",
+          subscriptionStatus: "active",
+        });
+        return res.json({ tier: "pro", status: "active" });
+      }
+
+      const canceledSubs = await stripe.subscriptions.list({
+        customer: subData.stripeCustomerId,
+        status: 'canceled',
+        limit: 1,
+      });
+
+      if (canceledSubs.data.length > 0) {
+        await storage.updateUserSubscription(userId, {
+          subscriptionTier: "free",
+          subscriptionStatus: "canceled",
+        });
+        return res.json({ tier: "free", status: "canceled" });
+      }
+
+      await storage.updateUserSubscription(userId, {
+        subscriptionTier: "free",
+        subscriptionStatus: "inactive",
+      });
+      res.json({ tier: "free", status: "inactive" });
+    } catch (error) {
+      console.error("Error syncing subscription:", error);
+      res.status(500).json({ error: "Failed to sync subscription" });
     }
   });
 

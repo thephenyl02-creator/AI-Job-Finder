@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/hooks/use-auth";
+import { useSubscription } from "@/hooks/use-subscription";
+import { UpgradePrompt } from "@/components/upgrade-prompt";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { JOB_TAXONOMY } from "@shared/schema";
@@ -309,6 +311,7 @@ function AlertCard({ alert }: { alert: JobAlert }) {
 
 export default function Alerts() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { isPro, isLoading: subLoading } = useSubscription();
   const [showForm, setShowForm] = useState(false);
 
   const { data: alerts = [], isLoading } = useQuery<JobAlert[]>({
@@ -316,8 +319,20 @@ export default function Alerts() {
     enabled: isAuthenticated,
   });
 
-  if (authLoading) return null;
+  if (authLoading || subLoading) return null;
   if (!isAuthenticated) return null;
+
+  if (!isPro) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <UpgradePrompt
+          feature="Job Alerts"
+          description="Create custom alerts based on categories, keywords, seniority, and remote preferences. Get notified instantly when matching jobs are posted."
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">

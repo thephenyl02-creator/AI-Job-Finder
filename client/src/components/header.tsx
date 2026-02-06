@@ -10,12 +10,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, Briefcase, Info, Settings, Compass, Scale, BarChart3, Bell, FileText } from "lucide-react";
+import { LogOut, Briefcase, Info, Settings, Compass, Scale, BarChart3, Bell, FileText, Crown } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { NotificationBell } from "@/components/notification-bell";
+import { useSubscription } from "@/hooks/use-subscription";
+import { Badge } from "@/components/ui/badge";
 
 export function Header() {
   const { user, isAuthenticated, isAdmin } = useAuth();
+  const { isPro } = useSubscription();
   const [location] = useLocation();
 
   const getInitials = () => {
@@ -111,9 +114,17 @@ export function Header() {
                 <DropdownMenuContent className="w-56" align="end" forceMount>
                   <DropdownMenuLabel className="font-normal">
                     <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium leading-none">
-                        {user?.firstName} {user?.lastName}
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium leading-none">
+                          {user?.firstName} {user?.lastName}
+                        </p>
+                        {isPro && (
+                          <Badge variant="default" className="text-[10px] px-1.5 py-0" data-testid="badge-pro-user">
+                            <Crown className="h-2.5 w-2.5 mr-0.5" />
+                            Pro
+                          </Badge>
+                        )}
+                      </div>
                       <p className="text-xs leading-none text-muted-foreground">
                         {user?.email}
                       </p>
@@ -148,6 +159,12 @@ export function Header() {
                     <Link href="/alerts" className="cursor-pointer" data-testid="link-alerts">
                       <Bell className="mr-2 h-4 w-4" />
                       <span>Job Alerts</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/pricing" className="cursor-pointer" data-testid="link-pricing">
+                      <Crown className="mr-2 h-4 w-4" />
+                      <span>Pricing</span>
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>

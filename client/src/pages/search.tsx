@@ -226,7 +226,7 @@ export default function Search() {
         });
       }
     },
-    onError: (error) => {
+    onError: (error: any) => {
       if (isUnauthorizedError(error as Error)) {
         toast({
           title: "Session expired",
@@ -238,11 +238,19 @@ export default function Search() {
         }, 500);
         return;
       }
-      toast({
-        title: "Analysis failed",
-        description: "Let's try a regular search instead.",
-        variant: "destructive",
-      });
+      const is403 = error?.message?.includes("403");
+      if (is403) {
+        toast({
+          title: "Pro feature",
+          description: "Guided search is a Pro feature. Running a regular search instead.",
+        });
+      } else {
+        toast({
+          title: "Analysis failed",
+          description: "Let's try a regular search instead.",
+          variant: "destructive",
+        });
+      }
       regularSearchMutation.mutate(query);
     },
   });

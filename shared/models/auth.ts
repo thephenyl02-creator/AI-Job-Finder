@@ -28,6 +28,10 @@ export const users = pgTable("users", {
   extractedData: jsonb("extracted_data"),
   lastSearchQuery: text("last_search_query"),
   isAdmin: boolean("is_admin").default(false),
+  stripeCustomerId: varchar("stripe_customer_id", { length: 255 }),
+  stripeSubscriptionId: varchar("stripe_subscription_id", { length: 255 }),
+  subscriptionTier: varchar("subscription_tier", { length: 50 }).default("free"),
+  subscriptionStatus: varchar("subscription_status", { length: 50 }).default("inactive"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

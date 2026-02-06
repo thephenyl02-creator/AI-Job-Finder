@@ -4,6 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/use-auth";
+import { useSubscription } from "@/hooks/use-subscription";
+import { UpgradePrompt } from "@/components/upgrade-prompt";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import {
@@ -182,15 +184,28 @@ function SkeletonDashboard() {
 
 export default function Insights() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { isPro, isLoading: subLoading } = useSubscription();
 
   const { data, isLoading } = useQuery<MarketAnalytics>({
     queryKey: ["/api/analytics/market"],
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && isPro,
     staleTime: 5 * 60 * 1000,
   });
 
-  if (authLoading || isLoading) {
+  if (authLoading || subLoading || isLoading) {
     return <SkeletonDashboard />;
+  }
+
+  if (!isPro) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <UpgradePrompt
+          feature="Market Insights"
+          description="Access comprehensive analytics on the legal tech job market including salary trends, in-demand skills, company breakdowns, and seniority distribution."
+        />
+      </div>
+    );
   }
 
   if (!data) {
