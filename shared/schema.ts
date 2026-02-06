@@ -328,3 +328,51 @@ export const insertResumeSchema = createInsertSchema(resumes).omit({
 
 export type Resume = typeof resumes.$inferSelect;
 export type InsertResume = z.infer<typeof insertResumeSchema>;
+
+export const userActivities = pgTable("user_activities", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id", { length: 255 }).notNull(),
+  eventType: varchar("event_type", { length: 50 }).notNull(),
+  entityType: varchar("entity_type", { length: 50 }),
+  entityId: varchar("entity_id", { length: 255 }),
+  metadata: jsonb("metadata"),
+  pagePath: varchar("page_path", { length: 500 }),
+  sessionId: varchar("session_id", { length: 255 }),
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const insertUserActivitySchema = createInsertSchema(userActivities).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type UserActivity = typeof userActivities.$inferSelect;
+export type InsertUserActivity = z.infer<typeof insertUserActivitySchema>;
+
+export const userPersonas = pgTable("user_personas", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id", { length: 255 }).notNull().unique(),
+  topCategories: text("top_categories").array(),
+  topSkills: text("top_skills").array(),
+  preferredLocations: text("preferred_locations").array(),
+  remotePreference: varchar("remote_preference", { length: 20 }),
+  seniorityInterest: text("seniority_interest").array(),
+  careerStage: varchar("career_stage", { length: 50 }),
+  engagementLevel: varchar("engagement_level", { length: 20 }),
+  searchPatterns: text("search_patterns").array(),
+  viewedCompanies: text("viewed_companies").array(),
+  personaSummary: text("persona_summary"),
+  totalJobViews: integer("total_job_views").default(0),
+  totalSearches: integer("total_searches").default(0),
+  totalApplyClicks: integer("total_apply_clicks").default(0),
+  lastActiveAt: timestamp("last_active_at"),
+  updatedAt: timestamp("updated_at").default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const insertUserPersonaSchema = createInsertSchema(userPersonas).omit({
+  id: true,
+  updatedAt: true,
+});
+
+export type UserPersona = typeof userPersonas.$inferSelect;
+export type InsertUserPersona = z.infer<typeof insertUserPersonaSchema>;

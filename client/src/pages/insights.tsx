@@ -7,10 +7,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/use-auth";
 import { useSubscription } from "@/hooks/use-subscription";
+import { useActivityTracker } from "@/hooks/use-activity-tracker";
 import { UpgradePrompt } from "@/components/upgrade-prompt";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Link } from "wouter";
+import { ContextualPrompt } from "@/components/contextual-prompt";
 import {
   Briefcase,
   Building2,
@@ -191,6 +193,7 @@ function RenderMarkdown({ text }: { text: string }) {
 }
 
 function InsightsChat() {
+  const { track } = useActivityTracker();
   const [messages, setMessages] = useState<InsightMessage[]>([]);
   const [input, setInput] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -226,6 +229,7 @@ function InsightsChat() {
   const handleSubmit = (question?: string) => {
     const q = (question || input).trim();
     if (!q || queryMutation.isPending) return;
+    track({ eventType: "insight_query", metadata: { query: q } });
     setMessages((prev) => [...prev, { role: "user", content: q }]);
     setInput("");
     if (textareaRef.current) {
@@ -395,7 +399,10 @@ function SkeletonDashboard() {
 
 export default function Insights() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { track } = useActivityTracker();
   const { isPro, isLoading: subLoading } = useSubscription();
+
+  useEffect(() => { track({ eventType: "page_view", pagePath: "/insights" }); }, []);
 
   const { data, isLoading } = useQuery<MarketAnalytics>({
     queryKey: ["/api/analytics/market"],
@@ -737,6 +744,8 @@ export default function Insights() {
             </Link>
           </div>
         </div>
+
+        <ContextualPrompt pageContext="insights" className="mt-6" />
       </main>
     </div>
   );

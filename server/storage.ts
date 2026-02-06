@@ -1,6 +1,6 @@
 import { db } from "./db";
-import { jobs, users, userPreferences, jobCategories, jobSubmissions, jobAlerts, notifications, resumes, type Job, type InsertJob, type User, type UserPreferences, type InsertUserPreferences, type ResumeExtractedData, type JobCategory, type JobSubmission, type InsertJobSubmission, type JobAlert, type InsertJobAlert, type Notification, type InsertNotification, type Resume, type InsertResume, JOB_TAXONOMY } from "@shared/schema";
-import { eq, desc, and, sql, inArray, lt } from "drizzle-orm";
+import { jobs, users, userPreferences, jobCategories, jobSubmissions, jobAlerts, notifications, resumes, userActivities, userPersonas, type Job, type InsertJob, type User, type UserPreferences, type InsertUserPreferences, type ResumeExtractedData, type JobCategory, type JobSubmission, type InsertJobSubmission, type JobAlert, type InsertJobAlert, type Notification, type InsertNotification, type Resume, type InsertResume, type UserActivity, type InsertUserActivity, type UserPersona, type InsertUserPersona, JOB_TAXONOMY } from "@shared/schema";
+import { eq, desc, and, sql, inArray, lt, gte, count } from "drizzle-orm";
 
 export interface IStorage {
   // Jobs
@@ -61,6 +61,14 @@ export interface IStorage {
   updateUserSubscription(userId: string, data: { stripeCustomerId?: string; stripeSubscriptionId?: string; subscriptionTier?: string; subscriptionStatus?: string }): Promise<void>;
   getUserSubscription(userId: string): Promise<{ subscriptionTier: string | null; subscriptionStatus: string | null; stripeCustomerId: string | null; stripeSubscriptionId: string | null } | null>;
   getUserByStripeCustomerId(stripeCustomerId: string): Promise<User | undefined>;
+  // User Activities
+  logActivity(activity: InsertUserActivity): Promise<UserActivity>;
+  logActivities(activities: InsertUserActivity[]): Promise<void>;
+  getUserRecentActivities(userId: string, limit?: number): Promise<UserActivity[]>;
+  getUserActivityCounts(userId: string): Promise<{ jobViews: number; searches: number; applyClicks: number }>;
+  // User Personas
+  getUserPersona(userId: string): Promise<UserPersona | undefined>;
+  upsertUserPersona(userId: string, data: Partial<InsertUserPersona>): Promise<UserPersona>;
 }
 
 class DatabaseStorage implements IStorage {
@@ -712,6 +720,65 @@ class DatabaseStorage implements IStorage {
   async getUserByStripeCustomerId(stripeCustomerId: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.stripeCustomerId, stripeCustomerId));
     return user;
+  }
+
+  async logActivity(activity: InsertUserActivity): Promise<UserActivity> {
+    const [result] = await db.insert(userActivities).values(activity).returning();
+    return result;
+  }
+
+  async logActivities(activities: InsertUserActivity[]): Promise<void> {
+    if (activities.length === 0) return;
+    await db.insert(userActivities).values(activities);
+  }
+
+  async getUserRecentActivities(userId: string, limit = 50): Promise<UserActivity[]> {
+    return db.select().from(userActivities)
+      .where(eq(userActivities.userId, userId))
+      .orderBy(desc(userActivities.createdAt))
+      .limit(limit);
+  }
+
+  async getUserActivityCounts(userId: string): Promise<{ jobViews: number; searches: number; applyClicks: number }> {
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
+    const results = await db.select({
+      eventType: userActivities.eventType,
+      cnt: count(),
+    }).from(userActivities)
+      .where(and(
+        eq(userActivities.userId, userId),
+        gte(userActivities.createdAt, thirtyDaysAgo),
+      ))
+      .groupBy(userActivities.eventType);
+
+    const counts = { jobViews: 0, searches: 0, applyClicks: 0 };
+    for (const r of results) {
+      if (r.eventType === "job_view") counts.jobViews = Number(r.cnt);
+      if (r.eventType === "search") counts.searches = Number(r.cnt);
+      if (r.eventType === "apply_click") counts.applyClicks = Number(r.cnt);
+    }
+    return counts;
+  }
+
+  async getUserPersona(userId: string): Promise<UserPersona | undefined> {
+    const [persona] = await db.select().from(userPersonas).where(eq(userPersonas.userId, userId));
+    return persona;
+  }
+
+  async upsertUserPersona(userId: string, data: Partial<InsertUserPersona>): Promise<UserPersona> {
+    const existing = await this.getUserPersona(userId);
+    if (existing) {
+      const [updated] = await db.update(userPersonas)
+        .set({ ...data, updatedAt: new Date() })
+        .where(eq(userPersonas.userId, userId))
+        .returning();
+      return updated;
+    }
+    const [created] = await db.insert(userPersonas)
+      .values({ userId, ...data, updatedAt: new Date() })
+      .returning();
+    return created;
   }
 }
 

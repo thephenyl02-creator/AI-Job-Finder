@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Header } from "@/components/header";
 import { Button } from "@/components/ui/button";
@@ -8,12 +8,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/hooks/use-auth";
+import { useActivityTracker } from "@/hooks/use-activity-tracker";
 import { useSubscription } from "@/hooks/use-subscription";
 import { UpgradePrompt } from "@/components/upgrade-prompt";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { JOB_TAXONOMY } from "@shared/schema";
 import type { JobAlert } from "@shared/schema";
+import { ContextualPrompt } from "@/components/contextual-prompt";
 import {
   Bell,
   Plus,
@@ -29,6 +31,7 @@ const CATEGORY_NAMES = Object.keys(JOB_TAXONOMY);
 
 function CreateAlertForm({ onClose }: { onClose: () => void }) {
   const { toast } = useToast();
+  const { track } = useActivityTracker();
   const [name, setName] = useState("");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [keywordsInput, setKeywordsInput] = useState("");
@@ -43,6 +46,7 @@ function CreateAlertForm({ onClose }: { onClose: () => void }) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/alerts"] });
       toast({ title: "Alert created", description: "You'll be notified when matching jobs appear." });
+      track({ eventType: "alert_create" });
       onClose();
     },
     onError: (err: Error) => {
@@ -311,8 +315,11 @@ function AlertCard({ alert }: { alert: JobAlert }) {
 
 export default function Alerts() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { track } = useActivityTracker();
   const { isPro, isLoading: subLoading } = useSubscription();
   const [showForm, setShowForm] = useState(false);
+
+  useEffect(() => { track({ eventType: "page_view", pagePath: "/alerts" }); }, []);
 
   const { data: alerts = [], isLoading } = useQuery<JobAlert[]>({
     queryKey: ["/api/alerts"],
@@ -393,6 +400,8 @@ export default function Alerts() {
             ))}
           </div>
         )}
+
+        <ContextualPrompt pageContext="alerts" className="mt-6" />
       </main>
     </div>
   );

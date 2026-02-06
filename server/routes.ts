@@ -216,9 +216,32 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/jobs/locations", isAuthenticated, async (req, res) => {
+    try {
+      const allJobs = await storage.getActiveJobs();
+      const locationMap: Record<string, number> = {};
+      for (const job of allJobs) {
+        if (job.location && job.location.trim()) {
+          const loc = job.location.trim();
+          locationMap[loc] = (locationMap[loc] || 0) + 1;
+        }
+      }
+      const locations = Object.entries(locationMap)
+        .sort((a, b) => b[1] - a[1])
+        .map(([location, count]) => ({ location, count }));
+      res.json(locations);
+    } catch (error) {
+      console.error("Error fetching locations:", error);
+      res.status(500).json({ error: "Failed to fetch locations" });
+    }
+  });
+
   app.get("/api/jobs/:id", isAuthenticated, async (req, res) => {
     try {
       const id = parseInt(req.params.id as string);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid job ID" });
+      }
       const job = await storage.getJob(id);
       if (!job) {
         return res.status(404).json({ error: "Job not found" });
@@ -2349,26 +2372,6 @@ After your analysis, list 2-4 key data points you referenced as "Sources" - each
   // Assistant Chat API
   // =============================================
 
-  app.get("/api/jobs/locations", isAuthenticated, async (req, res) => {
-    try {
-      const allJobs = await storage.getActiveJobs();
-      const locationMap: Record<string, number> = {};
-      for (const job of allJobs) {
-        if (job.location && job.location.trim()) {
-          const loc = job.location.trim();
-          locationMap[loc] = (locationMap[loc] || 0) + 1;
-        }
-      }
-      const locations = Object.entries(locationMap)
-        .sort((a, b) => b[1] - a[1])
-        .map(([location, count]) => ({ location, count }));
-      res.json(locations);
-    } catch (error) {
-      console.error("Error fetching locations:", error);
-      res.status(500).json({ error: "Failed to fetch locations" });
-    }
-  });
-
   app.post("/api/assistant/chat", isAuthenticated, async (req, res) => {
     try {
       const user = req.user as any;
@@ -2389,6 +2392,7 @@ After your analysis, list 2-4 key data points you referenced as "Sources" - each
       let jobContext = "";
       let resumeContext = "";
       let platformContext = "";
+      let personaContext = "";
 
       if (context?.jobId) {
         const job = await storage.getJob(Number(context.jobId));
@@ -2431,6 +2435,27 @@ ${primaryResume.resumeText ? `Resume Summary (first 1500 chars):\n${primaryResum
         }
       }
 
+      if (userId) {
+        const persona = await storage.getUserPersona(userId);
+        if (persona && (persona.totalJobViews > 0 || persona.totalSearches > 0)) {
+          const parts: string[] = [];
+          if (persona.personaSummary) parts.push(`Profile: ${persona.personaSummary}`);
+          if (persona.topCategories?.length) parts.push(`Top interests: ${(persona.topCategories as string[]).join(", ")}`);
+          if (persona.topSkills?.length) parts.push(`Key skills: ${(persona.topSkills as string[]).slice(0, 8).join(", ")}`);
+          if (persona.preferredLocations?.length) parts.push(`Location preferences: ${(persona.preferredLocations as string[]).join(", ")}`);
+          if (persona.seniorityInterest?.length) parts.push(`Seniority interest: ${(persona.seniorityInterest as string[]).join(", ")}`);
+          if (persona.remotePreference && persona.remotePreference !== "unknown") parts.push(`Remote preference: ${persona.remotePreference}`);
+          if (persona.careerStage && persona.careerStage !== "exploring") parts.push(`Career stage: ${persona.careerStage}`);
+          if (persona.searchPatterns?.length) parts.push(`Recent searches: ${(persona.searchPatterns as string[]).slice(-5).join(", ")}`);
+          if (persona.viewedCompanies?.length) parts.push(`Companies explored: ${(persona.viewedCompanies as string[]).slice(0, 5).join(", ")}`);
+          parts.push(`Activity: ${persona.totalJobViews} jobs viewed, ${persona.totalSearches} searches, ${persona.totalApplyClicks} applications`);
+
+          personaContext = `
+USER BEHAVIORAL PROFILE (based on their activity on this platform):
+${parts.join("\n")}`;
+        }
+      }
+
       const allJobs = await storage.getActiveJobs();
       const jobSummaries = allJobs.slice(0, 30).map(j => {
         const sal = j.salaryMin ? `$${Math.round(j.salaryMin/1000)}K${j.salaryMax ? `-$${Math.round(j.salaryMax/1000)}K` : "+"}` : "";
@@ -2455,10 +2480,17 @@ IMPORTANT GUIDELINES:
 - If the user asks about something you don't have data for, say so honestly rather than guessing.
 - Format responses with short paragraphs. Use **bold** for emphasis on key points.
 - When listing items, use bullet points (- item) for readability.
+${personaContext ? `\nYou have access to this user's behavioral profile from their activity on the platform. Use it to personalize your responses:
+- Reference their interests and activity patterns naturally, don't list them back robotically.
+- Suggest jobs and career paths that align with their demonstrated interests.
+- Tailor language to their career stage (e.g., more detailed explanations for early-career, strategic guidance for senior).
+- If they've been exploring specific companies or categories, proactively mention relevant opportunities.
+- Never say "based on your profile" or "your data shows." Instead, weave personalization naturally: "Since you've been looking at compliance roles..." or "Given your interest in remote positions..."` : ""}
 ${jobContext ? "\nThe user is currently looking at a specific job posting. Use the job details below to answer their questions about this role." : ""}
 ${resumeContext ? "\nThe user has uploaded their resume. Use their background to personalize advice and evaluate job fit." : ""}
 ${jobContext}
 ${resumeContext}
+${personaContext}
 ${platformContext}`;
 
       const messages: { role: "system" | "user" | "assistant"; content: string }[] = [
@@ -2482,6 +2514,207 @@ ${platformContext}`;
       res.status(500).json({ error: "Failed to process your question. Please try again." });
     }
   });
+
+  // =============================================
+  // User Activity & Persona Routes
+  // =============================================
+
+  app.post("/api/activities", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const userId = user?.claims?.sub;
+      if (!userId) return res.status(401).json({ error: "Not authenticated" });
+
+      const { events } = req.body;
+
+      if (Array.isArray(events) && events.length > 0) {
+        const activities = events.slice(0, 20).map((e: any) => ({
+          userId,
+          eventType: String(e.eventType || "unknown").slice(0, 50),
+          entityType: e.entityType ? String(e.entityType).slice(0, 50) : null,
+          entityId: e.entityId ? String(e.entityId).slice(0, 255) : null,
+          metadata: e.metadata || null,
+          pagePath: e.pagePath ? String(e.pagePath).slice(0, 500) : null,
+          sessionId: e.sessionId ? String(e.sessionId).slice(0, 255) : null,
+        }));
+        await storage.logActivities(activities);
+      } else if (req.body.eventType) {
+        await storage.logActivity({
+          userId,
+          eventType: String(req.body.eventType).slice(0, 50),
+          entityType: req.body.entityType ? String(req.body.entityType).slice(0, 50) : null,
+          entityId: req.body.entityId ? String(req.body.entityId).slice(0, 255) : null,
+          metadata: req.body.metadata || null,
+          pagePath: req.body.pagePath ? String(req.body.pagePath).slice(0, 500) : null,
+          sessionId: req.body.sessionId ? String(req.body.sessionId).slice(0, 255) : null,
+        });
+      }
+
+      res.json({ ok: true });
+    } catch (error) {
+      console.error("Activity log error:", error);
+      res.status(500).json({ error: "Failed to log activity" });
+    }
+  });
+
+  app.get("/api/persona", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const userId = user?.claims?.sub;
+      if (!userId) return res.status(401).json({ error: "Not authenticated" });
+
+      let persona = await storage.getUserPersona(userId);
+
+      const shouldRecompute = !persona || !persona.updatedAt ||
+        (Date.now() - new Date(persona.updatedAt).getTime()) > 10 * 60 * 1000;
+
+      if (shouldRecompute) {
+        persona = await recomputePersona(userId);
+      }
+
+      res.json(persona || {
+        userId,
+        topCategories: [],
+        topSkills: [],
+        preferredLocations: [],
+        remotePreference: "unknown",
+        seniorityInterest: [],
+        careerStage: "exploring",
+        engagementLevel: "new",
+        searchPatterns: [],
+        viewedCompanies: [],
+        personaSummary: null,
+        totalJobViews: 0,
+        totalSearches: 0,
+        totalApplyClicks: 0,
+      });
+    } catch (error) {
+      console.error("Persona fetch error:", error);
+      res.status(500).json({ error: "Failed to fetch persona" });
+    }
+  });
+
+  async function recomputePersona(userId: string) {
+    try {
+      const recentActivities = await storage.getUserRecentActivities(userId, 200);
+      const counts = await storage.getUserActivityCounts(userId);
+
+      const categoryCounter: Record<string, number> = {};
+      const locationCounter: Record<string, number> = {};
+      const companyCounter: Record<string, number> = {};
+      const seniorityCounter: Record<string, number> = {};
+      const searchTerms: string[] = [];
+      let remoteViews = 0;
+      let totalViews = 0;
+
+      const allJobs = await storage.getActiveJobs();
+      const jobMap = new Map(allJobs.map(j => [j.id, j]));
+
+      for (const activity of recentActivities) {
+        const meta = activity.metadata as any;
+
+        if (activity.eventType === "job_view" && activity.entityId) {
+          totalViews++;
+          const job = jobMap.get(Number(activity.entityId));
+          if (job) {
+            if (job.roleCategory) categoryCounter[job.roleCategory] = (categoryCounter[job.roleCategory] || 0) + 1;
+            if (job.location) locationCounter[job.location.split(",")[0].trim()] = (locationCounter[job.location.split(",")[0].trim()] || 0) + 1;
+            if (job.company) companyCounter[job.company] = (companyCounter[job.company] || 0) + 1;
+            if (job.seniorityLevel) seniorityCounter[job.seniorityLevel] = (seniorityCounter[job.seniorityLevel] || 0) + 1;
+            if (job.isRemote) remoteViews++;
+          }
+        }
+
+        if (activity.eventType === "apply_click" && activity.entityId) {
+          const job = jobMap.get(Number(activity.entityId));
+          if (job) {
+            if (job.roleCategory) categoryCounter[job.roleCategory] = (categoryCounter[job.roleCategory] || 0) + 3;
+            if (job.company) companyCounter[job.company] = (companyCounter[job.company] || 0) + 3;
+            if (job.seniorityLevel) seniorityCounter[job.seniorityLevel] = (seniorityCounter[job.seniorityLevel] || 0) + 2;
+          }
+        }
+
+        if (activity.eventType === "search" && meta?.query) {
+          searchTerms.push(String(meta.query));
+        }
+
+        if (activity.eventType === "filter_change" && meta) {
+          if (meta.category) categoryCounter[meta.category] = (categoryCounter[meta.category] || 0) + 2;
+          if (meta.location) locationCounter[meta.location] = (locationCounter[meta.location] || 0) + 2;
+          if (meta.seniority) seniorityCounter[meta.seniority] = (seniorityCounter[meta.seniority] || 0) + 2;
+        }
+      }
+
+      const topN = (obj: Record<string, number>, n: number) =>
+        Object.entries(obj).sort((a, b) => b[1] - a[1]).slice(0, n).map(([k]) => k);
+
+      const topCategories = topN(categoryCounter, 5);
+      const preferredLocations = topN(locationCounter, 5);
+      const viewedCompanies = topN(companyCounter, 10);
+      const seniorityInterest = topN(seniorityCounter, 3);
+      const uniqueSearches = [...new Set(searchTerms)].slice(-10);
+
+      const remotePreference = totalViews > 3
+        ? (remoteViews / totalViews > 0.6 ? "strong" : remoteViews / totalViews > 0.3 ? "moderate" : "low")
+        : "unknown";
+
+      const totalEvents = recentActivities.length;
+      const engagementLevel = totalEvents > 50 ? "power_user" :
+        totalEvents > 20 ? "active" :
+        totalEvents > 5 ? "exploring" : "new";
+
+      let careerStage = "exploring";
+      const primaryResume = await storage.getPrimaryResume(userId);
+      if (primaryResume) {
+        const extracted = primaryResume.extractedData as any;
+        const years = extracted?.yearsOfExperience;
+        if (years !== undefined) {
+          careerStage = years <= 2 ? "early_career" :
+            years <= 7 ? "mid_career" :
+            years <= 15 ? "senior" : "executive";
+        }
+      }
+
+      const topSkills: string[] = [];
+      if (primaryResume) {
+        const extracted = primaryResume.extractedData as any;
+        if (extracted?.skills) topSkills.push(...extracted.skills.slice(0, 10));
+      }
+
+      const summaryParts: string[] = [];
+      if (careerStage !== "exploring") {
+        const stageMap: Record<string, string> = { early_career: "Early-career", mid_career: "Mid-career", senior: "Senior", executive: "Executive-level" };
+        summaryParts.push(stageMap[careerStage] || "");
+      }
+      summaryParts.push("legal professional");
+      if (topCategories.length > 0) summaryParts.push(`interested in ${topCategories.slice(0, 2).join(" and ")}`);
+      if (preferredLocations.length > 0) summaryParts.push(`preferring ${preferredLocations.slice(0, 2).join("/")} roles`);
+      if (remotePreference === "strong") summaryParts.push("with a strong preference for remote work");
+      const personaSummary = summaryParts.join(", ").replace(/,\s*,/g, ",");
+
+      const persona = await storage.upsertUserPersona(userId, {
+        topCategories,
+        topSkills,
+        preferredLocations,
+        remotePreference,
+        seniorityInterest,
+        careerStage,
+        engagementLevel,
+        searchPatterns: uniqueSearches,
+        viewedCompanies,
+        personaSummary,
+        totalJobViews: counts.jobViews,
+        totalSearches: counts.searches,
+        totalApplyClicks: counts.applyClicks,
+        lastActiveAt: new Date(),
+      });
+
+      return persona;
+    } catch (error) {
+      console.error("Persona recompute error:", error);
+      return null;
+    }
+  }
 
   // =============================================
   // Stripe Subscription Routes

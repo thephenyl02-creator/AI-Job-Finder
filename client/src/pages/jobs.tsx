@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useLocation, useSearch } from "wouter";
 import { Header } from "@/components/header";
 import { useAuth } from "@/hooks/use-auth";
+import { useActivityTracker } from "@/hooks/use-activity-tracker";
 import { apiRequest } from "@/lib/queryClient";
 import type { Job, JobWithScore } from "@shared/schema";
 import { JOB_TAXONOMY } from "@shared/schema";
@@ -14,6 +15,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
 import { motion, AnimatePresence } from "framer-motion";
 import { ScrollReveal, StaggerContainer, StaggerItem } from "@/components/animations";
+import { ContextualPrompt } from "@/components/contextual-prompt";
 import {
   ExternalLink,
   Search,
@@ -68,6 +70,7 @@ const SENIORITY_LEVELS = [
 
 export default function Jobs() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { track } = useActivityTracker();
   const [, setLocation] = useLocation();
   const searchString = useSearch();
   const urlParams = new URLSearchParams(searchString);
@@ -84,6 +87,8 @@ export default function Jobs() {
   const [locationSearch, setLocationSearch] = useState("");
   const [locationDropdownOpen, setLocationDropdownOpen] = useState(false);
   const locationDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => { track({ eventType: "page_view", pagePath: "/jobs" }); }, []);
 
   useEffect(() => {
     const params = new URLSearchParams(searchString);
@@ -351,7 +356,7 @@ export default function Jobs() {
                 key={level.value}
                 variant={selectedLevel === level.value ? "default" : "ghost"}
                 size="sm"
-                onClick={() => setSelectedLevel(level.value)}
+                onClick={() => { setSelectedLevel(level.value); track({ eventType: "filter_change", metadata: { filterType: "level", value: level.value } }); }}
                 data-testid={`button-level-${level.value}`}
               >
                 {level.label}
@@ -383,14 +388,14 @@ export default function Jobs() {
                 <div className="overflow-y-auto max-h-52">
                   <button
                     className={`w-full text-left px-3 py-2 text-sm hover-elevate ${selectedLocation === "all" ? "bg-muted font-medium" : ""}`}
-                    onClick={() => { setSelectedLocation("all"); setLocationDropdownOpen(false); setLocationSearch(""); }}
+                    onClick={() => { setSelectedLocation("all"); setLocationDropdownOpen(false); setLocationSearch(""); track({ eventType: "filter_change", metadata: { filterType: "location", value: "all" } }); }}
                     data-testid="button-location-all"
                   >
                     All Locations
                   </button>
                   <button
                     className={`w-full text-left px-3 py-2 text-sm hover-elevate flex items-center justify-between gap-2 ${selectedLocation === "remote" ? "bg-muted font-medium" : ""}`}
-                    onClick={() => { setSelectedLocation("remote"); setLocationDropdownOpen(false); setLocationSearch(""); }}
+                    onClick={() => { setSelectedLocation("remote"); setLocationDropdownOpen(false); setLocationSearch(""); track({ eventType: "filter_change", metadata: { filterType: "location", value: "remote" } }); }}
                     data-testid="button-location-remote"
                   >
                     <span>Remote Only</span>
@@ -403,7 +408,7 @@ export default function Jobs() {
                     <button
                       key={loc.key}
                       className={`w-full text-left px-3 py-2 text-sm hover-elevate flex items-center justify-between gap-2 ${selectedLocation === loc.key ? "bg-muted font-medium" : ""}`}
-                      onClick={() => { setSelectedLocation(loc.key); setLocationDropdownOpen(false); setLocationSearch(""); }}
+                      onClick={() => { setSelectedLocation(loc.key); setLocationDropdownOpen(false); setLocationSearch(""); track({ eventType: "filter_change", metadata: { filterType: "location", value: loc.key } }); }}
                       data-testid={`button-location-${loc.key}`}
                     >
                       <span className="truncate">{loc.display}</span>
@@ -478,6 +483,7 @@ export default function Jobs() {
                     onClick={() => {
                       setSelectedCategory(category);
                       setExpandedCategories(new Set([category]));
+                      track({ eventType: "filter_change", metadata: { filterType: "category", value: category } });
                     }}
                     className={`w-full p-4 rounded-lg border text-left transition-colors hover:border-primary/50 hover:bg-muted/30 ${
                       count === 0 ? "opacity-50" : ""
@@ -682,6 +688,8 @@ export default function Jobs() {
             )}
           </div>
         )}
+
+        <ContextualPrompt pageContext="search" searchQuery={searchQuery || undefined} className="mt-4" />
 
         <AnimatePresence>
           {selectedJobIds.size > 0 && (

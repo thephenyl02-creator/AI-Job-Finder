@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollReveal } from "@/components/animations";
 import { useAuth } from "@/hooks/use-auth";
+import { useActivityTracker } from "@/hooks/use-activity-tracker";
 import { apiRequest } from "@/lib/queryClient";
 import type { Job } from "@shared/schema";
 import {
@@ -425,9 +426,14 @@ function JobChat({ jobId }: { jobId: string }) {
 
 export default function JobDetail() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { trackNow } = useActivityTracker();
   const [, setLocation] = useLocation();
   const params = useParams<{ id: string }>();
   const jobId = params.id;
+
+  useEffect(() => {
+    if (jobId) trackNow({ eventType: "job_view", entityType: "job", entityId: jobId });
+  }, [jobId]);
 
   const { data: job, isLoading } = useQuery<Job>({
     queryKey: [`/api/jobs/${jobId}`],
@@ -436,6 +442,7 @@ export default function JobDetail() {
 
   const handleApplyClick = async () => {
     if (!job) return;
+    trackNow({ eventType: "apply_click", entityType: "job", entityId: String(job.id) });
     try {
       await apiRequest("POST", `/api/jobs/${job.id}/apply-click`);
     } catch (e) {

@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/hooks/use-auth";
+import { useActivityTracker } from "@/hooks/use-activity-tracker";
 import { useSubscription } from "@/hooks/use-subscription";
 import { UpgradePrompt } from "@/components/upgrade-prompt";
 import { useToast } from "@/hooks/use-toast";
@@ -17,6 +18,7 @@ import { apiRequest } from "@/lib/queryClient";
 import type { Job } from "@shared/schema";
 import { motion } from "framer-motion";
 import { ScrollReveal } from "@/components/animations";
+import { ContextualPrompt } from "@/components/contextual-prompt";
 import { 
   Loader2, 
   Plus, 
@@ -114,9 +116,12 @@ interface ComparisonResult {
 
 export default function CareerAdvisor() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { track } = useActivityTracker();
   const { isPro, isLoading: subLoading } = useSubscription();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  useEffect(() => { track({ eventType: "page_view", pagePath: "/career-advisor" }); }, []);
   const [jobs, setJobs] = useState<JobInput[]>([
     { id: "1", title: "", description: "" },
     { id: "2", title: "", description: "" },
@@ -459,6 +464,7 @@ export default function CareerAdvisor() {
       });
       return;
     }
+    track({ eventType: "compare_start" });
     compareMutation.mutate({ jobs: validJobs, includeResume: resumeData?.hasResume ?? false });
   };
 
@@ -824,6 +830,8 @@ export default function CareerAdvisor() {
             hasResume={resumeData?.hasResume ?? false}
           />
         )}
+
+        <ContextualPrompt pageContext="career-advisor" className="mt-6" />
       </main>
 
       {showJobPicker && (

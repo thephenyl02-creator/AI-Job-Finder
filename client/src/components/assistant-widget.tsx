@@ -1,6 +1,7 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useLocation, useParams } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
+import { usePersona } from "@/hooks/use-persona";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,9 @@ import {
   Briefcase,
   Sparkles,
   ArrowDown,
+  TrendingUp,
+  MapPin,
+  Target,
 } from "lucide-react";
 
 interface ChatMessage {
@@ -70,7 +74,7 @@ function renderInline(text: string, parentKey: number) {
   return parts.length === 1 && typeof parts[0] === "string" ? parts[0] : <>{parts}</>;
 }
 
-const SUGGESTION_CHIPS = [
+const BASE_CHIPS = [
   { label: "What jobs match my skills?", icon: Sparkles, requiresResume: true },
   { label: "What does this role involve?", icon: Briefcase, requiresJob: true },
   { label: "How do I get started in legal tech?", icon: FileText, requiresResume: false },
@@ -78,6 +82,7 @@ const SUGGESTION_CHIPS = [
 
 export function AssistantWidget() {
   const { isAuthenticated } = useAuth();
+  const { persona, hasPersona } = usePersona();
   const [location] = useLocation();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -107,6 +112,55 @@ export function AssistantWidget() {
       inputRef.current.focus();
     }
   }, [isOpen]);
+
+  const dynamicChips = useMemo(() => {
+    const chips = BASE_CHIPS.filter((chip) => {
+      if (chip.requiresResume && !hasResume) return false;
+      if (chip.requiresJob && !currentJobId) return false;
+      return true;
+    });
+
+    if (hasPersona && persona) {
+      const categories = persona.topCategories as string[] | undefined;
+      const locations = persona.preferredLocations as string[] | undefined;
+      const companies = persona.viewedCompanies as string[] | undefined;
+
+      if (categories?.length) {
+        chips.push({
+          label: `What's trending in ${categories[0]}?`,
+          icon: TrendingUp,
+          requiresResume: false,
+          requiresJob: false,
+        } as any);
+      }
+      if (locations?.length && persona.remotePreference !== "strong") {
+        chips.push({
+          label: `Best opportunities in ${locations[0]}?`,
+          icon: MapPin,
+          requiresResume: false,
+          requiresJob: false,
+        } as any);
+      }
+      if (companies?.length && companies.length >= 2) {
+        chips.push({
+          label: `Compare ${companies[0]} vs ${companies[1]}`,
+          icon: Target,
+          requiresResume: false,
+          requiresJob: false,
+        } as any);
+      }
+      if (persona.remotePreference === "strong") {
+        chips.push({
+          label: "Best remote legal tech roles?",
+          icon: MapPin,
+          requiresResume: false,
+          requiresJob: false,
+        } as any);
+      }
+    }
+
+    return chips.slice(0, 4);
+  }, [hasPersona, persona, hasResume, currentJobId]);
 
   if (!isAuthenticated) return null;
 
@@ -165,13 +219,13 @@ export function AssistantWidget() {
     }
   };
 
-  const relevantChips = SUGGESTION_CHIPS.filter((chip) => {
-    if (chip.requiresResume && !hasResume) return false;
-    if (chip.requiresJob && !currentJobId) return false;
-    return true;
-  });
-
-  const contextLabel = currentJobId ? "Discussing this job" : hasResume ? "Resume loaded" : null;
+  const contextLabel = currentJobId
+    ? "Discussing this job"
+    : hasPersona
+    ? "Personalized"
+    : hasResume
+    ? "Resume loaded"
+    : null;
 
   return (
     <>
@@ -210,18 +264,22 @@ export function AssistantWidget() {
                       <MessageCircle className="h-5 w-5 text-muted-foreground" />
                     </div>
                     <div>
-                      <p className="font-medium text-foreground text-sm">How can I help?</p>
+                      <p className="font-medium text-foreground text-sm">
+                        {hasPersona ? "Welcome back. How can I help today?" : "How can I help?"}
+                      </p>
                       <p className="text-xs text-muted-foreground mt-1">
                         {currentJobId
                           ? "Ask me anything about this job posting. I'll explain it in plain language."
+                          : hasPersona && persona?.personaSummary
+                          ? "I know your interests and can give you personalized recommendations."
                           : hasResume
                           ? "Ask about jobs that match your resume, or anything about legal tech careers."
                           : "Ask about any job listing, career advice, or legal tech in general."}
                       </p>
                     </div>
-                    {relevantChips.length > 0 && (
+                    {dynamicChips.length > 0 && (
                       <div className="flex flex-wrap gap-2 justify-center">
-                        {relevantChips.map((chip) => (
+                        {dynamicChips.map((chip) => (
                           <Badge
                             key={chip.label}
                             variant="outline"

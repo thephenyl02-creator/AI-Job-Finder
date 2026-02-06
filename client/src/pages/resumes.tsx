@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Header } from "@/components/header";
@@ -9,9 +9,11 @@ import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/hooks/use-auth";
+import { useActivityTracker } from "@/hooks/use-activity-tracker";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Resume, ResumeExtractedData } from "@shared/schema";
+import { ContextualPrompt } from "@/components/contextual-prompt";
 import {
   FileText,
   Upload,
@@ -326,6 +328,7 @@ function UploadForm({
   existingCount: number;
 }) {
   const { toast } = useToast();
+  const { track } = useActivityTracker();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [label, setLabel] = useState("");
   const [file, setFile] = useState<File | null>(null);
@@ -350,6 +353,7 @@ function UploadForm({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/resumes"] });
       toast({ title: "Resume uploaded", description: "Your resume has been parsed and saved." });
+      track({ eventType: "resume_upload" });
       onClose();
     },
     onError: (err: Error) => {
@@ -805,8 +809,11 @@ function MatchDashboard({ results }: { results: ResumeMatchResult[] }) {
 
 export default function Resumes() {
   const { isAuthenticated } = useAuth();
+  const { track } = useActivityTracker();
   const { toast } = useToast();
   const [showUpload, setShowUpload] = useState(false);
+
+  useEffect(() => { track({ eventType: "page_view", pagePath: "/resumes" }); }, []);
 
   const {
     data: userResumes = [],
@@ -1008,6 +1015,8 @@ export default function Resumes() {
             )}
           </div>
         </div>
+
+        <ContextualPrompt pageContext="resumes" className="mt-6" />
       </main>
     </div>
   );

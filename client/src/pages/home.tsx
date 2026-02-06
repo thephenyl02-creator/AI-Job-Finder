@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Header } from "@/components/header";
 import { SearchBar } from "@/components/search-bar";
 import { JobList } from "@/components/job-list";
 import { useAuth } from "@/hooks/use-auth";
+import { useActivityTracker } from "@/hooks/use-activity-tracker";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/auth-utils";
 import { apiRequest } from "@/lib/queryClient";
@@ -22,8 +23,11 @@ const categoryIcons = {
 
 export default function Home() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { track } = useActivityTracker();
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
+
+  useEffect(() => { track({ eventType: "page_view", pagePath: "/" }); }, []);
   const [searchResults, setSearchResults] = useState<JobWithScore[] | null>(null);
   const [activeTab, setActiveTab] = useState<"search" | "browse">("search");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -69,6 +73,7 @@ export default function Home() {
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
+    track({ eventType: "search", metadata: { query } });
     searchMutation.mutate(query);
   };
 
