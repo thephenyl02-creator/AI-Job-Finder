@@ -163,7 +163,7 @@ export default function Landing() {
 
               <ScrollReveal delay={0.4} direction="none">
                 <div className="hidden lg:block" data-testid="hero-job-preview">
-                  <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center justify-between gap-2 mb-3">
                     <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Live roles</p>
                     {stats?.totalJobs ? (
                       <Badge variant="secondary" className="text-xs" data-testid="badge-job-count">
@@ -216,6 +216,58 @@ export default function Landing() {
                     )}
                   </div>
                   <p className="text-xs text-muted-foreground text-center mt-3">
+                    Sign in to see all roles and apply
+                  </p>
+                </div>
+              </ScrollReveal>
+
+              <ScrollReveal delay={0.4} direction="none">
+                <div className="lg:hidden mt-8" data-testid="hero-job-preview-mobile">
+                  <div className="flex items-center justify-between gap-2 mb-3">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Live roles</p>
+                    {stats?.totalJobs ? (
+                      <Badge variant="secondary" className="text-xs" data-testid="badge-job-count-mobile">
+                        {stats.totalJobs}+ open
+                      </Badge>
+                    ) : null}
+                  </div>
+                  <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 snap-x snap-mandatory scrollbar-none">
+                    {featuredJobs?.slice(0, 6).map((job, i) => (
+                      <motion.div
+                        key={job.id}
+                        initial={{ opacity: 0, x: 12 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.5 + i * 0.08, duration: 0.35 }}
+                        className="snap-start shrink-0 w-[260px]"
+                      >
+                        <Card className="bg-background/80 backdrop-blur-sm border-border/50 h-full" data-testid={`hero-job-card-mobile-${i}`}>
+                          <CardContent className="p-3">
+                            <p className="text-sm font-semibold text-foreground truncate">{job.title}</p>
+                            <div className="flex items-center gap-2 mt-1.5">
+                              <span className="flex items-center gap-1 text-xs text-muted-foreground truncate">
+                                <Building2 className="h-3 w-3 shrink-0" />
+                                {job.company}
+                              </span>
+                            </div>
+                            {job.location && (
+                              <span className="flex items-center gap-1 text-xs text-muted-foreground mt-1 truncate">
+                                <MapPin className="h-3 w-3 shrink-0" />
+                                {job.isRemote ? "Remote" : shortenLocation(job.location)}
+                              </span>
+                            )}
+                          </CardContent>
+                        </Card>
+                      </motion.div>
+                    ))}
+                    {(!featuredJobs || featuredJobs.length === 0) && (
+                      <div className="flex gap-3">
+                        {[...Array(3)].map((_, i) => (
+                          <div key={i} className="shrink-0 w-[260px] h-[76px] rounded-md bg-muted/40 animate-pulse" />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground text-center mt-2">
                     Sign in to see all roles and apply
                   </p>
                 </div>

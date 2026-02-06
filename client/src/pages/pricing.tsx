@@ -438,6 +438,27 @@ export default function Pricing() {
           </p>
         </div>
       </main>
+
+      <footer className="border-t border-border/40 py-8 mt-12">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <p className="text-sm text-muted-foreground">
+              Legal Tech Careers
+            </p>
+            <nav className="flex items-center gap-3 flex-wrap">
+              <Link href="/">
+                <Button variant="ghost" size="sm" data-testid="footer-link-home">Home</Button>
+              </Link>
+              <Link href="/about">
+                <Button variant="ghost" size="sm" data-testid="footer-link-about">About</Button>
+              </Link>
+              <Link href="/post-job">
+                <Button variant="ghost" size="sm" data-testid="footer-link-post-job">Post a Job</Button>
+              </Link>
+            </nav>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
