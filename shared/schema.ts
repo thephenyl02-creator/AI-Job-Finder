@@ -377,6 +377,23 @@ export const insertUserPersonaSchema = createInsertSchema(userPersonas).omit({
 export type UserPersona = typeof userPersonas.$inferSelect;
 export type InsertUserPersona = z.infer<typeof insertUserPersonaSchema>;
 
+export const savedJobs = pgTable("saved_jobs", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id", { length: 255 }).notNull(),
+  jobId: integer("job_id").notNull(),
+  savedAt: timestamp("saved_at").default(sql`CURRENT_TIMESTAMP`),
+  reminderShown: boolean("reminder_shown").default(false),
+  notes: text("notes"),
+});
+
+export const insertSavedJobSchema = createInsertSchema(savedJobs).omit({
+  id: true,
+  savedAt: true,
+});
+
+export type SavedJob = typeof savedJobs.$inferSelect;
+export type InsertSavedJob = z.infer<typeof insertSavedJobSchema>;
+
 export const builtResumes = pgTable("built_resumes", {
   id: serial("id").primaryKey(),
   userId: varchar("user_id", { length: 255 }).notNull(),
