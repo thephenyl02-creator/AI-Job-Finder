@@ -144,11 +144,20 @@ export function AnimatedCounter({
   prefix = "",
 }: AnimatedCounterProps) {
   const ref = useRef<HTMLSpanElement>(null);
-  const isInView = useInView(ref, { once: true, margin: "-40px" });
+  const isInView = useInView(ref, { once: true, margin: "200px" });
   const [displayValue, setDisplayValue] = useState(0);
+  const lastAnimatedValue = useRef<number | null>(null);
 
   useEffect(() => {
-    if (!isInView) return;
+    if (value === undefined || value === null) return;
+
+    if (!isInView) {
+      setDisplayValue(value);
+      return;
+    }
+
+    if (lastAnimatedValue.current === value) return;
+    lastAnimatedValue.current = value;
 
     let startTime: number;
     let animationFrame: number;
@@ -161,6 +170,8 @@ export function AnimatedCounter({
 
       if (progress < 1) {
         animationFrame = requestAnimationFrame(animate);
+      } else {
+        setDisplayValue(value);
       }
     };
 
@@ -170,7 +181,7 @@ export function AnimatedCounter({
 
   return (
     <span ref={ref} className={className}>
-      {prefix}{isInView ? displayValue : 0}{suffix}
+      {prefix}{displayValue}{suffix}
     </span>
   );
 }
