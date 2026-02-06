@@ -628,6 +628,163 @@ function CertificationsEditor({
   );
 }
 
+interface OptimizationData {
+  optimizedSummary?: string;
+  keywordInjections?: Array<{ section: string; keyword: string; context: string }>;
+  bulletRewrites?: Array<{ experienceIndex: number; bulletIndex: number; original: string; optimized: string }>;
+  missingSkills?: { technical?: string[]; legal?: string[] };
+  overallAdvice?: string;
+  estimatedScoreBoost?: number;
+}
+
+function OptimizationResultsPanel({
+  data,
+  onApplySummary,
+  onApplyBullet,
+  onApplySkills,
+  onDismiss,
+}: {
+  data: OptimizationData;
+  onApplySummary: (summary: string) => void;
+  onApplyBullet: (expIdx: number, bulletIdx: number, text: string) => boolean;
+  onApplySkills: (technical: string[], legal: string[]) => void;
+  onDismiss: () => void;
+}) {
+  const [appliedSummary, setAppliedSummary] = useState(false);
+  const [appliedBullets, setAppliedBullets] = useState<Set<string>>(new Set());
+  const [appliedSkills, setAppliedSkills] = useState(false);
+
+  return (
+    <div className="space-y-5">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-2">
+          <Zap className="h-4 w-4 text-primary" />
+          <h3 className="text-sm font-serif font-medium text-foreground">Optimization Suggestions</h3>
+        </div>
+        <Button variant="ghost" size="icon" onClick={onDismiss} data-testid="button-dismiss-optimization">
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
+
+      {data.estimatedScoreBoost != null && data.estimatedScoreBoost > 0 && (
+        <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
+          <ChevronUp className="h-4 w-4 text-green-600 dark:text-green-400" />
+          <span className="text-xs text-green-700 dark:text-green-300">
+            Estimated +{data.estimatedScoreBoost} point ATS score improvement
+          </span>
+        </div>
+      )}
+
+      {data.overallAdvice && (
+        <div className="px-3 py-2.5 rounded-md bg-muted/50 border border-border/60">
+          <p className="text-xs text-muted-foreground leading-relaxed">{data.overallAdvice}</p>
+        </div>
+      )}
+
+      {data.optimizedSummary && (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Improved Summary</h4>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={appliedSummary}
+              onClick={() => { onApplySummary(data.optimizedSummary!); setAppliedSummary(true); }}
+              data-testid="button-apply-summary"
+            >
+              {appliedSummary ? <Check className="h-3.5 w-3.5 mr-1" /> : <Sparkles className="h-3.5 w-3.5 mr-1" />}
+              {appliedSummary ? "Applied" : "Apply"}
+            </Button>
+          </div>
+          <div className="text-xs text-foreground bg-muted/30 rounded-md p-3 border border-border/40 leading-relaxed">
+            {data.optimizedSummary}
+          </div>
+        </div>
+      )}
+
+      {data.bulletRewrites && data.bulletRewrites.length > 0 && (
+        <div className="space-y-3">
+          <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Bullet Point Improvements</h4>
+          {data.bulletRewrites.map((rewrite, i) => {
+            const key = `${rewrite.experienceIndex}-${rewrite.bulletIndex}`;
+            const isApplied = appliedBullets.has(key);
+            return (
+              <div key={i} className="space-y-1.5 p-3 rounded-md border border-border/40 bg-muted/20">
+                <div className="flex items-start gap-2">
+                  <span className="text-[10px] text-red-500 dark:text-red-400 line-through shrink-0 mt-0.5">Before:</span>
+                  <p className="text-[11px] text-muted-foreground line-through">{rewrite.original}</p>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-[10px] text-green-600 dark:text-green-400 shrink-0 mt-0.5">After:</span>
+                  <p className="text-[11px] text-foreground">{rewrite.optimized}</p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={isApplied}
+                  onClick={() => {
+                    const success = onApplyBullet(rewrite.experienceIndex, rewrite.bulletIndex, rewrite.optimized);
+                    if (success) setAppliedBullets((prev) => new Set(prev).add(key));
+                  }}
+                  data-testid={`button-apply-bullet-${i}`}
+                >
+                  {isApplied ? <Check className="h-3.5 w-3.5 mr-1" /> : <Sparkles className="h-3.5 w-3.5 mr-1" />}
+                  {isApplied ? "Applied" : "Apply Change"}
+                </Button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {data.missingSkills && ((data.missingSkills.technical?.length ?? 0) > 0 || (data.missingSkills.legal?.length ?? 0) > 0) && (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Suggested Skills to Add</h4>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={appliedSkills}
+              onClick={() => {
+                onApplySkills(data.missingSkills?.technical || [], data.missingSkills?.legal || []);
+                setAppliedSkills(true);
+              }}
+              data-testid="button-apply-skills"
+            >
+              {appliedSkills ? <Check className="h-3.5 w-3.5 mr-1" /> : <Plus className="h-3.5 w-3.5 mr-1" />}
+              {appliedSkills ? "Added" : "Add All"}
+            </Button>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {(data.missingSkills.technical || []).map((s, i) => (
+              <Badge key={`t-${i}`} variant="secondary" className="text-[10px]">{s}</Badge>
+            ))}
+            {(data.missingSkills.legal || []).map((s, i) => (
+              <Badge key={`l-${i}`} variant="outline" className="text-[10px]">{s}</Badge>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {data.keywordInjections && data.keywordInjections.length > 0 && (
+        <div className="space-y-2">
+          <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Keyword Placement Guide</h4>
+          <p className="text-[10px] text-muted-foreground">Manually weave these keywords into the suggested sections for best results.</p>
+          {data.keywordInjections.map((inj, i) => (
+            <div key={i} className="flex items-start gap-2 text-xs">
+              <Target className="h-3 w-3 text-primary shrink-0 mt-0.5" />
+              <div className="min-w-0">
+                <span className="font-medium text-foreground">{inj.keyword}</span>
+                <span className="text-muted-foreground"> in {inj.section}: {inj.context}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ATSPanel({
   resume,
   isPro,
@@ -648,21 +805,51 @@ function ATSPanel({
   const atsScore = resume?.atsScore ?? 0;
   const atsAnalysis = (resume?.atsAnalysis as any) || null;
 
-  const breakdownItems = atsAnalysis?.breakdown || [
-    { label: "Formatting", score: 0 },
-    { label: "Keywords", score: 0 },
-    { label: "Content", score: 0 },
-    { label: "Relevance", score: 0 },
-  ];
+  const scoreBreakdown = atsAnalysis?.scoreBreakdown;
+  const breakdownItems = scoreBreakdown
+    ? [
+        { label: "Formatting", score: Math.round((scoreBreakdown.formatting / 25) * 100) },
+        { label: "Keywords", score: Math.round((scoreBreakdown.keywords / 25) * 100) },
+        { label: "Content", score: Math.round((scoreBreakdown.content / 25) * 100) },
+        { label: "Relevance", score: Math.round((scoreBreakdown.relevance / 25) * 100) },
+      ]
+    : atsAnalysis?.breakdown || [
+        { label: "Formatting", score: 0 },
+        { label: "Keywords", score: 0 },
+        { label: "Content", score: 0 },
+        { label: "Relevance", score: 0 },
+      ];
 
   const quickFixes = atsAnalysis?.quickFixes || [];
+  const jobFitScore = atsAnalysis?.jobFitScore;
+  const jobFitVerdict = atsAnalysis?.jobFitVerdict;
+  const missingJobKeywords = atsAnalysis?.missingJobKeywords || [];
+  const matchedJobKeywords = atsAnalysis?.matchedJobKeywords || [];
+  const verdict = atsAnalysis?.verdict;
+  const keywordAnalysis = atsAnalysis?.keywordAnalysis;
+  const sectionScores = atsAnalysis?.sectionScores;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div className="text-center">
         <ATSScoreRing score={atsScore} size={110} />
         <p className="text-xs text-muted-foreground mt-2">ATS Readiness Score</p>
+        {verdict && <p className="text-[11px] text-foreground mt-1">{verdict}</p>}
       </div>
+
+      {jobFitScore != null && (
+        <>
+          <Separator />
+          <div className="space-y-2">
+            <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Job Fit</h4>
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-sm font-medium text-foreground">{jobFitScore}%</span>
+              <Progress value={jobFitScore} className="h-2 flex-1" />
+            </div>
+            {jobFitVerdict && <p className="text-[11px] text-muted-foreground">{jobFitVerdict}</p>}
+          </div>
+        </>
+      )}
 
       <Separator />
 
@@ -679,17 +866,104 @@ function ATSPanel({
         ))}
       </div>
 
+      {sectionScores && (
+        <>
+          <Separator />
+          <div className="space-y-3">
+            <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Section Analysis</h4>
+            {Object.entries(sectionScores).map(([key, data]: [string, any]) => (
+              <div key={key} className="space-y-1">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs text-foreground capitalize">{key}</span>
+                  <span className={`text-xs font-medium ${data.score >= 80 ? "text-green-600 dark:text-green-400" : data.score >= 60 ? "text-yellow-600 dark:text-yellow-400" : "text-red-600 dark:text-red-400"}`}>
+                    {data.score}%
+                  </span>
+                </div>
+                {data.fixes && data.fixes.length > 0 && (
+                  <ul className="space-y-0.5">
+                    {data.fixes.slice(0, 2).map((fix: string, i: number) => (
+                      <li key={i} className="text-[10px] text-muted-foreground flex items-start gap-1">
+                        <span className="shrink-0 mt-0.5">-</span>
+                        <span>{fix}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {(matchedJobKeywords.length > 0 || missingJobKeywords.length > 0) && (
+        <>
+          <Separator />
+          <div className="space-y-2">
+            <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Job Keywords</h4>
+            {matchedJobKeywords.length > 0 && (
+              <div className="space-y-1">
+                <span className="text-[10px] text-green-600 dark:text-green-400 font-medium">Matched</span>
+                <div className="flex flex-wrap gap-1">
+                  {matchedJobKeywords.map((kw: string, i: number) => (
+                    <Badge key={i} variant="secondary" className="text-[9px] bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300">{kw}</Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+            {missingJobKeywords.length > 0 && (
+              <div className="space-y-1">
+                <span className="text-[10px] text-red-600 dark:text-red-400 font-medium">Missing</span>
+                <div className="flex flex-wrap gap-1">
+                  {missingJobKeywords.map((kw: string, i: number) => (
+                    <Badge key={i} variant="outline" className="text-[9px] border-red-200 dark:border-red-800 text-red-600 dark:text-red-400">{kw}</Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {keywordAnalysis && !jobFitScore && (
+        <>
+          <Separator />
+          <div className="space-y-2">
+            <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Keywords</h4>
+            {keywordAnalysis.strong?.length > 0 && (
+              <div className="space-y-1">
+                <span className="text-[10px] text-green-600 dark:text-green-400 font-medium">Strong</span>
+                <div className="flex flex-wrap gap-1">
+                  {keywordAnalysis.strong.slice(0, 8).map((kw: string, i: number) => (
+                    <Badge key={i} variant="secondary" className="text-[9px]">{kw}</Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+            {keywordAnalysis.missing?.length > 0 && (
+              <div className="space-y-1">
+                <span className="text-[10px] text-red-600 dark:text-red-400 font-medium">Consider Adding</span>
+                <div className="flex flex-wrap gap-1">
+                  {keywordAnalysis.missing.slice(0, 8).map((kw: string, i: number) => (
+                    <Badge key={i} variant="outline" className="text-[9px]">{kw}</Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
       {quickFixes.length > 0 && (
         <>
           <Separator />
           <div className="space-y-3">
             <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Quick Fixes</h4>
-            {quickFixes.map((fix: { text: string; impact: string }, i: number) => (
+            {quickFixes.map((fix: any, i: number) => (
               <div key={i} className="flex items-start gap-2">
                 <AlertTriangle className="h-3.5 w-3.5 text-yellow-500 dark:text-yellow-400 shrink-0 mt-0.5" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs text-foreground">{fix.text}</p>
-                  <ImpactBadge impact={fix.impact} />
+                  <p className="text-xs text-foreground">{fix.fix || fix.text || fix.issue}</p>
+                  {fix.impact && <ImpactBadge impact={fix.impact} />}
                 </div>
               </div>
             ))}
@@ -968,6 +1242,7 @@ function ResumeEditorView({
   const [targetJobId, setTargetJobId] = useState<number | null>(null);
   const [hasLoaded, setHasLoaded] = useState(false);
   const [atsExpanded, setAtsExpanded] = useState(false);
+  const [optimizationResults, setOptimizationResults] = useState<OptimizationData | null>(null);
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const { data: resume, isLoading } = useQuery<BuiltResume>({
@@ -1074,13 +1349,9 @@ function ResumeEditorView({
       });
       return res.json();
     },
-    onSuccess: (data) => {
-      if (data.sections) {
-        setSections(data.sections);
-        autoSave(data.sections);
-      }
-      queryClient.invalidateQueries({ queryKey: ["/api/built-resumes", resumeId] });
-      toast({ title: "Optimization Complete", description: "Your resume has been optimized for the target job." });
+    onSuccess: (data: OptimizationData) => {
+      setOptimizationResults(data);
+      toast({ title: "Optimization Complete", description: "Review the suggestions below and apply the ones you like." });
     },
     onError: (error: any) => {
       if (error.message?.includes("403") || error.message?.includes("Pro")) {
@@ -1090,6 +1361,55 @@ function ResumeEditorView({
       }
     },
   });
+
+  const saveImmediately = useCallback((newSections: ResumeSections) => {
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    updateMutation.mutate({ sections: newSections });
+  }, [updateMutation]);
+
+  const applyOptimizedSummary = (summary: string) => {
+    const updated = { ...sections, summary };
+    setSections(updated);
+    saveImmediately(updated);
+    toast({ title: "Summary Updated", description: "The optimized summary has been applied and saved." });
+  };
+
+  const applyOptimizedBullet = (expIdx: number, bulletIdx: number, text: string) => {
+    const updated = { ...sections };
+    const exp = [...updated.experience];
+    if (expIdx >= exp.length) {
+      toast({ title: "Could Not Apply", description: "The experience entry no longer exists. The change was not applied.", variant: "destructive" });
+      return false;
+    }
+    const bullets = [...exp[expIdx].bullets];
+    if (bulletIdx >= bullets.length) {
+      bullets.push(text);
+    } else {
+      bullets[bulletIdx] = text;
+    }
+    exp[expIdx] = { ...exp[expIdx], bullets };
+    updated.experience = exp;
+    setSections(updated);
+    saveImmediately(updated);
+    toast({ title: "Bullet Updated", description: "The improved bullet point has been applied and saved." });
+    return true;
+  };
+
+  const applyOptimizedSkills = (technical: string[], legal: string[]) => {
+    const updated = { ...sections };
+    const existTech = new Set(updated.skills.technical.map((s) => s.toLowerCase()));
+    const existLegal = new Set(updated.skills.legal.map((s) => s.toLowerCase()));
+    const newTech = technical.filter((s) => !existTech.has(s.toLowerCase()));
+    const newLegal = legal.filter((s) => !existLegal.has(s.toLowerCase()));
+    updated.skills = {
+      ...updated.skills,
+      technical: [...updated.skills.technical, ...newTech],
+      legal: [...updated.skills.legal, ...newLegal],
+    };
+    setSections(updated);
+    saveImmediately(updated);
+    toast({ title: "Skills Added", description: `Added ${newTech.length + newLegal.length} suggested skills and saved.` });
+  };
 
   const handleAiAssist = (section: string, content: string) => {
     if (!isPro) {
@@ -1237,7 +1557,7 @@ function ResumeEditorView({
           </Tabs>
         </div>
 
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 space-y-4">
           <Card>
             <CardContent className="p-5 sm:p-6">
               <div className="flex items-center gap-2 mb-5">
@@ -1249,6 +1569,20 @@ function ResumeEditorView({
               {renderSection()}
             </CardContent>
           </Card>
+
+          {optimizationResults && (
+            <Card data-testid="card-optimization-results">
+              <CardContent className="p-5 sm:p-6">
+                <OptimizationResultsPanel
+                  data={optimizationResults}
+                  onApplySummary={applyOptimizedSummary}
+                  onApplyBullet={applyOptimizedBullet}
+                  onApplySkills={applyOptimizedSkills}
+                  onDismiss={() => setOptimizationResults(null)}
+                />
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         <div className="hidden lg:block w-60 shrink-0">
