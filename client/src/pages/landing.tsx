@@ -95,16 +95,16 @@ export default function Landing() {
               <div>
                 <ScrollReveal delay={0.1} direction="none">
                   <p className="text-sm font-medium text-muted-foreground tracking-wide uppercase mb-5" data-testid="text-hero-label">
-                    The Job Board That Actually Gets Lawyers
+                    Built for lawyers moving into tech
                   </p>
                 </ScrollReveal>
 
                 <ScrollReveal delay={0.2}>
                   <h1 className="text-4xl sm:text-5xl lg:text-[3.25rem] xl:text-5xl font-serif font-medium text-foreground mb-5 leading-[1.15] tracking-tight" data-testid="text-hero-title">
-                    Your legal mind.
+                    Every legal tech role.
                     <br />
                     <span className="relative">
-                      Their next hire.
+                      One place to find it.
                       <motion.span
                         className="absolute -bottom-1 left-0 h-[3px] bg-primary/30 rounded-full"
                         initial={{ width: 0 }}
@@ -203,36 +203,36 @@ export default function Landing() {
             </div>
 
             <ScrollReveal delay={0.6}>
-              <div className="grid grid-cols-3 gap-6 sm:gap-8 mt-12 sm:mt-16 border-t border-border/40 pt-8" data-testid="stats-section">
-                <div className="text-center" data-testid="stat-jobs">
-                  <div className="text-3xl sm:text-4xl font-serif font-semibold text-foreground tabular-nums">
+              <div className="grid grid-cols-3 gap-3 sm:gap-4 mt-10 sm:mt-14" data-testid="stats-section">
+                <div className="rounded-md bg-primary/10 dark:bg-primary/15 p-4 sm:p-5 text-center" data-testid="stat-jobs">
+                  <div className="text-2xl sm:text-3xl font-serif font-semibold text-primary tabular-nums">
                     {stats?.totalJobs ? (
                       <AnimatedCounter value={stats.totalJobs} duration={2} />
                     ) : (
                       "\u2014"
                     )}
                   </div>
-                  <div className="text-xs sm:text-sm text-muted-foreground mt-1">Open positions</div>
+                  <div className="text-xs sm:text-sm text-primary/70 dark:text-primary/60 mt-0.5 font-medium">Open positions</div>
                 </div>
-                <div className="text-center border-x border-border/40" data-testid="stat-companies">
-                  <div className="text-3xl sm:text-4xl font-serif font-semibold text-foreground tabular-nums">
+                <div className="rounded-md bg-chart-2/10 dark:bg-chart-2/15 p-4 sm:p-5 text-center" data-testid="stat-companies">
+                  <div className="text-2xl sm:text-3xl font-serif font-semibold text-chart-2 tabular-nums">
                     {stats?.totalCompanies ? (
                       <AnimatedCounter value={stats.totalCompanies} duration={1.6} />
                     ) : (
                       "\u2014"
                     )}
                   </div>
-                  <div className="text-xs sm:text-sm text-muted-foreground mt-1">Companies hiring</div>
+                  <div className="text-xs sm:text-sm text-chart-2/70 dark:text-chart-2/60 mt-0.5 font-medium">Companies hiring</div>
                 </div>
-                <div className="text-center" data-testid="stat-categories">
-                  <div className="text-3xl sm:text-4xl font-serif font-semibold text-foreground tabular-nums">
+                <div className="rounded-md bg-chart-4/10 dark:bg-chart-4/15 p-4 sm:p-5 text-center" data-testid="stat-categories">
+                  <div className="text-2xl sm:text-3xl font-serif font-semibold text-chart-4 tabular-nums">
                     {stats?.totalCategories ? (
                       <AnimatedCounter value={stats.totalCategories} duration={1.2} />
                     ) : (
                       "\u2014"
                     )}
                   </div>
-                  <div className="text-xs sm:text-sm text-muted-foreground mt-1">Career paths</div>
+                  <div className="text-xs sm:text-sm text-chart-4/70 dark:text-chart-4/60 mt-0.5 font-medium">Career paths</div>
                 </div>
               </div>
             </ScrollReveal>
