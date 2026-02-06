@@ -28,6 +28,7 @@ A premium job search platform for legal technology careers, built specifically f
 - **Admin Page (/admin)**: Admin-only job scraping controls
 - **Landing Page**: Unauthenticated users see clean marketing/sign-in page
 - **About Page (/about)**: Platform information and mission
+- **Market Insights (/insights)**: Analytics dashboard with real-time job market statistics
 - **Post Job (/post-job)**: Job submission form
 
 ### Backend Architecture

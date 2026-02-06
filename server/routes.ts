@@ -1531,6 +1531,116 @@ Return a JSON response with this exact structure:
     }
   });
 
+  // ===== Market Analytics (public for authenticated users) =====
+  app.get("/api/analytics/market", isAuthenticated, async (req, res) => {
+    try {
+      const allJobs = await storage.getActiveJobs();
+
+      const totalJobs = allJobs.length;
+      if (totalJobs === 0) {
+        return res.json({
+          overview: { totalJobs: 0, totalCompanies: 0, totalCategories: 0, remoteJobs: 0, hybridOrOnsite: 0, remotePercentage: 0, avgSalaryMin: null, avgSalaryMax: null, totalViews: 0, totalApplyClicks: 0 },
+          categoryBreakdown: [], seniorityBreakdown: [], topSkills: [], topCompanies: [], topSubcategories: [], experienceRanges: { entry: 0, mid: 0, senior: 0, expert: 0 },
+        });
+      }
+
+      const companies = new Set(allJobs.map((j) => j.company));
+      const totalCompanies = companies.size;
+      const remoteJobs = allJobs.filter((j) => j.isRemote).length;
+      const hybridOrOnsite = totalJobs - remoteJobs;
+
+      const jobsWithSalaryMin = allJobs.filter((j) => j.salaryMin && j.salaryMin > 0);
+      const jobsWithSalaryMax = allJobs.filter((j) => j.salaryMax && j.salaryMax > 0);
+      const avgSalaryMin = jobsWithSalaryMin.length > 0
+        ? Math.round(jobsWithSalaryMin.reduce((s, j) => s + j.salaryMin!, 0) / jobsWithSalaryMin.length)
+        : null;
+      const avgSalaryMax = jobsWithSalaryMax.length > 0
+        ? Math.round(jobsWithSalaryMax.reduce((s, j) => s + j.salaryMax!, 0) / jobsWithSalaryMax.length)
+        : null;
+
+      const categoryMap: Record<string, number> = {};
+      const seniorityMap: Record<string, number> = {};
+      const skillMap: Record<string, number> = {};
+      const companyMap: Record<string, number> = {};
+      const subcategoryMap: Record<string, number> = {};
+      let totalViews = 0;
+      let totalApplyClicks = 0;
+
+      for (const job of allJobs) {
+        if (job.roleCategory) {
+          categoryMap[job.roleCategory] = (categoryMap[job.roleCategory] || 0) + 1;
+        }
+        if (job.seniorityLevel) {
+          seniorityMap[job.seniorityLevel] = (seniorityMap[job.seniorityLevel] || 0) + 1;
+        }
+        if (job.keySkills) {
+          for (const skill of job.keySkills) {
+            skillMap[skill] = (skillMap[skill] || 0) + 1;
+          }
+        }
+        companyMap[job.company] = (companyMap[job.company] || 0) + 1;
+        if (job.roleSubcategory) {
+          subcategoryMap[job.roleSubcategory] = (subcategoryMap[job.roleSubcategory] || 0) + 1;
+        }
+        totalViews += job.viewCount || 0;
+        totalApplyClicks += job.applyClickCount || 0;
+      }
+
+      const categoryBreakdown = Object.entries(categoryMap)
+        .map(([name, count]) => ({ name, count, percentage: Math.round((count / totalJobs) * 100) }))
+        .sort((a, b) => b.count - a.count);
+
+      const seniorityBreakdown = Object.entries(seniorityMap)
+        .map(([level, count]) => ({ level, count, percentage: Math.round((count / totalJobs) * 100) }))
+        .sort((a, b) => b.count - a.count);
+
+      const topSkills = Object.entries(skillMap)
+        .map(([skill, count]) => ({ skill, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 15);
+
+      const topCompanies = Object.entries(companyMap)
+        .map(([company, jobCount]) => ({ company, jobCount }))
+        .sort((a, b) => b.jobCount - a.jobCount);
+
+      const topSubcategories = Object.entries(subcategoryMap)
+        .map(([name, count]) => ({ name, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 10);
+
+      const experienceRanges = {
+        entry: allJobs.filter((j) => (j.experienceMin || 0) <= 2).length,
+        mid: allJobs.filter((j) => (j.experienceMin || 0) >= 3 && (j.experienceMin || 0) <= 5).length,
+        senior: allJobs.filter((j) => (j.experienceMin || 0) >= 6 && (j.experienceMin || 0) <= 9).length,
+        expert: allJobs.filter((j) => (j.experienceMin || 0) >= 10).length,
+      };
+
+      res.json({
+        overview: {
+          totalJobs,
+          totalCompanies,
+          totalCategories: categoryBreakdown.length,
+          remoteJobs,
+          hybridOrOnsite,
+          remotePercentage: Math.round((remoteJobs / totalJobs) * 100),
+          avgSalaryMin,
+          avgSalaryMax,
+          totalViews,
+          totalApplyClicks,
+        },
+        categoryBreakdown,
+        seniorityBreakdown,
+        topSkills,
+        topCompanies,
+        topSubcategories,
+        experienceRanges,
+      });
+    } catch (error) {
+      console.error("Analytics error:", error);
+      res.status(500).json({ error: "Failed to generate analytics" });
+    }
+  });
+
   // Run startup cleanup and start the scheduler when the server starts
   runStartupCleanup();
   startScheduler();

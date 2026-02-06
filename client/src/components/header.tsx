@@ -10,7 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, Briefcase, Info, Settings, Compass, Scale } from "lucide-react";
+import { LogOut, Briefcase, Info, Settings, Compass, Scale, BarChart3 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 
 export function Header() {
@@ -72,6 +72,16 @@ export function Header() {
                   Career Advisor
                 </Button>
               </Link>
+              <Link href="/insights">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={isActive("/insights") ? "text-foreground" : "text-muted-foreground"}
+                  data-testid="link-insights"
+                >
+                  Insights
+                </Button>
+              </Link>
             </div>
           )}
         </div>
@@ -112,6 +122,12 @@ export function Header() {
                     <Link href="/career-advisor" className="cursor-pointer" data-testid="link-career-advisor-mobile">
                       <Compass className="mr-2 h-4 w-4" />
                       <span>Career Advisor</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild className="sm:hidden">
+                    <Link href="/insights" className="cursor-pointer" data-testid="link-insights-mobile">
+                      <BarChart3 className="mr-2 h-4 w-4" />
+                      <span>Insights</span>
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild className="sm:hidden">
