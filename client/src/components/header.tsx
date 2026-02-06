@@ -72,6 +72,18 @@ export function Header() {
                   {(isActive("/jobs") || location.startsWith("/jobs/")) && <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-primary rounded-full" />}
                 </Button>
               </Link>
+              <Link href="/dashboard">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={`relative ${isActive("/dashboard") ? "text-foreground" : "text-muted-foreground"}`}
+                  data-testid="link-dashboard"
+                >
+                  <LayoutDashboard className="h-3.5 w-3.5 mr-1.5" />
+                  Dashboard
+                  {isActive("/dashboard") && <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-primary rounded-full" />}
+                </Button>
+              </Link>
             </div>
           )}
         </div>
@@ -100,7 +112,7 @@ export function Header() {
                     </Avatar>
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-56" align="end" forceMount>
+                <DropdownMenuContent className="w-52" align="end" forceMount>
                   <DropdownMenuLabel className="font-normal">
                     <div className="flex flex-col space-y-1">
                       <div className="flex items-center gap-2">
@@ -120,32 +132,32 @@ export function Header() {
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuGroup>
-                    <DropdownMenuItem asChild className="sm:hidden">
+                  <DropdownMenuGroup className="sm:hidden">
+                    <DropdownMenuItem asChild>
                       <Link href="/" className="cursor-pointer" data-testid="link-search-mobile">
                         <Search className="mr-2 h-4 w-4" />
                         <span>Search</span>
                       </Link>
                     </DropdownMenuItem>
-                    <DropdownMenuItem asChild className="sm:hidden">
+                    <DropdownMenuItem asChild>
                       <Link href="/jobs" className="cursor-pointer" data-testid="link-jobs-mobile">
                         <Briefcase className="mr-2 h-4 w-4" />
-                        <span>Browse Jobs</span>
+                        <span>Jobs</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/dashboard" className="cursor-pointer" data-testid="link-dashboard-mobile">
+                        <LayoutDashboard className="mr-2 h-4 w-4" />
+                        <span>Dashboard</span>
                       </Link>
                     </DropdownMenuItem>
                   </DropdownMenuGroup>
                   <DropdownMenuSeparator className="sm:hidden" />
                   <DropdownMenuGroup>
                     <DropdownMenuItem asChild>
-                      <Link href="/dashboard" className="cursor-pointer" data-testid="link-dashboard">
-                        <LayoutDashboard className="mr-2 h-4 w-4" />
-                        <span>My Dashboard</span>
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
                       <Link href="/resumes" className="cursor-pointer" data-testid="link-resumes">
                         <FileText className="mr-2 h-4 w-4" />
-                        <span>My Resumes</span>
+                        <span>Resumes</span>
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
@@ -166,6 +178,9 @@ export function Header() {
                         <span>Job Alerts</span>
                       </Link>
                     </DropdownMenuItem>
+                  </DropdownMenuGroup>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuGroup>
                     <DropdownMenuItem asChild>
                       <Link href="/career-advisor" className="cursor-pointer" data-testid="link-career-advisor">
                         <Compass className="mr-2 h-4 w-4" />
@@ -181,12 +196,6 @@ export function Header() {
                   </DropdownMenuGroup>
                   <DropdownMenuSeparator />
                   <DropdownMenuGroup>
-                    <DropdownMenuItem asChild>
-                      <Link href="/post-job" className="cursor-pointer" data-testid="link-post-job">
-                        <Briefcase className="mr-2 h-4 w-4" />
-                        <span>Post a Job</span>
-                      </Link>
-                    </DropdownMenuItem>
                     <DropdownMenuItem asChild>
                       <Link href="/pricing" className="cursor-pointer" data-testid="link-pricing">
                         <Crown className="mr-2 h-4 w-4" />
