@@ -2,9 +2,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { MapPin, DollarSign, Clock, ExternalLink, Sparkles, Building2, Briefcase, Brain, Scale, Zap } from "lucide-react";
+import { MapPin, DollarSign, Clock, ExternalLink, Sparkles, Building2, Briefcase, Brain, Scale, Zap, Bookmark } from "lucide-react";
 import type { JobWithScore } from "@shared/schema";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useMutation } from "@tanstack/react-query";
 import { JobComparison } from "./job-comparison";
 
 function stripHtmlPreview(text: string): string {
@@ -29,9 +30,11 @@ interface JobCardProps {
   job: JobWithScore;
   showMatchScore?: boolean;
   hasResume?: boolean;
+  isSaved?: boolean;
+  isAuthenticated?: boolean;
 }
 
-export function JobCard({ job, showMatchScore = false, hasResume = false }: JobCardProps) {
+export function JobCard({ job, showMatchScore = false, hasResume = false, isSaved = false, isAuthenticated = false }: JobCardProps) {
   const formatSalary = (min?: number | null, max?: number | null) => {
     if (!min && !max) return null;
     const formatNum = (num: number) => `$${(num / 1000).toFixed(0)}K`;
@@ -84,8 +87,21 @@ export function JobCard({ job, showMatchScore = false, hasResume = false }: JobC
   const salary = formatSalary(job.salaryMin, job.salaryMax);
   const experience = formatExperience(job.experienceMin, job.experienceMax);
 
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      if (isSaved) {
+        await apiRequest("DELETE", `/api/saved-jobs/${job.id}`);
+      } else {
+        await apiRequest("POST", `/api/saved-jobs/${job.id}`);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/saved-jobs/ids"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/saved-jobs"] });
+    },
+  });
+
   const handleApplyClick = () => {
-    // Track the click asynchronously (fire and forget)
     apiRequest("POST", `/api/jobs/${job.id}/apply-click`).catch(() => {});
   };
 
@@ -118,12 +134,26 @@ export function JobCard({ job, showMatchScore = false, hasResume = false }: JobC
               </div>
             </div>
             
-            {showMatchScore && job.matchScore && (
-              <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium flex-shrink-0 ${getMatchScoreColor(job.matchScore)}`} data-testid={`badge-match-score-${job.id}`}>
-                <Sparkles className="h-3.5 w-3.5" />
-                {job.matchScore}%
-              </div>
-            )}
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {showMatchScore && job.matchScore && (
+                <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium ${getMatchScoreColor(job.matchScore)}`} data-testid={`badge-match-score-${job.id}`}>
+                  <Sparkles className="h-3.5 w-3.5" />
+                  {job.matchScore}%
+                </div>
+              )}
+              {isAuthenticated && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); saveMutation.mutate(); }}
+                  disabled={saveMutation.isPending}
+                  data-testid={`button-save-job-${job.id}`}
+                  className={isSaved ? "text-primary" : "text-muted-foreground"}
+                >
+                  <Bookmark className={`h-4.5 w-4.5 ${isSaved ? "fill-current" : ""}`} />
+                </Button>
+              )}
+            </div>
           </div>
 
           <div className="flex flex-wrap gap-2">

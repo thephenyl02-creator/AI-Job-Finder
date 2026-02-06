@@ -3594,9 +3594,8 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
 
   // --- Saved Jobs ---
 
-  app.get("/api/saved-jobs", async (req, res) => {
-    if (!req.isAuthenticated()) return res.status(401).json({ error: "Not authenticated" });
-    const userId = (req.user as any).id?.toString();
+  app.get("/api/saved-jobs", isAuthenticated, async (req: any, res) => {
+    const userId = req.user.id;
     try {
       const savedJobsList = await storage.getUserSavedJobs(userId);
       res.json(savedJobsList);
@@ -3606,9 +3605,8 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
     }
   });
 
-  app.get("/api/saved-jobs/ids", async (req, res) => {
-    if (!req.isAuthenticated()) return res.status(401).json({ error: "Not authenticated" });
-    const userId = (req.user as any).id?.toString();
+  app.get("/api/saved-jobs/ids", isAuthenticated, async (req: any, res) => {
+    const userId = req.user.id;
     try {
       const ids = await storage.getUserSavedJobIds(userId);
       res.json(ids);
@@ -3618,9 +3616,8 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
     }
   });
 
-  app.get("/api/saved-jobs/expiring", async (req, res) => {
-    if (!req.isAuthenticated()) return res.status(401).json({ error: "Not authenticated" });
-    const userId = (req.user as any).id?.toString();
+  app.get("/api/saved-jobs/expiring", isAuthenticated, async (req: any, res) => {
+    const userId = req.user.id;
     try {
       const expiring = await storage.getExpiringSavedJobs(userId, 21);
       res.json(expiring);
@@ -3630,15 +3627,14 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
     }
   });
 
-  app.post("/api/saved-jobs/:jobId", async (req, res) => {
-    if (!req.isAuthenticated()) return res.status(401).json({ error: "Not authenticated" });
-    const userId = (req.user as any).id?.toString();
+  app.post("/api/saved-jobs/:jobId", isAuthenticated, async (req: any, res) => {
+    const userId = req.user.id;
     const jobId = parseInt(req.params.jobId);
     if (isNaN(jobId)) return res.status(400).json({ error: "Invalid job ID" });
     try {
       const job = await storage.getJob(jobId);
       if (!job) return res.status(404).json({ error: "Job not found" });
-      const saved = await storage.saveJob(userId, jobId, req.body.notes);
+      const saved = await storage.saveJob(userId, jobId, req.body?.notes);
       res.json(saved);
     } catch (error) {
       console.error("Save job error:", error);
@@ -3646,9 +3642,8 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
     }
   });
 
-  app.delete("/api/saved-jobs/:jobId", async (req, res) => {
-    if (!req.isAuthenticated()) return res.status(401).json({ error: "Not authenticated" });
-    const userId = (req.user as any).id?.toString();
+  app.delete("/api/saved-jobs/:jobId", isAuthenticated, async (req: any, res) => {
+    const userId = req.user.id;
     const jobId = parseInt(req.params.jobId);
     if (isNaN(jobId)) return res.status(400).json({ error: "Invalid job ID" });
     try {
@@ -3660,9 +3655,8 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
     }
   });
 
-  app.post("/api/saved-jobs/:id/dismiss-reminder", async (req, res) => {
-    if (!req.isAuthenticated()) return res.status(401).json({ error: "Not authenticated" });
-    const userId = (req.user as any).id?.toString();
+  app.post("/api/saved-jobs/:id/dismiss-reminder", isAuthenticated, async (req: any, res) => {
+    const userId = req.user.id;
     const savedJobId = parseInt(req.params.id);
     if (isNaN(savedJobId)) return res.status(400).json({ error: "Invalid ID" });
     try {

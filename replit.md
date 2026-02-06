@@ -53,6 +53,7 @@ A freemium SaaS job search platform specifically designed for legal professional
 - **Conversational Assistant**: Context-aware chat widget offering explanations, guidance, and recommendations.
 - **User Memory & Persona System**: Tracks user activity to build behavioral personas for personalized AI interactions.
 - **Resume Builder**: Structured resume creation with real-time ATS scoring and AI assistance (Pro-only for advanced features).
+- **Saved Jobs**: Bookmark jobs for later, with expiry reminders on login for older postings to encourage timely applications.
 
 ## External Dependencies
 

@@ -11,6 +11,8 @@ interface JobListProps {
   emptyMessage?: string;
   searchQuery?: string;
   hasResume?: boolean;
+  savedJobIds?: number[];
+  isAuthenticated?: boolean;
 }
 
 function JobCardSkeleton() {
@@ -51,8 +53,11 @@ export function JobList({
   showMatchScores = false,
   emptyMessage = "No jobs found",
   searchQuery,
-  hasResume = false
+  hasResume = false,
+  savedJobIds = [],
+  isAuthenticated = false,
 }: JobListProps) {
+  const savedSet = new Set(savedJobIds);
   if (isLoading) {
     return (
       <div className="space-y-4">
@@ -102,6 +107,8 @@ export function JobList({
           job={job} 
           showMatchScore={showMatchScores}
           hasResume={hasResume}
+          isSaved={savedSet.has(job.id)}
+          isAuthenticated={isAuthenticated}
         />
       ))}
     </div>

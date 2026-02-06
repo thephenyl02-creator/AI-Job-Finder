@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { usePageTitle } from "@/hooks/use-page-title";
 import { useLocation, useParams } from "wouter";
 import { Header } from "@/components/header";
@@ -9,7 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ScrollReveal } from "@/components/animations";
 import { useAuth } from "@/hooks/use-auth";
 import { useActivityTracker } from "@/hooks/use-activity-tracker";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Job } from "@shared/schema";
 import {
   ArrowLeft,
@@ -24,6 +24,7 @@ import {
   MessageCircle,
   Send,
   FileText,
+  Bookmark,
 } from "lucide-react";
 
 const BULLET_PATTERN = /^(?:[-•*]\s|(?:\d+)[.)]\s)/;
@@ -476,6 +477,28 @@ export default function JobDetail() {
     enabled: isAuthenticated && !!jobId,
   });
 
+  const { data: savedJobIds = [] } = useQuery<number[]>({
+    queryKey: ["/api/saved-jobs/ids"],
+    enabled: isAuthenticated,
+  });
+
+  const jobIsSaved = job ? savedJobIds.includes(job.id) : false;
+
+  const saveJobMutation = useMutation({
+    mutationFn: async () => {
+      if (!job) return;
+      if (jobIsSaved) {
+        await apiRequest("DELETE", `/api/saved-jobs/${job.id}`);
+      } else {
+        await apiRequest("POST", `/api/saved-jobs/${job.id}`);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/saved-jobs/ids"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/saved-jobs"] });
+    },
+  });
+
   const handleApplyClick = async () => {
     if (!job) return;
     trackNow({ eventType: "apply_click", entityType: "job", entityId: String(job.id) });
@@ -606,6 +629,16 @@ export default function JobDetail() {
               </div>
 
               <div className="shrink-0 flex flex-col sm:flex-row gap-2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => saveJobMutation.mutate()}
+                  disabled={saveJobMutation.isPending}
+                  data-testid="button-save-job-detail"
+                  className={jobIsSaved ? "text-primary" : "text-muted-foreground"}
+                >
+                  <Bookmark className={`h-5 w-5 ${jobIsSaved ? "fill-current" : ""}`} />
+                </Button>
                 <Button
                   variant="outline"
                   onClick={() => setLocation(`/resume-builder?jobId=${job.id}`)}

@@ -42,6 +42,11 @@ export default function Home() {
     enabled: isAuthenticated,
   });
 
+  const { data: savedJobIds = [] } = useQuery<number[]>({
+    queryKey: ["/api/saved-jobs/ids"],
+    enabled: isAuthenticated,
+  });
+
   const searchMutation = useMutation({
     mutationFn: async (query: string) => {
       const response = await apiRequest("POST", "/api/search", { query });
@@ -171,6 +176,8 @@ export default function Home() {
             searchQuery={activeTab === "search" ? searchQuery : undefined}
             emptyMessage={activeTab === "search" && !searchResults ? "Enter a search query to find matching jobs" : "No jobs available"}
             hasResume={resumeData?.hasResume ?? false}
+            savedJobIds={savedJobIds}
+            isAuthenticated={isAuthenticated}
           />
         </div>
       </main>
