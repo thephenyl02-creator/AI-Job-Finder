@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { jobs, users, userPreferences, jobCategories, jobSubmissions, jobAlerts, notifications, type Job, type InsertJob, type User, type UserPreferences, type InsertUserPreferences, type ResumeExtractedData, type JobCategory, type JobSubmission, type InsertJobSubmission, type JobAlert, type InsertJobAlert, type Notification, type InsertNotification, JOB_TAXONOMY } from "@shared/schema";
+import { jobs, users, userPreferences, jobCategories, jobSubmissions, jobAlerts, notifications, resumes, type Job, type InsertJob, type User, type UserPreferences, type InsertUserPreferences, type ResumeExtractedData, type JobCategory, type JobSubmission, type InsertJobSubmission, type JobAlert, type InsertJobAlert, type Notification, type InsertNotification, type Resume, type InsertResume, JOB_TAXONOMY } from "@shared/schema";
 import { eq, desc, and, sql, inArray, lt } from "drizzle-orm";
 
 export interface IStorage {
@@ -47,6 +47,16 @@ export interface IStorage {
   markNotificationRead(id: number, userId: string): Promise<void>;
   markAllNotificationsRead(userId: string): Promise<void>;
   cleanOldNotifications(daysOld: number): Promise<void>;
+  // Resumes
+  createResume(resume: InsertResume): Promise<Resume>;
+  getUserResumes(userId: string): Promise<Resume[]>;
+  getResumeById(id: number, userId: string): Promise<Resume | undefined>;
+  getResumeWithText(id: number, userId: string): Promise<Resume | undefined>;
+  updateResumeLabel(id: number, userId: string, label: string): Promise<Resume | undefined>;
+  deleteResume(id: number, userId: string): Promise<void>;
+  setPrimaryResume(id: number, userId: string): Promise<void>;
+  getPrimaryResume(userId: string): Promise<Resume | undefined>;
+  migrateUserResumeToResumes(userId: string): Promise<void>;
 }
 
 class DatabaseStorage implements IStorage {
@@ -572,6 +582,113 @@ class DatabaseStorage implements IStorage {
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - daysOld);
     await db.delete(notifications).where(lt(notifications.createdAt, cutoff));
+  }
+
+  async createResume(resume: InsertResume): Promise<Resume> {
+    const existing = await this.getUserResumes(resume.userId);
+    if (existing.length === 0) {
+      resume.isPrimary = true;
+    }
+    const [created] = await db.insert(resumes).values(resume).returning();
+    return created;
+  }
+
+  async getUserResumes(userId: string): Promise<Resume[]> {
+    return db
+      .select({
+        id: resumes.id,
+        userId: resumes.userId,
+        label: resumes.label,
+        filename: resumes.filename,
+        resumeText: sql<string | null>`null`,
+        extractedData: resumes.extractedData,
+        isPrimary: resumes.isPrimary,
+        createdAt: resumes.createdAt,
+      })
+      .from(resumes)
+      .where(eq(resumes.userId, userId))
+      .orderBy(desc(resumes.isPrimary), desc(resumes.createdAt));
+  }
+
+  async getResumeById(id: number, userId: string): Promise<Resume | undefined> {
+    const [resume] = await db
+      .select({
+        id: resumes.id,
+        userId: resumes.userId,
+        label: resumes.label,
+        filename: resumes.filename,
+        resumeText: sql<string | null>`null`,
+        extractedData: resumes.extractedData,
+        isPrimary: resumes.isPrimary,
+        createdAt: resumes.createdAt,
+      })
+      .from(resumes)
+      .where(and(eq(resumes.id, id), eq(resumes.userId, userId)));
+    return resume ?? undefined;
+  }
+
+  async getResumeWithText(id: number, userId: string): Promise<Resume | undefined> {
+    const [resume] = await db
+      .select()
+      .from(resumes)
+      .where(and(eq(resumes.id, id), eq(resumes.userId, userId)));
+    return resume ?? undefined;
+  }
+
+  async updateResumeLabel(id: number, userId: string, label: string): Promise<Resume | undefined> {
+    const [updated] = await db
+      .update(resumes)
+      .set({ label })
+      .where(and(eq(resumes.id, id), eq(resumes.userId, userId)))
+      .returning();
+    return updated ?? undefined;
+  }
+
+  async deleteResume(id: number, userId: string): Promise<void> {
+    const resume = await this.getResumeById(id, userId);
+    await db.delete(resumes).where(and(eq(resumes.id, id), eq(resumes.userId, userId)));
+    if (resume?.isPrimary) {
+      const remaining = await this.getUserResumes(userId);
+      if (remaining.length > 0) {
+        await this.setPrimaryResume(remaining[0].id, userId);
+      }
+    }
+  }
+
+  async setPrimaryResume(id: number, userId: string): Promise<void> {
+    await db
+      .update(resumes)
+      .set({ isPrimary: false })
+      .where(eq(resumes.userId, userId));
+    await db
+      .update(resumes)
+      .set({ isPrimary: true })
+      .where(and(eq(resumes.id, id), eq(resumes.userId, userId)));
+  }
+
+  async getPrimaryResume(userId: string): Promise<Resume | undefined> {
+    const [resume] = await db
+      .select()
+      .from(resumes)
+      .where(and(eq(resumes.userId, userId), eq(resumes.isPrimary, true)));
+    return resume ?? undefined;
+  }
+
+  async migrateUserResumeToResumes(userId: string): Promise<void> {
+    const existingResumes = await this.getUserResumes(userId);
+    if (existingResumes.length > 0) return;
+
+    const userData = await this.getUserResumeWithText(userId);
+    if (!userData?.resumeFilename || !userData.resumeText) return;
+
+    await this.createResume({
+      userId,
+      label: "My Resume",
+      filename: userData.resumeFilename,
+      resumeText: userData.resumeText,
+      extractedData: userData.extractedData,
+      isPrimary: true,
+    });
   }
 }
 
