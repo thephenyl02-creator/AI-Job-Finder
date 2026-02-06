@@ -4,6 +4,7 @@ import { usePageTitle } from "@/hooks/use-page-title";
 import { useAuth } from "@/hooks/use-auth";
 import { useSubscription } from "@/hooks/use-subscription";
 import { Header } from "@/components/header";
+import { Footer } from "@/components/footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -446,26 +447,7 @@ export default function Pricing() {
         </div>
       </main>
 
-      <footer className="border-t border-border/40 py-8 mt-12">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <p className="text-sm text-muted-foreground">
-              Legal Tech Careers
-            </p>
-            <nav className="flex items-center gap-3 flex-wrap">
-              <Link href="/">
-                <Button variant="ghost" size="sm" data-testid="footer-link-home">Home</Button>
-              </Link>
-              <Link href="/about">
-                <Button variant="ghost" size="sm" data-testid="footer-link-about">About</Button>
-              </Link>
-              <Link href="/post-job">
-                <Button variant="ghost" size="sm" data-testid="footer-link-post-job">Post a Job</Button>
-              </Link>
-            </nav>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { usePageTitle } from "@/hooks/use-page-title";
 import { Header } from "@/components/header";
+import { Footer } from "@/components/footer";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -1362,6 +1363,7 @@ function ComparisonResults({
           </div>
         </TabsContent>
       </Tabs>
+      <Footer />
     </div>
   );
 }

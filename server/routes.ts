@@ -295,6 +295,94 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/search/suggestions", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const userId = user?.id;
+
+      const defaultSuggestions = [
+        { label: "Compliance & Risk", query: "compliance or risk management role" },
+        { label: "Remote Roles", query: "remote legal tech position" },
+        { label: "Student / Intern", query: "internship or fellowship in legal tech" },
+        { label: "Legal AI", query: "legal AI company, any role" },
+        { label: "Operations", query: "legal operations at a growing company" },
+      ];
+
+      if (!userId) {
+        return res.json({ suggestions: defaultSuggestions, personalized: false });
+      }
+
+      const [persona, primaryResume] = await Promise.all([
+        storage.getUserPersona(userId).catch(() => null),
+        storage.getPrimaryResume(userId).catch(() => null),
+      ]);
+
+      const extractedData = primaryResume?.extractedData as any;
+      const hasPersona = persona && (persona.topCategories?.length || persona.topSkills?.length);
+      const hasResume = extractedData && (extractedData.skills?.length || extractedData.experience?.length);
+
+      if (!hasPersona && !hasResume) {
+        return res.json({ suggestions: defaultSuggestions, personalized: false });
+      }
+
+      const personalized: { label: string; query: string }[] = [];
+      const usedLabels = new Set<string>();
+
+      if (extractedData?.skills?.length) {
+        const topSkills = extractedData.skills.slice(0, 3);
+        const skillQuery = topSkills.join(", ");
+        personalized.push({ label: `Your Skills`, query: `roles requiring ${skillQuery}` });
+        usedLabels.add("skills");
+      }
+
+      if (persona?.topCategories?.length) {
+        const topCat = persona.topCategories[0];
+        personalized.push({ label: topCat, query: `${topCat} roles` });
+        usedLabels.add(topCat);
+      }
+
+      if (persona?.remotePreference === "strong" || persona?.remotePreference === "moderate") {
+        personalized.push({ label: "Remote Roles", query: "remote legal tech position" });
+        usedLabels.add("remote");
+      }
+
+      if (extractedData?.experience?.length) {
+        const recentRole = extractedData.experience[0];
+        const roleTitle = typeof recentRole === "string" ? recentRole : recentRole.title || recentRole.role;
+        if (roleTitle) {
+          personalized.push({ label: `Similar to ${roleTitle.slice(0, 25)}`, query: `roles similar to ${roleTitle}` });
+          usedLabels.add("experience");
+        }
+      }
+
+      if (persona?.seniorityInterest?.length) {
+        const seniority = persona.seniorityInterest[0];
+        if (!personalized.some(s => s.label.toLowerCase().includes(seniority.toLowerCase()))) {
+          personalized.push({ label: `${seniority} Level`, query: `${seniority} level legal tech positions` });
+        }
+      }
+
+      const remaining = defaultSuggestions.filter(s => !usedLabels.has(s.label.toLowerCase()));
+      while (personalized.length < 5 && remaining.length > 0) {
+        personalized.push(remaining.shift()!);
+      }
+
+      res.json({ suggestions: personalized.slice(0, 5), personalized: true });
+    } catch (error) {
+      console.error("Search suggestions error:", error);
+      res.json({
+        suggestions: [
+          { label: "Compliance & Risk", query: "compliance or risk management role" },
+          { label: "Remote Roles", query: "remote legal tech position" },
+          { label: "Student / Intern", query: "internship or fellowship in legal tech" },
+          { label: "Legal AI", query: "legal AI company, any role" },
+          { label: "Operations", query: "legal operations at a growing company" },
+        ],
+        personalized: false,
+      });
+    }
+  });
+
   app.post("/api/search", isAuthenticated, async (req, res) => {
     try {
       const { query } = req.body;

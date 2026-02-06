@@ -58,6 +58,7 @@ import { Progress } from "@/components/ui/progress";
 import type { ResumeExtractedData } from "@shared/schema";
 import { queryClient } from "@/lib/queryClient";
 import { useSubscription } from "@/hooks/use-subscription";
+import { Footer } from "@/components/footer";
 
 interface SearchQuestion {
   id: string;
@@ -78,12 +79,12 @@ interface RefinedSearchResult {
 
 type GuidedStep = "idle" | "refining" | "questions" | "searching";
 
-const SEARCH_SUGGESTIONS = [
-  { icon: Briefcase, label: "Compliance & Risk", query: "compliance or risk management role" },
-  { icon: Globe, label: "Remote Roles", query: "remote legal tech position" },
-  { icon: GraduationCap, label: "Student / Intern", query: "internship or fellowship in legal tech" },
-  { icon: Sparkles, label: "Legal AI", query: "legal AI company, any role" },
-  { icon: Building2, label: "Operations", query: "legal operations at a growing company" },
+const DEFAULT_SEARCH_SUGGESTIONS = [
+  { label: "Compliance & Risk", query: "compliance or risk management role" },
+  { label: "Remote Roles", query: "remote legal tech position" },
+  { label: "Student / Intern", query: "internship or fellowship in legal tech" },
+  { label: "Legal AI", query: "legal AI company, any role" },
+  { label: "Operations", query: "legal operations at a growing company" },
 ];
 
 const CATEGORY_ICONS: Record<string, typeof Brain> = {
@@ -352,6 +353,14 @@ export default function Jobs() {
     enabled: isAuthenticated,
   });
 
+  const { data: suggestionsData } = useQuery<{ suggestions: { label: string; query: string }[]; personalized: boolean }>({
+    queryKey: ["/api/search/suggestions"],
+    enabled: isAuthenticated,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const searchSuggestions = suggestionsData?.suggestions ?? DEFAULT_SEARCH_SUGGESTIONS;
+
   const [isUploadingResume, setIsUploadingResume] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const resumeFileInputRef = useRef<HTMLInputElement>(null);
@@ -587,7 +596,13 @@ export default function Jobs() {
 
             {!smartQuery && !searchResults && guidedStep === "idle" && (
               <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-                {SEARCH_SUGGESTIONS.map((s) => (
+                {suggestionsData?.personalized && (
+                  <Badge variant="secondary" className="text-[10px] mr-0.5" data-testid="badge-personalized-suggestions">
+                    <User className="h-2.5 w-2.5 mr-0.5" />
+                    For you
+                  </Badge>
+                )}
+                {searchSuggestions.map((s) => (
                   <Button
                     key={s.label}
                     variant="outline"
@@ -596,7 +611,6 @@ export default function Jobs() {
                     onClick={() => setSmartQuery(s.query)}
                     data-testid={`chip-${s.label.toLowerCase().replace(/\s+/g, "-")}`}
                   >
-                    <s.icon className="h-3 w-3" />
                     {s.label}
                   </Button>
                 ))}
@@ -1037,7 +1051,7 @@ export default function Jobs() {
                   <div className="border-t pt-3">
                     <p className="text-xs text-muted-foreground mb-2">Try searching for:</p>
                     <div className="flex flex-wrap gap-1.5 justify-center">
-                      {SEARCH_SUGGESTIONS.slice(0, 3).map((s) => (
+                      {searchSuggestions.slice(0, 3).map((s) => (
                         <Button
                           key={s.label}
                           variant="ghost"
@@ -1046,7 +1060,6 @@ export default function Jobs() {
                           onClick={() => { setSmartQuery(s.query); handleClearSearch(); }}
                           data-testid={`empty-chip-${s.label.toLowerCase().replace(/\s+/g, "-")}`}
                         >
-                          <s.icon className="h-3 w-3" />
                           {s.label}
                         </Button>
                       ))}
@@ -1168,6 +1181,7 @@ export default function Jobs() {
           )}
         </AnimatePresence>
       </main>
+      <Footer />
     </div>
   );
 }

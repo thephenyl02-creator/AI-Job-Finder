@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { usePageTitle } from "@/hooks/use-page-title";
 import { Header } from "@/components/header";
+import { Footer } from "@/components/footer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -800,6 +801,7 @@ export default function Insights() {
         </div>
 
       </main>
+      <Footer />
     </div>
   );
 }

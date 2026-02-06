@@ -3,6 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { usePageTitle } from "@/hooks/use-page-title";
 import { useLocation } from "wouter";
 import { Header } from "@/components/header";
+import { Footer } from "@/components/footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -1797,6 +1798,7 @@ export default function ResumeBuilder() {
           />
         )}
       </main>
+      <Footer />
     </div>
   );
 }

@@ -20,6 +20,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { Link } from "wouter";
+import { Footer } from "@/components/footer";
 
 type SavedJobWithJob = SavedJob & { job: Job };
 
@@ -241,6 +242,7 @@ export default function SavedJobs() {
           </div>
         )}
       </main>
+      <Footer />
     </div>
   );
 }

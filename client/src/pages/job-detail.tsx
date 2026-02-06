@@ -3,6 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { usePageTitle } from "@/hooks/use-page-title";
 import { useLocation, useParams } from "wouter";
 import { Header } from "@/components/header";
+import { Footer } from "@/components/footer";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -822,6 +823,7 @@ export default function JobDetail() {
           </div>
         </div>
       </main>
+      <Footer />
     </div>
   );
 }

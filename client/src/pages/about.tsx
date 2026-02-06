@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { ArrowRight, Target, Lightbulb, Shield } from "lucide-react";
 import { Logo } from "@/components/logo";
+import { Footer } from "@/components/footer";
 
 export default function About() {
   usePageTitle("About");
@@ -106,22 +107,7 @@ export default function About() {
           </CardContent>
         </Card>
       </main>
-
-      <footer className="border-t border-border/40 py-8 mt-8">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <Logo className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm text-muted-foreground">
-                Legal Tech Careers
-              </span>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              Where legal professionals find their next move in technology.
-            </p>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }
