@@ -40,6 +40,7 @@ import {
   List,
   Target,
   Loader2,
+  DollarSign,
 } from "lucide-react";
 
 const CATEGORY_ICONS: Record<string, typeof Brain> = {
@@ -186,6 +187,17 @@ export default function Jobs() {
   if (!isAuthenticated) {
     return null;
   }
+
+  const formatSalaryRange = (min?: number | null, max?: number | null) => {
+    if (!min && !max) return null;
+    const fmt = (n: number) => {
+      if (n >= 1000) return `$${Math.round(n / 1000)}K`;
+      return `$${n}`;
+    };
+    if (min && max) return `${fmt(min)} - ${fmt(max)}`;
+    if (min) return `${fmt(min)}+`;
+    return `Up to ${fmt(max!)}`;
+  };
 
   const displayJobs = searchResults || allJobs;
 
@@ -399,6 +411,7 @@ export default function Jobs() {
                   <th className="text-left p-3 font-medium text-sm">Job Title</th>
                   <th className="text-left p-3 font-medium text-sm">Company</th>
                   <th className="text-left p-3 font-medium text-sm">Location</th>
+                  <th className="text-left p-3 font-medium text-sm">Salary</th>
                   <th className="text-left p-3 font-medium text-sm">Category</th>
                   {searchResults && <th className="text-left p-3 font-medium text-sm">Match</th>}
                   <th className="text-right p-3 font-medium text-sm">Action</th>
@@ -443,9 +456,18 @@ export default function Jobs() {
                       <div className="flex items-center gap-1 text-muted-foreground">
                         <MapPin className="h-3 w-3" />
                         <span data-testid={`text-job-location-${job.id}`}>
-                          {job.location || "Remote"}
+                          {job.location || "Not specified"}
                         </span>
                       </div>
+                    </td>
+                    <td className="p-3">
+                      {formatSalaryRange(job.salaryMin, job.salaryMax) ? (
+                        <span className="text-sm text-green-600 dark:text-green-400" data-testid={`text-salary-${job.id}`}>
+                          {formatSalaryRange(job.salaryMin, job.salaryMax)}
+                        </span>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">-</span>
+                      )}
                     </td>
                     <td className="p-3">
                       <span className="text-sm">{job.roleCategory || "Uncategorized"}</span>
@@ -625,6 +647,17 @@ function CategorySection({
 }) {
   const Icon = getCategoryIcon(taxonomy.icon);
 
+  const formatSalaryRange = (min?: number | null, max?: number | null) => {
+    if (!min && !max) return null;
+    const fmt = (n: number) => {
+      if (n >= 1000) return `$${Math.round(n / 1000)}K`;
+      return `$${n}`;
+    };
+    if (min && max) return `${fmt(min)} - ${fmt(max)}`;
+    if (min) return `${fmt(min)}+`;
+    return `Up to ${fmt(max!)}`;
+  };
+
   const jobsBySubcategory = jobs.reduce((acc, job) => {
     const sub = job.roleSubcategory || "Other";
     if (!acc[sub]) acc[sub] = [];
@@ -668,90 +701,99 @@ function CategorySection({
             className="overflow-hidden"
           >
             <CardContent className="pt-0 pb-4">
-              <div className="space-y-4">
+              <div className="space-y-6">
                 {Object.entries(jobsBySubcategory)
                   .sort((a, b) => b[1].length - a[1].length)
                   .map(([subcategory, subJobs]) => (
-                    <div key={subcategory}>
-                      <div className="flex items-center gap-2 mb-2 px-2">
-                        <span className="text-sm font-medium text-muted-foreground">{subcategory}</span>
-                        <span className="text-xs text-muted-foreground">({subJobs.length})</span>
+                    <div key={subcategory} data-testid={`subcategory-${subcategory.replace(/\s+/g, '-').toLowerCase()}`}>
+                      <div className="flex items-center gap-3 mb-3 px-1 pb-2 border-b border-border">
+                        <h4 className="text-sm font-semibold text-foreground">{subcategory}</h4>
+                        <Badge variant="outline" className="text-xs">{subJobs.length}</Badge>
                       </div>
                       <div className="grid gap-2">
-                        {subJobs.map((job) => (
-                      <div
-                        key={job.id}
-                        className={`p-3 rounded-lg border bg-card hover:bg-muted/30 transition-colors cursor-pointer ${selectedJobIds.has(job.id) ? "ring-2 ring-primary bg-primary/5" : ""}`}
-                        data-testid={`card-job-${job.id}`}
-                        onClick={(e) => {
-                          if ((e.target as HTMLElement).closest('button, [role="checkbox"], a')) return;
-                          onJobClick(job.id);
-                        }}
-                      >
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex items-start gap-3 min-w-0 flex-1">
-                            <div onClick={(e) => e.stopPropagation()}>
-                              <Checkbox
-                                checked={selectedJobIds.has(job.id)}
-                                onCheckedChange={() => onToggleSelection(job.id)}
-                                disabled={!selectedJobIds.has(job.id) && selectedJobIds.size >= 3}
-                                className="mt-1"
-                                data-testid={`checkbox-job-${job.id}`}
-                              />
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <h4 className="font-medium text-foreground" data-testid={`text-job-title-${job.id}`}>
-                                {job.title}
-                              </h4>
-                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-sm text-muted-foreground">
-                              <span className="flex items-center gap-1">
-                                <Building2 className="h-3 w-3" />
-                                <span data-testid={`text-job-company-${job.id}`}>{job.company}</span>
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <MapPin className="h-3 w-3" />
-                                <span data-testid={`text-job-location-${job.id}`}>{job.location || "Remote"}</span>
-                              </span>
-                              {job.seniorityLevel && (
-                                <Badge variant="outline" className="text-xs">
-                                  {job.seniorityLevel}
-                                </Badge>
-                              )}
-                              {searchResults && "matchScore" in job && (job as JobWithScore).matchScore && (
-                                <Badge 
-                                  variant={(job as JobWithScore).matchScore! >= 80 ? "default" : "secondary"}
-                                  data-testid={`badge-match-${job.id}`}
-                                >
-                                  {(job as JobWithScore).matchScore}% match
-                                </Badge>
-                              )}
-                            </div>
-                            {job.aiSummary && (
-                              <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
-                                {job.aiSummary}
-                              </p>
-                            )}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2 shrink-0">
-                            <Button
-                              size="sm"
+                        {subJobs.map((job) => {
+                          const salaryDisplay = formatSalaryRange(job.salaryMin, job.salaryMax);
+                          return (
+                            <div
+                              key={job.id}
+                              className={`p-3 rounded-lg border bg-card hover:bg-muted/30 transition-colors cursor-pointer ${selectedJobIds.has(job.id) ? "ring-2 ring-primary bg-primary/5" : ""}`}
+                              data-testid={`card-job-${job.id}`}
                               onClick={(e) => {
-                                e.stopPropagation();
-                                onApply(job);
+                                if ((e.target as HTMLElement).closest('button, [role="checkbox"], a')) return;
+                                onJobClick(job.id);
                               }}
-                              data-testid={`button-apply-${job.id}`}
                             >
-                              <ExternalLink className="h-3 w-3 mr-1" />
-                              Apply
-                            </Button>
-                          </div>
-                        </div>
+                              <div className="flex items-start justify-between gap-4">
+                                <div className="flex items-start gap-3 min-w-0 flex-1">
+                                  <div onClick={(e) => e.stopPropagation()}>
+                                    <Checkbox
+                                      checked={selectedJobIds.has(job.id)}
+                                      onCheckedChange={() => onToggleSelection(job.id)}
+                                      disabled={!selectedJobIds.has(job.id) && selectedJobIds.size >= 3}
+                                      className="mt-1"
+                                      data-testid={`checkbox-job-${job.id}`}
+                                    />
+                                  </div>
+                                  <div className="min-w-0 flex-1">
+                                    <h4 className="font-medium text-foreground" data-testid={`text-job-title-${job.id}`}>
+                                      {job.title}
+                                    </h4>
+                                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-sm text-muted-foreground">
+                                      <span className="flex items-center gap-1">
+                                        <Building2 className="h-3 w-3" />
+                                        <span data-testid={`text-job-company-${job.id}`}>{job.company}</span>
+                                      </span>
+                                      <span className="flex items-center gap-1">
+                                        <MapPin className="h-3 w-3" />
+                                        <span data-testid={`text-job-location-${job.id}`}>{job.location || "Not specified"}</span>
+                                      </span>
+                                      {salaryDisplay && (
+                                        <span className="flex items-center gap-1 text-green-600 dark:text-green-400">
+                                          <DollarSign className="h-3 w-3" />
+                                          <span data-testid={`text-salary-${job.id}`}>{salaryDisplay}</span>
+                                        </span>
+                                      )}
+                                      {job.seniorityLevel && (
+                                        <Badge variant="outline" className="text-xs">
+                                          {job.seniorityLevel}
+                                        </Badge>
+                                      )}
+                                      {searchResults && "matchScore" in job && (job as JobWithScore).matchScore && (
+                                        <Badge 
+                                          variant={(job as JobWithScore).matchScore! >= 80 ? "default" : "secondary"}
+                                          data-testid={`badge-match-${job.id}`}
+                                        >
+                                          {(job as JobWithScore).matchScore}% match
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    {job.aiSummary && (
+                                      <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
+                                        {job.aiSummary}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  <Button
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      onApply(job);
+                                    }}
+                                    data-testid={`button-apply-${job.id}`}
+                                  >
+                                    <ExternalLink className="h-3 w-3 mr-1" />
+                                    Apply
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
+                    </div>
+                  ))}
               </div>
             </CardContent>
           </motion.div>
