@@ -34,7 +34,7 @@ import {
 import { LAW_FIRMS_AND_COMPANIES } from "./lib/law-firms-list";
 import { categorizeJob } from "./lib/job-categorizer";
 import { matchNewJobsAgainstAlerts } from "./lib/alert-matcher";
-import { parseJobFile } from "./lib/job-file-parser";
+import { parseJobFile, parseMultipleJobsFromText } from "./lib/job-file-parser";
 import { JOB_TAXONOMY } from "@shared/schema";
 import {
   startScheduler,
@@ -1385,6 +1385,92 @@ Be specific and actionable. Focus on legal tech industry keywords and ATS best p
     } catch (error: any) {
       console.error("Error parsing pasted text:", error);
       res.status(500).json({ error: error.message || "Failed to parse job text" });
+    }
+  });
+
+  app.post("/api/admin/jobs/smart-input", isAuthenticated, async (req, res) => {
+    if (!(await isAdminCheck(req))) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    try {
+      const { input } = req.body;
+      if (!input || typeof input !== 'string' || input.trim().length < 10) {
+        return res.status(400).json({ error: "Please provide a URL or job posting text." });
+      }
+
+      const trimmed = input.trim();
+
+      let isUrl = false;
+      try {
+        const parsed = new URL(trimmed);
+        isUrl = ['http:', 'https:'].includes(parsed.protocol);
+      } catch {
+        isUrl = false;
+      }
+
+      if (isUrl) {
+        console.log(`[Smart Input] Detected URL: ${trimmed}`);
+        const job = await scrapeSingleJobUrl(trimmed);
+        if (!job) {
+          return res.status(400).json({
+            success: false,
+            inputType: 'url',
+            error: "Could not extract job details from this URL. Try pasting the job description text instead.",
+          });
+        }
+
+        return res.json({
+          success: true,
+          inputType: 'url',
+          count: 1,
+          jobs: [{
+            title: job.title,
+            company: job.company,
+            location: job.location,
+            isRemote: job.isRemote,
+            salaryMin: job.salaryMin,
+            salaryMax: job.salaryMax,
+            roleCategory: job.roleCategory,
+            roleSubcategory: job.roleSubcategory,
+            seniorityLevel: job.seniorityLevel,
+            keySkills: job.keySkills,
+            aiSummary: job.aiSummary,
+            description: job.description,
+            applyUrl: job.applyUrl,
+            source: job.source,
+            externalId: job.externalId,
+          }],
+        });
+      }
+
+      console.log(`[Smart Input] Detected text input (${trimmed.length} chars)`);
+      const jobs = await parseMultipleJobsFromText(trimmed);
+
+      return res.json({
+        success: true,
+        inputType: 'text',
+        count: jobs.length,
+        jobs: jobs.map(job => ({
+          title: job.title,
+          company: job.company,
+          location: job.location,
+          isRemote: job.isRemote,
+          salaryMin: job.salaryMin,
+          salaryMax: job.salaryMax,
+          roleCategory: job.roleCategory,
+          roleSubcategory: job.roleSubcategory,
+          seniorityLevel: job.seniorityLevel,
+          keySkills: job.keySkills,
+          aiSummary: job.aiSummary,
+          description: job.description,
+          applyUrl: job.applyUrl,
+          source: job.source || "paste",
+          externalId: job.externalId,
+        })),
+      });
+    } catch (error: any) {
+      console.error("[Smart Input] Error:", error);
+      res.status(500).json({ error: error.message || "Failed to process input" });
     }
   });
 

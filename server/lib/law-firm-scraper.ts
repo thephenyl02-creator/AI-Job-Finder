@@ -516,136 +516,409 @@ export async function scrapeAllLawFirmsWithAI(
   return { jobs: allJobs, stats };
 }
 
-// Scrape a single job URL
+type ATSPlatform = 'greenhouse' | 'lever' | 'ashby' | 'workday' | 'smartrecruiters' | 'icims' | 'bamboohr' | 'rippling' | 'jazzhr' | 'recruitee' | 'breezy' | 'linkedin' | 'indeed' | 'myworkdayjobs' | 'generic';
+
+function detectATSPlatform(url: string): ATSPlatform {
+  const hostname = new URL(url).hostname.toLowerCase();
+  const fullUrl = url.toLowerCase();
+
+  if (hostname.includes('greenhouse.io') || hostname.includes('boards.greenhouse.io') || hostname.includes('job-boards.greenhouse.io')) return 'greenhouse';
+  if (hostname.includes('lever.co') || hostname.includes('jobs.lever.co')) return 'lever';
+  if (hostname.includes('ashbyhq.com') || hostname.includes('jobs.ashbyhq.com')) return 'ashby';
+  if (hostname.includes('myworkdayjobs.com') || hostname.includes('wd5.myworkdayjobs.com') || hostname.includes('workday.com')) return 'workday';
+  if (hostname.includes('smartrecruiters.com') || hostname.includes('jobs.smartrecruiters.com')) return 'smartrecruiters';
+  if (hostname.includes('icims.com') || fullUrl.includes('icims')) return 'icims';
+  if (hostname.includes('bamboohr.com')) return 'bamboohr';
+  if (hostname.includes('rippling.com') || hostname.includes('ats.rippling.com')) return 'rippling';
+  if (hostname.includes('jazzhr.com') || hostname.includes('app.jazz.co')) return 'jazzhr';
+  if (hostname.includes('recruitee.com')) return 'recruitee';
+  if (hostname.includes('breezy.hr')) return 'breezy';
+  if (hostname.includes('linkedin.com')) return 'linkedin';
+  if (hostname.includes('indeed.com')) return 'indeed';
+
+  return 'generic';
+}
+
+function extractGreenhouseJobId(url: string): string | null {
+  const match = url.match(/\/jobs\/(\d+)/);
+  return match ? match[1] : null;
+}
+
+function extractGreenhouseBoardSlug(url: string): string | null {
+  const match = url.match(/(?:boards|job-boards)\.greenhouse\.io\/(\w+)/);
+  return match ? match[1] : null;
+}
+
+function smartExtractFromHTML($: cheerio.CheerioAPI, platform: ATSPlatform): Partial<ScrapedJob> {
+  const result: Partial<ScrapedJob> = {};
+
+  const ogTitle = $('meta[property="og:title"]').attr('content')?.trim();
+  const ogDesc = $('meta[property="og:description"]').attr('content')?.trim();
+  const ogSiteName = $('meta[property="og:site_name"]').attr('content')?.trim();
+  const twitterTitle = $('meta[name="twitter:title"]').attr('content')?.trim();
+
+  const titleCandidates = [
+    $('h1.job-title, h1.posting-title, h1[class*="job-title"], h1[class*="JobTitle"]').first().text().trim(),
+    $('h1[data-testid*="title"], h1[data-qa*="title"]').first().text().trim(),
+    $('h1').first().text().trim(),
+    $('h2.posting-headline h2, .posting-headline h2').first().text().trim(),
+    ogTitle || '',
+    twitterTitle || '',
+    $('title').text().trim().split(/\s*[-|–]\s*/)[0]?.trim() || '',
+  ];
+  result.title = titleCandidates.find(t => t && t.length > 2 && t.length < 200) || '';
+
+  const companyCandidates = [
+    ogSiteName || '',
+    $('[class*="company-name"], [class*="CompanyName"], [data-testid*="company"]').first().text().trim(),
+    $('meta[name="author"]').attr('content')?.trim() || '',
+    $('[itemtype*="Organization"] [itemprop="name"]').first().text().trim(),
+  ];
+  result.company = companyCandidates.find(c => c && c.length > 1 && c.length < 100) || '';
+
+  const locationCandidates = [
+    $('[class*="location"], [data-testid*="location"], .posting-categories .location').first().text().trim(),
+    $('[itemprop="jobLocation"] [itemprop="addressLocality"]').first().text().trim(),
+    $('[class*="Location"]').first().text().trim(),
+  ];
+  result.location = locationCandidates.find(l => l && l.length > 1) || '';
+
+  $('script, style, nav, footer, header, iframe, noscript, [class*="cookie"], [class*="banner"], [class*="footer"], [class*="header"], [class*="nav"], [class*="sidebar"], [class*="related"], [class*="similar"]').remove();
+
+  const descCandidates = [
+    $('[class*="job-description"], [class*="jobDescription"], [class*="job_description"]').first(),
+    $('[class*="posting-page"], .posting-page-body, #content').first(),
+    $('[class*="description"], [data-testid*="description"]').first(),
+    $('[class*="job-details"], [class*="jobDetails"]').first(),
+    $('article').first(),
+    $('main').first(),
+    $('[role="main"]').first(),
+  ];
+
+  let descEl = descCandidates.find(el => el.length > 0 && el.text().trim().length > 100);
+  if (!descEl || descEl.text().trim().length < 100) {
+    descEl = $('body');
+  }
+
+  if (descEl && descEl.length > 0) {
+    let descHtml = descEl.html() || '';
+    result.description = cleanDescriptionText(descHtml);
+  }
+
+  return result;
+}
+
+async function scrapeWithAIFallback(url: string, rawHtml: string, basicResult: Partial<ScrapedJob>): Promise<ScrapedJob | null> {
+  const hasGoodTitle = basicResult.title && basicResult.title.length > 3;
+  const hasGoodDesc = basicResult.description && basicResult.description.length > 100;
+
+  if (hasGoodTitle && hasGoodDesc) {
+    return {
+      title: basicResult.title!,
+      company: basicResult.company || 'Unknown Company',
+      location: basicResult.location || 'Not specified',
+      description: basicResult.description!,
+      applyUrl: url,
+      postedDate: new Date().toISOString(),
+      source: 'scraped',
+      externalId: `scraped_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+    };
+  }
+
+  console.log(`[Smart Scraper] Basic extraction insufficient for ${url}, using AI fallback...`);
+
+  let cleanedText = cleanDescriptionText(rawHtml);
+  if (cleanedText.length < 50) {
+    const $ = cheerio.load(rawHtml);
+    $('script, style, nav, footer, header, iframe, noscript').remove();
+    cleanedText = $('body').text().replace(/\s+/g, ' ').trim();
+  }
+
+  if (cleanedText.length < 30) {
+    console.log(`[Smart Scraper] Not enough text content from ${url}`);
+    return null;
+  }
+
+  const truncated = cleanedText.substring(0, 8000);
+
+  try {
+    const { getOpenAIClient } = await import('./openai-client');
+    const completion = await getOpenAIClient().chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content: `You are an expert job posting extractor. Given raw text from a job posting page, extract structured job data.
+Return ONLY valid JSON:
+{
+  "title": "Exact job title",
+  "company": "Company name",
+  "location": "Location or 'Remote' or 'Not specified'",
+  "description": "The full job description including responsibilities, requirements, qualifications, and benefits. Preserve important details but remove navigation/menu text, cookie notices, and unrelated content.",
+  "isRemote": true/false,
+  "salaryMin": number or null,
+  "salaryMax": number or null
+}
+Rules:
+- Extract the REAL job title (not the page title or company tagline)
+- If multiple jobs appear, extract only the primary/most prominent one
+- For salary, convert to annual USD. Handle hourly ($X/hr * 2080), monthly (*12), and "$XK" formats
+- Clean the description: keep responsibilities, requirements, qualifications, benefits. Remove boilerplate.`,
+        },
+        {
+          role: "user",
+          content: `Extract job posting data from this page (URL: ${url}):\n\n${truncated}`,
+        },
+      ],
+      response_format: { type: "json_object" },
+      max_completion_tokens: 3000,
+    });
+
+    const content = completion.choices[0]?.message?.content;
+    if (!content) return null;
+
+    const parsed = JSON.parse(content);
+    const aiTitle = parsed.title || basicResult.title;
+    if (!aiTitle) return null;
+
+    return {
+      title: (aiTitle || 'Untitled Position').substring(0, 255),
+      company: (parsed.company || basicResult.company || 'Unknown Company').substring(0, 255),
+      location: parsed.location || basicResult.location || 'Not specified',
+      description: parsed.description || basicResult.description || `${aiTitle} position`,
+      applyUrl: url,
+      postedDate: new Date().toISOString(),
+      source: 'ai_extracted',
+      externalId: `ai_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+    };
+  } catch (error: any) {
+    console.error(`[Smart Scraper] AI fallback failed for ${url}:`, error.message);
+    if (basicResult.title) {
+      return {
+        title: basicResult.title,
+        company: basicResult.company || 'Unknown Company',
+        location: basicResult.location || 'Not specified',
+        description: basicResult.description || `${basicResult.title} position`,
+        applyUrl: url,
+        postedDate: new Date().toISOString(),
+        source: 'scraped',
+        externalId: `scraped_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      };
+    }
+    return null;
+  }
+}
+
+async function tryGreenhouseAPI(url: string): Promise<ScrapedJob | null> {
+  const boardSlug = extractGreenhouseBoardSlug(url);
+  const jobId = extractGreenhouseJobId(url);
+
+  if (boardSlug && jobId) {
+    try {
+      const apiUrl = `https://boards-api.greenhouse.io/v1/boards/${boardSlug}/jobs/${jobId}?content=true`;
+      const response = await axios.get(apiUrl, {
+        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; LegalTechCareersBot/1.0)' },
+        timeout: 10000,
+      });
+      const job = response.data;
+      return {
+        title: job.title,
+        company: job.company?.name || boardSlug,
+        location: job.location?.name || 'Not specified',
+        description: cleanDescriptionText(job.content || ''),
+        applyUrl: job.absolute_url || url,
+        postedDate: job.updated_at || new Date().toISOString(),
+        source: 'greenhouse',
+        externalId: `gh_${boardSlug}_${jobId}`,
+      };
+    } catch {
+    }
+  }
+
+  if (boardSlug) {
+    try {
+      const listUrl = `https://boards-api.greenhouse.io/v1/boards/${boardSlug}/jobs?content=true`;
+      const response = await axios.get(listUrl, {
+        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; LegalTechCareersBot/1.0)' },
+        timeout: 10000,
+      });
+      const matchingJob = response.data.jobs?.find((j: any) =>
+        url.includes(String(j.id)) || url.includes(j.absolute_url)
+      );
+      if (matchingJob) {
+        return {
+          title: matchingJob.title,
+          company: boardSlug,
+          location: matchingJob.location?.name || 'Not specified',
+          description: cleanDescriptionText(matchingJob.content || ''),
+          applyUrl: matchingJob.absolute_url || url,
+          postedDate: matchingJob.updated_at || new Date().toISOString(),
+          source: 'greenhouse',
+          externalId: `gh_${boardSlug}_${matchingJob.id}`,
+        };
+      }
+    } catch {
+    }
+  }
+  return null;
+}
+
+async function tryLeverAPI(url: string): Promise<ScrapedJob | null> {
+  const match = url.match(/jobs\.lever\.co\/([^/]+)\/([a-f0-9-]+)/i);
+  if (!match) return null;
+
+  const [, companySlug, jobId] = match;
+  try {
+    const apiUrl = `https://api.lever.co/v0/postings/${companySlug}/${jobId}`;
+    const response = await axios.get(apiUrl, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; LegalTechCareersBot/1.0)' },
+      timeout: 10000,
+    });
+    const job = response.data;
+    return {
+      title: job.text,
+      company: companySlug,
+      location: job.categories?.location || 'Not specified',
+      description: cleanDescriptionText(job.descriptionPlain || job.description || ''),
+      applyUrl: job.hostedUrl || url,
+      postedDate: new Date(job.createdAt).toISOString(),
+      source: 'lever',
+      externalId: `lever_${jobId}`,
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function tryAshbyAPI(url: string): Promise<ScrapedJob | null> {
+  const match = url.match(/jobs\.ashbyhq\.com\/([^/]+)\/([a-f0-9-]+)/i);
+  if (!match) return null;
+
+  const [, companySlug, jobId] = match;
+  try {
+    const apiUrl = `https://api.ashbyhq.com/posting-api/job-board/${companySlug}`;
+    const response = await axios.get(apiUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; LegalTechCareersBot/1.0)',
+        'Accept': 'application/json',
+      },
+      timeout: 10000,
+    });
+    const matchingJob = (response.data.jobs || []).find((j: any) => j.id === jobId);
+    if (matchingJob) {
+      return {
+        title: matchingJob.title,
+        company: companySlug,
+        location: matchingJob.location?.name || matchingJob.locationName || 'Not specified',
+        description: cleanDescriptionText(matchingJob.descriptionHtml || matchingJob.descriptionPlain || ''),
+        applyUrl: matchingJob.applicationUrl || matchingJob.jobUrl || url,
+        postedDate: matchingJob.publishedDate || new Date().toISOString(),
+        source: 'ashby',
+        externalId: `ashby_${jobId}`,
+      };
+    }
+  } catch {
+  }
+  return null;
+}
+
 export async function scrapeSingleJobUrl(url: string): Promise<InsertJob | null> {
   try {
-    const parsedUrl = new URL(url);
-    const hostname = parsedUrl.hostname;
-    
+    const platform = detectATSPlatform(url);
+    console.log(`[Smart Scraper] Detected platform: ${platform} for ${url}`);
     let scrapedJob: ScrapedJob | null = null;
-    
-    // Detect ATS platform from URL
-    if (hostname.includes('greenhouse.io') || hostname.includes('boards.greenhouse.io')) {
+
+    if (platform === 'greenhouse') {
+      scrapedJob = await tryGreenhouseAPI(url);
+    } else if (platform === 'lever') {
+      scrapedJob = await tryLeverAPI(url);
+    } else if (platform === 'ashby') {
+      scrapedJob = await tryAshbyAPI(url);
+    }
+
+    if (!scrapedJob) {
       const response = await axios.get(url, {
-        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; LegalAICareersBot/1.0)' },
-        timeout: 15000,
-      });
-      const $ = cheerio.load(response.data);
-      
-      const title = $('h1').first().text().trim() || $('[class*="title"]').first().text().trim();
-      const company = $('.company-name').text().trim() || $('[class*="company"]').first().text().trim() || 'Unknown Company';
-      const location = $('#location, .location, [class*="location"]').first().text().trim() || 'Not specified';
-      const description = $('#content, .content, [class*="description"]').text().trim();
-      
-      if (title) {
-        scrapedJob = {
-          title,
-          company,
-          location,
-          description,
-          applyUrl: url,
-          postedDate: new Date().toISOString(),
-          source: 'greenhouse',
-          externalId: `gh_custom_${Date.now()}`,
-        };
-      }
-    } else if (hostname.includes('lever.co')) {
-      const response = await axios.get(url, {
-        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; LegalAICareersBot/1.0)' },
-        timeout: 15000,
-      });
-      const $ = cheerio.load(response.data);
-      
-      const title = $('h2').first().text().trim() || $('.posting-headline h2').text().trim();
-      const company = $('.company-name').text().trim() || $('[class*="company"]').first().text().trim() || 'Unknown Company';
-      const location = $('.location, .posting-categories .sort-by-time').first().text().trim() || 'Not specified';
-      const description = $('[class*="description"], .posting-page-body').text().trim();
-      
-      if (title) {
-        scrapedJob = {
-          title,
-          company,
-          location,
-          description,
-          applyUrl: url,
-          postedDate: new Date().toISOString(),
-          source: 'lever',
-          externalId: `lever_custom_${Date.now()}`,
-        };
-      }
-    } else if (hostname.includes('ashby')) {
-      const response = await axios.get(url, {
-        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; LegalAICareersBot/1.0)' },
-        timeout: 15000,
-      });
-      const $ = cheerio.load(response.data);
-      
-      const title = $('h1').first().text().trim();
-      const company = $('[class*="company"]').first().text().trim() || 'Unknown Company';
-      const location = $('[class*="location"]').first().text().trim() || 'Not specified';
-      const description = $('[class*="description"]').text().trim();
-      
-      if (title) {
-        scrapedJob = {
-          title,
-          company,
-          location,
-          description,
-          applyUrl: url,
-          postedDate: new Date().toISOString(),
-          source: 'ashby',
-          externalId: `ashby_custom_${Date.now()}`,
-        };
-      }
-    } else {
-      const response = await axios.get(url, {
-        headers: { 
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.9',
         },
-        timeout: 15000,
+        timeout: 20000,
+        maxRedirects: 5,
       });
-      const $ = cheerio.load(response.data);
-      
-      const title = $('h1').first().text().trim() || $('title').text().trim();
-      const company = $('[class*="company"]').first().text().trim() || 
-                      $('meta[property="og:site_name"]').attr('content') || 
-                      parsedUrl.hostname.replace('www.', '').split('.')[0];
-      const location = $('[class*="location"]').first().text().trim() || 'Not specified';
-      const description = $('article, [class*="description"], [class*="content"], main').first().text().trim();
-      
-      if (title) {
-        scrapedJob = {
-          title: title.substring(0, 255),
-          company: company.substring(0, 100),
-          location,
-          description,
-          applyUrl: url,
-          postedDate: new Date().toISOString(),
-          source: 'custom',
-          externalId: `custom_${Date.now()}`,
-        };
+
+      const rawHtml = response.data;
+      const $ = cheerio.load(rawHtml);
+
+      const ldJsonScripts = $('script[type="application/ld+json"]');
+      let ldJob: any = null;
+      ldJsonScripts.each((_, el) => {
+        try {
+          const json = JSON.parse($(el).html() || '');
+          const items = Array.isArray(json) ? json : [json];
+          for (const item of items) {
+            if (item['@type'] === 'JobPosting') {
+              ldJob = item;
+              break;
+            }
+          }
+        } catch {
+        }
+      });
+
+      if (ldJob) {
+        console.log(`[Smart Scraper] Found JSON-LD JobPosting data`);
+        const ldTitle = ldJob.title || ldJob.name || '';
+        const ldCompany = ldJob.hiringOrganization?.name || '';
+        const ldLocation = ldJob.jobLocation?.address?.addressLocality
+          ? `${ldJob.jobLocation.address.addressLocality}${ldJob.jobLocation.address.addressRegion ? ', ' + ldJob.jobLocation.address.addressRegion : ''}${ldJob.jobLocation.address.addressCountry ? ', ' + ldJob.jobLocation.address.addressCountry : ''}`
+          : ldJob.jobLocationType === 'TELECOMMUTE' ? 'Remote' : '';
+        const ldDesc = cleanDescriptionText(ldJob.description || '');
+
+        if (ldTitle && ldDesc.length > 50) {
+          scrapedJob = {
+            title: ldTitle.substring(0, 255),
+            company: ldCompany || 'Unknown Company',
+            location: ldLocation || 'Not specified',
+            description: ldDesc,
+            applyUrl: ldJob.url || url,
+            postedDate: ldJob.datePosted || new Date().toISOString(),
+            source: platform === 'generic' ? 'structured' : platform,
+            externalId: `ld_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+          };
+        }
+      }
+
+      if (!scrapedJob) {
+        const basicResult = smartExtractFromHTML($, platform);
+        scrapedJob = await scrapeWithAIFallback(url, rawHtml, basicResult);
       }
     }
-    
+
     if (!scrapedJob) {
+      console.log(`[Smart Scraper] Could not extract job data from ${url}`);
       return null;
     }
 
+    if (scrapedJob.description) {
+      scrapedJob.description = cleanDescriptionText(scrapedJob.description);
+    }
     if (!scrapedJob.description || scrapedJob.description.length < 20) {
       scrapedJob.description = `${scrapedJob.title} position at ${scrapedJob.company}. Location: ${scrapedJob.location || 'Not specified'}.`;
     }
-    
-    // Categorize the job
+
+    scrapedJob.company = cleanCompanyName(scrapedJob.company);
+
     let categorization: JobCategorizationResult | undefined;
     try {
       categorization = await categorizeJob(scrapedJob.title, scrapedJob.description, scrapedJob.company);
     } catch (error) {
-      console.error('Categorization failed for custom URL:', error);
+      console.error('[Smart Scraper] Categorization failed:', error);
     }
-    
+
     return transformToJobSchema(scrapedJob, categorization);
   } catch (error: any) {
-    console.error('Error scraping single URL:', error.message);
+    console.error(`[Smart Scraper] Error scraping ${url}:`, error.message);
     return null;
   }
 }

@@ -99,7 +99,8 @@ export default function AdminPage() {
   const [lastResult, setLastResult] = useState<ScrapeResult | null>(null);
   const [customUrl, setCustomUrl] = useState("");
   const [pasteText, setPasteText] = useState("");
-  const [addJobMode, setAddJobMode] = useState<"url" | "paste" | "file">("url");
+  const [addJobMode, setAddJobMode] = useState<"smart" | "file">("smart");
+  const [smartInput, setSmartInput] = useState("");
   const [previewJob, setPreviewJob] = useState<Record<string, any> | null>(null);
   const [previewEdits, setPreviewEdits] = useState<Record<string, any>>({});
   const [addJobError, setAddJobError] = useState<string | null>(null);
@@ -355,6 +356,39 @@ export default function AdminPage() {
         description: error.message,
         variant: "destructive",
       });
+    },
+  });
+
+  const [smartInputResults, setSmartInputResults] = useState<Record<string, any>[]>([]);
+
+  const smartInputMutation = useMutation({
+    mutationFn: async (input: string) => {
+      const res = await apiRequest("POST", "/api/admin/jobs/smart-input", { input });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      if (data.success && data.jobs?.length > 0) {
+        if (data.jobs.length === 1) {
+          setPreviewJob(data.jobs[0]);
+          setPreviewEdits(data.jobs[0]);
+          setAddJobError(null);
+        } else {
+          setSmartInputResults(data.jobs);
+          setAddJobError(null);
+        }
+        setSmartInput("");
+        const typeLabel = data.inputType === 'url' ? 'URL' : 'text';
+        toast({
+          title: `Extracted ${data.count} job${data.count > 1 ? 's' : ''} from ${typeLabel}`,
+          description: data.jobs[0].title + (data.count > 1 ? ` and ${data.count - 1} more` : ` at ${data.jobs[0].company}`),
+        });
+      } else {
+        setAddJobError(data.error || "Could not extract job details. Try a different format.");
+      }
+    },
+    onError: (error: Error) => {
+      setAddJobError(error.message);
+      toast({ title: "Extraction failed", description: error.message, variant: "destructive" });
     },
   });
 
@@ -784,31 +818,58 @@ export default function AdminPage() {
                 Add Job
               </CardTitle>
               <CardDescription>
-                Paste a URL, drop in a file, or paste the job text directly. The system auto-extracts everything.
+                Paste anything - a URL, job description, email, LinkedIn post - the system figures it out. Or drop a file.
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {!previewJob && (
+                {smartInputResults.length > 0 && !previewJob && (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium">Found {smartInputResults.length} jobs:</p>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setSmartInputResults([])}
+                        data-testid="button-clear-results"
+                      >
+                        <XIcon className="mr-1.5 h-3.5 w-3.5" />
+                        Clear
+                      </Button>
+                    </div>
+                    {smartInputResults.map((job, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center justify-between gap-3 p-3 border rounded-md hover-elevate cursor-pointer"
+                        onClick={() => {
+                          setPreviewJob(job);
+                          setPreviewEdits(job);
+                        }}
+                        data-testid={`multi-job-result-${idx}`}
+                      >
+                        <div className="min-w-0">
+                          <p className="font-medium truncate">{job.title}</p>
+                          <p className="text-sm text-muted-foreground truncate">{job.company} &middot; {job.location}</p>
+                        </div>
+                        <Button size="sm" variant="outline" data-testid={`button-preview-job-${idx}`}>
+                          Review
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {!previewJob && smartInputResults.length === 0 && (
                   <>
                     <div className="flex gap-1 p-1 bg-muted rounded-md w-fit">
                       <Button
                         size="sm"
-                        variant={addJobMode === "url" ? "default" : "ghost"}
-                        onClick={() => { setAddJobMode("url"); setAddJobError(null); }}
-                        data-testid="button-mode-url"
+                        variant={addJobMode === "smart" ? "default" : "ghost"}
+                        onClick={() => { setAddJobMode("smart"); setAddJobError(null); }}
+                        data-testid="button-mode-smart"
                       >
-                        <LinkIcon className="mr-1.5 h-3.5 w-3.5" />
-                        URL
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant={addJobMode === "paste" ? "default" : "ghost"}
-                        onClick={() => { setAddJobMode("paste"); setAddJobError(null); }}
-                        data-testid="button-mode-paste"
-                      >
-                        <ClipboardPaste className="mr-1.5 h-3.5 w-3.5" />
-                        Paste Text
+                        <Sparkles className="mr-1.5 h-3.5 w-3.5" />
+                        Smart Input
                       </Button>
                       <Button
                         size="sm"
@@ -821,78 +882,34 @@ export default function AdminPage() {
                       </Button>
                     </div>
 
-                    {addJobMode === "url" && (
-                      <div className="space-y-2">
-                        <div className="flex gap-3">
-                          <Input
-                            placeholder="https://boards.greenhouse.io/company/jobs/123..."
-                            value={customUrl}
-                            onChange={(e) => setCustomUrl(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter" && customUrl.trim()) {
-                                setAddJobError(null);
-                                previewUrlMutation.mutate(customUrl.trim());
-                              }
-                            }}
-                            className="flex-1"
-                            data-testid="input-custom-url"
-                          />
-                          <Button
-                            onClick={() => {
-                              if (customUrl.trim()) {
-                                setAddJobError(null);
-                                previewUrlMutation.mutate(customUrl.trim());
-                              }
-                            }}
-                            disabled={previewUrlMutation.isPending || !customUrl.trim()}
-                            data-testid="button-scrape-url"
-                          >
-                            {previewUrlMutation.isPending ? (
-                              <>
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                Scraping...
-                              </>
-                            ) : (
-                              <>
-                                <Search className="mr-2 h-4 w-4" />
-                                Extract
-                              </>
-                            )}
-                          </Button>
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          Supports Greenhouse, Lever, Ashby, and any generic job page.
-                        </p>
-                      </div>
-                    )}
-
-                    {addJobMode === "paste" && (
+                    {addJobMode === "smart" && (
                       <div className="space-y-2">
                         <Textarea
-                          placeholder={"Paste the full job posting text here...\n\nExample:\nSenior Legal Engineer\nCompany: Clio\nLocation: Remote, US\nSalary: $120K - $160K\n\nWe are looking for a Senior Legal Engineer to join our team..."}
-                          value={pasteText}
-                          onChange={(e) => setPasteText(e.target.value)}
-                          rows={8}
-                          data-testid="input-paste-text"
+                          placeholder={"Paste a job URL or the full job posting text...\n\nExamples:\nhttps://boards.greenhouse.io/company/jobs/123\nhttps://jobs.lever.co/company/abc-def\n\nOr paste the job description directly:\nSenior Legal Engineer at Clio\nRemote, US - $120K-$160K\nWe are looking for..."}
+                          value={smartInput}
+                          onChange={(e) => setSmartInput(e.target.value)}
+                          rows={5}
+                          data-testid="input-smart"
                         />
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between flex-wrap gap-2">
                           <p className="text-xs text-muted-foreground">
-                            Paste any format: job description, email, LinkedIn post, etc.
+                            URLs, job descriptions, emails, LinkedIn posts - works with anything.
+                            Supports Greenhouse, Lever, Ashby, Workday, SmartRecruiters, iCIMS, and more.
                           </p>
                           <Button
                             onClick={() => {
-                              if (pasteText.trim()) {
+                              if (smartInput.trim()) {
                                 setAddJobError(null);
-                                parseTextMutation.mutate(pasteText.trim());
+                                smartInputMutation.mutate(smartInput.trim());
                               }
                             }}
-                            disabled={parseTextMutation.isPending || pasteText.trim().length < 20}
-                            data-testid="button-parse-text"
+                            disabled={smartInputMutation.isPending || smartInput.trim().length < 10}
+                            data-testid="button-smart-extract"
                           >
-                            {parseTextMutation.isPending ? (
+                            {smartInputMutation.isPending ? (
                               <>
                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                Processing...
+                                Extracting...
                               </>
                             ) : (
                               <>
