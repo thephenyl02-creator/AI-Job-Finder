@@ -3592,6 +3592,88 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
     }
   });
 
+  // --- Saved Jobs ---
+
+  app.get("/api/saved-jobs", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ error: "Not authenticated" });
+    const userId = (req.user as any).id?.toString();
+    try {
+      const savedJobsList = await storage.getUserSavedJobs(userId);
+      res.json(savedJobsList);
+    } catch (error) {
+      console.error("Get saved jobs error:", error);
+      res.status(500).json({ error: "Failed to get saved jobs" });
+    }
+  });
+
+  app.get("/api/saved-jobs/ids", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ error: "Not authenticated" });
+    const userId = (req.user as any).id?.toString();
+    try {
+      const ids = await storage.getUserSavedJobIds(userId);
+      res.json(ids);
+    } catch (error) {
+      console.error("Get saved job IDs error:", error);
+      res.status(500).json({ error: "Failed to get saved job IDs" });
+    }
+  });
+
+  app.get("/api/saved-jobs/expiring", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ error: "Not authenticated" });
+    const userId = (req.user as any).id?.toString();
+    try {
+      const expiring = await storage.getExpiringSavedJobs(userId, 21);
+      res.json(expiring);
+    } catch (error) {
+      console.error("Get expiring saved jobs error:", error);
+      res.status(500).json({ error: "Failed to get expiring saved jobs" });
+    }
+  });
+
+  app.post("/api/saved-jobs/:jobId", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ error: "Not authenticated" });
+    const userId = (req.user as any).id?.toString();
+    const jobId = parseInt(req.params.jobId);
+    if (isNaN(jobId)) return res.status(400).json({ error: "Invalid job ID" });
+    try {
+      const job = await storage.getJob(jobId);
+      if (!job) return res.status(404).json({ error: "Job not found" });
+      const saved = await storage.saveJob(userId, jobId, req.body.notes);
+      res.json(saved);
+    } catch (error) {
+      console.error("Save job error:", error);
+      res.status(500).json({ error: "Failed to save job" });
+    }
+  });
+
+  app.delete("/api/saved-jobs/:jobId", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ error: "Not authenticated" });
+    const userId = (req.user as any).id?.toString();
+    const jobId = parseInt(req.params.jobId);
+    if (isNaN(jobId)) return res.status(400).json({ error: "Invalid job ID" });
+    try {
+      await storage.unsaveJob(userId, jobId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Unsave job error:", error);
+      res.status(500).json({ error: "Failed to unsave job" });
+    }
+  });
+
+  app.post("/api/saved-jobs/:id/dismiss-reminder", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ error: "Not authenticated" });
+    const userId = (req.user as any).id?.toString();
+    const savedJobId = parseInt(req.params.id);
+    if (isNaN(savedJobId)) return res.status(400).json({ error: "Invalid ID" });
+    try {
+      await storage.markReminderShown(savedJobId, userId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Dismiss reminder error:", error);
+      res.status(500).json({ error: "Failed to dismiss reminder" });
+    }
+  });
+
   // Run startup cleanup and start the scheduler when the server starts
   runStartupCleanup();
   startScheduler();

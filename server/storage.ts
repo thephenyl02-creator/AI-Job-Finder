@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { jobs, users, userPreferences, jobCategories, jobSubmissions, jobAlerts, notifications, resumes, builtResumes, userActivities, userPersonas, type Job, type InsertJob, type User, type UserPreferences, type InsertUserPreferences, type ResumeExtractedData, type JobCategory, type JobSubmission, type InsertJobSubmission, type JobAlert, type InsertJobAlert, type Notification, type InsertNotification, type Resume, type InsertResume, type BuiltResume, type InsertBuiltResume, type UserActivity, type InsertUserActivity, type UserPersona, type InsertUserPersona, JOB_TAXONOMY } from "@shared/schema";
+import { jobs, users, userPreferences, jobCategories, jobSubmissions, jobAlerts, notifications, resumes, builtResumes, userActivities, userPersonas, savedJobs, type Job, type InsertJob, type User, type UserPreferences, type InsertUserPreferences, type ResumeExtractedData, type JobCategory, type JobSubmission, type InsertJobSubmission, type JobAlert, type InsertJobAlert, type Notification, type InsertNotification, type Resume, type InsertResume, type BuiltResume, type InsertBuiltResume, type UserActivity, type InsertUserActivity, type UserPersona, type InsertUserPersona, type SavedJob, type InsertSavedJob, JOB_TAXONOMY } from "@shared/schema";
 import { eq, desc, and, sql, inArray, lt, gte, count } from "drizzle-orm";
 
 export interface IStorage {
@@ -75,6 +75,14 @@ export interface IStorage {
   getBuiltResumeById(id: number, userId: string): Promise<BuiltResume | undefined>;
   updateBuiltResume(id: number, userId: string, data: Partial<InsertBuiltResume>): Promise<BuiltResume | undefined>;
   deleteBuiltResume(id: number, userId: string): Promise<void>;
+  // Saved Jobs
+  saveJob(userId: string, jobId: number, notes?: string): Promise<SavedJob>;
+  unsaveJob(userId: string, jobId: number): Promise<void>;
+  getUserSavedJobs(userId: string): Promise<(SavedJob & { job: Job })[]>;
+  isJobSaved(userId: string, jobId: number): Promise<boolean>;
+  getUserSavedJobIds(userId: string): Promise<number[]>;
+  getExpiringSavedJobs(userId: string, daysThreshold: number): Promise<(SavedJob & { job: Job })[]>;
+  markReminderShown(savedJobId: number, userId: string): Promise<void>;
 }
 
 class DatabaseStorage implements IStorage {
@@ -815,6 +823,64 @@ class DatabaseStorage implements IStorage {
   async deleteBuiltResume(id: number, userId: string): Promise<void> {
     await db.delete(builtResumes)
       .where(and(eq(builtResumes.id, id), eq(builtResumes.userId, userId)));
+  }
+
+  async saveJob(userId: string, jobId: number, notes?: string): Promise<SavedJob> {
+    const existing = await db.select().from(savedJobs)
+      .where(and(eq(savedJobs.userId, userId), eq(savedJobs.jobId, jobId)));
+    if (existing.length > 0) return existing[0];
+    const [created] = await db.insert(savedJobs)
+      .values({ userId, jobId, notes: notes || null, reminderShown: false })
+      .returning();
+    return created;
+  }
+
+  async unsaveJob(userId: string, jobId: number): Promise<void> {
+    await db.delete(savedJobs)
+      .where(and(eq(savedJobs.userId, userId), eq(savedJobs.jobId, jobId)));
+  }
+
+  async getUserSavedJobs(userId: string): Promise<(SavedJob & { job: Job })[]> {
+    const rows = await db.select()
+      .from(savedJobs)
+      .innerJoin(jobs, eq(savedJobs.jobId, jobs.id))
+      .where(eq(savedJobs.userId, userId))
+      .orderBy(desc(savedJobs.savedAt));
+    return rows.map(r => ({ ...r.saved_jobs, job: r.jobs }));
+  }
+
+  async isJobSaved(userId: string, jobId: number): Promise<boolean> {
+    const rows = await db.select({ id: savedJobs.id }).from(savedJobs)
+      .where(and(eq(savedJobs.userId, userId), eq(savedJobs.jobId, jobId)));
+    return rows.length > 0;
+  }
+
+  async getUserSavedJobIds(userId: string): Promise<number[]> {
+    const rows = await db.select({ jobId: savedJobs.jobId }).from(savedJobs)
+      .where(eq(savedJobs.userId, userId));
+    return rows.map(r => r.jobId);
+  }
+
+  async getExpiringSavedJobs(userId: string, daysThreshold: number): Promise<(SavedJob & { job: Job })[]> {
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - daysThreshold);
+    const rows = await db.select()
+      .from(savedJobs)
+      .innerJoin(jobs, eq(savedJobs.jobId, jobs.id))
+      .where(and(
+        eq(savedJobs.userId, userId),
+        eq(savedJobs.reminderShown, false),
+        lt(jobs.postedDate, cutoffDate),
+        eq(jobs.isActive, true),
+      ))
+      .orderBy(jobs.postedDate);
+    return rows.map(r => ({ ...r.saved_jobs, job: r.jobs }));
+  }
+
+  async markReminderShown(savedJobId: number, userId: string): Promise<void> {
+    await db.update(savedJobs)
+      .set({ reminderShown: true })
+      .where(and(eq(savedJobs.id, savedJobId), eq(savedJobs.userId, userId)));
   }
 }
 
