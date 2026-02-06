@@ -2,10 +2,10 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/theme-toggle";
 import {
   Search,
-  Briefcase,
   TrendingUp,
   Scale,
   Users,
@@ -16,13 +16,16 @@ import {
   RefreshCw,
   Rocket,
   Compass,
+  Zap,
+  Bell,
+  BarChart3,
+  Target,
 } from "lucide-react";
 import {
   ScrollReveal,
   StaggerContainer,
   StaggerItem,
   AnimatedCounter,
-  FloatingElement,
   GradientOrb,
 } from "@/components/animations";
 import { motion } from "framer-motion";
@@ -72,16 +75,16 @@ export default function Landing() {
             <div className="max-w-3xl">
               <ScrollReveal delay={0.1} direction="none">
                 <p className="text-sm font-medium text-muted-foreground tracking-wide uppercase mb-6" data-testid="text-hero-label">
-                  For Lawyers Interested in Technology
+                  The Job Board That Actually Gets Lawyers
                 </p>
               </ScrollReveal>
 
               <ScrollReveal delay={0.2}>
                 <h1 className="text-4xl sm:text-5xl lg:text-6xl font-serif font-medium text-foreground mb-6 leading-[1.15] tracking-tight" data-testid="text-hero-title">
-                  Your next career move
+                  You studied law.
                   <br />
                   <span className="relative">
-                    starts here
+                    Now build what's next.
                     <motion.span
                       className="absolute -bottom-1 left-0 h-[3px] bg-primary/30 rounded-full"
                       initial={{ width: 0 }}
@@ -94,7 +97,7 @@ export default function Landing() {
 
               <ScrollReveal delay={0.35}>
                 <p className="text-lg sm:text-xl text-muted-foreground mb-10 max-w-xl leading-relaxed" data-testid="text-hero-subtitle">
-                  Browse real job openings at companies building the future of legal technology. Search by role, experience level, or describe what you're looking for.
+                  Legal tech companies need people who understand the law <em>and</em> technology. That's you. We collect the roles, match them to your experience, and show you exactly where you fit.
                 </p>
               </ScrollReveal>
 
@@ -102,7 +105,7 @@ export default function Landing() {
                 <div className="flex flex-col sm:flex-row items-start gap-3 mb-16">
                   <Button size="lg" asChild className="text-base px-8" data-testid="button-hero-get-started">
                     <a href="/api/login">
-                      Browse Jobs
+                      Browse Open Roles
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </a>
                   </Button>
@@ -135,7 +138,7 @@ export default function Landing() {
                         "\u2014"
                       )}
                     </div>
-                    <div className="text-sm text-muted-foreground mt-0.5">Companies</div>
+                    <div className="text-sm text-muted-foreground mt-0.5">Companies hiring</div>
                   </div>
                   <div className="w-px h-10 bg-border" />
                   <div data-testid="stat-categories">
@@ -158,13 +161,13 @@ export default function Landing() {
           <div className="max-w-5xl mx-auto px-4 sm:px-6 py-20 sm:py-28">
             <ScrollReveal>
               <p className="text-sm font-medium text-muted-foreground tracking-wide uppercase mb-4">
-                How it works
+                Why this exists
               </p>
               <h2 className="text-3xl sm:text-4xl font-serif font-medium text-foreground mb-4 tracking-tight">
-                Three ways to find your next role
+                Most job boards don't speak your language
               </h2>
-              <p className="text-lg text-muted-foreground max-w-xl mb-12">
-                No technical skills needed. Just describe what you're looking for.
+              <p className="text-lg text-muted-foreground max-w-2xl mb-12">
+                You search "legal tech" on LinkedIn and get 500 software engineer roles. You search on legal job boards and get associate positions at BigLaw. Neither understands what you're actually looking for. We do.
               </p>
             </ScrollReveal>
 
@@ -172,34 +175,28 @@ export default function Landing() {
               {[
                 {
                   icon: Search,
-                  step: "Step 1",
-                  title: "Search in plain English",
-                  description: 'Type what you\'re looking for in your own words. Something like "product role at a legal tech startup, remote." We\'ll find the best matches.',
+                  title: "Tell us what you want",
+                  description: "Describe your ideal role in plain language. \"I want a product role at a legal tech company, ideally remote.\" That's it. No boolean operators. No keyword guessing.",
                   testId: "text-feature-search",
                 },
                 {
                   icon: FileText,
-                  step: "Step 2",
-                  title: "Upload your resume",
-                  description: "We'll read your experience and match you with roles where your legal background is an advantage. See exactly how well you fit each position.",
+                  title: "Let your resume do the work",
+                  description: "Upload your resume and we'll match it against every open role. You'll see a clear fit score, what transfers, and what gaps to address before applying.",
                   testId: "text-feature-resume",
                 },
                 {
                   icon: Compass,
-                  step: "Step 3",
-                  title: "Compare opportunities",
-                  description: "Torn between offers? Our Career Advisor compares 2-3 jobs side by side and shows how your legal experience transfers to each.",
+                  title: "Compare before you leap",
+                  description: "Considering multiple offers? Our Career Advisor lays them side by side, showing how each role leverages your legal background differently.",
                   testId: "text-feature-advisor",
                 },
               ].map((feature) => (
-                <StaggerItem key={feature.step}>
-                  <Card className="bg-background border-border/60 hover-elevate h-full group">
+                <StaggerItem key={feature.title}>
+                  <Card className="bg-background border-border/60 hover-elevate h-full">
                     <CardContent className="p-6">
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className="w-8 h-8 rounded-md bg-muted flex items-center justify-center text-foreground group-hover:bg-primary/10 transition-colors duration-300">
-                          <feature.icon className="h-4 w-4" />
-                        </div>
-                        <span className="text-xs font-medium text-muted-foreground tracking-wide uppercase">{feature.step}</span>
+                      <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center text-foreground mb-4">
+                        <feature.icon className="h-5 w-5" />
                       </div>
                       <h3 className="text-lg font-semibold text-foreground mb-2" data-testid={feature.testId}>
                         {feature.title}
@@ -219,13 +216,84 @@ export default function Landing() {
           <div className="max-w-5xl mx-auto px-4 sm:px-6 py-20 sm:py-28">
             <ScrollReveal>
               <p className="text-sm font-medium text-muted-foreground tracking-wide uppercase mb-4">
+                What you get
+              </p>
+              <h2 className="text-3xl sm:text-4xl font-serif font-medium text-foreground mb-4 tracking-tight">
+                Tools that save you hours every week
+              </h2>
+              <p className="text-lg text-muted-foreground max-w-2xl mb-12">
+                Stop scrolling through irrelevant listings. Start with a focused search and let the platform surface what matters to you.
+              </p>
+            </ScrollReveal>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <ScrollReveal delay={0.1}>
+                <div className="flex items-start gap-4 p-5 rounded-lg border border-border/50 bg-background" data-testid="feature-card-0">
+                  <div className="w-9 h-9 rounded-md bg-muted flex items-center justify-center shrink-0">
+                    <Target className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-foreground mb-1">Resume Matching</h3>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      See a percentage score for every job. Know instantly if your litigation background transfers to that compliance tech role, and get specific suggestions to improve your odds.
+                    </p>
+                  </div>
+                </div>
+              </ScrollReveal>
+              <ScrollReveal delay={0.15}>
+                <div className="flex items-start gap-4 p-5 rounded-lg border border-border/50 bg-background" data-testid="feature-card-1">
+                  <div className="w-9 h-9 rounded-md bg-muted flex items-center justify-center shrink-0">
+                    <Bell className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-foreground mb-1">Job Alerts</h3>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      Set your criteria once. When a new role matches, you'll know about it before the posting gets buried. Filter by category, seniority, remote, or keywords.
+                    </p>
+                  </div>
+                </div>
+              </ScrollReveal>
+              <ScrollReveal delay={0.2}>
+                <div className="flex items-start gap-4 p-5 rounded-lg border border-border/50 bg-background" data-testid="feature-card-2">
+                  <div className="w-9 h-9 rounded-md bg-muted flex items-center justify-center shrink-0">
+                    <BarChart3 className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-foreground mb-1">Market Insights</h3>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      Understand which legal tech categories are hiring the most, what salary ranges look like, and where demand is growing. Real data, not guesswork.
+                    </p>
+                  </div>
+                </div>
+              </ScrollReveal>
+              <ScrollReveal delay={0.25}>
+                <div className="flex items-start gap-4 p-5 rounded-lg border border-border/50 bg-background" data-testid="feature-card-3">
+                  <div className="w-9 h-9 rounded-md bg-muted flex items-center justify-center shrink-0">
+                    <Zap className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-foreground mb-1">Resume Tweaks</h3>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      Don't rewrite your resume from scratch for every application. See exactly what to adjust for each specific role so your experience reads the way hiring managers expect.
+                    </p>
+                  </div>
+                </div>
+              </ScrollReveal>
+            </div>
+          </div>
+        </section>
+
+        <section className="border-t border-border/40">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-20 sm:py-28">
+            <ScrollReveal>
+              <p className="text-sm font-medium text-muted-foreground tracking-wide uppercase mb-4">
                 Who this is for
               </p>
               <h2 className="text-3xl sm:text-4xl font-serif font-medium text-foreground mb-4 tracking-tight">
-                Built for legal professionals
+                If any of this sounds like you
               </h2>
-              <p className="text-lg text-muted-foreground max-w-xl mb-12">
-                Whether you're a seasoned attorney or a law student exploring options.
+              <p className="text-lg text-muted-foreground max-w-2xl mb-12">
+                You don't need to be technical. You need to be curious about where law is headed.
               </p>
             </ScrollReveal>
 
@@ -233,42 +301,42 @@ export default function Landing() {
               {[
                 {
                   icon: GraduationCap,
-                  title: "Attorneys",
-                  description: "Transition from practice to product, operations, or consulting roles at legal tech companies.",
+                  title: "Practicing attorneys",
+                  description: "You're good at your job but wonder what else is out there. Product, operations, strategy roles at companies that actually value your JD.",
                 },
                 {
                   icon: Users,
-                  title: "Paralegals & Legal Ops",
-                  description: "Your expertise in document management, workflows, and legal processes is in high demand.",
+                  title: "Paralegals & legal ops",
+                  description: "You've been streamlining workflows for years. Legal tech companies are building exactly what you've been wishing existed.",
                 },
                 {
                   icon: RefreshCw,
                   title: "Career changers",
-                  description: "Moving from traditional practice? Your legal knowledge is a competitive advantage in tech.",
+                  description: "Leaving traditional practice doesn't mean leaving law behind. Your domain expertise is rare and valuable in the right company.",
                 },
                 {
                   icon: BookOpen,
                   title: "Law students",
-                  description: "Start your career where law meets technology. Find internships and entry-level positions.",
+                  description: "You see where the industry is going. Find internships and entry-level roles at companies shaping the future of legal work.",
                 },
                 {
                   icon: TrendingUp,
-                  title: "Multi-practice lawyers",
-                  description: "Cross-functional experience in IP, contracts, or compliance translates directly to legal tech.",
+                  title: "In-house counsel",
+                  description: "You've seen legal tech from the buyer's side. Companies building these tools want people who understand how firms actually work.",
                 },
                 {
                   icon: Rocket,
-                  title: "Tech-curious professionals",
-                  description: "No coding required. Strategy, domain expertise, and legal knowledge open many doors.",
+                  title: "Curious professionals",
+                  description: "No coding required. Many of the best roles in legal tech are in sales, marketing, customer success, and consulting.",
                 },
               ].map((audience, index) => (
                 <StaggerItem key={audience.title}>
                   <div
-                    className="flex items-start gap-4 p-4 rounded-md group"
+                    className="flex items-start gap-4 p-4 rounded-md hover-elevate"
                     data-testid={`audience-card-${index}`}
                   >
-                    <div className="w-9 h-9 rounded-md bg-background border border-border/60 flex items-center justify-center shrink-0 group-hover:border-primary/30 transition-colors duration-300">
-                      <audience.icon className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors duration-300" />
+                    <div className="w-9 h-9 rounded-md bg-background border border-border/60 flex items-center justify-center shrink-0">
+                      <audience.icon className="h-4 w-4 text-muted-foreground" />
                     </div>
                     <div>
                       <h3 className="font-semibold text-foreground mb-1">
@@ -285,19 +353,56 @@ export default function Landing() {
           </div>
         </section>
 
+        <section className="border-t border-border/40 bg-muted/30">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
+            <ScrollReveal>
+              <div className="max-w-3xl mx-auto text-center">
+                <div className="flex items-center justify-center gap-3 mb-6">
+                  <Badge variant="secondary" className="text-xs font-medium">Free to start</Badge>
+                  <Badge variant="outline" className="text-xs font-medium">Pro from $5/mo</Badge>
+                </div>
+                <h2 className="text-3xl sm:text-4xl font-serif font-medium text-foreground mb-4 tracking-tight">
+                  Start for free. Upgrade when it's worth it.
+                </h2>
+                <p className="text-lg text-muted-foreground mb-4 max-w-xl mx-auto">
+                  Browse every job and search for free. When you want resume matching, career comparisons, and personalized alerts, Pro is $5 a month.
+                </p>
+                <p className="text-sm text-muted-foreground mb-8">
+                  No credit card required to get started. Cancel anytime.
+                </p>
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                  <Button size="lg" asChild className="text-base px-10" data-testid="button-cta-sign-up">
+                    <a href="/api/login">
+                      Get Started Free
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </a>
+                  </Button>
+                  <Link href="/pricing">
+                    <Button size="lg" variant="outline" className="text-base" data-testid="button-cta-pricing">
+                      See Full Pricing
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            </ScrollReveal>
+          </div>
+        </section>
+
         <section className="border-t border-border/40">
           <div className="max-w-5xl mx-auto px-4 sm:px-6 py-20 sm:py-28">
             <ScrollReveal>
               <div className="max-w-2xl mx-auto text-center">
                 <h2 className="text-3xl sm:text-4xl font-serif font-medium text-foreground mb-4 tracking-tight">
-                  Ready to explore?
+                  Your legal career got you here.
+                  <br />
+                  Let's figure out what's next.
                 </h2>
-                <p className="text-lg text-muted-foreground mb-8">
-                  Free to use. Sign in to search, upload your resume, and compare opportunities.
+                <p className="text-lg text-muted-foreground mb-8 max-w-lg mx-auto">
+                  Every week, new legal tech roles go live. The ones that fit your background might already be waiting.
                 </p>
-                <Button size="lg" asChild className="text-base px-10" data-testid="button-cta-sign-up">
+                <Button size="lg" asChild className="text-base px-10" data-testid="button-cta-final">
                   <a href="/api/login">
-                    Get Started
+                    Browse Jobs Now
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </a>
                 </Button>
@@ -317,7 +422,7 @@ export default function Landing() {
               </span>
             </div>
             <p className="text-sm text-muted-foreground">
-              Connecting legal professionals with technology careers.
+              Where legal professionals find their next move in technology.
             </p>
           </div>
         </div>
