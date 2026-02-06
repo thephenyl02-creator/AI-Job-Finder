@@ -1,6 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
   <rect width="32" height="32" rx="7" fill="#1e293b"/>
-  <rect x="5" y="7" width="9" height="18" rx="2" fill="#f8fafc" opacity="0.95"/>
-  <rect x="16" y="7" width="5" height="18" rx="1.5" fill="#f8fafc" opacity="0.55"/>
-  <rect x="23" y="7" width="4" height="18" rx="1" fill="#f8fafc" opacity="0.28"/>
+  <text x="16" y="22.5" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-weight="700" font-size="18" fill="#f8fafc" letter-spacing="-0.5">LT</text>
+  <rect x="5" y="25" width="22" height="2" rx="1" fill="#60a5fa" opacity="0.8"/>
 </svg>
