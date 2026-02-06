@@ -25,7 +25,23 @@ import {
   Send,
   FileText,
   Bookmark,
+  Mail,
 } from "lucide-react";
+
+function extractContactEmails(text: string | null | undefined): string[] {
+  if (!text) return [];
+  const emailRegex = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g;
+  const matches = text.match(emailRegex) || [];
+  const noReplyPatterns = /^(no-?reply|donotreply|unsubscribe|notifications?|mailer|bounce|auto|system|info@greenhouse|privacy@|legal@|compliance@)/i;
+  const imagePatterns = /\.(png|jpg|jpeg|gif|svg|webp|ico)$/i;
+  const filtered = matches.filter(email => {
+    if (noReplyPatterns.test(email)) return false;
+    if (imagePatterns.test(email)) return false;
+    if (email.includes('example.com')) return false;
+    return true;
+  });
+  return [...new Set(filtered)];
+}
 
 const BULLET_PATTERN = /^(?:[-•*]\s|(?:\d+)[.)]\s)/;
 
@@ -291,6 +307,29 @@ function cleanDescription(text: string): string {
   return cleaned;
 }
 
+function linkifyEmails(content: string) {
+  const emailRegex = /([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})/g;
+  const parts = content.split(emailRegex);
+  if (parts.length === 1) return content;
+  return parts.map((part, idx) => {
+    if (emailRegex.test(part)) {
+      emailRegex.lastIndex = 0;
+      return (
+        <a
+          key={idx}
+          href={`mailto:${part}`}
+          className="text-primary hover:underline inline-flex items-center gap-0.5"
+          data-testid={`link-inline-email-${part.replace(/[@.]/g, '-')}`}
+        >
+          {part}
+        </a>
+      );
+    }
+    emailRegex.lastIndex = 0;
+    return part;
+  });
+}
+
 function DescriptionContent({ text, testId }: { text?: string | null; testId: string }) {
   if (!text) return null;
 
@@ -302,7 +341,7 @@ function DescriptionContent({ text, testId }: { text?: string | null; testId: st
         if (block.type === 'heading') {
           return (
             <p key={i} className="font-medium text-foreground pt-3 first:pt-0">
-              {block.content}
+              {linkifyEmails(block.content)}
             </p>
           );
         }
@@ -310,11 +349,11 @@ function DescriptionContent({ text, testId }: { text?: string | null; testId: st
           return (
             <div key={i} className="flex gap-2 pl-1 py-0.5">
               <span className="text-muted-foreground shrink-0">&#8226;</span>
-              <span>{block.content}</span>
+              <span>{linkifyEmails(block.content)}</span>
             </div>
           );
         }
-        return <p key={i}>{block.content}</p>;
+        return <p key={i}>{linkifyEmails(block.content)}</p>;
       })}
     </div>
   );
@@ -799,6 +838,34 @@ export default function JobDetail() {
                     </div>
                   </div>
                 )}
+
+                {(() => {
+                  const emails = extractContactEmails(
+                    (job.description || '') + ' ' + (job.requirements || '')
+                  );
+                  if (emails.length === 0) return null;
+                  return (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-md bg-muted flex items-center justify-center shrink-0">
+                          <Mail className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                        <p className="text-xs text-muted-foreground">Contact</p>
+                      </div>
+                      {emails.map((email) => (
+                        <a
+                          key={email}
+                          href={`mailto:${email}`}
+                          className="flex items-center gap-2 pl-10 text-sm font-medium text-foreground hover:underline"
+                          data-testid={`link-contact-email-${email.replace(/[@.]/g, '-')}`}
+                        >
+                          {email}
+                          <ExternalLink className="h-3 w-3 text-muted-foreground shrink-0" />
+                        </a>
+                      ))}
+                    </div>
+                  );
+                })()}
 
               </CardContent>
             </Card>
