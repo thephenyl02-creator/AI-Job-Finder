@@ -121,8 +121,8 @@ export default function Landing() {
                 <ScrollReveal delay={0.2}>
                   <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[3.25rem] xl:text-5xl font-serif font-medium text-foreground mb-5 leading-[1.15] tracking-tight" data-testid="text-hero-title">
                     Every legal tech role.
-                    <br />
-                    <span className="relative">
+                    <br className="hidden sm:block" />
+                    <span className="block mt-2 sm:mt-3 relative">
                       One place to find it.
                       <motion.span
                         className="absolute -bottom-1 left-0 h-[3px] bg-primary/30 rounded-full"
