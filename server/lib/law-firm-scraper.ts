@@ -320,13 +320,49 @@ function cleanCompanyName(name: string): string {
     .trim();
 }
 
+function sanitizeLocation(location: string, company: string): string {
+  const loc = location?.trim();
+  if (!loc || loc === 'Not specified') return loc || 'Not specified';
+
+  const locLower = loc.toLowerCase();
+  const companyLower = company.toLowerCase();
+
+  const nonGeoPatterns = [
+    /\blegal\s+services?\b/i,
+    /\bcentral\s+office\b/i,
+    /\bheadquarters?\b/i,
+    /\b(division|department|unit|branch|office)\s*$/i,
+  ];
+
+  const looksLikeCompanyName = nonGeoPatterns.some(p => p.test(loc));
+  const containsCompanyWord = companyLower.split(/\s+/).some(
+    w => w.length > 3 && locLower.includes(w)
+  );
+
+  if (looksLikeCompanyName || containsCompanyWord) {
+    const boroughMap: Record<string, string> = {
+      'bronx': 'Bronx, New York, United States',
+      'brooklyn': 'Brooklyn, New York, United States',
+      'manhattan': 'Manhattan, New York, United States',
+      'queens': 'Queens, New York, United States',
+      'staten island': 'Staten Island, New York, United States',
+    };
+    for (const [borough, fullLoc] of Object.entries(boroughMap)) {
+      if (locLower.includes(borough)) return fullLoc;
+    }
+    return 'Not specified';
+  }
+
+  return loc;
+}
+
 export function transformToJobSchema(job: ScrapedJob, categorization?: JobCategorizationResult): InsertJob {
   const companyClean = cleanCompanyName(job.company);
   const companySlug = companyClean.toLowerCase().replace(/\s+/g, '').replace(/[^a-z0-9]/g, '');
   
   const cleanDescription = cleanDescriptionText(job.description || '') || `${job.title} position at ${companyClean}`;
   
-  const locationText = job.location?.trim() || 'Not specified';
+  const locationText = sanitizeLocation(job.location || '', companyClean);
   const fullText = `${job.title} ${cleanDescription} ${locationText}`.toLowerCase();
   const negativeRemote = /\bnot remote\b|\bon[- ]?site only\b|\bin[- ]?office only\b|\bno remote\b/.test(fullText);
   const hasRemoteSignal = /\bremote\b/.test(fullText) || /\bwork from home\b/.test(fullText) || /\bhybrid\b/.test(fullText) || /\bwfh\b/.test(fullText);
