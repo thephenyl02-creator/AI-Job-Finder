@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   LogOut, Settings, Compass, BarChart3, Bell, FileText, Crown, Search,
-  Wrench, Bookmark, LayoutDashboard, MoreHorizontal, Menu, ClipboardList
+  Wrench, Bookmark, LayoutDashboard, MoreHorizontal, Menu
 } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { Link, useLocation } from "wouter";
@@ -96,7 +96,7 @@ export function Header() {
                     variant="ghost"
                     size="sm"
                     className={`relative ${
-                      isActive("/dashboard") || isActive("/alerts") || isActive("/applications")
+                      isActive("/dashboard") || isActive("/alerts")
                         ? "text-foreground"
                         : "text-muted-foreground"
                     }`}
@@ -104,7 +104,7 @@ export function Header() {
                   >
                     <MoreHorizontal className="h-3.5 w-3.5 mr-1.5" />
                     More
-                    {(isActive("/dashboard") || isActive("/alerts") || isActive("/applications")) && (
+                    {(isActive("/dashboard") || isActive("/alerts")) && (
                       <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-primary rounded-full" />
                     )}
                   </Button>
@@ -114,12 +114,6 @@ export function Header() {
                     <Link href="/dashboard" className="cursor-pointer" data-testid="link-dashboard">
                       <LayoutDashboard className="mr-2 h-4 w-4" />
                       <span>Dashboard</span>
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/applications" className="cursor-pointer" data-testid="link-applications">
-                      <ClipboardList className="mr-2 h-4 w-4" />
-                      <span>Applications</span>
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
@@ -195,7 +189,6 @@ export function Header() {
                       <MobileNavSection label="Main">
                         <MobileNavItem href="/jobs" icon={Search} label="Find Jobs" active={isJobsActive} testId="link-jobs-mobile" />
                         <MobileNavItem href="/saved-jobs" icon={Bookmark} label="Saved Jobs" active={isActive("/saved-jobs")} testId="link-saved-jobs-mobile" />
-                        <MobileNavItem href="/applications" icon={ClipboardList} label="Applications" active={isActive("/applications")} testId="link-applications-mobile" />
                         <MobileNavItem href="/dashboard" icon={LayoutDashboard} label="Dashboard" active={isActive("/dashboard")} testId="link-dashboard-mobile" />
                       </MobileNavSection>
 

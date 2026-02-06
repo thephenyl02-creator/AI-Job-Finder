@@ -26,7 +26,6 @@ import Pricing from "@/pages/pricing";
 import Terms from "@/pages/terms";
 import Privacy from "@/pages/privacy";
 import Dashboard from "@/pages/dashboard";
-import Applications from "@/pages/applications";
 import { AssistantWidget } from "@/components/assistant-widget";
 import { ExpiringJobsReminder } from "@/components/expiring-jobs-reminder";
 import { OnboardingDialog } from "@/components/onboarding-dialog";
@@ -66,7 +65,6 @@ function AppRouter() {
       <Route path="/resumes">{isAuthenticated ? <Resumes /> : <Landing />}</Route>
       <Route path="/resume-builder">{isAuthenticated ? <ResumeBuilder /> : <Landing />}</Route>
       <Route path="/saved-jobs">{isAuthenticated ? <SavedJobs /> : <Landing />}</Route>
-      <Route path="/applications">{isAuthenticated ? <Applications /> : <Landing />}</Route>
       <Route path="/dashboard">{isAuthenticated ? <Dashboard /> : <Landing />}</Route>
       <Route path="/auth" component={Auth} />
       <Route path="/pricing" component={Pricing} />

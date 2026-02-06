@@ -11,7 +11,7 @@ import { ScrollReveal } from "@/components/animations";
 import { useAuth } from "@/hooks/use-auth";
 import { useActivityTracker } from "@/hooks/use-activity-tracker";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { Job, JobApplication } from "@shared/schema";
+import type { Job } from "@shared/schema";
 import { Link } from "wouter";
 import {
   ArrowLeft,
@@ -27,7 +27,6 @@ import {
   FileText,
   Bookmark,
   Mail,
-  ClipboardList,
   Upload,
 } from "lucide-react";
 
@@ -640,32 +639,6 @@ export default function JobDetail() {
     },
   });
 
-  const { data: applicationData } = useQuery<JobApplication | null>({
-    queryKey: ["/api/applications/check", jobId],
-    queryFn: async () => {
-      const res = await fetch(`/api/applications/check/${jobId}`, { credentials: "include" });
-      if (!res.ok) return null;
-      return res.json();
-    },
-    enabled: isAuthenticated && !!jobId,
-  });
-
-  const trackAppMutation = useMutation({
-    mutationFn: async () => {
-      if (!job) return;
-      await apiRequest("POST", "/api/applications", { jobId: job.id, status: "saved" });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/applications/check", jobId] });
-      queryClient.invalidateQueries({ queryKey: ["/api/applications"] });
-    },
-    onError: (error: any) => {
-      if (error?.message?.includes("409")) {
-        queryClient.invalidateQueries({ queryKey: ["/api/applications/check", jobId] });
-      }
-    },
-  });
-
   const { data: similarJobs = [] } = useQuery<Job[]>({
     queryKey: ["/api/jobs", jobId, "similar"],
     queryFn: async () => {
@@ -826,21 +799,6 @@ export default function JobDetail() {
                   className={jobIsSaved ? "text-primary" : "text-muted-foreground"}
                 >
                   <Bookmark className={`h-5 w-5 ${jobIsSaved ? "fill-current" : ""}`} />
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    if (applicationData) {
-                      setLocation("/applications");
-                    } else {
-                      trackAppMutation.mutate();
-                    }
-                  }}
-                  disabled={trackAppMutation.isPending}
-                  data-testid="button-track-application"
-                >
-                  <ClipboardList className="h-4 w-4 mr-2" />
-                  {applicationData ? "Tracking" : "Track"}
                 </Button>
                 <Button
                   variant="outline"
