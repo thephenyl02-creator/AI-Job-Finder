@@ -47,7 +47,11 @@ CATEGORIZATION GUIDANCE:
 - "Emerging LegalTech Roles": For new/cutting-edge roles like AI auditors, safety specialists
 
 Also extract:
-- Seniority level (Intern/Fellowship/Entry/Mid/Senior/Lead/Director/VP)
+- Seniority level: MUST be exactly one of: Intern, Fellowship, Entry, Mid, Senior, Lead, Director, VP
+  - Use "Intern" for internships, co-ops, student positions, summer programs, and any role explicitly for current students
+  - Use "Fellowship" for fellowships, rotational programs, post-grad programs, and academic/industry bridge roles
+  - Use "Entry" for entry-level, junior, and associate professional roles (NOT student roles)
+  - NEVER combine levels (e.g. never return "Senior/Lead" — pick the single best match)
 - Key skills (5-8 most important technical/domain skills)
 - Experience range if mentioned
 - Summary (3 sentences max, focus on: what you'll do, what they're looking for, what makes it interesting)
@@ -86,7 +90,7 @@ Return ONLY valid JSON:
     return {
       category: validCategory,
       subcategory: validSubcategory,
-      seniorityLevel: result.seniorityLevel || inferSeniority(title),
+      seniorityLevel: result.seniorityLevel || inferSeniority(title, description),
       keySkills: Array.isArray(result.keySkills) ? result.keySkills.slice(0, 8) : [],
       aiSummary: result.aiSummary || `${title} position at ${company}.`,
       matchKeywords: Array.isArray(result.matchKeywords) ? result.matchKeywords.slice(0, 10) : [],
@@ -132,10 +136,13 @@ function validateSubcategory(category: string, subcategory: string): string {
   return validSubs[0] || subcategory || "Other";
 }
 
-function inferSeniority(title: string): string {
+function inferSeniority(title: string, description?: string): string {
   const titleLower = title.toLowerCase();
-  if (titleLower.includes("intern") || titleLower.includes("internship")) return "Intern";
+  const descLower = (description || "").toLowerCase();
+  if (titleLower.includes("intern") || titleLower.includes("internship") || titleLower.includes("co-op") || titleLower.includes("summer program")) return "Intern";
   if (titleLower.includes("fellow") || titleLower.includes("fellowship")) return "Fellowship";
+  if (descLower.includes("current student") || descLower.includes("enrolled in") || descLower.includes("pursuing a degree")) return "Intern";
+  if (descLower.includes("fellowship program") || descLower.includes("rotational program")) return "Fellowship";
   if (titleLower.includes("senior") || titleLower.includes("sr.") || titleLower.includes("sr ")) return "Senior";
   if (titleLower.includes("lead") || titleLower.includes("principal")) return "Lead";
   if (titleLower.includes("director")) return "Director";
@@ -220,7 +227,7 @@ function fallbackCategorization(
     matchKeywords.push("engineering", "development", "software");
   }
 
-  const seniorityLevel = inferSeniority(title);
+  const seniorityLevel = inferSeniority(title, description);
 
   return {
     category,

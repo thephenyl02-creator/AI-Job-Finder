@@ -1401,6 +1401,7 @@ Be specific and actionable. Focus on legal tech industry keywords and ATS best p
       const category = req.query.category as string;
       const source = req.query.source as string;
       const active = req.query.active as string;
+      const seniority = req.query.seniority as string;
 
       let filtered = allJobs;
       if (search) {
@@ -1420,6 +1421,9 @@ Be specific and actionable. Focus on legal tech industry keywords and ATS best p
         filtered = filtered.filter(j => j.isActive);
       } else if (active === "false") {
         filtered = filtered.filter(j => !j.isActive);
+      }
+      if (seniority) {
+        filtered = filtered.filter(j => j.seniorityLevel === seniority);
       }
 
       const total = filtered.length;

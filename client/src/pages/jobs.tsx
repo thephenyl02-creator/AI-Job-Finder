@@ -75,7 +75,7 @@ type GuidedStep = "idle" | "refining" | "questions" | "searching";
 const SEARCH_SUGGESTIONS = [
   { icon: Briefcase, label: "Compliance & Risk", query: "compliance or risk management role" },
   { icon: Globe, label: "Remote Roles", query: "remote legal tech position" },
-  { icon: GraduationCap, label: "Entry Level", query: "entry level legal technology" },
+  { icon: GraduationCap, label: "Student / Intern", query: "internship or fellowship in legal tech" },
   { icon: Sparkles, label: "Legal AI", query: "legal AI company, any role" },
   { icon: Building2, label: "Operations", query: "legal operations at a growing company" },
 ];
@@ -98,7 +98,8 @@ const CATEGORY_ICONS: Record<string, typeof Brain> = {
 
 const SENIORITY_LEVELS = [
   { value: "all", label: "All Levels" },
-  { value: "entry", label: "Entry Level", match: ["Entry", "Junior", "Associate", "Intern", "Fellowship"] },
+  { value: "student", label: "Student / Intern", match: ["Intern", "Fellowship"] },
+  { value: "entry", label: "Entry Level", match: ["Entry", "Junior", "Associate"] },
   { value: "mid", label: "Mid Level", match: ["Mid"] },
   { value: "senior", label: "Senior+", match: ["Senior", "Lead", "Director", "VP", "Principal", "Staff"] },
 ];
@@ -114,7 +115,7 @@ export default function Jobs() {
   const urlParams = new URLSearchParams(searchString);
   const levelParam = urlParams.get("level");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
-  const [selectedLevel, setSelectedLevel] = useState<string>(levelParam && ["entry", "mid", "senior"].includes(levelParam) ? levelParam : "all");
+  const [selectedLevel, setSelectedLevel] = useState<string>(levelParam && ["student", "entry", "mid", "senior"].includes(levelParam) ? levelParam : "all");
   const [selectedLocation, setSelectedLocation] = useState<string>("all");
   const [filterText, setFilterText] = useState("");
   const [searchResults, setSearchResults] = useState<JobWithScore[] | null>(null);

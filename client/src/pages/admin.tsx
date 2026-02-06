@@ -16,6 +16,14 @@ import { ArrowLeft, RefreshCw, Building2, Globe, Loader2, CheckCircle, XCircle, 
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { Job } from "@shared/schema";
+import { JOB_TAXONOMY } from "@shared/schema";
+
+const SENIORITY_OPTIONS = ["Intern", "Fellowship", "Entry", "Mid", "Senior", "Lead", "Director", "VP"];
+const TAXONOMY_CATEGORIES = Object.entries(JOB_TAXONOMY).map(([name, data]) => ({
+  value: name,
+  label: data.shortName,
+  subcategories: data.subcategories as readonly string[],
+}));
 
 interface Company {
   name: string;
@@ -100,6 +108,7 @@ export default function AdminPage() {
   const [jobsCategoryFilter, setJobsCategoryFilter] = useState("all");
   const [jobsSourceFilter, setJobsSourceFilter] = useState("all");
   const [jobsActiveFilter, setJobsActiveFilter] = useState("all");
+  const [jobsSeniorityFilter, setJobsSeniorityFilter] = useState("");
   const [editingJob, setEditingJob] = useState<Job | null>(null);
   const [editForm, setEditForm] = useState<Partial<Job>>({});
 
@@ -127,6 +136,7 @@ export default function AdminPage() {
     ...(jobsCategoryFilter !== "all" && { category: jobsCategoryFilter }),
     ...(jobsSourceFilter !== "all" && { source: jobsSourceFilter }),
     ...(jobsActiveFilter !== "all" && { active: jobsActiveFilter }),
+    ...(jobsSeniorityFilter && { seniority: jobsSeniorityFilter }),
   });
 
   const { data: adminJobs, isLoading: loadingAdminJobs } = useQuery<AdminJobsResponse>({
@@ -245,7 +255,18 @@ export default function AdminPage() {
       salaryMin: job.salaryMin,
       salaryMax: job.salaryMax,
       isActive: job.isActive,
+      isRemote: job.isRemote,
+      roleCategory: job.roleCategory,
+      roleSubcategory: job.roleSubcategory,
+      seniorityLevel: job.seniorityLevel,
+      keySkills: job.keySkills,
     });
+  };
+
+  const getSubcategoriesForCategory = (category: string | null | undefined): readonly string[] => {
+    if (!category) return [];
+    const tax = JOB_TAXONOMY[category as keyof typeof JOB_TAXONOMY];
+    return tax ? tax.subcategories : [];
   };
 
   const schedulerMutation = useMutation({
@@ -949,14 +970,9 @@ export default function AdminPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Categories</SelectItem>
-                      <SelectItem value="Legal AI & Machine Learning">AI & ML</SelectItem>
-                      <SelectItem value="Legal Product & Innovation">Product</SelectItem>
-                      <SelectItem value="Legal Knowledge Engineering">Knowledge</SelectItem>
-                      <SelectItem value="Legal Operations">Ops</SelectItem>
-                      <SelectItem value="Contract Technology">Contracts</SelectItem>
-                      <SelectItem value="Compliance & RegTech">Compliance</SelectItem>
-                      <SelectItem value="Litigation & eDiscovery">Litigation</SelectItem>
-                      <SelectItem value="Legal Consulting & Strategy">Consulting</SelectItem>
+                      {TAXONOMY_CATEGORIES.map((cat) => (
+                        <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <Select
@@ -973,6 +989,20 @@ export default function AdminPage() {
                       <SelectItem value="ashby">Ashby</SelectItem>
                       <SelectItem value="generic">Generic</SelectItem>
                       <SelectItem value="upload">File Upload</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select
+                    value={jobsSeniorityFilter || "all"}
+                    onValueChange={(v) => { setJobsSeniorityFilter(v === "all" ? "" : v); setJobsPage(1); }}
+                  >
+                    <SelectTrigger className="w-[150px]" data-testid="select-seniority-filter">
+                      <SelectValue placeholder="Seniority" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Levels</SelectItem>
+                      {SENIORITY_OPTIONS.map((level) => (
+                        <SelectItem key={level} value={level}>{level}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <Select
@@ -1177,6 +1207,95 @@ export default function AdminPage() {
                       data-testid="input-edit-salaryMax"
                     />
                   </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-category">Category</Label>
+                    <Select
+                      value={editForm.roleCategory || "_none"}
+                      onValueChange={(v) => setEditForm((f) => ({
+                        ...f,
+                        roleCategory: v === "_none" ? null : v,
+                        roleSubcategory: v === "_none" ? null : (f.roleSubcategory && getSubcategoriesForCategory(v).includes(f.roleSubcategory) ? f.roleSubcategory : null),
+                      }))}
+                    >
+                      <SelectTrigger data-testid="select-edit-category">
+                        <SelectValue placeholder="Select category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="_none">None</SelectItem>
+                        {TAXONOMY_CATEGORIES.map((cat) => (
+                          <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-subcategory">Subcategory</Label>
+                    <Select
+                      value={editForm.roleSubcategory || "_none"}
+                      onValueChange={(v) => setEditForm((f) => ({ ...f, roleSubcategory: v === "_none" ? null : v }))}
+                    >
+                      <SelectTrigger data-testid="select-edit-subcategory">
+                        <SelectValue placeholder="Select subcategory" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="_none">None</SelectItem>
+                        {getSubcategoriesForCategory(editForm.roleCategory).map((sub) => (
+                          <SelectItem key={sub} value={sub}>{sub}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-seniority">Seniority Level</Label>
+                    <Select
+                      value={editForm.seniorityLevel || "_none"}
+                      onValueChange={(v) => setEditForm((f) => ({ ...f, seniorityLevel: v === "_none" ? null : v }))}
+                    >
+                      <SelectTrigger data-testid="select-edit-seniority">
+                        <SelectValue placeholder="Select level" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="_none">None</SelectItem>
+                        {SENIORITY_OPTIONS.map((level) => (
+                          <SelectItem key={level} value={level}>{level}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Remote</Label>
+                    <div className="pt-1">
+                      <Button
+                        variant={editForm.isRemote ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setEditForm((f) => ({ ...f, isRemote: !f.isRemote }))}
+                        data-testid="button-edit-toggle-remote"
+                      >
+                        {editForm.isRemote ? (
+                          <><Globe className="mr-1 h-4 w-4" /> Remote</>
+                        ) : (
+                          "Not Remote"
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-skills">Key Skills (comma-separated)</Label>
+                  <Input
+                    id="edit-skills"
+                    value={(editForm.keySkills || []).join(", ")}
+                    onChange={(e) => setEditForm((f) => ({
+                      ...f,
+                      keySkills: e.target.value.split(",").map(s => s.trim()).filter(Boolean),
+                    }))}
+                    placeholder="e.g. Python, NLP, Contract Review"
+                    data-testid="input-edit-skills"
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="edit-description">Description</Label>
