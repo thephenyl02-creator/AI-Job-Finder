@@ -739,10 +739,10 @@ ${JSON.stringify(jobSummaries, null, 2)}`
         const userResumes = await storage.getUserResumes(userId);
         const resume = userResumes.find((r: any) => r.id === resumeId);
         if (!resume) return res.status(404).json({ error: "Resume not found" });
-        resumeText = resume.resumeText;
+        resumeText = resume.resumeText ?? undefined;
         extractedData = resume.extractedData as ResumeExtractedData;
       } else {
-        const userData = await storage.getUserResume(userId);
+        const userData = await storage.getUserResumeWithText(userId);
         if (!userData?.resumeText) {
           return res.status(400).json({ error: "No resume uploaded. Please upload a resume first." });
         }
@@ -1012,7 +1012,7 @@ Be specific and actionable. Focus on legal tech industry keywords and ATS best p
     try {
       const userId = (req.user as any)?.id;
       if (!userId) return res.status(401).json({ error: "Not authenticated" });
-      const id = parseInt(req.params.id);
+      const id = parseInt(req.params.id as string);
       if (isNaN(id)) return res.status(400).json({ error: "Invalid resume ID" });
       const { label } = req.body;
       if (!label || typeof label !== "string") return res.status(400).json({ error: "Label is required" });
@@ -1029,7 +1029,7 @@ Be specific and actionable. Focus on legal tech industry keywords and ATS best p
     try {
       const userId = (req.user as any)?.id;
       if (!userId) return res.status(401).json({ error: "Not authenticated" });
-      const id = parseInt(req.params.id);
+      const id = parseInt(req.params.id as string);
       if (isNaN(id)) return res.status(400).json({ error: "Invalid resume ID" });
       await storage.setPrimaryResume(id, userId);
       res.json({ success: true });
@@ -1043,7 +1043,7 @@ Be specific and actionable. Focus on legal tech industry keywords and ATS best p
     try {
       const userId = (req.user as any)?.id;
       if (!userId) return res.status(401).json({ error: "Not authenticated" });
-      const id = parseInt(req.params.id);
+      const id = parseInt(req.params.id as string);
       if (isNaN(id)) return res.status(400).json({ error: "Invalid resume ID" });
       await storage.deleteResume(id, userId);
       res.json({ success: true });
@@ -1057,7 +1057,7 @@ Be specific and actionable. Focus on legal tech industry keywords and ATS best p
     try {
       const userId = (req.user as any)?.id;
       if (!userId) return res.status(401).json({ error: "Not authenticated" });
-      const id = parseInt(req.params.id);
+      const id = parseInt(req.params.id as string);
       if (isNaN(id)) return res.status(400).json({ error: "Invalid resume ID" });
 
       const resume = await storage.getResumeById(id, userId);
@@ -1438,7 +1438,7 @@ Be specific and actionable. Focus on legal tech industry keywords and ATS best p
       return res.status(403).json({ error: "Admin access required" });
     }
     try {
-      const id = parseInt(req.params.id);
+      const id = parseInt(req.params.id as string);
       if (isNaN(id)) return res.status(400).json({ error: "Invalid job ID" });
 
       const allowedFields = [
@@ -1474,7 +1474,7 @@ Be specific and actionable. Focus on legal tech industry keywords and ATS best p
       return res.status(403).json({ error: "Admin access required" });
     }
     try {
-      const id = parseInt(req.params.id);
+      const id = parseInt(req.params.id as string);
       if (isNaN(id)) return res.status(400).json({ error: "Invalid job ID" });
 
       await storage.deleteJob(id);
@@ -1490,7 +1490,7 @@ Be specific and actionable. Focus on legal tech industry keywords and ATS best p
       return res.status(403).json({ error: "Admin access required" });
     }
     try {
-      const id = parseInt(req.params.id);
+      const id = parseInt(req.params.id as string);
       if (isNaN(id)) return res.status(400).json({ error: "Invalid job ID" });
 
       const job = await storage.getJob(id);
@@ -1725,7 +1725,7 @@ Be specific and actionable. Focus on legal tech industry keywords and ATS best p
     try {
       const userId = (req.user as any)?.id;
       if (!userId) return res.status(401).json({ error: "Not authenticated" });
-      const id = parseInt(req.params.id);
+      const id = parseInt(req.params.id as string);
       if (isNaN(id)) return res.status(400).json({ error: "Invalid alert ID" });
       const updated = await storage.updateJobAlert(id, userId, req.body);
       if (!updated) return res.status(404).json({ error: "Alert not found" });
@@ -1740,7 +1740,7 @@ Be specific and actionable. Focus on legal tech industry keywords and ATS best p
     try {
       const userId = (req.user as any)?.id;
       if (!userId) return res.status(401).json({ error: "Not authenticated" });
-      const id = parseInt(req.params.id);
+      const id = parseInt(req.params.id as string);
       if (isNaN(id)) return res.status(400).json({ error: "Invalid alert ID" });
       await storage.deleteJobAlert(id, userId);
       res.json({ success: true });
@@ -1778,7 +1778,7 @@ Be specific and actionable. Focus on legal tech industry keywords and ATS best p
     try {
       const userId = (req.user as any)?.id;
       if (!userId) return res.status(401).json({ error: "Not authenticated" });
-      const id = parseInt(req.params.id);
+      const id = parseInt(req.params.id as string);
       if (isNaN(id)) return res.status(400).json({ error: "Invalid notification ID" });
       await storage.markNotificationRead(id, userId);
       res.json({ success: true });
@@ -2944,7 +2944,7 @@ ${matchDetails}`;
         (Date.now() - new Date(persona.updatedAt).getTime()) > 10 * 60 * 1000;
 
       if (shouldRecompute) {
-        persona = await recomputePersona(userId);
+        persona = (await recomputePersona(userId)) ?? undefined;
       }
 
       res.json(persona ?? {
@@ -3321,7 +3321,7 @@ ${matchDetails}`;
     try {
       const userId = (req.user as any)?.id;
       if (!userId) return res.status(401).json({ error: "Unauthorized" });
-      const id = parseInt(req.params.id);
+      const id = parseInt(req.params.id as string);
       const resume = await storage.getBuiltResumeById(id, userId);
       if (!resume) return res.status(404).json({ error: "Resume not found" });
       res.json(resume);
@@ -3360,7 +3360,7 @@ ${matchDetails}`;
     try {
       const userId = (req.user as any)?.id;
       if (!userId) return res.status(401).json({ error: "Unauthorized" });
-      const id = parseInt(req.params.id);
+      const id = parseInt(req.params.id as string);
       const updated = await storage.updateBuiltResume(id, userId, req.body);
       if (!updated) return res.status(404).json({ error: "Resume not found" });
       res.json(updated);
@@ -3375,7 +3375,7 @@ ${matchDetails}`;
     try {
       const userId = (req.user as any)?.id;
       if (!userId) return res.status(401).json({ error: "Unauthorized" });
-      const id = parseInt(req.params.id);
+      const id = parseInt(req.params.id as string);
       await storage.deleteBuiltResume(id, userId);
       res.json({ success: true });
     } catch (error) {
@@ -3436,7 +3436,7 @@ Return JSON: { "suggestion": "<improved content>", "tips": ["<tip>"] }`;
     try {
       const userId = (req.user as any)?.id;
       if (!userId) return res.status(401).json({ error: "Unauthorized" });
-      const id = parseInt(req.params.id);
+      const id = parseInt(req.params.id as string);
       const builtResume = await storage.getBuiltResumeById(id, userId);
       if (!builtResume) return res.status(404).json({ error: "Resume not found" });
 
@@ -3607,7 +3607,7 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
     try {
       const userId = (req.user as any)?.id;
       if (!userId) return res.status(401).json({ error: "Unauthorized" });
-      const id = parseInt(req.params.id);
+      const id = parseInt(req.params.id as string);
       const builtResume = await storage.getBuiltResumeById(id, userId);
       if (!builtResume) return res.status(404).json({ error: "Resume not found" });
 
