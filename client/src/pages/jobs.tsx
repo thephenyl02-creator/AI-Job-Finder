@@ -624,14 +624,16 @@ export default function Jobs() {
                 )}
 
                 {!resumeData?.hasResume && !isUploadingResume && (
-                  <button
-                    className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5 text-xs"
                     onClick={() => resumeFileInputRef.current?.click()}
                     data-testid="button-upload-resume"
                   >
-                    <Upload className="h-3 w-3" />
+                    <Upload className="h-3.5 w-3.5" />
                     Upload resume for better matches
-                  </button>
+                  </Button>
                 )}
               </div>
             )}
