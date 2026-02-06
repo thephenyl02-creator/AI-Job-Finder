@@ -711,16 +711,6 @@ export default function JobDetail() {
               </Card>
             )}
 
-            <Button
-              className="w-full"
-              size="lg"
-              onClick={handleApplyClick}
-              data-testid="button-apply-detail-bottom"
-            >
-              <ExternalLink className="h-4 w-4 mr-2" />
-              Apply Now
-            </Button>
-
             <JobChat jobId={jobId || ""} />
           </div>
         </div>
