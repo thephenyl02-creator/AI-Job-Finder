@@ -83,10 +83,10 @@ export default function Landing() {
 
               <ScrollReveal delay={0.2}>
                 <h1 className="text-4xl sm:text-5xl lg:text-6xl font-serif font-medium text-foreground mb-6 leading-[1.15] tracking-tight" data-testid="text-hero-title">
-                  You studied law.
+                  Your legal mind.
                   <br />
                   <span className="relative">
-                    Now build what's next.
+                    Their next hire.
                     <motion.span
                       className="absolute -bottom-1 left-0 h-[3px] bg-primary/30 rounded-full"
                       initial={{ width: 0 }}
@@ -117,48 +117,48 @@ export default function Landing() {
                     </Button>
                   </Link>
                 </div>
-                <p className="text-sm text-muted-foreground mb-16" data-testid="text-hero-free-note">
+                <p className="text-sm text-muted-foreground" data-testid="text-hero-free-note">
                   Free to browse. No credit card required.
                 </p>
               </ScrollReveal>
-
-              <ScrollReveal delay={0.6}>
-                <div className="flex items-center gap-8 sm:gap-12" data-testid="stats-section">
-                  <div data-testid="stat-jobs">
-                    <div className="text-3xl sm:text-4xl font-serif font-medium text-foreground tabular-nums">
-                      {stats?.totalJobs ? (
-                        <AnimatedCounter value={stats.totalJobs} duration={2} />
-                      ) : (
-                        "\u2014"
-                      )}
-                    </div>
-                    <div className="text-sm text-muted-foreground mt-0.5">Open positions</div>
-                  </div>
-                  <div className="w-px h-10 bg-border" />
-                  <div data-testid="stat-companies">
-                    <div className="text-3xl sm:text-4xl font-serif font-medium text-foreground tabular-nums">
-                      {stats?.totalCompanies ? (
-                        <AnimatedCounter value={stats.totalCompanies} duration={1.6} />
-                      ) : (
-                        "\u2014"
-                      )}
-                    </div>
-                    <div className="text-sm text-muted-foreground mt-0.5">Companies hiring</div>
-                  </div>
-                  <div className="w-px h-10 bg-border" />
-                  <div data-testid="stat-categories">
-                    <div className="text-3xl sm:text-4xl font-serif font-medium text-foreground tabular-nums">
-                      {stats?.totalCategories ? (
-                        <AnimatedCounter value={stats.totalCategories} duration={1.2} />
-                      ) : (
-                        "\u2014"
-                      )}
-                    </div>
-                    <div className="text-sm text-muted-foreground mt-0.5">Career paths</div>
-                  </div>
-                </div>
-              </ScrollReveal>
             </div>
+
+            <ScrollReveal delay={0.6}>
+              <div className="flex items-center gap-6 sm:gap-10 mt-16 sm:mt-20 border-t border-border/40 pt-10" data-testid="stats-section">
+                <div data-testid="stat-jobs">
+                  <div className="text-4xl sm:text-5xl font-serif font-semibold text-foreground tabular-nums">
+                    {stats?.totalJobs ? (
+                      <AnimatedCounter value={stats.totalJobs} duration={2} />
+                    ) : (
+                      "\u2014"
+                    )}
+                  </div>
+                  <div className="text-sm text-muted-foreground mt-1">Open positions</div>
+                </div>
+                <div className="w-px h-12 bg-border/60" />
+                <div data-testid="stat-companies">
+                  <div className="text-4xl sm:text-5xl font-serif font-semibold text-foreground tabular-nums">
+                    {stats?.totalCompanies ? (
+                      <AnimatedCounter value={stats.totalCompanies} duration={1.6} />
+                    ) : (
+                      "\u2014"
+                    )}
+                  </div>
+                  <div className="text-sm text-muted-foreground mt-1">Companies hiring</div>
+                </div>
+                <div className="w-px h-12 bg-border/60" />
+                <div data-testid="stat-categories">
+                  <div className="text-4xl sm:text-5xl font-serif font-semibold text-foreground tabular-nums">
+                    {stats?.totalCategories ? (
+                      <AnimatedCounter value={stats.totalCategories} duration={1.2} />
+                    ) : (
+                      "\u2014"
+                    )}
+                  </div>
+                  <div className="text-sm text-muted-foreground mt-1">Career paths</div>
+                </div>
+              </div>
+            </ScrollReveal>
           </div>
         </section>
 
