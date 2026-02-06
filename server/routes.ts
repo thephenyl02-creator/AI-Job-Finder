@@ -719,6 +719,178 @@ ${JSON.stringify(jobSummaries, null, 2)}`
     }
   });
 
+  // ==========================================
+  // MULTI-RESUME MANAGEMENT
+  // ==========================================
+
+  app.get("/api/resumes", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) return res.status(401).json({ error: "Not authenticated" });
+      await storage.migrateUserResumeToResumes(userId);
+      const userResumes = await storage.getUserResumes(userId);
+      res.json(userResumes);
+    } catch (error) {
+      console.error("Error fetching resumes:", error);
+      res.status(500).json({ error: "Failed to fetch resumes" });
+    }
+  });
+
+  app.post("/api/resumes/upload", isAuthenticated, upload.single("resume"), async (req, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) return res.status(401).json({ error: "Not authenticated" });
+
+      const file = req.file;
+      if (!file) return res.status(400).json({ error: "No file provided" });
+
+      const label = req.body.label || file.originalname.replace(/\.[^/.]+$/, "");
+
+      let resumeText: string;
+      if (file.mimetype === "application/pdf") {
+        resumeText = await extractTextFromPDF(file.buffer);
+      } else {
+        resumeText = await extractTextFromDOCX(file.buffer);
+      }
+
+      if (!resumeText || resumeText.trim().length < 50) {
+        return res.status(400).json({ error: "Could not extract text from file. Please ensure your resume contains readable text." });
+      }
+
+      const parsedData = await parseResumeWithAI(resumeText);
+
+      const existing = await storage.getUserResumes(userId);
+      if (existing.length >= 5) {
+        return res.status(400).json({ error: "Maximum of 5 resumes allowed. Please delete one first." });
+      }
+
+      const resume = await storage.createResume({
+        userId,
+        label,
+        filename: file.originalname,
+        resumeText,
+        extractedData: parsedData,
+        isPrimary: existing.length === 0,
+      });
+
+      res.json({
+        success: true,
+        resume: { ...resume, resumeText: null },
+        parsedData,
+      });
+    } catch (error: any) {
+      console.error("Resume upload error:", error);
+      if (error instanceof InvalidPDFError) {
+        return res.status(400).json({ error: error.message });
+      }
+      res.status(500).json({ error: "Failed to process resume. Please try a different file." });
+    }
+  });
+
+  app.patch("/api/resumes/:id", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) return res.status(401).json({ error: "Not authenticated" });
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ error: "Invalid resume ID" });
+      const { label } = req.body;
+      if (!label || typeof label !== "string") return res.status(400).json({ error: "Label is required" });
+      const updated = await storage.updateResumeLabel(id, userId, label);
+      if (!updated) return res.status(404).json({ error: "Resume not found" });
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating resume:", error);
+      res.status(500).json({ error: "Failed to update resume" });
+    }
+  });
+
+  app.post("/api/resumes/:id/set-primary", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) return res.status(401).json({ error: "Not authenticated" });
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ error: "Invalid resume ID" });
+      await storage.setPrimaryResume(id, userId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error setting primary resume:", error);
+      res.status(500).json({ error: "Failed to set primary resume" });
+    }
+  });
+
+  app.delete("/api/resumes/:id", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) return res.status(401).json({ error: "Not authenticated" });
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ error: "Invalid resume ID" });
+      await storage.deleteResume(id, userId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting resume:", error);
+      res.status(500).json({ error: "Failed to delete resume" });
+    }
+  });
+
+  app.post("/api/resumes/:id/match-jobs", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) return res.status(401).json({ error: "Not authenticated" });
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ error: "Invalid resume ID" });
+
+      const resume = await storage.getResumeById(id, userId);
+      if (!resume?.extractedData || Object.keys(resume.extractedData as object).length === 0) {
+        return res.status(400).json({ error: "Resume has no extracted data" });
+      }
+
+      const allJobs = await storage.getActiveJobs();
+      if (allJobs.length === 0) return res.json({ matches: [] });
+
+      const matches = await batchMatchResume(
+        resume.extractedData as ResumeExtractedData,
+        allJobs
+      );
+
+      res.json({ resumeId: id, label: resume.label, matches });
+    } catch (error) {
+      console.error("Error matching resume against jobs:", error);
+      res.status(500).json({ error: "Failed to match resume against jobs" });
+    }
+  });
+
+  app.post("/api/resumes/match-all", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) return res.status(401).json({ error: "Not authenticated" });
+
+      const userResumes = await storage.getUserResumes(userId);
+      if (userResumes.length === 0) return res.json({ results: [] });
+
+      const allJobs = await storage.getActiveJobs();
+      if (allJobs.length === 0) return res.json({ results: userResumes.map(r => ({ resumeId: r.id, label: r.label, matches: [] })) });
+
+      const results = [];
+      for (const resume of userResumes) {
+        const fullResume = await storage.getResumeById(resume.id, userId);
+        if (!fullResume?.extractedData || Object.keys(fullResume.extractedData as object).length === 0) {
+          results.push({ resumeId: resume.id, label: resume.label, matches: [] });
+          continue;
+        }
+        const matches = await batchMatchResume(
+          fullResume.extractedData as ResumeExtractedData,
+          allJobs
+        );
+        results.push({ resumeId: resume.id, label: resume.label, matches });
+      }
+
+      res.json({ results });
+    } catch (error) {
+      console.error("Error matching all resumes:", error);
+      res.status(500).json({ error: "Failed to match resumes against jobs" });
+    }
+  });
+
   // User preferences endpoints
   app.get("/api/preferences", isAuthenticated, async (req, res) => {
     try {
