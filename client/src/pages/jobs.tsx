@@ -60,7 +60,7 @@ const CATEGORY_ICONS: Record<string, typeof Brain> = {
 
 const SENIORITY_LEVELS = [
   { value: "all", label: "All Levels" },
-  { value: "entry", label: "Entry Level", match: ["Entry", "Junior", "Associate"] },
+  { value: "entry", label: "Entry Level", match: ["Entry", "Junior", "Associate", "Intern", "Fellowship"] },
   { value: "mid", label: "Mid Level", match: ["Mid"] },
   { value: "senior", label: "Senior+", match: ["Senior", "Lead", "Director", "VP", "Principal", "Staff"] },
 ];

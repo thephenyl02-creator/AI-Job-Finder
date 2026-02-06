@@ -52,7 +52,7 @@ CATEGORIZATION GUIDANCE:
 - "Emerging LegalTech Roles": For new/cutting-edge roles like AI auditors, safety specialists
 
 Also extract:
-- Seniority level (Entry/Mid/Senior/Lead/Director/VP)
+- Seniority level (Intern/Fellowship/Entry/Mid/Senior/Lead/Director/VP)
 - Key skills (5-8 most important technical/domain skills)
 - Experience range if mentioned
 - Summary (3 sentences max, focus on: what you'll do, what they're looking for, what makes it interesting)
@@ -139,6 +139,8 @@ function validateSubcategory(category: string, subcategory: string): string {
 
 function inferSeniority(title: string): string {
   const titleLower = title.toLowerCase();
+  if (titleLower.includes("intern") || titleLower.includes("internship")) return "Intern";
+  if (titleLower.includes("fellow") || titleLower.includes("fellowship")) return "Fellowship";
   if (titleLower.includes("senior") || titleLower.includes("sr.") || titleLower.includes("sr ")) return "Senior";
   if (titleLower.includes("lead") || titleLower.includes("principal")) return "Lead";
   if (titleLower.includes("director")) return "Director";

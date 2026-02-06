@@ -24,7 +24,7 @@ import {
   X,
 } from "lucide-react";
 
-const SENIORITY_OPTIONS = ["Entry", "Mid", "Senior", "Lead", "Director", "VP"];
+const SENIORITY_OPTIONS = ["Intern", "Fellowship", "Entry", "Mid", "Senior", "Lead", "Director", "VP"];
 const CATEGORY_NAMES = Object.keys(JOB_TAXONOMY);
 
 function CreateAlertForm({ onClose }: { onClose: () => void }) {

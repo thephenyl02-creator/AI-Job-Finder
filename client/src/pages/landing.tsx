@@ -435,18 +435,18 @@ export default function Landing() {
                     Start your legal tech career before you graduate
                   </h2>
                   <p className="text-muted-foreground leading-relaxed mb-6" data-testid="text-law-student-description">
-                    You don't have to wait until you pass the bar to explore legal tech. Companies building the future of law need people who understand the legal system from the inside. Your 1L summer, clinic experience, and law review skills are more relevant than you think.
+                    You don't have to wait until you pass the bar to explore legal tech. Internships, fellowships, and entry-level roles at companies building the future of law are designed for people who understand the legal system from the inside. Your 1L summer, clinic experience, and law review skills are more relevant than you think.
                   </p>
                   <div className="flex flex-col sm:flex-row items-start gap-3">
                     <Button asChild data-testid="button-browse-entry-level">
                       <Link href="/jobs?level=entry">
-                        Browse Entry-Level Roles
+                        Browse Student & Entry-Level Roles
                         <ArrowRight className="ml-2 h-4 w-4" />
                       </Link>
                     </Button>
                     {stats?.entryLevelJobs ? (
                       <p className="text-sm text-muted-foreground self-center" data-testid="text-entry-level-count">
-                        {stats.entryLevelJobs} entry-level positions open now
+                        {stats.entryLevelJobs} positions open now
                       </p>
                     ) : null}
                   </div>
@@ -454,8 +454,8 @@ export default function Landing() {
                 <div className="space-y-3" data-testid="law-student-highlights">
                   {[
                     {
-                      title: "No experience required",
-                      description: "Many legal tech roles value your legal training over years of practice. Product, sales, and operations teams actively recruit from law schools.",
+                      title: "Internships & fellowships",
+                      description: "We track internships, fellowships, and entry-level roles specifically. Filter by these types to find positions designed for students and recent graduates.",
                     },
                     {
                       title: "Roles that match your studies",
@@ -463,7 +463,7 @@ export default function Landing() {
                     },
                     {
                       title: "Get alerts for new opportunities",
-                      description: "Set up notifications for entry-level and internship roles so you're first to know when something opens up.",
+                      description: "Set up notifications for internships, fellowships, and entry-level roles so you're first to know when something opens up.",
                     },
                   ].map((item, i) => (
                     <Card key={item.title} className="bg-background border-border/50" data-testid={`law-student-card-${i}`}>
