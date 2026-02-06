@@ -48,17 +48,23 @@ CATEGORIZATION GUIDANCE:
 
 Also extract:
 - Seniority level: MUST be exactly one of: Intern, Fellowship, Entry, Mid, Senior, Lead, Director, VP
-  - Use "Intern" for internships, co-ops, student positions, summer programs, and any role explicitly for current students
-  - Use "Fellowship" for fellowships, rotational programs, post-grad programs, and academic/industry bridge roles
-  - Use "Entry" for entry-level, junior, and associate professional roles (NOT student roles)
-  - IMPORTANT: "Associate" in the title (e.g. "Legal Engineer Associate", "Engagement Associate", "Strategic Programs Associate") means ENTRY level, NOT Mid
-  - Only use "Mid" when there's no title indicator AND the role clearly requires 2-5+ years experience
-  - Use "Senior" for roles with "Senior", "Sr.", or "Staff" in the title
-  - Use "Lead" for roles with "Lead" or "Principal" in the title
-  - Use "Director" for roles with "Director" in the title
+  SENIORITY RULES (follow in strict priority order):
+  1. Title contains "Intern", "Internship", "Co-op", "Summer Program" → "Intern"
+  2. Title contains "Fellow" or "Fellowship" → "Fellowship"
+  3. Title contains "VP" or "Vice President" → "VP"
+  4. Title contains "Director" (including "Deputy Director") → "Director"
+  5. Title contains "Lead", "Principal" → "Lead"
+  6. Title contains "Senior", "Sr.", "Staff" → "Senior"
+  7. Title contains "Associate" (without Senior/Director/Lead/VP) → "Entry"
+  8. Title contains "Junior", "Jr.", "Entry" → "Entry"
+  9. If title has NO seniority indicator: look at the description for experience requirements:
+     - No experience mentioned or 0-2 years → "Entry"
+     - 2-5 years → "Mid"
+     - 5+ years → "Senior"
+  10. If truly ambiguous with no clues → "Mid"
   - NEVER combine levels (e.g. never return "Senior/Lead" — pick the single best match)
 - Key skills (5-8 most important technical/domain skills)
-- Experience range if mentioned
+- Experience range: set experienceMin and experienceMax if the posting mentions years of experience. If NOT mentioned, set BOTH to null — do NOT guess or invent experience numbers.
 - Summary (3 sentences max, focus on: what you'll do, what they're looking for, what makes it interesting)
 - Match keywords for search (5-10 relevant terms)
 
@@ -72,7 +78,9 @@ Return ONLY valid JSON:
   "experienceMax": 8,
   "aiSummary": "Brief 3-sentence summary here.",
   "matchKeywords": ["ai", "machine learning", "legal", "nlp"]
-}`;
+}
+
+IMPORTANT: experienceMin and experienceMax MUST be null if the job posting does not explicitly state years of experience. Do not infer or assume.`;
 
   try {
     const completion = await getOpenAIClient().chat.completions.create({
@@ -102,8 +110,8 @@ Return ONLY valid JSON:
       keySkills: Array.isArray(result.keySkills) ? result.keySkills.slice(0, 8) : [],
       aiSummary: result.aiSummary || `${title} position at ${company}.`,
       matchKeywords: Array.isArray(result.matchKeywords) ? result.matchKeywords.slice(0, 10) : [],
-      experienceMin: result.experienceMin,
-      experienceMax: result.experienceMax,
+      experienceMin: typeof result.experienceMin === "number" ? result.experienceMin : undefined,
+      experienceMax: typeof result.experienceMax === "number" ? result.experienceMax : undefined,
     };
   } catch (error) {
     console.error("AI categorization error:", error);
@@ -181,17 +189,20 @@ function validateSeniority(aiSeniority: string, title: string, description?: str
 function inferSeniority(title: string, description?: string): string {
   const titleLower = title.toLowerCase();
   const descLower = (description || "").toLowerCase();
+
   if (titleLower.includes("intern") || titleLower.includes("internship") || titleLower.includes("co-op") || titleLower.includes("summer program")) return "Intern";
   if (titleLower.includes("fellow") || titleLower.includes("fellowship")) return "Fellowship";
   if (descLower.includes("current student") || descLower.includes("enrolled in") || descLower.includes("pursuing a degree")) return "Intern";
   if (descLower.includes("fellowship program") || descLower.includes("rotational program")) return "Fellowship";
-  if (titleLower.includes("senior") || titleLower.includes("sr.") || titleLower.includes("sr ")) return "Senior";
-  if (titleLower.includes("lead") || titleLower.includes("principal")) return "Lead";
-  if (titleLower.includes("director")) return "Director";
+
   if (titleLower.includes("vp") || titleLower.includes("vice president")) return "VP";
+  if (titleLower.includes("director")) return "Director";
+  if (titleLower.includes("lead") || titleLower.includes("principal")) return "Lead";
+  if (titleLower.includes("senior") || titleLower.includes("sr.") || titleLower.includes("sr ") || titleLower.includes("staff")) return "Senior";
+
   if (titleLower.includes("junior") || titleLower.includes("jr.") || titleLower.includes("jr ")) return "Entry";
   if (titleLower.includes("associate") || titleLower.includes("entry")) return "Entry";
-  if (titleLower.includes("staff") || titleLower.includes("manager")) return "Senior";
+
   return "Mid";
 }
 
