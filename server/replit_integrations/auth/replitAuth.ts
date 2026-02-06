@@ -7,6 +7,7 @@ import { authStorage } from "./storage";
 declare module "express-session" {
   interface SessionData {
     userId: string;
+    oauthState?: string;
   }
 }
 
@@ -30,6 +31,12 @@ export function getSession() {
       maxAge: sessionTtl,
     },
   });
+}
+
+function generateState(): string {
+  const array = new Uint8Array(32);
+  crypto.getRandomValues(array);
+  return Array.from(array, (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
 export async function setupAuth(app: Express) {
@@ -110,6 +117,138 @@ export async function setupAuth(app: Express) {
       res.json({ message: "Logged out successfully" });
     });
   });
+
+  // Google OAuth 2.0 - Authorization Code Flow
+  app.get("/api/auth/google", (req, res) => {
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    if (!clientId) {
+      return res.status(500).json({ message: "Google login is not configured" });
+    }
+
+    const state = generateState();
+    req.session.oauthState = state;
+
+    const redirectUri = `${getBaseUrl(req)}/api/auth/google/callback`;
+
+    const params = new URLSearchParams({
+      client_id: clientId,
+      redirect_uri: redirectUri,
+      response_type: "code",
+      scope: "openid email profile",
+      state,
+      access_type: "offline",
+      prompt: "select_account",
+    });
+
+    res.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`);
+  });
+
+  app.get("/api/auth/google/callback", async (req, res) => {
+    try {
+      const { code, state, error } = req.query;
+
+      if (error) {
+        console.error("Google OAuth error:", error);
+        return res.redirect("/auth?error=google_denied");
+      }
+
+      if (!code || !state) {
+        return res.redirect("/auth?error=google_failed");
+      }
+
+      if (state !== req.session.oauthState) {
+        console.error("OAuth state mismatch");
+        return res.redirect("/auth?error=google_failed");
+      }
+
+      delete req.session.oauthState;
+
+      const clientId = process.env.GOOGLE_CLIENT_ID!;
+      const clientSecret = process.env.GOOGLE_CLIENT_SECRET!;
+      const redirectUri = `${getBaseUrl(req)}/api/auth/google/callback`;
+
+      const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          code: code as string,
+          client_id: clientId,
+          client_secret: clientSecret,
+          redirect_uri: redirectUri,
+          grant_type: "authorization_code",
+        }),
+      });
+
+      if (!tokenResponse.ok) {
+        console.error("Google token exchange failed:", await tokenResponse.text());
+        return res.redirect("/auth?error=google_failed");
+      }
+
+      const tokenData = await tokenResponse.json();
+
+      const userInfoResponse = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
+        headers: { Authorization: `Bearer ${tokenData.access_token}` },
+      });
+
+      if (!userInfoResponse.ok) {
+        console.error("Google user info failed:", await userInfoResponse.text());
+        return res.redirect("/auth?error=google_failed");
+      }
+
+      const googleUser = await userInfoResponse.json();
+      const { id: googleId, email, given_name: firstName, family_name: lastName, picture: profileImageUrl } = googleUser;
+
+      // Account linking logic:
+      // 1. Check if user exists with this Google ID
+      let user = await authStorage.getUserByGoogleId(googleId);
+
+      if (!user && email) {
+        // 2. Check if user exists with this email - link accounts
+        const existingUser = await authStorage.getUserByEmail(email);
+        if (existingUser) {
+          user = await authStorage.linkGoogleAccount(existingUser.id, googleId, {
+            profileImageUrl: existingUser.profileImageUrl || profileImageUrl,
+            firstName: existingUser.firstName || firstName,
+            lastName: existingUser.lastName || lastName,
+          });
+        }
+      }
+
+      if (!user) {
+        // 3. Create new user
+        user = await authStorage.upsertUser({
+          email,
+          googleId,
+          firstName: firstName || null,
+          lastName: lastName || null,
+          profileImageUrl: profileImageUrl || null,
+          password: null,
+        });
+      }
+
+      req.session.userId = user.id;
+
+      req.session.save(() => {
+        res.redirect("/");
+      });
+    } catch (error) {
+      console.error("Google OAuth callback error:", error);
+      res.redirect("/auth?error=google_failed");
+    }
+  });
+
+  // Check if Google login is available
+  app.get("/api/auth/providers", (_req, res) => {
+    res.json({
+      google: !!process.env.GOOGLE_CLIENT_ID,
+    });
+  });
+}
+
+function getBaseUrl(req: any): string {
+  const protocol = req.headers["x-forwarded-proto"] || req.protocol || "https";
+  const host = req.headers["x-forwarded-host"] || req.headers.host;
+  return `${protocol}://${host}`;
 }
 
 export const isAuthenticated: RequestHandler = async (req, res, next) => {

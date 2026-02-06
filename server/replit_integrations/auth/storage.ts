@@ -5,7 +5,9 @@ import { eq } from "drizzle-orm";
 export interface IAuthStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
+  getUserByGoogleId(googleId: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
+  linkGoogleAccount(userId: string, googleId: string, updates?: Partial<UpsertUser>): Promise<User>;
 }
 
 class AuthStorage implements IAuthStorage {
@@ -16,6 +18,11 @@ class AuthStorage implements IAuthStorage {
 
   async getUserByEmail(email: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user;
+  }
+
+  async getUserByGoogleId(googleId: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.googleId, googleId));
     return user;
   }
 
@@ -30,6 +37,23 @@ class AuthStorage implements IAuthStorage {
           updatedAt: new Date(),
         },
       })
+      .returning();
+    return user;
+  }
+
+  async linkGoogleAccount(userId: string, googleId: string, updates?: Partial<UpsertUser>): Promise<User> {
+    const setData: Record<string, any> = {
+      googleId,
+      updatedAt: new Date(),
+    };
+    if (updates?.profileImageUrl) setData.profileImageUrl = updates.profileImageUrl;
+    if (updates?.firstName) setData.firstName = updates.firstName;
+    if (updates?.lastName) setData.lastName = updates.lastName;
+
+    const [user] = await db
+      .update(users)
+      .set(setData)
+      .where(eq(users.id, userId))
       .returning();
     return user;
   }
