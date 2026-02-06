@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, serial, text, varchar, integer, boolean, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, varchar, integer, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -309,3 +309,22 @@ export const insertNotificationSchema = createInsertSchema(notifications).omit({
 
 export type Notification = typeof notifications.$inferSelect;
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+
+export const resumes = pgTable("resumes", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id", { length: 255 }).notNull(),
+  label: varchar("label", { length: 255 }).notNull(),
+  filename: varchar("filename", { length: 255 }).notNull(),
+  resumeText: text("resume_text"),
+  extractedData: jsonb("extracted_data"),
+  isPrimary: boolean("is_primary").default(false),
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const insertResumeSchema = createInsertSchema(resumes).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type Resume = typeof resumes.$inferSelect;
+export type InsertResume = z.infer<typeof insertResumeSchema>;
