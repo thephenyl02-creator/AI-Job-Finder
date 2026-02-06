@@ -378,7 +378,7 @@ export default function Search() {
                 exit={{ opacity: 0, y: -8 }}
                 transition={{ duration: 0.25 }}
               >
-                {step === "input" && "Describe what you're looking for in your own words"}
+                {step === "input" && "Tell us what kind of role you're looking for"}
                 {step === "refining" && "Understanding your search..."}
                 {step === "questions" && "A few quick questions to narrow down the best matches"}
                 {step === "searching" && "Finding your best matches..."}
@@ -604,7 +604,7 @@ export default function Search() {
                   className="text-muted-foreground"
                   data-testid="link-browse-all"
                 >
-                  Or browse all jobs
+                  Or browse all jobs by category
                 </Button>
               </div>
             </motion.div>

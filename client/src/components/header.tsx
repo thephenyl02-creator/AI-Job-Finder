@@ -9,8 +9,9 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuGroup,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, Briefcase, Info, Settings, Compass, BarChart3, Bell, FileText, Crown } from "lucide-react";
+import { LogOut, Briefcase, Info, Settings, Compass, BarChart3, Bell, FileText, Crown, Search } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { Link, useLocation } from "wouter";
 import { NotificationBell } from "@/components/notification-bell";
@@ -54,6 +55,7 @@ export function Header() {
                   className={isActive("/") ? "text-foreground" : "text-muted-foreground"}
                   data-testid="link-search"
                 >
+                  <Search className="h-3.5 w-3.5 mr-1.5" />
                   Search
                 </Button>
               </Link>
@@ -61,30 +63,11 @@ export function Header() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className={isActive("/jobs") ? "text-foreground" : "text-muted-foreground"}
+                  className={isActive("/jobs") || location.startsWith("/jobs/") ? "text-foreground" : "text-muted-foreground"}
                   data-testid="link-jobs"
                 >
+                  <Briefcase className="h-3.5 w-3.5 mr-1.5" />
                   Jobs
-                </Button>
-              </Link>
-              <Link href="/career-advisor">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={isActive("/career-advisor") ? "text-foreground" : "text-muted-foreground"}
-                  data-testid="link-career-advisor"
-                >
-                  Career Advisor
-                </Button>
-              </Link>
-              <Link href="/insights">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={isActive("/insights") ? "text-foreground" : "text-muted-foreground"}
-                  data-testid="link-insights"
-                >
-                  Insights
                 </Button>
               </Link>
             </div>
@@ -94,11 +77,6 @@ export function Header() {
         <div className="flex items-center gap-2">
           {isAuthenticated ? (
             <>
-              <Link href="/post-job" className="hidden sm:inline-flex">
-                <Button variant="ghost" size="sm" className="text-muted-foreground" data-testid="link-post-job">
-                  Post a Job
-                </Button>
-              </Link>
               <NotificationBell />
               <ThemeToggle />
               <DropdownMenu>
@@ -132,55 +110,78 @@ export function Header() {
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild className="sm:hidden">
-                    <Link href="/career-advisor" className="cursor-pointer" data-testid="link-career-advisor-mobile">
-                      <Compass className="mr-2 h-4 w-4" />
-                      <span>Career Advisor</span>
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild className="sm:hidden">
-                    <Link href="/insights" className="cursor-pointer" data-testid="link-insights-mobile">
-                      <BarChart3 className="mr-2 h-4 w-4" />
-                      <span>Insights</span>
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild className="sm:hidden">
-                    <Link href="/post-job" className="cursor-pointer" data-testid="link-post-job-mobile">
-                      <Briefcase className="mr-2 h-4 w-4" />
-                      <span>Post a Job</span>
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/resumes" className="cursor-pointer" data-testid="link-resumes">
-                      <FileText className="mr-2 h-4 w-4" />
-                      <span>My Resumes</span>
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/alerts" className="cursor-pointer" data-testid="link-alerts">
-                      <Bell className="mr-2 h-4 w-4" />
-                      <span>Job Alerts</span>
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/pricing" className="cursor-pointer" data-testid="link-pricing">
-                      <Crown className="mr-2 h-4 w-4" />
-                      <span>Pricing</span>
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/about" className="cursor-pointer" data-testid="link-about">
-                      <Info className="mr-2 h-4 w-4" />
-                      <span>About</span>
-                    </Link>
-                  </DropdownMenuItem>
-                  {isAdmin && (
-                    <DropdownMenuItem asChild>
-                      <Link href="/admin" className="cursor-pointer" data-testid="link-admin">
-                        <Settings className="mr-2 h-4 w-4" />
-                        <span>Admin</span>
+                  <DropdownMenuGroup>
+                    <DropdownMenuItem asChild className="sm:hidden">
+                      <Link href="/" className="cursor-pointer" data-testid="link-search-mobile">
+                        <Search className="mr-2 h-4 w-4" />
+                        <span>Search</span>
                       </Link>
                     </DropdownMenuItem>
+                    <DropdownMenuItem asChild className="sm:hidden">
+                      <Link href="/jobs" className="cursor-pointer" data-testid="link-jobs-mobile">
+                        <Briefcase className="mr-2 h-4 w-4" />
+                        <span>Browse Jobs</span>
+                      </Link>
+                    </DropdownMenuItem>
+                  </DropdownMenuGroup>
+                  <DropdownMenuSeparator className="sm:hidden" />
+                  <DropdownMenuGroup>
+                    <DropdownMenuItem asChild>
+                      <Link href="/resumes" className="cursor-pointer" data-testid="link-resumes">
+                        <FileText className="mr-2 h-4 w-4" />
+                        <span>My Resumes</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/alerts" className="cursor-pointer" data-testid="link-alerts">
+                        <Bell className="mr-2 h-4 w-4" />
+                        <span>Job Alerts</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/career-advisor" className="cursor-pointer" data-testid="link-career-advisor">
+                        <Compass className="mr-2 h-4 w-4" />
+                        <span>Career Advisor</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/insights" className="cursor-pointer" data-testid="link-insights">
+                        <BarChart3 className="mr-2 h-4 w-4" />
+                        <span>Market Insights</span>
+                      </Link>
+                    </DropdownMenuItem>
+                  </DropdownMenuGroup>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuGroup>
+                    <DropdownMenuItem asChild>
+                      <Link href="/post-job" className="cursor-pointer" data-testid="link-post-job">
+                        <Briefcase className="mr-2 h-4 w-4" />
+                        <span>Post a Job</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/pricing" className="cursor-pointer" data-testid="link-pricing">
+                        <Crown className="mr-2 h-4 w-4" />
+                        <span>Pricing</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/about" className="cursor-pointer" data-testid="link-about">
+                        <Info className="mr-2 h-4 w-4" />
+                        <span>About</span>
+                      </Link>
+                    </DropdownMenuItem>
+                  </DropdownMenuGroup>
+                  {isAdmin && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem asChild>
+                        <Link href="/admin" className="cursor-pointer" data-testid="link-admin">
+                          <Settings className="mr-2 h-4 w-4" />
+                          <span>Admin</span>
+                        </Link>
+                      </DropdownMenuItem>
+                    </>
                   )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>

@@ -46,6 +46,7 @@ function AppRouter() {
   return (
     <Switch>
       <Route path="/" component={isAuthenticated ? Search : Landing} />
+      <Route path="/search">{isAuthenticated ? <Search /> : <Landing />}</Route>
       <Route path="/jobs">{isAuthenticated ? <Jobs /> : <Landing />}</Route>
       <Route path="/jobs/:id">{isAuthenticated ? <JobDetail /> : <Landing />}</Route>
       <Route path="/admin">{isAuthenticated ? <Admin /> : <Landing />}</Route>
