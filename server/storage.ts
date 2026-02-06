@@ -75,6 +75,14 @@ export interface IStorage {
   getBuiltResumeById(id: number, userId: string): Promise<BuiltResume | undefined>;
   updateBuiltResume(id: number, userId: string, data: Partial<InsertBuiltResume>): Promise<BuiltResume | undefined>;
   deleteBuiltResume(id: number, userId: string): Promise<void>;
+  // Admin Analytics
+  getAnalyticsKpis(): Promise<any>;
+  getAnalyticsEngagement(days?: number): Promise<any>;
+  getAnalyticsFeatureAdoption(): Promise<any>;
+  getAnalyticsUserCohorts(): Promise<any>;
+  getAnalyticsTopContent(): Promise<any>;
+  getAnalyticsUserList(): Promise<any>;
+  getAnalyticsFunnel(): Promise<any>;
   // Saved Jobs
   saveJob(userId: string, jobId: number, notes?: string): Promise<SavedJob>;
   unsaveJob(userId: string, jobId: number): Promise<void>;
@@ -881,6 +889,471 @@ class DatabaseStorage implements IStorage {
     await db.update(savedJobs)
       .set({ reminderShown: true })
       .where(and(eq(savedJobs.id, savedJobId), eq(savedJobs.userId, userId)));
+  }
+
+  async getAnalyticsKpis(): Promise<{
+    totalUsers: number;
+    activeUsersLast7d: number;
+    activeUsersLast30d: number;
+    proUsers: number;
+    freeUsers: number;
+    conversionRate: number;
+    totalJobs: number;
+    activeJobs: number;
+    totalResumes: number;
+    totalSavedJobs: number;
+    totalPageViews: number;
+    totalSearches: number;
+    totalJobViews: number;
+    totalApplyClicks: number;
+  }> {
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
+    const [userStats] = await db.select({
+      totalUsers: count(),
+      proUsers: sql<number>`count(case when ${users.subscriptionTier} = 'pro' and ${users.subscriptionStatus} = 'active' then 1 end)`,
+    }).from(users);
+
+    const [activeUsers7d] = await db.select({
+      cnt: sql<number>`count(distinct ${userActivities.userId})`,
+    }).from(userActivities).where(gte(userActivities.createdAt, sevenDaysAgo));
+
+    const [activeUsers30d] = await db.select({
+      cnt: sql<number>`count(distinct ${userActivities.userId})`,
+    }).from(userActivities).where(gte(userActivities.createdAt, thirtyDaysAgo));
+
+    const [jobStats] = await db.select({
+      totalJobs: count(),
+      activeJobs: sql<number>`count(case when ${jobs.isActive} = true then 1 end)`,
+    }).from(jobs);
+
+    const [resumeCount] = await db.select({ cnt: count() }).from(resumes);
+    const [savedCount] = await db.select({ cnt: count() }).from(savedJobs);
+
+    const eventCounts = await db.select({
+      eventType: userActivities.eventType,
+      cnt: count(),
+    }).from(userActivities).groupBy(userActivities.eventType);
+
+    const eventMap: Record<string, number> = {};
+    for (const e of eventCounts) {
+      eventMap[e.eventType] = Number(e.cnt);
+    }
+
+    const totalUsers = Number(userStats.totalUsers);
+    const proUsers = Number(userStats.proUsers);
+
+    return {
+      totalUsers,
+      activeUsersLast7d: Number(activeUsers7d.cnt),
+      activeUsersLast30d: Number(activeUsers30d.cnt),
+      proUsers,
+      freeUsers: totalUsers - proUsers,
+      conversionRate: totalUsers > 0 ? Math.round((proUsers / totalUsers) * 10000) / 100 : 0,
+      totalJobs: Number(jobStats.totalJobs),
+      activeJobs: Number(jobStats.activeJobs),
+      totalResumes: Number(resumeCount.cnt),
+      totalSavedJobs: Number(savedCount.cnt),
+      totalPageViews: eventMap["page_view"] || 0,
+      totalSearches: eventMap["search"] || 0,
+      totalJobViews: eventMap["job_view"] || 0,
+      totalApplyClicks: eventMap["apply_click"] || 0,
+    };
+  }
+
+  async getAnalyticsEngagement(days: number = 30): Promise<{
+    dailyActiveUsers: { date: string; count: number }[];
+    pageViewsByPage: { page: string; views: number; uniqueUsers: number }[];
+    eventBreakdown: { eventType: string; count: number; uniqueUsers: number }[];
+    activityTimeline: { date: string; pageViews: number; jobViews: number; searches: number; applyClicks: number }[];
+  }> {
+    const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+    const dailyActive = await db.select({
+      date: sql<string>`date_trunc('day', ${userActivities.createdAt})::date::text`,
+      count: sql<number>`count(distinct ${userActivities.userId})`,
+    }).from(userActivities)
+      .where(gte(userActivities.createdAt, cutoff))
+      .groupBy(sql`date_trunc('day', ${userActivities.createdAt})::date`)
+      .orderBy(sql`date_trunc('day', ${userActivities.createdAt})::date`);
+
+    const pageViews = await db.select({
+      page: userActivities.pagePath,
+      views: count(),
+      uniqueUsers: sql<number>`count(distinct ${userActivities.userId})`,
+    }).from(userActivities)
+      .where(and(
+        eq(userActivities.eventType, "page_view"),
+        gte(userActivities.createdAt, cutoff),
+      ))
+      .groupBy(userActivities.pagePath)
+      .orderBy(desc(count()));
+
+    const eventBreakdown = await db.select({
+      eventType: userActivities.eventType,
+      count: count(),
+      uniqueUsers: sql<number>`count(distinct ${userActivities.userId})`,
+    }).from(userActivities)
+      .where(gte(userActivities.createdAt, cutoff))
+      .groupBy(userActivities.eventType)
+      .orderBy(desc(count()));
+
+    const timeline = await db.select({
+      date: sql<string>`date_trunc('day', ${userActivities.createdAt})::date::text`,
+      pageViews: sql<number>`count(case when ${userActivities.eventType} = 'page_view' then 1 end)`,
+      jobViews: sql<number>`count(case when ${userActivities.eventType} = 'job_view' then 1 end)`,
+      searches: sql<number>`count(case when ${userActivities.eventType} = 'search' then 1 end)`,
+      applyClicks: sql<number>`count(case when ${userActivities.eventType} = 'apply_click' then 1 end)`,
+    }).from(userActivities)
+      .where(gte(userActivities.createdAt, cutoff))
+      .groupBy(sql`date_trunc('day', ${userActivities.createdAt})::date`)
+      .orderBy(sql`date_trunc('day', ${userActivities.createdAt})::date`);
+
+    return {
+      dailyActiveUsers: dailyActive.map(d => ({ date: d.date, count: Number(d.count) })),
+      pageViewsByPage: pageViews.map(p => ({ page: p.page || "unknown", views: Number(p.views), uniqueUsers: Number(p.uniqueUsers) })),
+      eventBreakdown: eventBreakdown.map(e => ({ eventType: e.eventType, count: Number(e.count), uniqueUsers: Number(e.uniqueUsers) })),
+      activityTimeline: timeline.map(t => ({
+        date: t.date,
+        pageViews: Number(t.pageViews),
+        jobViews: Number(t.jobViews),
+        searches: Number(t.searches),
+        applyClicks: Number(t.applyClicks),
+      })),
+    };
+  }
+
+  async getAnalyticsFeatureAdoption(): Promise<{
+    resumeUploads: number;
+    builtResumes: number;
+    savedJobsUsers: number;
+    totalSavedJobs: number;
+    alertsCreated: number;
+    alertsActiveUsers: number;
+    careerAdvisorViews: number;
+    insightsViews: number;
+    resumeBuilderViews: number;
+  }> {
+    const [resumeCount] = await db.select({ cnt: count() }).from(resumes);
+    const [builtResumeCount] = await db.select({ cnt: count() }).from(builtResumes);
+    
+    const [savedJobsStats] = await db.select({
+      uniqueUsers: sql<number>`count(distinct ${savedJobs.userId})`,
+      totalSaved: count(),
+    }).from(savedJobs);
+
+    const [alertsStats] = await db.select({
+      total: count(),
+      uniqueUsers: sql<number>`count(distinct ${jobAlerts.userId})`,
+    }).from(jobAlerts);
+
+    const featurePageViews = await db.select({
+      page: userActivities.pagePath,
+      views: count(),
+    }).from(userActivities)
+      .where(and(
+        eq(userActivities.eventType, "page_view"),
+        sql`${userActivities.pagePath} in ('/career-advisor', '/insights', '/resume-builder')`,
+      ))
+      .groupBy(userActivities.pagePath);
+
+    const pageViewMap: Record<string, number> = {};
+    for (const p of featurePageViews) {
+      if (p.page) pageViewMap[p.page] = Number(p.views);
+    }
+
+    return {
+      resumeUploads: Number(resumeCount.cnt),
+      builtResumes: Number(builtResumeCount.cnt),
+      savedJobsUsers: Number(savedJobsStats.uniqueUsers),
+      totalSavedJobs: Number(savedJobsStats.totalSaved),
+      alertsCreated: Number(alertsStats.total),
+      alertsActiveUsers: Number(alertsStats.uniqueUsers),
+      careerAdvisorViews: pageViewMap["/career-advisor"] || 0,
+      insightsViews: pageViewMap["/insights"] || 0,
+      resumeBuilderViews: pageViewMap["/resume-builder"] || 0,
+    };
+  }
+
+  async getAnalyticsUserCohorts(): Promise<{
+    signupsByDay: { date: string; count: number }[];
+    subscriptionBreakdown: { tier: string; status: string; count: number }[];
+    authMethodBreakdown: { method: string; count: number }[];
+    usersWithResume: number;
+    usersWithSearch: number;
+  }> {
+    const signups = await db.select({
+      date: sql<string>`date_trunc('day', ${users.createdAt})::date::text`,
+      count: count(),
+    }).from(users)
+      .groupBy(sql`date_trunc('day', ${users.createdAt})::date`)
+      .orderBy(sql`date_trunc('day', ${users.createdAt})::date`);
+
+    const subscriptions = await db.select({
+      tier: users.subscriptionTier,
+      status: users.subscriptionStatus,
+      count: count(),
+    }).from(users)
+      .groupBy(users.subscriptionTier, users.subscriptionStatus);
+
+    const [authMethods] = await db.select({
+      googleUsers: sql<number>`count(case when ${users.googleId} is not null then 1 end)`,
+      emailUsers: sql<number>`count(case when ${users.password} is not null and ${users.googleId} is null then 1 end)`,
+      bothUsers: sql<number>`count(case when ${users.password} is not null and ${users.googleId} is not null then 1 end)`,
+    }).from(users);
+
+    const [resumeStats] = await db.select({
+      withResume: sql<number>`count(case when ${users.resumeText} is not null then 1 end)`,
+      withSearch: sql<number>`count(case when ${users.lastSearchQuery} is not null then 1 end)`,
+    }).from(users);
+
+    return {
+      signupsByDay: signups.map(s => ({ date: s.date, count: Number(s.count) })),
+      subscriptionBreakdown: subscriptions.map(s => ({
+        tier: s.tier || "free",
+        status: s.status || "inactive",
+        count: Number(s.count),
+      })),
+      authMethodBreakdown: [
+        { method: "Google Only", count: Number(authMethods.googleUsers) },
+        { method: "Email Only", count: Number(authMethods.emailUsers) },
+        { method: "Both", count: Number(authMethods.bothUsers) },
+      ],
+      usersWithResume: Number(resumeStats.withResume),
+      usersWithSearch: Number(resumeStats.withSearch),
+    };
+  }
+
+  async getAnalyticsTopContent(): Promise<{
+    topSearchTerms: { term: string; count: number }[];
+    topViewedJobs: { id: number; title: string; company: string; viewCount: number; applyClicks: number }[];
+    topAppliedJobs: { id: number; title: string; company: string; applyClicks: number; viewCount: number }[];
+    topCategories: { category: string; count: number }[];
+    topCompanies: { company: string; jobCount: number; totalViews: number }[];
+  }> {
+    const searchActivities = await db.select({
+      metadata: userActivities.metadata,
+    }).from(userActivities)
+      .where(eq(userActivities.eventType, "search"))
+      .orderBy(desc(userActivities.createdAt))
+      .limit(500);
+
+    const termCounter: Record<string, number> = {};
+    for (const a of searchActivities) {
+      const meta = a.metadata as any;
+      const query = meta?.query || meta?.searchQuery;
+      if (query && typeof query === "string") {
+        const term = query.toLowerCase().trim();
+        termCounter[term] = (termCounter[term] || 0) + 1;
+      }
+    }
+    const topSearchTerms = Object.entries(termCounter)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 20)
+      .map(([term, count]) => ({ term, count }));
+
+    const topViewed = await db.select({
+      id: jobs.id,
+      title: jobs.title,
+      company: jobs.company,
+      viewCount: jobs.viewCount,
+      applyClicks: jobs.applyClickCount,
+    }).from(jobs)
+      .where(eq(jobs.isActive, true))
+      .orderBy(desc(jobs.viewCount))
+      .limit(20);
+
+    const topApplied = await db.select({
+      id: jobs.id,
+      title: jobs.title,
+      company: jobs.company,
+      applyClicks: jobs.applyClickCount,
+      viewCount: jobs.viewCount,
+    }).from(jobs)
+      .where(and(eq(jobs.isActive, true), sql`${jobs.applyClickCount} > 0`))
+      .orderBy(desc(jobs.applyClickCount))
+      .limit(20);
+
+    const categories = await db.select({
+      category: jobs.roleCategory,
+      count: count(),
+    }).from(jobs)
+      .where(and(eq(jobs.isActive, true), sql`${jobs.roleCategory} is not null`))
+      .groupBy(jobs.roleCategory)
+      .orderBy(desc(count()));
+
+    const companies = await db.select({
+      company: jobs.company,
+      jobCount: count(),
+      totalViews: sql<number>`coalesce(sum(${jobs.viewCount}), 0)`,
+    }).from(jobs)
+      .where(eq(jobs.isActive, true))
+      .groupBy(jobs.company)
+      .orderBy(desc(count()))
+      .limit(20);
+
+    return {
+      topSearchTerms,
+      topViewedJobs: topViewed.map(j => ({
+        id: j.id,
+        title: j.title,
+        company: j.company,
+        viewCount: Number(j.viewCount) || 0,
+        applyClicks: Number(j.applyClicks) || 0,
+      })),
+      topAppliedJobs: topApplied.map(j => ({
+        id: j.id,
+        title: j.title,
+        company: j.company,
+        applyClicks: Number(j.applyClicks) || 0,
+        viewCount: Number(j.viewCount) || 0,
+      })),
+      topCategories: categories.map(c => ({ category: c.category || "Uncategorized", count: Number(c.count) })),
+      topCompanies: companies.map(c => ({
+        company: c.company,
+        jobCount: Number(c.jobCount),
+        totalViews: Number(c.totalViews),
+      })),
+    };
+  }
+
+  async getAnalyticsUserList(): Promise<{
+    id: string;
+    email: string | null;
+    firstName: string | null;
+    lastName: string | null;
+    subscriptionTier: string | null;
+    subscriptionStatus: string | null;
+    createdAt: Date | null;
+    lastActiveAt: string | null;
+    totalJobViews: number;
+    totalSearches: number;
+    totalApplyClicks: number;
+    totalPageViews: number;
+    savedJobsCount: number;
+    resumeCount: number;
+  }[]> {
+    const allUsers = await db.select({
+      id: users.id,
+      email: users.email,
+      firstName: users.firstName,
+      lastName: users.lastName,
+      subscriptionTier: users.subscriptionTier,
+      subscriptionStatus: users.subscriptionStatus,
+      createdAt: users.createdAt,
+    }).from(users).orderBy(desc(users.createdAt));
+
+    const userActivityStats = await db.select({
+      userId: userActivities.userId,
+      eventType: userActivities.eventType,
+      cnt: count(),
+      lastActive: sql<string>`max(${userActivities.createdAt})::text`,
+    }).from(userActivities)
+      .groupBy(userActivities.userId, userActivities.eventType);
+
+    const savedJobsCounts = await db.select({
+      userId: savedJobs.userId,
+      cnt: count(),
+    }).from(savedJobs).groupBy(savedJobs.userId);
+
+    const resumeCounts = await db.select({
+      userId: resumes.userId,
+      cnt: count(),
+    }).from(resumes).groupBy(resumes.userId);
+
+    const activityMap: Record<string, { jobViews: number; searches: number; applyClicks: number; pageViews: number; lastActive: string | null }> = {};
+    for (const s of userActivityStats) {
+      if (!activityMap[s.userId]) {
+        activityMap[s.userId] = { jobViews: 0, searches: 0, applyClicks: 0, pageViews: 0, lastActive: null };
+      }
+      const entry = activityMap[s.userId];
+      if (s.eventType === "job_view") entry.jobViews = Number(s.cnt);
+      if (s.eventType === "search") entry.searches = Number(s.cnt);
+      if (s.eventType === "apply_click") entry.applyClicks = Number(s.cnt);
+      if (s.eventType === "page_view") entry.pageViews = Number(s.cnt);
+      if (s.lastActive && (!entry.lastActive || s.lastActive > entry.lastActive)) {
+        entry.lastActive = s.lastActive;
+      }
+    }
+
+    const savedMap: Record<string, number> = {};
+    for (const s of savedJobsCounts) savedMap[s.userId] = Number(s.cnt);
+    const resumeMap: Record<string, number> = {};
+    for (const r of resumeCounts) resumeMap[r.userId] = Number(r.cnt);
+
+    return allUsers.map(u => {
+      const activity = activityMap[u.id] || { jobViews: 0, searches: 0, applyClicks: 0, pageViews: 0, lastActive: null };
+      return {
+        id: u.id,
+        email: u.email,
+        firstName: u.firstName,
+        lastName: u.lastName,
+        subscriptionTier: u.subscriptionTier,
+        subscriptionStatus: u.subscriptionStatus,
+        createdAt: u.createdAt,
+        lastActiveAt: activity.lastActive,
+        totalJobViews: activity.jobViews,
+        totalSearches: activity.searches,
+        totalApplyClicks: activity.applyClicks,
+        totalPageViews: activity.pageViews,
+        savedJobsCount: savedMap[u.id] || 0,
+        resumeCount: resumeMap[u.id] || 0,
+      };
+    });
+  }
+
+  async getAnalyticsFunnel(): Promise<{
+    totalUsers: number;
+    usersWhoSearched: number;
+    usersWhoViewedJob: number;
+    usersWhoApplied: number;
+    usersWhoSavedJob: number;
+    usersWhoUploadedResume: number;
+    usersWhoBuiltResume: number;
+    usersWhoPurchasedPro: number;
+  }> {
+    const [totals] = await db.select({ cnt: count() }).from(users);
+
+    const funnelSteps = await db.select({
+      eventType: userActivities.eventType,
+      uniqueUsers: sql<number>`count(distinct ${userActivities.userId})`,
+    }).from(userActivities)
+      .where(sql`${userActivities.eventType} in ('search', 'job_view', 'apply_click')`)
+      .groupBy(userActivities.eventType);
+
+    const funnelMap: Record<string, number> = {};
+    for (const f of funnelSteps) funnelMap[f.eventType] = Number(f.uniqueUsers);
+
+    const [savedUsers] = await db.select({
+      cnt: sql<number>`count(distinct ${savedJobs.userId})`,
+    }).from(savedJobs);
+
+    const [resumeUsers] = await db.select({
+      cnt: sql<number>`count(distinct ${resumes.userId})`,
+    }).from(resumes);
+
+    const [builtResumeUsers] = await db.select({
+      cnt: sql<number>`count(distinct ${builtResumes.userId})`,
+    }).from(builtResumes);
+
+    const [proUsers] = await db.select({
+      cnt: sql<number>`count(*)`,
+    }).from(users).where(and(
+      eq(users.subscriptionTier, "pro"),
+      eq(users.subscriptionStatus, "active"),
+    ));
+
+    return {
+      totalUsers: Number(totals.cnt),
+      usersWhoSearched: funnelMap["search"] || 0,
+      usersWhoViewedJob: funnelMap["job_view"] || 0,
+      usersWhoApplied: funnelMap["apply_click"] || 0,
+      usersWhoSavedJob: Number(savedUsers.cnt),
+      usersWhoUploadedResume: Number(resumeUsers.cnt),
+      usersWhoBuiltResume: Number(builtResumeUsers.cnt),
+      usersWhoPurchasedPro: Number(proUsers.cnt),
+    };
   }
 }
 

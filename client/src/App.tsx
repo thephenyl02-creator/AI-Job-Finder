@@ -22,7 +22,10 @@ import Alerts from "@/pages/alerts";
 import Resumes from "@/pages/resumes";
 import ResumeBuilder from "@/pages/resume-builder";
 import SavedJobs from "@/pages/saved-jobs";
+import AdminAnalytics from "@/pages/admin-analytics";
 import Pricing from "@/pages/pricing";
+import Terms from "@/pages/terms";
+import Privacy from "@/pages/privacy";
 import { AssistantWidget } from "@/components/assistant-widget";
 import { ExpiringJobsReminder } from "@/components/expiring-jobs-reminder";
 
@@ -54,6 +57,7 @@ function AppRouter() {
       <Route path="/jobs">{isAuthenticated ? <Jobs /> : <Landing />}</Route>
       <Route path="/jobs/:id">{isAuthenticated ? <JobDetail /> : <Landing />}</Route>
       <Route path="/admin">{isAuthenticated ? <Admin /> : <Landing />}</Route>
+      <Route path="/admin/analytics">{isAuthenticated ? <AdminAnalytics /> : <Landing />}</Route>
       <Route path="/career-advisor">{isAuthenticated ? <CareerAdvisor /> : <Landing />}</Route>
       <Route path="/insights">{isAuthenticated ? <Insights /> : <Landing />}</Route>
       <Route path="/alerts">{isAuthenticated ? <Alerts /> : <Landing />}</Route>
@@ -62,6 +66,8 @@ function AppRouter() {
       <Route path="/saved-jobs">{isAuthenticated ? <SavedJobs /> : <Landing />}</Route>
       <Route path="/auth" component={Auth} />
       <Route path="/pricing" component={Pricing} />
+      <Route path="/terms" component={Terms} />
+      <Route path="/privacy" component={Privacy} />
       <Route path="/about" component={About} />
       <Route path="/post-job" component={PostJob} />
       <Route component={NotFound} />

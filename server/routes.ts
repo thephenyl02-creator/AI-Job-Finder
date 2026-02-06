@@ -1974,6 +1974,86 @@ Be specific and actionable. Focus on legal tech industry keywords and ATS best p
     }
   });
 
+  // --- Admin Analytics ---
+
+  app.get("/api/admin/analytics/kpis", isAuthenticated, async (req, res) => {
+    if (!(await isAdminCheck(req))) return res.status(403).json({ error: "Admin access required" });
+    try {
+      const kpis = await storage.getAnalyticsKpis();
+      res.json(kpis);
+    } catch (error) {
+      console.error("Analytics KPIs error:", error);
+      res.status(500).json({ error: "Failed to fetch KPIs" });
+    }
+  });
+
+  app.get("/api/admin/analytics/engagement", isAuthenticated, async (req, res) => {
+    if (!(await isAdminCheck(req))) return res.status(403).json({ error: "Admin access required" });
+    try {
+      const days = parseInt(req.query.days as string) || 30;
+      const engagement = await storage.getAnalyticsEngagement(days);
+      res.json(engagement);
+    } catch (error) {
+      console.error("Analytics engagement error:", error);
+      res.status(500).json({ error: "Failed to fetch engagement data" });
+    }
+  });
+
+  app.get("/api/admin/analytics/features", isAuthenticated, async (req, res) => {
+    if (!(await isAdminCheck(req))) return res.status(403).json({ error: "Admin access required" });
+    try {
+      const features = await storage.getAnalyticsFeatureAdoption();
+      res.json(features);
+    } catch (error) {
+      console.error("Analytics features error:", error);
+      res.status(500).json({ error: "Failed to fetch feature adoption data" });
+    }
+  });
+
+  app.get("/api/admin/analytics/cohorts", isAuthenticated, async (req, res) => {
+    if (!(await isAdminCheck(req))) return res.status(403).json({ error: "Admin access required" });
+    try {
+      const cohorts = await storage.getAnalyticsUserCohorts();
+      res.json(cohorts);
+    } catch (error) {
+      console.error("Analytics cohorts error:", error);
+      res.status(500).json({ error: "Failed to fetch cohort data" });
+    }
+  });
+
+  app.get("/api/admin/analytics/top-content", isAuthenticated, async (req, res) => {
+    if (!(await isAdminCheck(req))) return res.status(403).json({ error: "Admin access required" });
+    try {
+      const content = await storage.getAnalyticsTopContent();
+      res.json(content);
+    } catch (error) {
+      console.error("Analytics top content error:", error);
+      res.status(500).json({ error: "Failed to fetch top content data" });
+    }
+  });
+
+  app.get("/api/admin/analytics/users", isAuthenticated, async (req, res) => {
+    if (!(await isAdminCheck(req))) return res.status(403).json({ error: "Admin access required" });
+    try {
+      const userList = await storage.getAnalyticsUserList();
+      res.json(userList);
+    } catch (error) {
+      console.error("Analytics users error:", error);
+      res.status(500).json({ error: "Failed to fetch user analytics" });
+    }
+  });
+
+  app.get("/api/admin/analytics/funnel", isAuthenticated, async (req, res) => {
+    if (!(await isAdminCheck(req))) return res.status(403).json({ error: "Admin access required" });
+    try {
+      const funnel = await storage.getAnalyticsFunnel();
+      res.json(funnel);
+    } catch (error) {
+      console.error("Analytics funnel error:", error);
+      res.status(500).json({ error: "Failed to fetch funnel data" });
+    }
+  });
+
   // Career Advisor - Parse job posting file (PDF/DOCX)
   app.post("/api/career-advisor/parse-job-file", isAuthenticated, upload.single("file"), async (req, res) => {
     try {

@@ -716,6 +716,20 @@ export default function Landing() {
                     </Button>
                   </Link>
                 </li>
+                <li>
+                  <Link href="/terms">
+                    <Button variant="ghost" size="sm" className="text-muted-foreground h-auto p-0 text-sm font-normal" data-testid="footer-link-terms">
+                      Terms of Service
+                    </Button>
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/privacy">
+                    <Button variant="ghost" size="sm" className="text-muted-foreground h-auto p-0 text-sm font-normal" data-testid="footer-link-privacy">
+                      Privacy Policy
+                    </Button>
+                  </Link>
+                </li>
               </ul>
             </div>
             <div>
