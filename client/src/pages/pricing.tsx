@@ -21,12 +21,12 @@ import {
   ArrowRight,
   Loader2,
   Crown,
-  Scale,
   Sparkles,
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { LogoMark } from "@/components/logo";
 
 interface PriceData {
   id: string;
@@ -190,7 +190,7 @@ export default function Pricing() {
           <nav className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
             <Link href="/">
               <div className="flex items-center gap-3 cursor-pointer" data-testid="logo-pricing">
-                <Scale className="h-6 w-6 text-foreground" />
+                <LogoMark className="h-6 w-6 text-foreground" />
                 <span className="text-base font-semibold text-foreground tracking-tight">
                   Legal Tech Careers
                 </span>

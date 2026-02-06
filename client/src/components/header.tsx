@@ -10,7 +10,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, Briefcase, Info, Settings, Compass, Scale, BarChart3, Bell, FileText, Crown } from "lucide-react";
+import { LogOut, Briefcase, Info, Settings, Compass, BarChart3, Bell, FileText, Crown } from "lucide-react";
+import { Logo } from "@/components/logo";
 import { Link, useLocation } from "wouter";
 import { NotificationBell } from "@/components/notification-bell";
 import { useSubscription } from "@/hooks/use-subscription";
@@ -38,7 +39,7 @@ export function Header() {
       <nav className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
         <div className="flex items-center gap-6">
           <Link href="/" className="flex items-center gap-2.5 hover:opacity-80 transition-opacity" data-testid="logo-header">
-            <Scale className="h-5 w-5 text-foreground" />
+            <Logo className="h-5 w-5 text-foreground" />
             <span className="text-sm font-semibold text-foreground tracking-tight hidden sm:inline">
               Legal Tech Careers
             </span>

@@ -4,17 +4,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { LogoMark, Logo } from "@/components/logo";
 import {
   Search,
-  TrendingUp,
-  Scale,
   Users,
   GraduationCap,
   ArrowRight,
   FileText,
   BookOpen,
   RefreshCw,
-  Rocket,
   Compass,
   Zap,
   Bell,
@@ -22,7 +20,6 @@ import {
   Target,
   MapPin,
   Building2,
-  Briefcase,
 } from "lucide-react";
 import {
   ScrollReveal,
@@ -65,7 +62,7 @@ export default function Landing() {
         <nav className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
           <Link href="/">
             <div className="flex items-center gap-3 cursor-pointer" data-testid="logo-landing">
-              <Scale className="h-6 w-6 text-foreground" />
+              <LogoMark className="h-6 w-6 text-foreground" />
               <span className="text-base font-semibold text-foreground tracking-tight">
                 Legal Tech Careers
               </span>
@@ -379,12 +376,12 @@ export default function Landing() {
               </p>
             </ScrollReveal>
 
-            <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" staggerDelay={0.08}>
+            <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 gap-4" staggerDelay={0.08}>
               {[
                 {
                   icon: GraduationCap,
-                  title: "Practicing attorneys",
-                  description: "You're good at your job but wonder what else is out there. Product, operations, strategy roles at companies that actually value your JD.",
+                  title: "Attorneys exploring what's next",
+                  description: "Product, operations, and strategy roles at companies that actually value your JD. No coding required.",
                 },
                 {
                   icon: Users,
@@ -398,18 +395,8 @@ export default function Landing() {
                 },
                 {
                   icon: BookOpen,
-                  title: "Law students",
-                  description: "You see where the industry is going. Find internships and entry-level roles at companies shaping the future of legal work.",
-                },
-                {
-                  icon: TrendingUp,
-                  title: "In-house counsel",
-                  description: "You've seen legal tech from the buyer's side. Companies building these tools want people who understand how firms actually work.",
-                },
-                {
-                  icon: Rocket,
-                  title: "Curious professionals",
-                  description: "No coding required. Many of the best roles in legal tech are in sales, marketing, customer success, and consulting.",
+                  title: "Students & new grads",
+                  description: "Find internships and entry-level roles at companies shaping the future of legal work. Get in early.",
                 },
               ].map((audience, index) => (
                 <StaggerItem key={audience.title}>
@@ -491,51 +478,35 @@ export default function Landing() {
           </div>
         </section>
 
-        <section className="border-t border-border/40">
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
-            <ScrollReveal>
-              <div className="max-w-3xl mx-auto text-center">
-                <div className="flex items-center justify-center gap-3 mb-6">
-                  <Badge variant="secondary" className="text-xs font-medium">Free forever</Badge>
-                  <Badge variant="outline" className="text-xs font-medium">Pro from $5/mo</Badge>
-                </div>
-                <h2 className="text-3xl sm:text-4xl font-serif font-medium text-foreground mb-4 tracking-tight">
-                  Less than a coffee. More than a job board.
-                </h2>
-                <p className="text-lg text-muted-foreground mb-8 max-w-xl mx-auto">
-                  Browse and apply for free. Upgrade to Pro for resume matching, career comparisons, and personalized alerts. Cancel anytime.
-                </p>
-                <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-                  <Link href="/pricing">
-                    <Button size="lg" className="text-base px-10" data-testid="button-cta-pricing">
-                      See Plans & Pricing
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
-                  </Link>
-                </div>
-              </div>
-            </ScrollReveal>
-          </div>
-        </section>
-
         <section className="border-t border-border/40 bg-muted/30">
           <div className="max-w-5xl mx-auto px-4 sm:px-6 py-20 sm:py-28">
             <ScrollReveal>
               <div className="max-w-2xl mx-auto text-center">
+                <div className="flex items-center justify-center gap-3 mb-6">
+                  <Badge variant="secondary" className="text-xs font-medium">Free to browse</Badge>
+                  <Badge variant="outline" className="text-xs font-medium">Pro from $5/mo</Badge>
+                </div>
                 <h2 className="text-3xl sm:text-4xl font-serif font-medium text-foreground mb-4 tracking-tight">
                   Your legal career got you here.
                   <br />
                   Let's figure out what's next.
                 </h2>
                 <p className="text-lg text-muted-foreground mb-8 max-w-lg mx-auto">
-                  Every week, new legal tech roles go live. The ones that fit your background might already be waiting.
+                  Every week, new legal tech roles go live. Browse and apply for free, or upgrade to Pro for resume matching, career comparisons, and personalized alerts.
                 </p>
-                <Button size="lg" asChild className="text-base px-10" data-testid="button-cta-final">
-                  <a href="/api/login">
-                    Browse Jobs Now
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </a>
-                </Button>
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                  <Button size="lg" asChild className="text-base px-10" data-testid="button-cta-final">
+                    <a href="/api/login">
+                      Get Started Free
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </a>
+                  </Button>
+                  <Link href="/pricing">
+                    <Button size="lg" variant="outline" className="text-base" data-testid="button-cta-pricing">
+                      See Plans & Pricing
+                    </Button>
+                  </Link>
+                </div>
               </div>
             </ScrollReveal>
           </div>
@@ -603,7 +574,7 @@ export default function Landing() {
           </div>
           <div className="border-t border-border/40 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
-              <Scale className="h-4 w-4 text-muted-foreground" />
+              <Logo className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm text-muted-foreground">
                 Legal Tech Careers
               </span>

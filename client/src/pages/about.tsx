@@ -2,7 +2,8 @@ import { Header } from "@/components/header";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
-import { ArrowRight, Scale, Target, Lightbulb, Shield } from "lucide-react";
+import { ArrowRight, Target, Lightbulb, Shield } from "lucide-react";
+import { Logo } from "@/components/logo";
 
 export default function About() {
   return (
@@ -108,7 +109,7 @@ export default function About() {
         <div className="max-w-3xl mx-auto px-4 sm:px-6">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
-              <Scale className="h-4 w-4 text-muted-foreground" />
+              <Logo className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm text-muted-foreground">
                 Legal Tech Careers
               </span>

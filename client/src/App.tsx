@@ -6,7 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/theme-provider";
 import { useAuth } from "@/hooks/use-auth";
 import { ScrollToTop } from "@/components/scroll-to-top";
-import { Scale } from "lucide-react";
+import { LogoMark } from "@/components/logo";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
 import Search from "@/pages/search";
@@ -28,7 +28,7 @@ function AppRouter() {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4">
         <div className="flex items-center gap-3">
-          <Scale className="h-6 w-6 text-foreground animate-pulse" />
+          <LogoMark className="h-6 w-6 text-foreground animate-pulse" />
           <span className="text-base font-semibold text-foreground tracking-tight">
             Legal Tech Careers
           </span>

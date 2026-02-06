@@ -102,10 +102,10 @@ export default function Home() {
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
         <div className="text-center mb-8">
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">
-            Legal Tech Job Intelligence
+            Find Your Next Role
           </h1>
           <p className="text-muted-foreground">
-            Discover AI-powered job matching across legal technology careers
+            Search and match across legal technology careers
           </p>
         </div>
 
