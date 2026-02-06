@@ -3,6 +3,14 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
 import OpenAI from "openai";
+
+declare global {
+  namespace Express {
+    interface Request {
+      user?: any;
+    }
+  }
+}
 import { z } from "zod";
 import type { Job, JobWithScore, ResumeExtractedData, InsertJobSubmission, InsertJobAlert, InsertNotification } from "@shared/schema";
 import { insertJobSubmissionSchema, insertJobAlertSchema } from "@shared/schema";
@@ -1941,7 +1949,6 @@ ${JSON.stringify(jobSummaries, null, 2)}`
       }
 
       // Use OpenAI to extract job title and description from the page content
-      const openai = getOpenAIClient();
       const extractionPrompt = `Extract the job posting information from this webpage content. Look for:
 1. Job title (the specific position name)
 2. Company name (if available)
@@ -2464,7 +2471,7 @@ ${primaryResume.resumeText ? `Resume Summary (first 1500 chars):\n${primaryResum
 
       if (userId) {
         const persona = await storage.getUserPersona(userId);
-        if (persona && (persona.totalJobViews > 0 || persona.totalSearches > 0)) {
+        if (persona && ((persona.totalJobViews ?? 0) > 0 || (persona.totalSearches ?? 0) > 0)) {
           const parts: string[] = [];
           if (persona.personaSummary) parts.push(`Profile: ${persona.personaSummary}`);
           if (persona.topCategories?.length) parts.push(`Top interests: ${(persona.topCategories as string[]).join(", ")}`);
@@ -2714,7 +2721,7 @@ ${matchDetails}`;
         persona = await recomputePersona(userId);
       }
 
-      res.json(persona || {
+      res.json(persona ?? {
         userId,
         topCategories: [],
         topSkills: [],
@@ -2794,7 +2801,7 @@ ${matchDetails}`;
       const preferredLocations = topN(locationCounter, 5);
       const viewedCompanies = topN(companyCounter, 10);
       const seniorityInterest = topN(seniorityCounter, 3);
-      const uniqueSearches = [...new Set(searchTerms)].slice(-10);
+      const uniqueSearches = Array.from(new Set(searchTerms)).slice(-10);
 
       const remotePreference = totalViews > 3
         ? (remoteViews / totalViews > 0.6 ? "strong" : remoteViews / totalViews > 0.3 ? "moderate" : "low")
@@ -2997,7 +3004,7 @@ ${matchDetails}`;
           const { getUncachableStripeClient } = await import("./stripeClient");
           const stripe = await getUncachableStripeClient();
           const sub = await stripe.subscriptions.retrieve(subData.stripeSubscriptionId);
-          currentPeriodEnd = sub.current_period_end;
+          currentPeriodEnd = (sub as any).current_period_end;
         } catch (e) {}
       }
 
