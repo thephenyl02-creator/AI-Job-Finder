@@ -270,3 +270,42 @@ export const insertJobSubmissionSchema = createInsertSchema(jobSubmissions).omit
 
 export type JobSubmission = typeof jobSubmissions.$inferSelect;
 export type InsertJobSubmission = z.infer<typeof insertJobSubmissionSchema>;
+
+export const jobAlerts = pgTable("job_alerts", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id", { length: 255 }).notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  categories: text("categories").array(),
+  keywords: text("keywords").array(),
+  seniorityLevels: text("seniority_levels").array(),
+  isRemoteOnly: boolean("is_remote_only").default(false),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const insertJobAlertSchema = createInsertSchema(jobAlerts).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type JobAlert = typeof jobAlerts.$inferSelect;
+export type InsertJobAlert = z.infer<typeof insertJobAlertSchema>;
+
+export const notifications = pgTable("notifications", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id", { length: 255 }).notNull(),
+  alertId: integer("alert_id"),
+  jobId: integer("job_id"),
+  title: varchar("title", { length: 255 }).notNull(),
+  message: text("message"),
+  isRead: boolean("is_read").default(false),
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const insertNotificationSchema = createInsertSchema(notifications).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type Notification = typeof notifications.$inferSelect;
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;

@@ -4,8 +4,8 @@ import { storage } from "./storage";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
 import OpenAI from "openai";
 import { z } from "zod";
-import type { Job, JobWithScore, ResumeExtractedData, InsertJobSubmission } from "@shared/schema";
-import { insertJobSubmissionSchema } from "@shared/schema";
+import type { Job, JobWithScore, ResumeExtractedData, InsertJobSubmission, InsertJobAlert, InsertNotification } from "@shared/schema";
+import { insertJobSubmissionSchema, insertJobAlertSchema } from "@shared/schema";
 import multer from "multer";
 import {
   extractTextFromPDF,
@@ -25,6 +25,7 @@ import {
 } from "./lib/law-firm-scraper";
 import { LAW_FIRMS_AND_COMPANIES } from "./lib/law-firms-list";
 import { categorizeJob } from "./lib/job-categorizer";
+import { matchNewJobsAgainstAlerts } from "./lib/alert-matcher";
 import { JOB_TAXONOMY } from "@shared/schema";
 import {
   startScheduler,
@@ -799,7 +800,10 @@ ${JSON.stringify(jobSummaries, null, 2)}`
         });
       }
 
-      const { inserted, updated } = await storage.bulkUpsertJobs(scrapedJobs);
+      const { inserted, updated, newJobs } = await storage.bulkUpsertJobs(scrapedJobs);
+      if (newJobs.length > 0) {
+        matchNewJobsAgainstAlerts(newJobs).catch(err => console.error("Alert matching error:", err));
+      }
       
       res.json({
         success: true,
@@ -835,7 +839,10 @@ ${JSON.stringify(jobSummaries, null, 2)}`
         });
       }
 
-      const { inserted, updated } = await storage.bulkUpsertJobs(scrapedJobs);
+      const { inserted, updated, newJobs } = await storage.bulkUpsertJobs(scrapedJobs);
+      if (newJobs.length > 0) {
+        matchNewJobsAgainstAlerts(newJobs).catch(err => console.error("Alert matching error:", err));
+      }
       
       res.json({
         success: true,
@@ -881,8 +888,10 @@ ${JSON.stringify(jobSummaries, null, 2)}`
         });
       }
       
-      // Insert the job
-      const { inserted, updated } = await storage.bulkUpsertJobs([job]);
+      const { inserted, updated, newJobs } = await storage.bulkUpsertJobs([job]);
+      if (newJobs.length > 0) {
+        matchNewJobsAgainstAlerts(newJobs).catch(err => console.error("Alert matching error:", err));
+      }
       
       res.json({
         success: true,
@@ -944,7 +953,10 @@ ${JSON.stringify(jobSummaries, null, 2)}`
         });
       }
 
-      const { inserted, updated } = await storage.bulkUpsertJobs(scrapedJobs);
+      const { inserted, updated, newJobs } = await storage.bulkUpsertJobs(scrapedJobs);
+      if (newJobs.length > 0) {
+        matchNewJobsAgainstAlerts(newJobs).catch(err => console.error("Alert matching error:", err));
+      }
       
       res.json({
         success: true,
@@ -1040,6 +1052,117 @@ ${JSON.stringify(jobSummaries, null, 2)}`
     } catch (error) {
       console.error("Error fetching submissions:", error);
       res.status(500).json({ error: "Failed to fetch submissions" });
+    }
+  });
+
+  // ==========================================
+  // JOB ALERTS & NOTIFICATIONS
+  // ==========================================
+
+  app.get("/api/alerts", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) return res.status(401).json({ error: "Not authenticated" });
+      const alerts = await storage.getUserAlerts(userId);
+      res.json(alerts);
+    } catch (error) {
+      console.error("Error fetching alerts:", error);
+      res.status(500).json({ error: "Failed to fetch alerts" });
+    }
+  });
+
+  app.post("/api/alerts", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) return res.status(401).json({ error: "Not authenticated" });
+      const parsed = insertJobAlertSchema.safeParse({ ...req.body, userId });
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Invalid alert data", details: parsed.error.issues });
+      }
+      const alert = await storage.createJobAlert(parsed.data);
+      res.json(alert);
+    } catch (error) {
+      console.error("Error creating alert:", error);
+      res.status(500).json({ error: "Failed to create alert" });
+    }
+  });
+
+  app.patch("/api/alerts/:id", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) return res.status(401).json({ error: "Not authenticated" });
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ error: "Invalid alert ID" });
+      const updated = await storage.updateJobAlert(id, userId, req.body);
+      if (!updated) return res.status(404).json({ error: "Alert not found" });
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating alert:", error);
+      res.status(500).json({ error: "Failed to update alert" });
+    }
+  });
+
+  app.delete("/api/alerts/:id", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) return res.status(401).json({ error: "Not authenticated" });
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ error: "Invalid alert ID" });
+      await storage.deleteJobAlert(id, userId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting alert:", error);
+      res.status(500).json({ error: "Failed to delete alert" });
+    }
+  });
+
+  app.get("/api/notifications", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) return res.status(401).json({ error: "Not authenticated" });
+      const notifs = await storage.getUserNotifications(userId, 50);
+      res.json(notifs);
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
+      res.status(500).json({ error: "Failed to fetch notifications" });
+    }
+  });
+
+  app.get("/api/notifications/unread-count", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) return res.status(401).json({ error: "Not authenticated" });
+      const count = await storage.getUnreadNotificationCount(userId);
+      res.json({ count });
+    } catch (error) {
+      console.error("Error fetching unread count:", error);
+      res.status(500).json({ error: "Failed to fetch count" });
+    }
+  });
+
+  app.post("/api/notifications/:id/read", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) return res.status(401).json({ error: "Not authenticated" });
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ error: "Invalid notification ID" });
+      await storage.markNotificationRead(id, userId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error marking notification read:", error);
+      res.status(500).json({ error: "Failed to mark read" });
+    }
+  });
+
+  app.post("/api/notifications/mark-all-read", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) return res.status(401).json({ error: "Not authenticated" });
+      await storage.markAllNotificationsRead(userId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error marking all read:", error);
+      res.status(500).json({ error: "Failed to mark all read" });
     }
   });
 

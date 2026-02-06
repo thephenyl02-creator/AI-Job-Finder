@@ -10,8 +10,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, Briefcase, Info, Settings, Compass, Scale, BarChart3 } from "lucide-react";
+import { LogOut, Briefcase, Info, Settings, Compass, Scale, BarChart3, Bell } from "lucide-react";
 import { Link, useLocation } from "wouter";
+import { NotificationBell } from "@/components/notification-bell";
 
 export function Header() {
   const { user, isAuthenticated, isAdmin } = useAuth();
@@ -94,6 +95,7 @@ export function Header() {
                   Post a Job
                 </Button>
               </Link>
+              <NotificationBell />
               <ThemeToggle />
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -134,6 +136,12 @@ export function Header() {
                     <Link href="/post-job" className="cursor-pointer" data-testid="link-post-job-mobile">
                       <Briefcase className="mr-2 h-4 w-4" />
                       <span>Post a Job</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/alerts" className="cursor-pointer" data-testid="link-alerts">
+                      <Bell className="mr-2 h-4 w-4" />
+                      <span>Job Alerts</span>
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>

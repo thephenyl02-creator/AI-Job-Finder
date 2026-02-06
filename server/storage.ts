@@ -1,6 +1,6 @@
 import { db } from "./db";
-import { jobs, users, userPreferences, jobCategories, jobSubmissions, type Job, type InsertJob, type User, type UserPreferences, type InsertUserPreferences, type ResumeExtractedData, type JobCategory, type JobSubmission, type InsertJobSubmission, JOB_TAXONOMY } from "@shared/schema";
-import { eq, desc, and, sql } from "drizzle-orm";
+import { jobs, users, userPreferences, jobCategories, jobSubmissions, jobAlerts, notifications, type Job, type InsertJob, type User, type UserPreferences, type InsertUserPreferences, type ResumeExtractedData, type JobCategory, type JobSubmission, type InsertJobSubmission, type JobAlert, type InsertJobAlert, type Notification, type InsertNotification, JOB_TAXONOMY } from "@shared/schema";
+import { eq, desc, and, sql, inArray, lt } from "drizzle-orm";
 
 export interface IStorage {
   // Jobs
@@ -13,7 +13,7 @@ export interface IStorage {
   seedJobs(): Promise<void>;
   upsertJobByExternalId(job: InsertJob): Promise<{ job: Job; isNew: boolean }>;
   getJobByExternalId(externalId: string): Promise<Job | undefined>;
-  bulkUpsertJobs(jobsList: InsertJob[]): Promise<{ inserted: number; updated: number }>;
+  bulkUpsertJobs(jobsList: InsertJob[]): Promise<{ inserted: number; updated: number; newJobs: Job[] }>;
   trackApplyClick(jobId: number): Promise<void>;
   // User Resume
   updateUserResume(userId: string, resumeText: string, filename: string, extractedData: ResumeExtractedData): Promise<void>;
@@ -33,6 +33,20 @@ export interface IStorage {
   // Job Submissions
   createJobSubmission(submission: InsertJobSubmission): Promise<JobSubmission>;
   getJobSubmissions(): Promise<JobSubmission[]>;
+  // Job Alerts
+  createJobAlert(alert: InsertJobAlert): Promise<JobAlert>;
+  getUserAlerts(userId: string): Promise<JobAlert[]>;
+  getActiveAlerts(): Promise<JobAlert[]>;
+  updateJobAlert(id: number, userId: string, data: Partial<InsertJobAlert>): Promise<JobAlert | undefined>;
+  deleteJobAlert(id: number, userId: string): Promise<void>;
+  // Notifications
+  createNotification(notification: InsertNotification): Promise<Notification>;
+  createNotifications(notificationsList: InsertNotification[]): Promise<void>;
+  getUserNotifications(userId: string, limit?: number): Promise<Notification[]>;
+  getUnreadNotificationCount(userId: string): Promise<number>;
+  markNotificationRead(id: number, userId: string): Promise<void>;
+  markAllNotificationsRead(userId: string): Promise<void>;
+  cleanOldNotifications(daysOld: number): Promise<void>;
 }
 
 class DatabaseStorage implements IStorage {
@@ -103,20 +117,22 @@ class DatabaseStorage implements IStorage {
     }
   }
 
-  async bulkUpsertJobs(jobsList: InsertJob[]): Promise<{ inserted: number; updated: number }> {
+  async bulkUpsertJobs(jobsList: InsertJob[]): Promise<{ inserted: number; updated: number; newJobs: Job[] }> {
     let inserted = 0;
     let updated = 0;
+    const newJobs: Job[] = [];
 
     for (const job of jobsList) {
       const result = await this.upsertJobByExternalId(job);
       if (result.isNew) {
         inserted++;
+        newJobs.push(result.job);
       } else {
         updated++;
       }
     }
 
-    return { inserted, updated };
+    return { inserted, updated, newJobs };
   }
 
   async seedJobs(): Promise<void> {
@@ -488,6 +504,74 @@ class DatabaseStorage implements IStorage {
 
   async getJobSubmissions(): Promise<JobSubmission[]> {
     return db.select().from(jobSubmissions).orderBy(desc(jobSubmissions.submittedAt));
+  }
+
+  async createJobAlert(alert: InsertJobAlert): Promise<JobAlert> {
+    const [newAlert] = await db.insert(jobAlerts).values(alert).returning();
+    return newAlert;
+  }
+
+  async getUserAlerts(userId: string): Promise<JobAlert[]> {
+    return db.select().from(jobAlerts).where(eq(jobAlerts.userId, userId)).orderBy(desc(jobAlerts.createdAt));
+  }
+
+  async getActiveAlerts(): Promise<JobAlert[]> {
+    return db.select().from(jobAlerts).where(eq(jobAlerts.isActive, true));
+  }
+
+  async updateJobAlert(id: number, userId: string, data: Partial<InsertJobAlert>): Promise<JobAlert | undefined> {
+    const [updated] = await db
+      .update(jobAlerts)
+      .set(data)
+      .where(and(eq(jobAlerts.id, id), eq(jobAlerts.userId, userId)))
+      .returning();
+    return updated;
+  }
+
+  async deleteJobAlert(id: number, userId: string): Promise<void> {
+    await db.delete(jobAlerts).where(and(eq(jobAlerts.id, id), eq(jobAlerts.userId, userId)));
+  }
+
+  async createNotification(notification: InsertNotification): Promise<Notification> {
+    const [newNotif] = await db.insert(notifications).values(notification).returning();
+    return newNotif;
+  }
+
+  async createNotifications(notificationsList: InsertNotification[]): Promise<void> {
+    if (notificationsList.length === 0) return;
+    await db.insert(notifications).values(notificationsList);
+  }
+
+  async getUserNotifications(userId: string, limit = 50): Promise<Notification[]> {
+    return db.select().from(notifications).where(eq(notifications.userId, userId)).orderBy(desc(notifications.createdAt)).limit(limit);
+  }
+
+  async getUnreadNotificationCount(userId: string): Promise<number> {
+    const result = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(notifications)
+      .where(and(eq(notifications.userId, userId), eq(notifications.isRead, false)));
+    return result[0]?.count || 0;
+  }
+
+  async markNotificationRead(id: number, userId: string): Promise<void> {
+    await db
+      .update(notifications)
+      .set({ isRead: true })
+      .where(and(eq(notifications.id, id), eq(notifications.userId, userId)));
+  }
+
+  async markAllNotificationsRead(userId: string): Promise<void> {
+    await db
+      .update(notifications)
+      .set({ isRead: true })
+      .where(and(eq(notifications.userId, userId), eq(notifications.isRead, false)));
+  }
+
+  async cleanOldNotifications(daysOld: number): Promise<void> {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - daysOld);
+    await db.delete(notifications).where(lt(notifications.createdAt, cutoff));
   }
 }
 
