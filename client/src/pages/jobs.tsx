@@ -639,13 +639,18 @@ export default function Jobs() {
         )}
 
         <Card className="mb-6 shadow-sm" data-testid="card-smart-search">
-          <CardContent className="p-3 sm:p-4">
-            <div className="flex items-end gap-2">
+          <CardContent className="p-4 sm:p-5">
+            {!smartQuery && !searchResults && guidedStep === "idle" && (
+              <p className="text-xs text-muted-foreground mb-2" data-testid="text-search-hint">
+                Just type what you're looking for in your own words
+              </p>
+            )}
+            <div className="flex items-end gap-3">
               <div className="flex-1 min-w-0">
                 <Textarea
-                  placeholder="Describe your ideal role... e.g. 'remote compliance role, 3+ years experience'"
-                  className="resize-none border-0 text-sm sm:text-base focus-visible:ring-0 shadow-none min-h-[44px] max-h-[80px] placeholder:text-muted-foreground/60"
-                  rows={1}
+                  placeholder="What kind of role are you looking for? e.g. 'I'm a contracts attorney looking for a remote legal tech role' or 'entry level compliance jobs in New York'"
+                  className="resize-none border-0 text-base sm:text-lg focus-visible:ring-0 shadow-none min-h-[60px] max-h-[120px] placeholder:text-muted-foreground/50 leading-relaxed"
+                  rows={2}
                   value={smartQuery}
                   onChange={(e) => setSmartQuery(e.target.value)}
                   onKeyDown={(e) => {
@@ -658,22 +663,23 @@ export default function Jobs() {
                 />
               </div>
               <Button
-                size="icon"
                 onClick={handleSmartSearch}
                 disabled={!smartQuery.trim() || isSearching}
+                className="gap-1.5"
                 data-testid="button-smart-search"
               >
-                {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowUp className="h-4 w-4" />}
+                {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                <span className="hidden sm:inline">Search</span>
               </Button>
             </div>
             {!smartQuery && !searchResults && guidedStep === "idle" && (
-              <div className="flex flex-wrap gap-1.5 mt-2">
+              <div className="flex flex-wrap gap-1.5 mt-3">
                 {SEARCH_SUGGESTIONS.map((s) => (
                   <Button
                     key={s.label}
                     variant="outline"
                     size="sm"
-                    className="gap-1 text-xs min-h-[44px]"
+                    className="gap-1 text-xs"
                     onClick={() => setSmartQuery(s.query)}
                     data-testid={`chip-${s.label.toLowerCase().replace(/\s+/g, "-")}`}
                   >
