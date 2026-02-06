@@ -595,34 +595,6 @@ export default function Search() {
                 </motion.div>
               )}
 
-              {!isUploading && !resumeStatus?.hasResume && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.25 }}
-                >
-                  <div
-                    className={`rounded-md p-3 text-center cursor-pointer transition-colors border border-dashed ${
-                      isDragOver
-                        ? "border-primary bg-primary/5"
-                        : "border-border/60 hover:border-muted-foreground/40"
-                    }`}
-                    onDragOver={handleDragOver}
-                    onDragLeave={handleDragLeave}
-                    onDrop={handleDrop}
-                    onClick={() => fileInputRef.current?.click()}
-                    data-testid="dropzone-resume"
-                  >
-                    <div className="flex items-center justify-center gap-2">
-                      <Upload className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm text-muted-foreground">
-                        Drop your resume here for personalized matches
-                      </span>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-
               {resumeStatus?.hasResume && !isUploading && (
                 <motion.div
                   initial={{ opacity: 0, y: 12 }}
@@ -633,18 +605,48 @@ export default function Search() {
                 </motion.div>
               )}
 
-              <div className="text-center">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setLocation("/jobs")}
-                  className="text-muted-foreground gap-1.5"
-                  data-testid="link-browse-all"
+              {!isUploading && !resumeStatus?.hasResume && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.25 }}
                 >
-                  Or browse all jobs by category
-                  <ArrowRight className="h-3.5 w-3.5" />
-                </Button>
-              </div>
+                  <div
+                    className={`rounded-md p-3 transition-colors ${
+                      isDragOver
+                        ? "border border-dashed border-primary bg-primary/5"
+                        : ""
+                    }`}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                  >
+                    <div className="flex items-center justify-center gap-3 flex-wrap">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-muted-foreground gap-1.5"
+                        onClick={() => fileInputRef.current?.click()}
+                        data-testid="dropzone-resume"
+                      >
+                        <Upload className="h-3.5 w-3.5" />
+                        Upload resume for matches
+                      </Button>
+                      <span className="text-border text-xs">|</span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-muted-foreground gap-1.5"
+                        onClick={() => setLocation("/jobs")}
+                        data-testid="link-browse-all"
+                      >
+                        Browse all jobs
+                        <ArrowRight className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
             </motion.div>
           )}
 

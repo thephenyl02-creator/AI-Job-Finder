@@ -313,6 +313,21 @@ export default function Landing() {
           </div>
         </section>
 
+        <section className="border-t border-border/40 bg-muted/30">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-10 sm:py-14">
+            <ScrollReveal>
+              <div className="flex items-start gap-4 sm:gap-5 max-w-3xl mx-auto" data-testid="curated-highlight">
+                <div className="w-9 h-9 rounded-md bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
+                  <Target className="h-4 w-4 text-primary" />
+                </div>
+                <p className="text-base sm:text-lg text-foreground/90 leading-relaxed font-medium italic">
+                  Every opportunity is carefully curated and evaluated to ensure relevance, quality, and real career value before being featured on the platform.
+                </p>
+              </div>
+            </ScrollReveal>
+          </div>
+        </section>
+
         <section className="border-t border-border/40">
           <div className="max-w-5xl mx-auto px-4 sm:px-6 py-20 sm:py-28">
             <ScrollReveal>
