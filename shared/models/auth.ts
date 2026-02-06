@@ -39,6 +39,18 @@ export const users = pgTable("users", {
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
 
+// Password reset tokens
+export const passwordResetTokens = pgTable("password_reset_tokens", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  token: varchar("token", { length: 255 }).notNull().unique(),
+  expiresAt: timestamp("expires_at").notNull(),
+  usedAt: timestamp("used_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
+
 // User preferences for auto-save search criteria
 export const userPreferences = pgTable("user_preferences", {
   id: serial("id").primaryKey(),

@@ -245,6 +245,81 @@ export async function setupAuth(app: Express) {
     }
   });
 
+  // Forgot password - request reset
+  app.post("/api/auth/forgot-password", async (req, res) => {
+    try {
+      const { email } = req.body;
+      if (!email) {
+        return res.status(400).json({ message: "Email is required" });
+      }
+
+      const user = await authStorage.getUserByEmail(email);
+
+      const genericMessage = "If an account with that email exists, a reset link has been generated.";
+
+      if (!user || !user.password) {
+        return res.json({ message: genericMessage });
+      }
+
+      const token = randomBytes(32).toString("hex");
+      const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+      await authStorage.createPasswordResetToken(user.id, token, expiresAt);
+
+      res.json({
+        message: genericMessage,
+        resetToken: token,
+      });
+    } catch (error) {
+      console.error("Forgot password error:", error);
+      res.status(500).json({ message: "Something went wrong. Please try again." });
+    }
+  });
+
+  // Reset password with token
+  app.post("/api/auth/reset-password", async (req, res) => {
+    try {
+      const { token, newPassword } = req.body;
+
+      if (!token || !newPassword) {
+        return res.status(400).json({ message: "Token and new password are required" });
+      }
+
+      if (newPassword.length < 8) {
+        return res.status(400).json({ message: "Password must be at least 8 characters" });
+      }
+
+      const resetToken = await authStorage.getValidResetToken(token);
+      if (!resetToken) {
+        return res.status(400).json({ message: "This reset link has expired or is invalid. Please request a new one." });
+      }
+
+      const hashedPassword = await bcrypt.hash(newPassword, 12);
+      await authStorage.updateUserPassword(resetToken.userId, hashedPassword);
+      await authStorage.markTokenUsed(resetToken.id);
+
+      res.json({ message: "Password has been reset successfully. You can now sign in with your new password." });
+    } catch (error) {
+      console.error("Reset password error:", error);
+      res.status(500).json({ message: "Something went wrong. Please try again." });
+    }
+  });
+
+  // Verify reset token is valid
+  app.get("/api/auth/verify-reset-token", async (req, res) => {
+    try {
+      const { token } = req.query;
+      if (!token || typeof token !== "string") {
+        return res.status(400).json({ valid: false });
+      }
+
+      const resetToken = await authStorage.getValidResetToken(token);
+      res.json({ valid: !!resetToken });
+    } catch (error) {
+      res.json({ valid: false });
+    }
+  });
+
   // Check if Google login is available
   app.get("/api/auth/providers", (_req, res) => {
     res.json({

@@ -6,9 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Logo } from "@/components/logo";
-import { Loader2, ArrowRight, Mail } from "lucide-react";
+import { Loader2, ArrowRight, ArrowLeft, Mail, KeyRound, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 
 function GoogleIcon({ className }: { className?: string }) {
   return (
@@ -21,13 +22,20 @@ function GoogleIcon({ className }: { className?: string }) {
   );
 }
 
+type AuthView = "login" | "register" | "forgot" | "reset";
+
 export default function Auth() {
   const [mode, setMode] = useState<"login" | "register">("login");
+  const [view, setView] = useState<AuthView>("login");
   const [showEmailForm, setShowEmailForm] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [resetToken, setResetToken] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const { login, register, isLoggingIn, isRegistering, isAuthenticated } = useAuth();
   const [, setLocation] = useLocation();
   const search = useSearch();
@@ -42,20 +50,25 @@ export default function Auth() {
   const googleAvailable = providers?.google === true;
 
   useEffect(() => {
-    if (isAuthenticated) {
-      setLocation("/");
-    }
-  }, [isAuthenticated, setLocation]);
-
-  useEffect(() => {
     const params = new URLSearchParams(search);
     const error = params.get("error");
+    const token = params.get("token");
     if (error === "google_denied") {
       toast({ title: "Google sign-in was cancelled", variant: "destructive" });
     } else if (error === "google_failed") {
       toast({ title: "Google sign-in failed. Please try again.", variant: "destructive" });
     }
+    if (token) {
+      setResetToken(token);
+      setView("reset");
+    }
   }, [search, toast]);
+
+  useEffect(() => {
+    if (isAuthenticated && view !== "reset") {
+      setLocation("/");
+    }
+  }, [isAuthenticated, view, setLocation]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -88,6 +101,225 @@ export default function Auth() {
     window.location.href = "/api/auth/google";
   };
 
+  const forgotMutation = useMutation({
+    mutationFn: async (email: string) => {
+      const res = await apiRequest("POST", "/api/auth/forgot-password", { email });
+      return res.json();
+    },
+  });
+
+  const resetMutation = useMutation({
+    mutationFn: async (data: { token: string; newPassword: string }) => {
+      const res = await apiRequest("POST", "/api/auth/reset-password", data);
+      return res.json();
+    },
+  });
+
+  const handleForgotSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const result = await forgotMutation.mutateAsync(forgotEmail);
+      if (result.resetToken) {
+        setResetToken(result.resetToken);
+        setView("reset");
+        toast({ title: "Set your new password below." });
+      } else {
+        toast({ title: "If an account with that email exists, check your email for a reset link." });
+      }
+    } catch (err: any) {
+      toast({ title: "Something went wrong. Please try again.", variant: "destructive" });
+    }
+  };
+
+  const handleResetSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPassword !== confirmPassword) {
+      toast({ title: "Passwords don't match", variant: "destructive" });
+      return;
+    }
+    if (newPassword.length < 8) {
+      toast({ title: "Password must be at least 8 characters", variant: "destructive" });
+      return;
+    }
+    try {
+      await resetMutation.mutateAsync({ token: resetToken, newPassword });
+      setNewPassword("");
+      setConfirmPassword("");
+      setResetToken("");
+    } catch (err: any) {
+      const message = err?.message || "Something went wrong";
+      let displayMessage = message;
+      try {
+        const parsed = JSON.parse(message.replace(/^\d+:\s*/, ""));
+        displayMessage = parsed.message || message;
+      } catch {
+        displayMessage = message;
+      }
+      toast({ title: displayMessage, variant: "destructive" });
+    }
+  };
+
+  const switchToView = (newView: AuthView) => {
+    setView(newView);
+    if (newView === "login" || newView === "register") {
+      setMode(newView);
+    }
+  };
+
+  if (view === "forgot") {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center px-4">
+        <div className="w-full max-w-sm">
+          <div className="flex flex-col items-center gap-4 mb-8">
+            <Logo className="h-8 w-8 text-foreground" />
+            <div className="text-center">
+              <h1 className="font-serif text-2xl font-semibold text-foreground tracking-tight" data-testid="text-forgot-title">
+                Reset Your Password
+              </h1>
+              <p className="text-sm text-muted-foreground mt-1">
+                Enter the email address associated with your account
+              </p>
+            </div>
+          </div>
+
+          <Card>
+            <CardContent className="pt-6 space-y-4">
+              <form onSubmit={handleForgotSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="forgot-email">Email</Label>
+                  <Input
+                    id="forgot-email"
+                    type="email"
+                    placeholder="you@example.com"
+                    value={forgotEmail}
+                    onChange={(e) => setForgotEmail(e.target.value)}
+                    required
+                    data-testid="input-forgot-email"
+                  />
+                </div>
+                <Button
+                  type="submit"
+                  className="w-full"
+                  disabled={forgotMutation.isPending}
+                  data-testid="button-forgot-submit"
+                >
+                  {forgotMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : (
+                    <KeyRound className="h-4 w-4 mr-2" />
+                  )}
+                  Send Reset Link
+                </Button>
+              </form>
+              <Button
+                variant="ghost"
+                className="w-full gap-2"
+                onClick={() => switchToView("login")}
+                data-testid="button-back-to-login"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Back to Sign In
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  if (view === "reset") {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center px-4">
+        <div className="w-full max-w-sm">
+          <div className="flex flex-col items-center gap-4 mb-8">
+            <Logo className="h-8 w-8 text-foreground" />
+            <div className="text-center">
+              <h1 className="font-serif text-2xl font-semibold text-foreground tracking-tight" data-testid="text-reset-title">
+                Set New Password
+              </h1>
+              <p className="text-sm text-muted-foreground mt-1">
+                Choose a strong password for your account
+              </p>
+            </div>
+          </div>
+
+          <Card>
+            <CardContent className="pt-6 space-y-4">
+              {resetMutation.isSuccess ? (
+                <div className="text-center py-4">
+                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                    <CheckCircle2 className="h-6 w-6 text-primary" />
+                  </div>
+                  <p className="text-sm text-foreground font-medium mb-2" data-testid="text-reset-success">
+                    Password updated successfully
+                  </p>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    You can now sign in with your new password.
+                  </p>
+                  <Button onClick={() => { switchToView("login"); resetMutation.reset(); }} className="w-full" data-testid="button-go-to-login">
+                    Sign In
+                    <ArrowRight className="h-4 w-4 ml-2" />
+                  </Button>
+                </div>
+              ) : (
+                <form onSubmit={handleResetSubmit} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="new-password">New Password</Label>
+                    <Input
+                      id="new-password"
+                      type="password"
+                      placeholder="At least 8 characters"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      required
+                      minLength={8}
+                      data-testid="input-new-password"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="confirm-password">Confirm Password</Label>
+                    <Input
+                      id="confirm-password"
+                      type="password"
+                      placeholder="Re-enter your password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      required
+                      minLength={8}
+                      data-testid="input-confirm-password"
+                    />
+                  </div>
+                  <Button
+                    type="submit"
+                    className="w-full"
+                    disabled={resetMutation.isPending}
+                    data-testid="button-reset-submit"
+                  >
+                    {resetMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : (
+                      <KeyRound className="h-4 w-4 mr-2" />
+                    )}
+                    Reset Password
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    className="w-full gap-2"
+                    onClick={() => switchToView("login")}
+                    data-testid="button-reset-back-to-login"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                    Back to Sign In
+                  </Button>
+                </form>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
@@ -111,7 +343,7 @@ export default function Auth() {
               <Button
                 variant={mode === "login" ? "default" : "ghost"}
                 size="sm"
-                onClick={() => { setMode("login"); setShowEmailForm(false); }}
+                onClick={() => { setMode("login"); setView("login"); setShowEmailForm(false); }}
                 className="flex-1"
                 data-testid="button-tab-login"
               >
@@ -120,7 +352,7 @@ export default function Auth() {
               <Button
                 variant={mode === "register" ? "default" : "ghost"}
                 size="sm"
-                onClick={() => { setMode("register"); setShowEmailForm(false); }}
+                onClick={() => { setMode("register"); setView("register"); setShowEmailForm(false); }}
                 className="flex-1"
                 data-testid="button-tab-register"
               >
@@ -207,7 +439,19 @@ export default function Auth() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="password">Password</Label>
+                    {mode === "login" && (
+                      <button
+                        type="button"
+                        onClick={() => switchToView("forgot")}
+                        className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                        data-testid="link-forgot-password"
+                      >
+                        Forgot password?
+                      </button>
+                    )}
+                  </div>
                   <Input
                     id="password"
                     type="password"
