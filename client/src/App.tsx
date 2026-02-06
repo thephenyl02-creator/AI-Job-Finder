@@ -18,6 +18,7 @@ import PostJob from "@/pages/post-job";
 import CareerAdvisor from "@/pages/career-advisor";
 import Insights from "@/pages/insights";
 import Alerts from "@/pages/alerts";
+import Resumes from "@/pages/resumes";
 
 function AppRouter() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -49,6 +50,7 @@ function AppRouter() {
       <Route path="/career-advisor">{isAuthenticated ? <CareerAdvisor /> : <Landing />}</Route>
       <Route path="/insights">{isAuthenticated ? <Insights /> : <Landing />}</Route>
       <Route path="/alerts">{isAuthenticated ? <Alerts /> : <Landing />}</Route>
+      <Route path="/resumes">{isAuthenticated ? <Resumes /> : <Landing />}</Route>
       <Route path="/about" component={About} />
       <Route path="/post-job" component={PostJob} />
       <Route component={NotFound} />
