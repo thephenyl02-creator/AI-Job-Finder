@@ -130,14 +130,23 @@ export default function Jobs() {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [refinedSummary, setRefinedSummary] = useState<string | null>(null);
 
-  const hasUsedGuidedTrial = useCallback(() => {
-    return sessionStorage.getItem("guidedSearchUsed") === "true";
+  const GUIDED_TRIAL_LIMIT = 7;
+
+  const getGuidedTrialCount = useCallback(() => {
+    const count = sessionStorage.getItem("guidedSearchCount");
+    return count ? parseInt(count, 10) : 0;
   }, []);
+
+  const hasUsedGuidedTrial = useCallback(() => {
+    return getGuidedTrialCount() >= GUIDED_TRIAL_LIMIT;
+  }, [getGuidedTrialCount]);
 
   const markGuidedTrialUsed = useCallback(() => {
-    sessionStorage.setItem("guidedSearchUsed", "true");
-  }, []);
+    const current = getGuidedTrialCount();
+    sessionStorage.setItem("guidedSearchCount", String(current + 1));
+  }, [getGuidedTrialCount]);
 
+  const guidedTrialsRemaining = isPro ? Infinity : GUIDED_TRIAL_LIMIT - getGuidedTrialCount();
   const canUseGuidedSearch = isPro || !hasUsedGuidedTrial();
 
   const searchMutation = useMutation({
@@ -682,7 +691,9 @@ export default function Jobs() {
 
               {!isPro && (
                 <p className="text-xs text-muted-foreground text-center">
-                  You're using your free guided search trial.
+                  {guidedTrialsRemaining > 0
+                    ? `${guidedTrialsRemaining} free guided ${guidedTrialsRemaining === 1 ? "search" : "searches"} remaining.`
+                    : "You've used all your free guided searches."}
                   <Link href="/pricing" className="text-primary ml-1">Upgrade for unlimited</Link>
                 </p>
               )}
