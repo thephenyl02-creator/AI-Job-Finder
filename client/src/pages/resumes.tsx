@@ -30,9 +30,7 @@ import {
   Eye,
   ChevronDown,
   ChevronRight,
-  Wrench,
   Zap,
-  ArrowRight,
 } from "lucide-react";
 
 interface BatchMatchResult {
@@ -112,7 +110,7 @@ function ResumeCard({
                   <Input
                     value={editValue}
                     onChange={(e) => setEditValue(e.target.value)}
-                    className="h-7 text-sm w-40"
+                    className="text-sm max-w-[160px]"
                     onKeyDown={(e) => {
                       if (e.key === "Enter") handleSave();
                       if (e.key === "Escape") setEditing(false);
@@ -132,6 +130,7 @@ function ResumeCard({
                     size="icon"
                     variant="ghost"
                     onClick={() => setEditing(false)}
+                    data-testid={`button-cancel-edit-${resume.id}`}
                   >
                     <X className="h-3 w-3" />
                   </Button>
@@ -261,18 +260,20 @@ function MatchJobCard({
             </div>
             {match.allScores && match.allScores.length > 1 && (
               <div className="mt-2">
-                <button
-                  className="text-xs text-muted-foreground flex items-center gap-1 hover:text-foreground transition-colors"
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs text-muted-foreground"
                   onClick={() => setExpanded(!expanded)}
                   data-testid={`button-expand-scores-${match.jobId}`}
                 >
                   {expanded ? (
-                    <ChevronDown className="h-3 w-3" />
+                    <ChevronDown className="h-3 w-3 mr-1" />
                   ) : (
-                    <ChevronRight className="h-3 w-3" />
+                    <ChevronRight className="h-3 w-3 mr-1" />
                   )}
                   Scores across {match.allScores.length} resumes
-                </button>
+                </Button>
                 {expanded && (
                   <div className="mt-1.5 space-y-1">
                     {match.allScores
@@ -456,6 +457,7 @@ function UploadForm({
                     e.stopPropagation();
                     setFile(null);
                   }}
+                  data-testid="button-clear-file"
                 >
                   <X className="h-3 w-3" />
                 </Button>
@@ -478,6 +480,7 @@ function UploadForm({
               variant="outline"
               size="sm"
               onClick={onClose}
+              data-testid="button-cancel-upload"
             >
               Cancel
             </Button>
@@ -813,18 +816,11 @@ export default function Resumes() {
     enabled: isAuthenticated,
   });
 
-  const {
-    data: matchResults,
-    isLoading: matchLoading,
-    refetch: runMatch,
-    isFetching: matchFetching,
-  } = useQuery<{ results: ResumeMatchResult[] }>({
-    queryKey: ["/api/resumes/match-all"],
-    queryFn: async () => {
+  const matchMutation = useMutation({
+    mutationFn: async () => {
       const res = await apiRequest("POST", "/api/resumes/match-all");
-      return res.json();
+      return res.json() as Promise<{ results: ResumeMatchResult[] }>;
     },
-    enabled: false,
   });
 
   const deleteMutation = useMutation({
@@ -946,11 +942,11 @@ export default function Resumes() {
             {userResumes.length >= 1 && (
               <Button
                 className="w-full"
-                onClick={() => runMatch()}
-                disabled={matchLoading || matchFetching}
+                onClick={() => matchMutation.mutate()}
+                disabled={matchMutation.isPending}
                 data-testid="button-run-match"
               >
-                {matchLoading || matchFetching ? (
+                {matchMutation.isPending ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                     Analyzing matches...
@@ -966,7 +962,7 @@ export default function Resumes() {
           </div>
 
           <div className="lg:col-span-2">
-            {matchLoading || matchFetching ? (
+            {matchMutation.isPending ? (
               <Card className="overflow-visible">
                 <CardContent className="p-8 text-center">
                   <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
@@ -978,8 +974,8 @@ export default function Resumes() {
                   </p>
                 </CardContent>
               </Card>
-            ) : matchResults?.results ? (
-              <MatchDashboard results={matchResults.results} />
+            ) : matchMutation.data?.results ? (
+              <MatchDashboard results={matchMutation.data.results} />
             ) : (
               <Card className="overflow-visible">
                 <CardContent className="p-8 text-center">
@@ -999,8 +995,8 @@ export default function Resumes() {
                   </p>
                   {userResumes.length > 0 && (
                     <Button
-                      onClick={() => runMatch()}
-                      disabled={matchLoading || matchFetching}
+                      onClick={() => matchMutation.mutate()}
+                      disabled={matchMutation.isPending}
                       data-testid="button-run-match-main"
                     >
                       <Target className="h-4 w-4 mr-2" />
