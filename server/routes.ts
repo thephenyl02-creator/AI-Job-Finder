@@ -2167,6 +2167,145 @@ Return a JSON response with this exact structure:
     }
   });
 
+  // ===== Conversational Market Insights (Pro only) =====
+  app.post("/api/insights/query", isAuthenticated, requirePro, async (req, res) => {
+    try {
+      const { question } = req.body;
+      if (!question || typeof question !== "string" || question.trim().length < 3) {
+        return res.status(400).json({ error: "Please provide a question." });
+      }
+
+      const allJobs = await storage.getActiveJobs();
+      const totalJobs = allJobs.length;
+
+      if (totalJobs === 0) {
+        return res.json({
+          answer: "There are currently no active job listings in the database. Check back soon as new positions are added regularly.",
+          citations: [],
+        });
+      }
+
+      const companies = new Set(allJobs.map((j) => j.company));
+      const remoteJobs = allJobs.filter((j) => j.isRemote).length;
+
+      const categoryMap: Record<string, number> = {};
+      const seniorityMap: Record<string, number> = {};
+      const skillMap: Record<string, number> = {};
+      const companyMap: Record<string, number> = {};
+      const subcategoryMap: Record<string, number> = {};
+      const salaryJobs: { title: string; company: string; min: number; max: number; category: string }[] = [];
+      const locationMap: Record<string, number> = {};
+
+      for (const job of allJobs) {
+        if (job.roleCategory) categoryMap[job.roleCategory] = (categoryMap[job.roleCategory] || 0) + 1;
+        if (job.seniorityLevel) seniorityMap[job.seniorityLevel] = (seniorityMap[job.seniorityLevel] || 0) + 1;
+        if (job.keySkills) {
+          for (const skill of job.keySkills) skillMap[skill] = (skillMap[skill] || 0) + 1;
+        }
+        companyMap[job.company] = (companyMap[job.company] || 0) + 1;
+        if (job.roleSubcategory) subcategoryMap[job.roleSubcategory] = (subcategoryMap[job.roleSubcategory] || 0) + 1;
+        if (job.salaryMin && job.salaryMax && job.salaryMin > 0) {
+          salaryJobs.push({ title: job.title, company: job.company, min: job.salaryMin, max: job.salaryMax, category: job.roleCategory || "Unknown" });
+        }
+        if (job.location) locationMap[job.location] = (locationMap[job.location] || 0) + 1;
+      }
+
+      const topCategories = Object.entries(categoryMap).sort((a, b) => b[1] - a[1]).slice(0, 10);
+      const topSkills = Object.entries(skillMap).sort((a, b) => b[1] - a[1]).slice(0, 20);
+      const topCompanies = Object.entries(companyMap).sort((a, b) => b[1] - a[1]).slice(0, 15);
+      const topLocations = Object.entries(locationMap).sort((a, b) => b[1] - a[1]).slice(0, 10);
+      const seniorityBreakdown = Object.entries(seniorityMap).sort((a, b) => b[1] - a[1]);
+      const topSubcategories = Object.entries(subcategoryMap).sort((a, b) => b[1] - a[1]).slice(0, 15);
+
+      const avgSalaryMin = salaryJobs.length > 0 ? Math.round(salaryJobs.reduce((s, j) => s + j.min, 0) / salaryJobs.length) : null;
+      const avgSalaryMax = salaryJobs.length > 0 ? Math.round(salaryJobs.reduce((s, j) => s + j.max, 0) / salaryJobs.length) : null;
+
+      const salaryByCategory: Record<string, { total: number; count: number }> = {};
+      for (const sj of salaryJobs) {
+        if (!salaryByCategory[sj.category]) salaryByCategory[sj.category] = { total: 0, count: 0 };
+        salaryByCategory[sj.category].total += (sj.min + sj.max) / 2;
+        salaryByCategory[sj.category].count += 1;
+      }
+      const avgSalaryByCategory = Object.entries(salaryByCategory)
+        .map(([cat, d]) => ({ category: cat, avgSalary: Math.round(d.total / d.count), sampleSize: d.count }))
+        .sort((a, b) => b.avgSalary - a.avgSalary);
+
+      const internFellowshipCount = allJobs.filter((j) => ["Intern", "Fellowship"].includes(j.seniorityLevel || "")).length;
+      const entryLevelCount = allJobs.filter((j) => ["Entry", "Junior", "Associate", "Intern", "Fellowship"].includes(j.seniorityLevel || "")).length;
+
+      const facts = `LEGAL TECH JOB MARKET DATA (from ${totalJobs} active listings):
+
+OVERVIEW:
+- ${totalJobs} active positions across ${companies.size} companies
+- ${remoteJobs} remote positions (${Math.round((remoteJobs / totalJobs) * 100)}% of all jobs)
+- ${entryLevelCount} entry-level/student positions (includes ${internFellowshipCount} internships & fellowships)
+${avgSalaryMin && avgSalaryMax ? `- Average salary range: $${avgSalaryMin.toLocaleString()} - $${avgSalaryMax.toLocaleString()} (from ${salaryJobs.length} jobs with salary data)` : "- Limited salary data available"}
+
+CATEGORIES (by number of listings):
+${topCategories.map(([name, count]) => `- ${name}: ${count} positions (${Math.round((count / totalJobs) * 100)}%)`).join("\n")}
+
+SENIORITY DISTRIBUTION:
+${seniorityBreakdown.map(([level, count]) => `- ${level}: ${count} positions (${Math.round((count / totalJobs) * 100)}%)`).join("\n")}
+
+TOP SKILLS IN DEMAND:
+${topSkills.map(([skill, count]) => `- ${skill}: mentioned in ${count} listings`).join("\n")}
+
+TOP EMPLOYERS:
+${topCompanies.map(([company, count]) => `- ${company}: ${count} open positions`).join("\n")}
+
+TOP SPECIALIZATIONS:
+${topSubcategories.map(([name, count]) => `- ${name}: ${count} positions`).join("\n")}
+
+${avgSalaryByCategory.length > 0 ? `SALARY BY CATEGORY (average midpoint):
+${avgSalaryByCategory.map((s) => `- ${s.category}: ~$${s.avgSalary.toLocaleString()} avg (${s.sampleSize} jobs with salary data)`).join("\n")}` : ""}
+
+TOP LOCATIONS:
+${topLocations.map(([loc, count]) => `- ${loc}: ${count} positions`).join("\n")}
+
+SAMPLE JOB TITLES (for context):
+${allJobs.slice(0, 20).map((j) => `- "${j.title}" at ${j.company} [${j.roleCategory || "Uncategorized"}]${j.seniorityLevel ? ` (${j.seniorityLevel})` : ""}`).join("\n")}`;
+
+      const systemPrompt = `You are a legal tech job market analyst. You answer questions about the legal technology employment market using ONLY the data provided below. Be specific, cite numbers, and reference the source data. When you make a claim, include the data point in parentheses.
+
+Format your response in clear paragraphs. Use bold (**text**) for key findings. If the data doesn't contain enough information to answer the question, say so honestly.
+
+Do not mention that you are an AI or use phrases like "AI-powered". Speak naturally as a market analyst would.
+
+After your analysis, list 2-4 key data points you referenced as "Sources" - each should be a specific fact from the data (e.g., "45 active listings in Legal AI & Machine Learning").`;
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: `DATA:\n${facts}\n\nQUESTION: ${question.trim()}` },
+        ],
+        temperature: 0.4,
+        max_tokens: 1500,
+      });
+
+      const responseText = completion.choices[0]?.message?.content || "Unable to generate analysis.";
+
+      const sourcesMatch = responseText.match(/(?:Sources|SOURCES|Data Sources|References)[:\s]*\n?([\s\S]*?)$/i);
+      let answer = responseText;
+      const citations: string[] = [];
+
+      if (sourcesMatch) {
+        answer = responseText.slice(0, sourcesMatch.index).trim();
+        const sourcesBlock = sourcesMatch[1];
+        const sourceLines = sourcesBlock.split("\n").filter((l: string) => l.trim().startsWith("-") || l.trim().match(/^\d+\./));
+        for (const line of sourceLines) {
+          const cleaned = line.replace(/^[\s\-\d.]+/, "").trim();
+          if (cleaned.length > 5) citations.push(cleaned);
+        }
+      }
+
+      res.json({ answer, citations });
+    } catch (error) {
+      console.error("Insights query error:", error);
+      res.status(500).json({ error: "Failed to analyze market data" });
+    }
+  });
+
   // =============================================
   // Stripe Subscription Routes
   // =============================================

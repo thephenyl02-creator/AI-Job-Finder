@@ -65,7 +65,7 @@ A freemium SaaS job search platform for legal technology careers, built specific
 - Everything in Free
 - Resume matching & tweaks (AI-powered)
 - Career Advisor comparisons
-- Market insights & analytics
+- Market insights & analytics with conversational Q&A
 - Job alerts & notifications
 - Multi-resume management (up to 5)
 - Guided search with AI refinement
@@ -84,7 +84,7 @@ A freemium SaaS job search platform for legal technology careers, built specific
 - **Admin Job Management**: Full CRUD management of all job listings. Search/filter by text, category, source, and active status. Edit job details (title, company, location, salary, description, etc.), toggle active/inactive, re-categorize with AI, and delete. Paginated list view with inline edit dialog.
 - **Scheduled Scraping & Monitoring**: Automated daily scraping, log management (rotation, cleanup), link validation, and an admin dashboard for monitoring and control.
 - **Job Alerts & Notifications**: Users can create named alerts based on criteria (categories, keywords, seniority, remote). New matching jobs trigger in-app notifications with an unread count badge and a notification bell in the header. Pro-only feature with upgrade prompt for free users.
-- **Market Insights**: Analytics dashboard with job market trends, category breakdowns, salary data, and hiring activity. Pro-only feature with upgrade prompt for free users.
+- **Market Insights**: Analytics dashboard with job market trends, category breakdowns, salary data, and hiring activity. Includes a conversational Q&A interface where users can ask natural language questions about the legal tech job market and get data-backed answers with cited sources (powered by OpenAI + platform job data). Pro-only feature with upgrade prompt for free users.
 - **Pricing Page**: Displays Free vs Pro comparison with monthly/yearly toggle. Integrates with Stripe Checkout for subscription purchases and Stripe Billing Portal for management.
 
 ### API Routes (Stripe/Subscription)
