@@ -530,10 +530,10 @@ export default function Jobs() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-x-hidden">
       <Header />
       
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 overflow-hidden">
         <div className="flex items-center gap-2 sm:gap-4 mb-4 flex-wrap">
           {searchResults && (
             <Button
@@ -586,7 +586,7 @@ export default function Jobs() {
               <Button
                 onClick={handleSmartSearch}
                 disabled={!smartQuery.trim() || isSearching}
-                className="gap-1.5"
+                className="gap-1.5 shrink-0"
                 data-testid="button-smart-search"
               >
                 {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
@@ -825,8 +825,8 @@ export default function Jobs() {
           </Card>
         )}
 
-        <div className="flex flex-wrap gap-2 sm:gap-3 mb-4">
-          <div className="flex items-center gap-2 w-full sm:flex-1 sm:w-auto sm:min-w-[200px] sm:max-w-md">
+        <div className="flex flex-wrap gap-2 sm:gap-3 mb-4 items-start">
+          <div className="flex items-center gap-2 w-full sm:flex-1 sm:w-auto sm:min-w-[180px] sm:max-w-xs">
             <Search className="h-4 w-4 text-muted-foreground shrink-0" />
             <Input
               placeholder="Filter results..."
@@ -836,7 +836,7 @@ export default function Jobs() {
               data-testid="input-filter"
             />
           </div>
-          <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-1 overflow-x-auto w-full sm:w-auto">
+          <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-1 overflow-x-auto max-w-full">
             {SENIORITY_LEVELS.map((level) => (
               <Button
                 key={level.value}
