@@ -48,28 +48,16 @@ export function Header() {
 
           {isAuthenticated && (
             <div className="hidden sm:flex items-center gap-1">
-              <Link href="/">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={`relative ${isActive("/") ? "text-foreground" : "text-muted-foreground"}`}
-                  data-testid="link-search"
-                >
-                  <Search className="h-3.5 w-3.5 mr-1.5" />
-                  Search
-                  {isActive("/") && <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-primary rounded-full" />}
-                </Button>
-              </Link>
               <Link href="/jobs">
                 <Button
                   variant="ghost"
                   size="sm"
-                  className={`relative ${isActive("/jobs") || location.startsWith("/jobs/") ? "text-foreground" : "text-muted-foreground"}`}
+                  className={`relative ${isActive("/jobs") || isActive("/") || location.startsWith("/jobs/") ? "text-foreground" : "text-muted-foreground"}`}
                   data-testid="link-jobs"
                 >
-                  <Briefcase className="h-3.5 w-3.5 mr-1.5" />
-                  Jobs
-                  {(isActive("/jobs") || location.startsWith("/jobs/")) && <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-primary rounded-full" />}
+                  <Search className="h-3.5 w-3.5 mr-1.5" />
+                  Find Jobs
+                  {(isActive("/jobs") || isActive("/") || location.startsWith("/jobs/")) && <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-primary rounded-full" />}
                 </Button>
               </Link>
               <Link href="/dashboard">
@@ -134,15 +122,9 @@ export function Header() {
                   <DropdownMenuSeparator />
                   <DropdownMenuGroup className="sm:hidden">
                     <DropdownMenuItem asChild>
-                      <Link href="/" className="cursor-pointer" data-testid="link-search-mobile">
-                        <Search className="mr-2 h-4 w-4" />
-                        <span>Search</span>
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
                       <Link href="/jobs" className="cursor-pointer" data-testid="link-jobs-mobile">
-                        <Briefcase className="mr-2 h-4 w-4" />
-                        <span>Jobs</span>
+                        <Search className="mr-2 h-4 w-4" />
+                        <span>Find Jobs</span>
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>

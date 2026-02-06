@@ -309,6 +309,40 @@ export async function registerRoutes(
         return res.json([]);
       }
 
+      // Build user context from resume + persona for personalized results
+      const currentUser = req.user as any;
+      let userContext = "";
+      if (currentUser?.id) {
+        try {
+          const [resumeInfo, persona, prefs] = await Promise.all([
+            storage.getUserResume(currentUser.id),
+            storage.getUserPersona(currentUser.id),
+            storage.getUserPreferences(currentUser.id),
+          ]);
+          const contextParts: string[] = [];
+          if (resumeInfo?.extractedData) {
+            const rd = resumeInfo.extractedData;
+            if (rd.skills?.length) contextParts.push(`Skills: ${rd.skills.slice(0, 10).join(", ")}`);
+            if (rd.totalYearsExperience) contextParts.push(`Experience: ${rd.totalYearsExperience} years`);
+            if (rd.preferredRoles?.length) contextParts.push(`Target roles: ${rd.preferredRoles.join(", ")}`);
+            if (rd.legalBackground) contextParts.push("Has legal background");
+            if (rd.techBackground) contextParts.push("Has tech background");
+          }
+          if (persona) {
+            const p = persona as any;
+            if (p.topCategories?.length) contextParts.push(`Interested in: ${p.topCategories.slice(0, 3).join(", ")}`);
+            if (p.careerStage) contextParts.push(`Career stage: ${p.careerStage}`);
+          }
+          if (prefs) {
+            if (prefs.locationPreferences?.length) contextParts.push(`Preferred locations: ${(prefs.locationPreferences as string[]).join(", ")}`);
+            if (prefs.remoteOnly) contextParts.push("Prefers remote work");
+          }
+          if (contextParts.length > 0) {
+            userContext = `\n\nUser profile context (use to boost relevance):\n${contextParts.join("\n")}`;
+          }
+        } catch {}
+      }
+
       const jobSummaries = jobs.map((job, index) => ({
         index,
         title: job.title,
@@ -323,7 +357,7 @@ export async function registerRoutes(
         description: job.description.substring(0, 200),
       }));
 
-      const systemPrompt = `You are a job matching assistant. Analyze the user's job search query and score each job based on how well it matches their criteria.
+      const systemPrompt = `You are a job matching assistant for a legal tech careers platform. Analyze the user's job search query and score each job based on how well it matches their criteria.
 
 For each job, provide:
 1. A match score from 0-100 (100 = perfect match)
@@ -335,6 +369,7 @@ Consider factors like:
 - Salary expectations
 - Location and remote work preferences
 - Industry and company focus
+${userContext ? "- The user's profile context (skills, experience, preferences) to provide better, more personalized matches" : ""}
 
 Return ONLY valid JSON in this exact format:
 {
@@ -354,7 +389,7 @@ Only include jobs with a score above 40. Sort by score descending.`;
             { role: "system", content: systemPrompt },
             { 
               role: "user", 
-              content: `User search query: "${query}"\n\nAvailable jobs:\n${JSON.stringify(jobSummaries, null, 2)}` 
+              content: `User search query: "${query}"${userContext}\n\nAvailable jobs:\n${JSON.stringify(jobSummaries, null, 2)}` 
             },
           ],
           response_format: { type: "json_object" },
@@ -397,10 +432,14 @@ Only include jobs with a score above 40. Sort by score descending.`;
         }))
         .sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0));
 
-      // Save last search query for user
-      const user = req.user as any;
-      if (user?.id) {
-        storage.updateUserLastSearch(user.id, query).catch(console.error);
+      // Save last search query and log activity for learning
+      if (currentUser?.id) {
+        storage.updateUserLastSearch(currentUser.id, query).catch(console.error);
+        storage.logActivity({
+          userId: currentUser.id,
+          eventType: "search",
+          metadata: { query, resultCount: scoredJobs.length },
+        }).catch(console.error);
       }
 
       res.json(scoredJobs);
