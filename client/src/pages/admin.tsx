@@ -1,15 +1,20 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Link } from "wouter";
-import { ArrowLeft, RefreshCw, Building2, Globe, Loader2, CheckCircle, XCircle, Sparkles, Activity, FileText, Play, Square, LinkIcon, Clock, ShieldX, Plus } from "lucide-react";
+import { ArrowLeft, RefreshCw, Building2, Globe, Loader2, CheckCircle, XCircle, Sparkles, Activity, FileText, Play, Square, LinkIcon, Clock, ShieldX, Plus, Upload, Pencil, Trash2, RotateCw, ToggleLeft, ToggleRight, Search, Filter, ChevronLeft, ChevronRight, Save, X as XIcon } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import type { Job } from "@shared/schema";
 
 interface Company {
   name: string;
@@ -58,11 +63,43 @@ interface MonitoringData {
   };
 }
 
+interface UploadFileResult {
+  filename: string;
+  success: boolean;
+  job?: { title: string; company: string; category: string };
+  error?: string;
+}
+
+interface UploadResponse {
+  success: boolean;
+  message: string;
+  results: UploadFileResult[];
+}
+
+interface AdminJobsResponse {
+  jobs: Job[];
+  total: number;
+  page: number;
+  totalPages: number;
+}
+
 export default function AdminPage() {
   const { toast } = useToast();
   const { isAdmin, isLoading: authLoading } = useAuth();
   const [lastResult, setLastResult] = useState<ScrapeResult | null>(null);
   const [customUrl, setCustomUrl] = useState("");
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadResults, setUploadResults] = useState<UploadFileResult[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+
+  const [jobsPage, setJobsPage] = useState(1);
+  const [jobsSearch, setJobsSearch] = useState("");
+  const [jobsCategoryFilter, setJobsCategoryFilter] = useState("all");
+  const [jobsSourceFilter, setJobsSourceFilter] = useState("all");
+  const [jobsActiveFilter, setJobsActiveFilter] = useState("all");
+  const [editingJob, setEditingJob] = useState<Job | null>(null);
+  const [editForm, setEditForm] = useState<Partial<Job>>({});
 
   const { data: companies, isLoading: loadingCompanies } = useQuery<Company[]>({
     queryKey: ["/api/admin/scraper/companies"],
@@ -80,6 +117,134 @@ export default function AdminPage() {
     refetchInterval: 5000, // Check every 5 seconds for live updates
     enabled: isAdmin,
   });
+
+  const jobsQueryParams = new URLSearchParams({
+    page: jobsPage.toString(),
+    limit: "50",
+    ...(jobsSearch && { search: jobsSearch }),
+    ...(jobsCategoryFilter !== "all" && { category: jobsCategoryFilter }),
+    ...(jobsSourceFilter !== "all" && { source: jobsSourceFilter }),
+    ...(jobsActiveFilter !== "all" && { active: jobsActiveFilter }),
+  });
+
+  const { data: adminJobs, isLoading: loadingAdminJobs } = useQuery<AdminJobsResponse>({
+    queryKey: [`/api/admin/jobs?${jobsQueryParams.toString()}`],
+    enabled: isAdmin,
+  });
+
+  const handleFileUpload = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    setIsUploading(true);
+    setUploadResults([]);
+    try {
+      const formData = new FormData();
+      for (let i = 0; i < files.length; i++) {
+        formData.append("files", files[i]);
+      }
+      const res = await fetch("/api/admin/scraper/upload", {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Upload failed");
+      const data: UploadResponse = await res.json();
+      setUploadResults(data.results);
+      queryClient.invalidateQueries({ predicate: (query) => (query.queryKey[0] as string).startsWith("/api/admin/jobs") });
+      queryClient.invalidateQueries({ predicate: (query) => (query.queryKey[0] as string).startsWith("/api/jobs") });
+      toast({
+        title: data.success ? "Upload Complete" : "Upload Had Issues",
+        description: data.message,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Upload Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const updateJobMutation = useMutation({
+    mutationFn: async ({ id, updates }: { id: number; updates: Partial<Job> }) => {
+      const res = await apiRequest("PATCH", `/api/admin/jobs/${id}`, updates);
+      return res.json();
+    },
+    onSuccess: () => {
+      setEditingJob(null);
+      setEditForm({});
+      queryClient.invalidateQueries({ predicate: (query) => (query.queryKey[0] as string).startsWith("/api/admin/jobs") });
+      queryClient.invalidateQueries({ predicate: (query) => (query.queryKey[0] as string).startsWith("/api/jobs") });
+      toast({ title: "Job updated successfully" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Failed to update job", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const deleteJobMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("DELETE", `/api/admin/jobs/${id}`);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ predicate: (query) => (query.queryKey[0] as string).startsWith("/api/admin/jobs") });
+      queryClient.invalidateQueries({ predicate: (query) => (query.queryKey[0] as string).startsWith("/api/jobs") });
+      toast({ title: "Job deleted successfully" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Failed to delete job", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const recategorizeJobMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("POST", `/api/admin/jobs/${id}/recategorize`);
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ predicate: (query) => (query.queryKey[0] as string).startsWith("/api/admin/jobs") });
+      queryClient.invalidateQueries({ predicate: (query) => (query.queryKey[0] as string).startsWith("/api/jobs") });
+      toast({
+        title: "Job recategorized",
+        description: data.categorization ? `Category: ${data.categorization.category}` : "Done",
+      });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Failed to recategorize", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const toggleJobActiveMutation = useMutation({
+    mutationFn: async ({ id, isActive }: { id: number; isActive: boolean }) => {
+      const res = await apiRequest("PATCH", `/api/admin/jobs/${id}`, { isActive });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ predicate: (query) => (query.queryKey[0] as string).startsWith("/api/admin/jobs") });
+      queryClient.invalidateQueries({ predicate: (query) => (query.queryKey[0] as string).startsWith("/api/jobs") });
+      toast({ title: "Job status updated" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Failed to update status", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const openEditDialog = (job: Job) => {
+    setEditingJob(job);
+    setEditForm({
+      title: job.title,
+      company: job.company,
+      location: job.location,
+      applyUrl: job.applyUrl,
+      description: job.description,
+      salaryMin: job.salaryMin,
+      salaryMax: job.salaryMax,
+      isActive: job.isActive,
+    });
+  };
 
   const schedulerMutation = useMutation({
     mutationFn: async (action: 'start' | 'stop' | 'run-now') => {
@@ -545,6 +710,84 @@ export default function AdminPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
+                <Upload className="h-5 w-5" />
+                Upload Job Files
+              </CardTitle>
+              <CardDescription>
+                Upload PDF, HTML, DOCX, or TXT files containing job postings. Each file will be parsed, categorized, and saved.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept=".pdf,.html,.htm,.docx,.txt"
+                className="hidden"
+                data-testid="input-file-upload"
+                onChange={(e) => handleFileUpload(e.target.files)}
+              />
+              <div className="flex flex-wrap gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploading}
+                  data-testid="button-select-files"
+                >
+                  {isUploading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="mr-2 h-4 w-4" />
+                      Select Files
+                    </>
+                  )}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                Accepted formats: PDF, HTML, DOCX, TXT. Multiple files supported.
+              </p>
+
+              {uploadResults.length > 0 && (
+                <div className="mt-4 space-y-2" data-testid="upload-results">
+                  <h4 className="font-medium text-sm">Upload Results</h4>
+                  {uploadResults.map((result, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-start gap-2 p-3 border rounded-lg text-sm"
+                      data-testid={`upload-result-${idx}`}
+                    >
+                      {result.success ? (
+                        <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 shrink-0" />
+                      ) : (
+                        <XCircle className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
+                      )}
+                      <div className="min-w-0">
+                        <p className="font-medium truncate">{result.filename}</p>
+                        {result.success && result.job ? (
+                          <p className="text-muted-foreground">
+                            {result.job.title} at {result.job.company}
+                            {result.job.category && (
+                              <Badge variant="secondary" className="ml-2 text-xs">{result.job.category}</Badge>
+                            )}
+                          </p>
+                        ) : result.error ? (
+                          <p className="text-destructive">{result.error}</p>
+                        ) : null}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
                 <RefreshCw className="h-5 w-5" />
                 Scrape All Companies
               </CardTitle>
@@ -618,6 +861,326 @@ export default function AdminPage() {
               )}
             </CardContent>
           </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Job Management
+              </CardTitle>
+              <CardDescription>
+                Search, filter, edit, and manage all jobs in the database.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex flex-wrap gap-3">
+                  <div className="relative flex-1 min-w-[200px]">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search jobs..."
+                      value={jobsSearch}
+                      onChange={(e) => {
+                        setJobsSearch(e.target.value);
+                        setJobsPage(1);
+                      }}
+                      className="pl-9"
+                      data-testid="input-jobs-search"
+                    />
+                  </div>
+                  <Select
+                    value={jobsCategoryFilter}
+                    onValueChange={(v) => { setJobsCategoryFilter(v); setJobsPage(1); }}
+                  >
+                    <SelectTrigger className="w-[180px]" data-testid="select-category-filter">
+                      <Filter className="h-4 w-4 mr-2" />
+                      <SelectValue placeholder="Category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Categories</SelectItem>
+                      <SelectItem value="Legal AI & Machine Learning">AI & ML</SelectItem>
+                      <SelectItem value="Legal Product & Innovation">Product</SelectItem>
+                      <SelectItem value="Legal Knowledge Engineering">Knowledge</SelectItem>
+                      <SelectItem value="Legal Operations">Ops</SelectItem>
+                      <SelectItem value="Contract Technology">Contracts</SelectItem>
+                      <SelectItem value="Compliance & RegTech">Compliance</SelectItem>
+                      <SelectItem value="Litigation & eDiscovery">Litigation</SelectItem>
+                      <SelectItem value="Legal Consulting & Strategy">Consulting</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select
+                    value={jobsSourceFilter}
+                    onValueChange={(v) => { setJobsSourceFilter(v); setJobsPage(1); }}
+                  >
+                    <SelectTrigger className="w-[150px]" data-testid="select-source-filter">
+                      <SelectValue placeholder="Source" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Sources</SelectItem>
+                      <SelectItem value="greenhouse">Greenhouse</SelectItem>
+                      <SelectItem value="lever">Lever</SelectItem>
+                      <SelectItem value="ashby">Ashby</SelectItem>
+                      <SelectItem value="generic">Generic</SelectItem>
+                      <SelectItem value="upload">File Upload</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select
+                    value={jobsActiveFilter}
+                    onValueChange={(v) => { setJobsActiveFilter(v); setJobsPage(1); }}
+                  >
+                    <SelectTrigger className="w-[140px]" data-testid="select-active-filter">
+                      <SelectValue placeholder="Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Status</SelectItem>
+                      <SelectItem value="true">Active</SelectItem>
+                      <SelectItem value="false">Inactive</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {loadingAdminJobs ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : adminJobs && adminJobs.jobs.length > 0 ? (
+                  <>
+                    <p className="text-sm text-muted-foreground" data-testid="text-jobs-count">
+                      Showing {adminJobs.jobs.length} of {adminJobs.total} jobs (page {adminJobs.page} of {adminJobs.totalPages})
+                    </p>
+                    <div className="space-y-3">
+                      {adminJobs.jobs.map((job) => (
+                        <div
+                          key={job.id}
+                          className="p-4 border rounded-lg space-y-2"
+                          data-testid={`job-card-${job.id}`}
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0 flex-1">
+                              <h4 className="font-medium truncate" data-testid={`text-job-title-${job.id}`}>{job.title}</h4>
+                              <p className="text-sm text-muted-foreground" data-testid={`text-job-company-${job.id}`}>
+                                {job.company}
+                                {job.location && ` \u2022 ${job.location}`}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-1 shrink-0">
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={() => openEditDialog(job)}
+                                data-testid={`button-edit-job-${job.id}`}
+                              >
+                                <Pencil />
+                              </Button>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={() => toggleJobActiveMutation.mutate({ id: job.id, isActive: !job.isActive })}
+                                disabled={toggleJobActiveMutation.isPending}
+                                data-testid={`button-toggle-job-${job.id}`}
+                              >
+                                {job.isActive ? <ToggleRight /> : <ToggleLeft />}
+                              </Button>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={() => recategorizeJobMutation.mutate(job.id)}
+                                disabled={recategorizeJobMutation.isPending}
+                                data-testid={`button-recategorize-job-${job.id}`}
+                              >
+                                <RotateCw />
+                              </Button>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={() => {
+                                  if (confirm("Are you sure you want to delete this job?")) {
+                                    deleteJobMutation.mutate(job.id);
+                                  }
+                                }}
+                                disabled={deleteJobMutation.isPending}
+                                data-testid={`button-delete-job-${job.id}`}
+                              >
+                                <Trash2 />
+                              </Button>
+                            </div>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {job.source && (
+                              <Badge variant="outline" className="text-xs" data-testid={`badge-source-${job.id}`}>{job.source}</Badge>
+                            )}
+                            {job.roleCategory && (
+                              <Badge variant="secondary" className="text-xs" data-testid={`badge-category-${job.id}`}>{job.roleCategory}</Badge>
+                            )}
+                            {job.seniorityLevel && (
+                              <Badge variant="secondary" className="text-xs" data-testid={`badge-seniority-${job.id}`}>{job.seniorityLevel}</Badge>
+                            )}
+                            <Badge
+                              variant={job.isActive ? "default" : "destructive"}
+                              className="text-xs"
+                              data-testid={`badge-active-${job.id}`}
+                            >
+                              {job.isActive ? "Active" : "Inactive"}
+                            </Badge>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setJobsPage((p) => Math.max(1, p - 1))}
+                        disabled={jobsPage <= 1}
+                        data-testid="button-jobs-prev"
+                      >
+                        <ChevronLeft className="mr-1 h-4 w-4" />
+                        Previous
+                      </Button>
+                      <span className="text-sm text-muted-foreground" data-testid="text-jobs-page-info">
+                        Page {adminJobs.page} of {adminJobs.totalPages}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setJobsPage((p) => Math.min(adminJobs.totalPages, p + 1))}
+                        disabled={jobsPage >= adminJobs.totalPages}
+                        data-testid="button-jobs-next"
+                      >
+                        Next
+                        <ChevronRight className="ml-1 h-4 w-4" />
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-8">
+                    No jobs found matching your filters.
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Dialog open={!!editingJob} onOpenChange={(open) => { if (!open) { setEditingJob(null); setEditForm({}); } }}>
+            <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Edit Job</DialogTitle>
+                <DialogDescription>Update job details below.</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-title">Title</Label>
+                  <Input
+                    id="edit-title"
+                    value={editForm.title || ""}
+                    onChange={(e) => setEditForm((f) => ({ ...f, title: e.target.value }))}
+                    data-testid="input-edit-title"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-company">Company</Label>
+                  <Input
+                    id="edit-company"
+                    value={editForm.company || ""}
+                    onChange={(e) => setEditForm((f) => ({ ...f, company: e.target.value }))}
+                    data-testid="input-edit-company"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-location">Location</Label>
+                  <Input
+                    id="edit-location"
+                    value={editForm.location || ""}
+                    onChange={(e) => setEditForm((f) => ({ ...f, location: e.target.value }))}
+                    data-testid="input-edit-location"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-applyUrl">Apply URL</Label>
+                  <Input
+                    id="edit-applyUrl"
+                    value={editForm.applyUrl || ""}
+                    onChange={(e) => setEditForm((f) => ({ ...f, applyUrl: e.target.value }))}
+                    data-testid="input-edit-applyUrl"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-salaryMin">Salary Min</Label>
+                    <Input
+                      id="edit-salaryMin"
+                      type="number"
+                      value={editForm.salaryMin ?? ""}
+                      onChange={(e) => setEditForm((f) => ({ ...f, salaryMin: e.target.value ? Number(e.target.value) : null }))}
+                      data-testid="input-edit-salaryMin"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-salaryMax">Salary Max</Label>
+                    <Input
+                      id="edit-salaryMax"
+                      type="number"
+                      value={editForm.salaryMax ?? ""}
+                      onChange={(e) => setEditForm((f) => ({ ...f, salaryMax: e.target.value ? Number(e.target.value) : null }))}
+                      data-testid="input-edit-salaryMax"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-description">Description</Label>
+                  <Textarea
+                    id="edit-description"
+                    value={editForm.description || ""}
+                    onChange={(e) => setEditForm((f) => ({ ...f, description: e.target.value }))}
+                    rows={6}
+                    data-testid="input-edit-description"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="edit-active">Active</Label>
+                  <Button
+                    variant={editForm.isActive ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setEditForm((f) => ({ ...f, isActive: !f.isActive }))}
+                    data-testid="button-edit-toggle-active"
+                  >
+                    {editForm.isActive ? (
+                      <><ToggleRight className="mr-1 h-4 w-4" /> Active</>
+                    ) : (
+                      <><ToggleLeft className="mr-1 h-4 w-4" /> Inactive</>
+                    )}
+                  </Button>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => { setEditingJob(null); setEditForm({}); }}
+                  data-testid="button-edit-cancel"
+                >
+                  <XIcon className="mr-1 h-4 w-4" />
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => {
+                    if (editingJob) {
+                      updateJobMutation.mutate({ id: editingJob.id, updates: editForm });
+                    }
+                  }}
+                  disabled={updateJobMutation.isPending}
+                  data-testid="button-edit-save"
+                >
+                  {updateJobMutation.isPending ? (
+                    <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Save className="mr-1 h-4 w-4" />
+                  )}
+                  Save
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
 
           <Card>
             <CardHeader>

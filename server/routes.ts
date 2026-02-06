@@ -26,6 +26,7 @@ import {
 import { LAW_FIRMS_AND_COMPANIES } from "./lib/law-firms-list";
 import { categorizeJob } from "./lib/job-categorizer";
 import { matchNewJobsAgainstAlerts } from "./lib/alert-matcher";
+import { parseJobFile } from "./lib/job-file-parser";
 import { JOB_TAXONOMY } from "@shared/schema";
 import {
   startScheduler,
@@ -52,6 +53,26 @@ const upload = multer({
       cb(null, true);
     } else {
       cb(new Error("Invalid file type. Please upload PDF or DOCX."));
+    }
+  },
+});
+
+const adminUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = [
+      "application/pdf",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "application/msword",
+      "text/html",
+      "application/xhtml+xml",
+      "text/plain",
+    ];
+    if (allowedTypes.includes(file.mimetype) || file.originalname.endsWith(".html") || file.originalname.endsWith(".htm")) {
+      cb(null, true);
+    } else {
+      cb(new Error("Invalid file type. Supported: PDF, DOCX, HTML, TXT."));
     }
   },
 });
@@ -1096,6 +1117,178 @@ ${JSON.stringify(jobSummaries, null, 2)}`
     } catch (error: any) {
       console.error("Error scraping URL:", error);
       res.status(500).json({ error: error.message || "Failed to scrape URL" });
+    }
+  });
+
+  app.post("/api/admin/scraper/upload", isAuthenticated, adminUpload.array("files", 10), async (req, res) => {
+    if (!(await isAdminCheck(req))) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    try {
+      const files = req.files as Express.Multer.File[];
+      if (!files || files.length === 0) {
+        return res.status(400).json({ error: "No files uploaded" });
+      }
+
+      const results: { filename: string; success: boolean; job?: { title: string; company: string; category?: string | null }; error?: string }[] = [];
+
+      for (const file of files) {
+        try {
+          const jobData = await parseJobFile(file.buffer, file.mimetype, file.originalname);
+          const { inserted, updated, newJobs } = await storage.bulkUpsertJobs([jobData]);
+
+          if (newJobs.length > 0) {
+            matchNewJobsAgainstAlerts(newJobs).catch(err => console.error("Alert matching error:", err));
+          }
+
+          results.push({
+            filename: file.originalname,
+            success: true,
+            job: { title: jobData.title, company: jobData.company, category: jobData.roleCategory },
+          });
+        } catch (fileErr: any) {
+          console.error(`Error processing file ${file.originalname}:`, fileErr);
+          results.push({
+            filename: file.originalname,
+            success: false,
+            error: fileErr.message || "Failed to process file",
+          });
+        }
+      }
+
+      const successCount = results.filter(r => r.success).length;
+      res.json({
+        success: successCount > 0,
+        message: `Processed ${successCount}/${files.length} files successfully`,
+        results,
+      });
+    } catch (error: any) {
+      console.error("File upload error:", error);
+      res.status(500).json({ error: error.message || "Failed to process uploaded files" });
+    }
+  });
+
+  app.get("/api/admin/jobs", isAuthenticated, async (req, res) => {
+    if (!(await isAdminCheck(req))) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    try {
+      const allJobs = await storage.getJobs();
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = Math.min(parseInt(req.query.limit as string) || 50, 200);
+      const search = (req.query.search as string || "").toLowerCase();
+      const category = req.query.category as string;
+      const source = req.query.source as string;
+      const active = req.query.active as string;
+
+      let filtered = allJobs;
+      if (search) {
+        filtered = filtered.filter(j =>
+          j.title.toLowerCase().includes(search) ||
+          j.company.toLowerCase().includes(search) ||
+          (j.location || "").toLowerCase().includes(search)
+        );
+      }
+      if (category) {
+        filtered = filtered.filter(j => j.roleCategory === category);
+      }
+      if (source) {
+        filtered = filtered.filter(j => j.source === source);
+      }
+      if (active === "true") {
+        filtered = filtered.filter(j => j.isActive);
+      } else if (active === "false") {
+        filtered = filtered.filter(j => !j.isActive);
+      }
+
+      const total = filtered.length;
+      const start = (page - 1) * limit;
+      const paged = filtered.slice(start, start + limit);
+
+      res.json({ jobs: paged, total, page, totalPages: Math.ceil(total / limit) });
+    } catch (error: any) {
+      console.error("Error fetching admin jobs:", error);
+      res.status(500).json({ error: "Failed to fetch jobs" });
+    }
+  });
+
+  app.patch("/api/admin/jobs/:id", isAuthenticated, async (req, res) => {
+    if (!(await isAdminCheck(req))) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ error: "Invalid job ID" });
+
+      const allowedFields = [
+        "title", "company", "location", "isRemote", "salaryMin", "salaryMax",
+        "roleType", "description", "requirements", "applyUrl", "isActive",
+        "roleCategory", "roleSubcategory", "seniorityLevel",
+      ];
+      const updates: Record<string, any> = {};
+      for (const field of allowedFields) {
+        if (req.body[field] !== undefined) {
+          updates[field] = req.body[field];
+        }
+      }
+
+      if (Object.keys(updates).length === 0) {
+        return res.status(400).json({ error: "No valid fields to update" });
+      }
+
+      const updated = await storage.updateJob(id, updates);
+      if (!updated) {
+        return res.status(404).json({ error: "Job not found" });
+      }
+
+      res.json({ success: true, job: updated });
+    } catch (error: any) {
+      console.error("Error updating job:", error);
+      res.status(500).json({ error: "Failed to update job" });
+    }
+  });
+
+  app.delete("/api/admin/jobs/:id", isAuthenticated, async (req, res) => {
+    if (!(await isAdminCheck(req))) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ error: "Invalid job ID" });
+
+      await storage.deleteJob(id);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting job:", error);
+      res.status(500).json({ error: "Failed to delete job" });
+    }
+  });
+
+  app.post("/api/admin/jobs/:id/recategorize", isAuthenticated, async (req, res) => {
+    if (!(await isAdminCheck(req))) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ error: "Invalid job ID" });
+
+      const job = await storage.getJob(id);
+      if (!job) return res.status(404).json({ error: "Job not found" });
+
+      const categorization = await categorizeJob(job.title, job.description, job.company);
+      const updated = await storage.updateJob(id, {
+        roleCategory: categorization.category,
+        roleSubcategory: categorization.subcategory,
+        seniorityLevel: categorization.seniorityLevel,
+        keySkills: categorization.keySkills,
+        aiSummary: categorization.aiSummary,
+        matchKeywords: categorization.matchKeywords,
+      });
+
+      res.json({ success: true, job: updated, categorization });
+    } catch (error: any) {
+      console.error("Error recategorizing job:", error);
+      res.status(500).json({ error: "Failed to recategorize job" });
     }
   });
 
