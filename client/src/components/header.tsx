@@ -25,6 +25,9 @@ import {
   SheetContent,
   SheetTrigger,
   SheetClose,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
 } from "@/components/ui/sheet";
 
 function NavLink({ href, icon: Icon, label, isActive, testId }: {
@@ -152,6 +155,10 @@ export function Header() {
                   </Button>
                 </SheetTrigger>
                 <SheetContent side="right" className="w-72 p-0">
+                  <SheetHeader className="sr-only">
+                    <SheetTitle>Navigation Menu</SheetTitle>
+                    <SheetDescription>Main navigation and account options</SheetDescription>
+                  </SheetHeader>
                   <div className="flex flex-col h-full">
                     <div className="p-4 border-b">
                       <div className="flex items-center gap-3">

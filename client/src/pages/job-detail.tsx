@@ -290,10 +290,26 @@ function stripBoilerplate(text: string): string {
     /\n*(?:This (?:employer|company|organization) is an equal opportunity employer)[^\n]*/i,
     /\n*(?:[\w\s&.'()-]{2,50} is an? (?:equal opportunity|affirmative action) employer)[^\n]*(?:\n[^\n]*){0,5}$/i,
     /\n*(?:[\w\s&.'()-]{2,50} provides equal employment)[^\n]*(?:\n[^\n]*){0,5}$/i,
+    /\n*We pride ourselves on having a diverse workforce[^\n]*(?:\n[^\n]*){0,8}$/i,
+    /\n*We collect and process the personal information[^\n]*(?:\n[^\n]*){0,5}$/i,
+    /\n*We use Covey as part of our[^\n]*(?:\n[^\n]*){0,5}$/i,
+    /\n*When preparing to engage with[^\n]*(?:\n[^\n]*){0,5}$/i,
+    /\n*(?:Pursue Truth While Finding Yours|Find Your Truth)[^\n]*(?:\n[^\n]*){0,15}$/i,
+    /\n*[\u200B\s]*About [\w\s&.'()-]{2,40}\n+We help[^\n]*(?:\n[^\n]*){0,15}$/i,
+    /\n*(?:By applying for this role, you acknowledge)[^\n]*(?:\n[^\n]*){0,3}$/i,
+    /\n*(?:Your privacy is important to us)[^\n]*(?:\n[^\n]*){0,3}$/i,
+    /\n*(?:Individuals with Disabilities|Reasonable Accommodation)[^\n]*(?:\n[^\n]*){0,5}$/i,
+    /\n*(?:To learn more, visit:?\s*everify\.com)[^\n]*(?:\n[^\n]*){0,3}$/i,
+    /\n*(?:NetDocuments believes diversity)[^\n]*(?:\n[^\n]*){0,3}$/i,
   ];
   for (const p of trailingPatterns) {
     cleaned = cleaned.replace(p, '');
   }
+
+  cleaned = cleaned.replace(/\n*-\s*#LI-\w+\s*/g, '');
+  cleaned = cleaned.replace(/#LI-(?:Remote|Hybrid|Onsite|DNI|\w+)\s*/g, '');
+
+  cleaned = cleaned.replace(/\n*-?\s*Find out more about our Benefits and Perks\s*\n*/gi, '\n');
 
   return cleaned.trim();
 }
@@ -303,7 +319,13 @@ function cleanDescription(text: string): string {
   if (cleaned.includes('&lt;') || cleaned.includes('&gt;') || cleaned.includes('&amp;') || /<[a-z][^>]*>/i.test(cleaned)) {
     cleaned = stripHtmlToText(cleaned);
   }
-  cleaned = stripBoilerplate(cleaned);
+  let prev = '';
+  let iterations = 0;
+  while (prev !== cleaned && iterations < 5) {
+    prev = cleaned;
+    cleaned = stripBoilerplate(cleaned);
+    iterations++;
+  }
   return cleaned;
 }
 
