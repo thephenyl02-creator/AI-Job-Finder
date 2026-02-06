@@ -18,7 +18,6 @@ import {
   Building2,
   Briefcase,
   DollarSign,
-  Clock,
   Loader2,
   CheckCircle2,
   MessageCircle,
@@ -244,11 +243,34 @@ function stripHtmlToText(html: string): string {
   return text.trim();
 }
 
-function cleanDescription(text: string): string {
-  if (text.includes('&lt;') || text.includes('&gt;') || text.includes('&amp;') || /<[a-z][^>]*>/i.test(text)) {
-    return stripHtmlToText(text);
+function stripBoilerplate(text: string): string {
+  let cleaned = text;
+
+  cleaned = cleaned.replace(/^[A-Z][\w\s&.'()-]{2,40} is committed to providing an excellent candidate experience[^.]*\.\s*/i, '');
+
+  cleaned = cleaned.replace(/^ABOUT\s+(?:US|THE COMPANY)\s+/i, '');
+  cleaned = cleaned.replace(/^About (?:the company|us)\s+/i, '');
+
+  const trailingPatterns = [
+    /\n*(?:Equal\s+(?:Opportunity|Employment)|EEO|EOE)\s*(?:Statement|Employer|Policy)?[^\n]*(?:\n[^\n]*){0,10}$/i,
+    /\n*(?:We are (?:an|a) (?:equal opportunity|EEO) employer)[^\n]*(?:\n[^\n]*){0,5}$/i,
+    /\n*(?:Disclaimer|Notice|Legal Notice):?\s*(?:This job (?:posting|description|ad))[^\n]*(?:\n[^\n]*){0,5}$/i,
+    /\n*(?:This (?:employer|company|organization) is an equal opportunity employer)[^\n]*/i,
+  ];
+  for (const p of trailingPatterns) {
+    cleaned = cleaned.replace(p, '');
   }
-  return text;
+
+  return cleaned.trim();
+}
+
+function cleanDescription(text: string): string {
+  let cleaned = text;
+  if (cleaned.includes('&lt;') || cleaned.includes('&gt;') || cleaned.includes('&amp;') || /<[a-z][^>]*>/i.test(cleaned)) {
+    cleaned = stripHtmlToText(cleaned);
+  }
+  cleaned = stripBoilerplate(cleaned);
+  return cleaned;
 }
 
 function DescriptionContent({ text, testId }: { text?: string | null; testId: string }) {
@@ -276,6 +298,43 @@ function DescriptionContent({ text, testId }: { text?: string | null; testId: st
         }
         return <p key={i}>{block.content}</p>;
       })}
+    </div>
+  );
+}
+
+function cleanSummary(text: string): string {
+  let cleaned = text.trim();
+  cleaned = cleaned.replace(/^(?:As (?:an?|the) [\w\s,/()-]+? at [\w\s&.'()-]+?,\s*(?:you(?:'ll| will)\s*)?)/i, '');
+  if (cleaned.length < 20) return text.trim();
+  if (cleaned.length > 0 && cleaned[0] !== cleaned[0].toUpperCase()) {
+    cleaned = cleaned[0].toUpperCase() + cleaned.slice(1);
+  }
+  return cleaned;
+}
+
+function SummaryContent({ text, testId }: { text: string; testId: string }) {
+  const cleaned = cleanSummary(text);
+  const sentences = cleaned.split(/(?<=[.!?])\s+/).filter(s => s.trim().length > 0);
+
+  if (sentences.length <= 2) {
+    return (
+      <p className="text-foreground leading-relaxed" data-testid={testId}>
+        {cleaned}
+      </p>
+    );
+  }
+
+  return (
+    <div className="space-y-2 text-foreground leading-relaxed" data-testid={testId}>
+      <p>{sentences[0]}</p>
+      <div className="space-y-1.5">
+        {sentences.slice(1).map((s, i) => (
+          <div key={i} className="flex gap-2 pl-1">
+            <span className="text-muted-foreground shrink-0 mt-1.5 w-1.5 h-1.5 rounded-full bg-muted-foreground/40" />
+            <span>{s}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -665,10 +724,8 @@ export default function JobDetail() {
             {job.aiSummary && (
               <Card>
                 <CardContent className="pt-5 pb-5">
-                  <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Summary</h2>
-                  <p className="text-foreground leading-relaxed" data-testid="text-job-summary">
-                    {job.aiSummary}
-                  </p>
+                  <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Overview</h2>
+                  <SummaryContent text={job.aiSummary} testId="text-job-summary" />
                 </CardContent>
               </Card>
             )}
@@ -725,17 +782,6 @@ export default function JobDetail() {
                   </div>
                 )}
 
-                {job.source && (
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-md bg-muted flex items-center justify-center shrink-0">
-                      <Clock className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Source</p>
-                      <p className="text-sm font-medium text-foreground capitalize">{job.source}</p>
-                    </div>
-                  </div>
-                )}
               </CardContent>
             </Card>
 

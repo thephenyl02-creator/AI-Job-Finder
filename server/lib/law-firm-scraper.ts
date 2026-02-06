@@ -283,13 +283,22 @@ function inferRoleType(title: string): string {
   return 'Other';
 }
 
+function cleanCompanyName(name: string): string {
+  return name
+    .replace(/\s*\(formerly\s+[^)]+\)/gi, '')
+    .replace(/\s*\(fka\s+[^)]+\)/gi, '')
+    .replace(/\s*\(prev(?:iously)?\s+[^)]+\)/gi, '')
+    .trim();
+}
+
 export function transformToJobSchema(job: ScrapedJob, categorization?: JobCategorizationResult): InsertJob {
-  const companySlug = job.company.toLowerCase().replace(/\s+/g, '').replace(/[^a-z0-9]/g, '');
+  const companyClean = cleanCompanyName(job.company);
+  const companySlug = companyClean.toLowerCase().replace(/\s+/g, '').replace(/[^a-z0-9]/g, '');
   
   const cleanDescription = (job.description || '')
     .replace(/<[^>]*>/g, ' ')
     .replace(/\s+/g, ' ')
-    .trim() || `${job.title} position at ${job.company}`;
+    .trim() || `${job.title} position at ${companyClean}`;
   
   const locationText = job.location?.trim() || 'Not specified';
   const fullText = `${job.title} ${cleanDescription} ${locationText}`.toLowerCase();
@@ -307,7 +316,7 @@ export function transformToJobSchema(job: ScrapedJob, categorization?: JobCatego
 
   return {
     title: job.title.trim(),
-    company: job.company.trim(),
+    company: companyClean,
     companyLogo: `https://logo.clearbit.com/${companySlug}.com`,
     location: locationText,
     isRemote: isRemoteDetected,
