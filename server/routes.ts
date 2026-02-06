@@ -725,6 +725,117 @@ ${JSON.stringify(jobSummaries, null, 2)}`
     }
   });
 
+  // ATS Resume Review - analyze resume for ATS friendliness
+  app.post("/api/resume/ats-review", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const userId = user?.id;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      let resumeText: string | undefined;
+      let extractedData: ResumeExtractedData | undefined;
+
+      const { resumeId } = req.body;
+      if (resumeId) {
+        const userResumes = await storage.getUserResumes(userId);
+        const resume = userResumes.find((r: any) => r.id === resumeId);
+        if (!resume) return res.status(404).json({ error: "Resume not found" });
+        resumeText = resume.resumeText;
+        extractedData = resume.extractedData as ResumeExtractedData;
+      } else {
+        const userData = await storage.getUserResume(userId);
+        if (!userData?.resumeText) {
+          return res.status(400).json({ error: "No resume uploaded. Please upload a resume first." });
+        }
+        resumeText = userData.resumeText;
+        extractedData = userData.extractedData as ResumeExtractedData;
+      }
+
+      if (!resumeText || resumeText.trim().length < 50) {
+        return res.status(400).json({ error: "Resume text is too short to analyze." });
+      }
+
+      const openai = new (await import("openai")).default({
+        apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+        baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+      });
+
+      const skillsSummary = extractedData?.skills?.join(", ") || "Not extracted";
+      const experienceSummary = extractedData?.experience?.map(e => `${e.title} at ${e.company}`).join("; ") || "Not extracted";
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: `You are an expert resume reviewer specializing in ATS (Applicant Tracking System) optimization for legal tech careers. Analyze the resume and provide a comprehensive ATS-friendliness audit.
+
+Return valid JSON with this exact structure:
+{
+  "overallScore": <number 0-100>,
+  "verdict": "<one-sentence summary of ATS readiness>",
+  "sections": [
+    {
+      "name": "<section name>",
+      "score": <number 0-100>,
+      "status": "good" | "needs_work" | "missing",
+      "findings": ["<specific finding>"],
+      "suggestions": ["<actionable suggestion>"]
+    }
+  ],
+  "keywordAnalysis": {
+    "strongKeywords": ["<keyword that ATS systems will pick up>"],
+    "missingKeywords": ["<important legal tech keywords missing>"],
+    "advice": "<keyword optimization advice>"
+  },
+  "formatting": {
+    "issues": ["<formatting issue that could cause ATS problems>"],
+    "tips": ["<formatting tip>"]
+  },
+  "topPriorities": [
+    {
+      "priority": "<what to fix>",
+      "impact": "high" | "medium" | "low",
+      "howToFix": "<specific actionable steps>"
+    }
+  ]
+}
+
+Sections to evaluate:
+1. Contact Information - is it clearly structured?
+2. Professional Summary - does it exist and use relevant keywords?
+3. Work Experience - is it properly formatted with measurable achievements?
+4. Skills Section - are hard/technical skills clearly listed?
+5. Education - is it present and properly formatted?
+6. Keywords & Terminology - does it use legal tech industry terms?
+7. Overall Structure - is the format ATS-parseable?
+
+Be specific and actionable. Focus on legal tech industry keywords and ATS best practices.`
+          },
+          {
+            role: "user",
+            content: `Analyze this resume for ATS friendliness:\n\nExtracted Skills: ${skillsSummary}\nExperience: ${experienceSummary}\n\nFull Resume Text:\n${resumeText.substring(0, 8000)}`
+          }
+        ],
+        response_format: { type: "json_object" },
+        max_completion_tokens: 3000,
+      });
+
+      const content = completion.choices[0]?.message?.content;
+      if (!content) {
+        return res.status(500).json({ error: "Failed to generate ATS review" });
+      }
+
+      const review = JSON.parse(content);
+      res.json(review);
+    } catch (error: any) {
+      console.error("ATS review error:", error);
+      res.status(500).json({ error: "Failed to generate ATS review. Please try again." });
+    }
+  });
+
   // Batch match resume against all jobs
   app.post("/api/resume/match-jobs", isAuthenticated, requirePro, async (req, res) => {
     try {
@@ -1522,6 +1633,37 @@ ${JSON.stringify(jobSummaries, null, 2)}`
       console.log(`Finished re-categorizing ${done}/${needsCategorization.length} jobs`);
     } catch (error: any) {
       console.error("Error re-categorizing jobs:", error);
+    }
+  });
+
+  // Parse uploaded job file to extract fields (for Post a Job form auto-fill)
+  app.post("/api/parse-job-file", upload.single("file"), async (req, res) => {
+    try {
+      const file = req.file;
+      if (!file) {
+        return res.status(400).json({ error: "No file uploaded" });
+      }
+
+      const { parseJobFile } = await import("./lib/job-file-parser");
+      const parsedJob = await parseJobFile(file.buffer, file.mimetype, file.originalname);
+
+      res.json({
+        success: true,
+        data: {
+          title: parsedJob.title || "",
+          company: parsedJob.company || "",
+          location: parsedJob.location || "",
+          isRemote: parsedJob.isRemote || false,
+          salaryRange: parsedJob.salaryMin && parsedJob.salaryMax
+            ? `$${(parsedJob.salaryMin / 1000).toFixed(0)}K - $${(parsedJob.salaryMax / 1000).toFixed(0)}K`
+            : "",
+          description: parsedJob.description || "",
+          applyUrl: parsedJob.applyUrl || "",
+        },
+      });
+    } catch (error: any) {
+      console.error("Job file parse error:", error);
+      res.status(500).json({ error: error.message || "Failed to parse job file" });
     }
   });
 

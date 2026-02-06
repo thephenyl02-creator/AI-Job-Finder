@@ -12,8 +12,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Loader2, Send, Briefcase, CheckCircle, XCircle, AlertCircle } from "lucide-react";
-import { useState } from "react";
+import { Loader2, Send, Briefcase, CheckCircle, XCircle, AlertCircle, Upload, FileText, Sparkles } from "lucide-react";
+import { useState, useRef } from "react";
 
 const postJobSchema = z.object({
   title: z.string().min(5, "Job title must be at least 5 characters"),
@@ -36,6 +36,9 @@ export default function PostJob() {
     status: 'idle' | 'validating' | 'valid' | 'invalid';
     error?: string;
   }>({ status: 'idle' });
+  const [isParsing, setIsParsing] = useState(false);
+  const [parsedFileName, setParsedFileName] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<PostJobFormData>({
     resolver: zodResolver(postJobSchema),
@@ -80,8 +83,72 @@ export default function PostJob() {
     },
   });
 
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const validTypes = [
+      "application/pdf",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "application/msword",
+    ];
+    if (!validTypes.includes(file.type)) {
+      toast({
+        title: "Unsupported file type",
+        description: "Please upload a PDF or Word document (.pdf, .docx)",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsParsing(true);
+    setParsedFileName(null);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch("/api/parse-job-file", {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Failed to parse file");
+      }
+
+      const result = await res.json();
+      if (result.success && result.data) {
+        const d = result.data;
+        if (d.title) form.setValue("title", d.title);
+        if (d.company) form.setValue("company", d.company);
+        if (d.location) form.setValue("location", d.location);
+        if (d.isRemote) form.setValue("isRemote", d.isRemote);
+        if (d.salaryRange) form.setValue("salaryRange", d.salaryRange);
+        if (d.description) form.setValue("description", d.description);
+        if (d.applyUrl) form.setValue("applyUrl", d.applyUrl);
+
+        setParsedFileName(file.name);
+        toast({
+          title: "Job details extracted",
+          description: "We've filled in the form from your file. Please review and complete any missing fields.",
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Could not parse file",
+        description: error.message || "Please try a different file or fill in the details manually.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsParsing(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
   const onSubmit = async (data: PostJobFormData) => {
-    // Validate the apply URL first
     setUrlValidation({ status: 'validating' });
     try {
       const result = await validateUrlMutation.mutateAsync(data.applyUrl);
@@ -105,7 +172,6 @@ export default function PostJob() {
       return;
     }
     
-    // Submit the job
     submitMutation.mutate(data);
   };
 
@@ -148,6 +214,53 @@ export default function PostJob() {
             Reach legal professionals exploring technology careers
           </p>
         </div>
+
+        <Card className="mb-6">
+          <CardContent className="pt-6">
+            <div className="flex flex-col items-center gap-3 text-center">
+              <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                <Sparkles className="h-4 w-4 text-primary" />
+                Have a job description file? Upload it to auto-fill the form.
+              </div>
+              <p className="text-xs text-muted-foreground max-w-md">
+                Upload a PDF or Word document and we'll extract the job details automatically. You can review and edit everything before submitting.
+              </p>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,.docx,.doc"
+                onChange={handleFileUpload}
+                className="hidden"
+                data-testid="input-file-upload"
+              />
+              <Button
+                variant="outline"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isParsing}
+                className="gap-2"
+                data-testid="button-upload-job-file"
+              >
+                {isParsing ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Extracting job details...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="h-4 w-4" />
+                    Upload Job Description
+                  </>
+                )}
+              </Button>
+              {parsedFileName && (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <FileText className="h-3 w-3" />
+                  Extracted from: {parsedFileName}
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader>

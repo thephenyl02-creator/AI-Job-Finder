@@ -32,6 +32,11 @@ import {
   ChevronDown,
   ChevronRight,
   Zap,
+  ShieldCheck,
+  AlertTriangle,
+  CheckCircle,
+  XCircle,
+  ArrowRight,
 } from "lucide-react";
 
 interface BatchMatchResult {
@@ -806,11 +811,222 @@ function MatchDashboard({ results }: { results: ResumeMatchResult[] }) {
   );
 }
 
+interface ATSSection {
+  name: string;
+  score: number;
+  status: "good" | "needs_work" | "missing";
+  findings: string[];
+  suggestions: string[];
+}
+
+interface ATSPriority {
+  priority: string;
+  impact: "high" | "medium" | "low";
+  howToFix: string;
+}
+
+interface ATSReview {
+  overallScore: number;
+  verdict: string;
+  sections: ATSSection[];
+  keywordAnalysis: {
+    strongKeywords: string[];
+    missingKeywords: string[];
+    advice: string;
+  };
+  formatting: {
+    issues: string[];
+    tips: string[];
+  };
+  topPriorities: ATSPriority[];
+}
+
+function ATSScoreRing({ score }: { score: number }) {
+  const radius = 36;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference - (score / 100) * circumference;
+  const color = score >= 80 ? "text-green-500" : score >= 60 ? "text-yellow-500" : "text-red-500";
+
+  return (
+    <div className="relative inline-flex items-center justify-center">
+      <svg width="88" height="88" className="-rotate-90">
+        <circle cx="44" cy="44" r={radius} fill="none" stroke="currentColor" strokeWidth="5" className="text-border" />
+        <circle cx="44" cy="44" r={radius} fill="none" stroke="currentColor" strokeWidth="5" className={color}
+          strokeDasharray={circumference} strokeDashoffset={offset} strokeLinecap="round" style={{ transition: "stroke-dashoffset 1s ease" }} />
+      </svg>
+      <span className="absolute text-xl font-bold text-foreground" data-testid="text-ats-score">{score}</span>
+    </div>
+  );
+}
+
+function ATSReviewPanel({ review, onClose }: { review: ATSReview; onClose: () => void }) {
+  const [expandedSection, setExpandedSection] = useState<string | null>(null);
+
+  const statusIcon = (status: string) => {
+    if (status === "good") return <CheckCircle className="h-4 w-4 text-green-500 shrink-0" />;
+    if (status === "needs_work") return <AlertTriangle className="h-4 w-4 text-yellow-500 shrink-0" />;
+    return <XCircle className="h-4 w-4 text-red-500 shrink-0" />;
+  };
+
+  const impactColor = (impact: string) => {
+    if (impact === "high") return "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300";
+    if (impact === "medium") return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300";
+    return "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300";
+  };
+
+  return (
+    <div className="space-y-6" data-testid="panel-ats-review">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h3 className="text-lg font-medium text-foreground font-serif" data-testid="text-ats-review-title">
+            ATS Readiness Report
+          </h3>
+          <p className="text-sm text-muted-foreground mt-0.5">{review.verdict}</p>
+        </div>
+        <Button size="icon" variant="ghost" onClick={onClose} data-testid="button-close-ats">
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
+
+      <div className="flex items-center gap-6">
+        <ATSScoreRing score={review.overallScore} />
+        <div className="flex-1 space-y-1.5">
+          {review.sections.slice(0, 4).map((s) => (
+            <div key={s.name} className="flex items-center gap-2">
+              {statusIcon(s.status)}
+              <span className="text-xs text-foreground flex-1">{s.name}</span>
+              <span className="text-xs text-muted-foreground">{s.score}%</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {review.topPriorities && review.topPriorities.length > 0 && (
+        <div>
+          <h4 className="text-sm font-medium text-foreground mb-2 flex items-center gap-2">
+            <Zap className="h-4 w-4 text-primary" />
+            Top Priorities
+          </h4>
+          <div className="space-y-2">
+            {review.topPriorities.map((p, i) => (
+              <Card key={i} className="overflow-visible">
+                <CardContent className="p-3">
+                  <div className="flex items-start gap-2">
+                    <Badge variant="outline" className={`text-xs shrink-0 ${impactColor(p.impact)}`}>
+                      {p.impact}
+                    </Badge>
+                    <div>
+                      <p className="text-sm font-medium text-foreground">{p.priority}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{p.howToFix}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div>
+        <h4 className="text-sm font-medium text-foreground mb-2">Section Details</h4>
+        <div className="space-y-1">
+          {review.sections.map((s) => (
+            <div key={s.name}>
+              <button
+                onClick={() => setExpandedSection(expandedSection === s.name ? null : s.name)}
+                className="w-full flex items-center gap-2 p-2 rounded-md text-left hover-elevate"
+                data-testid={`button-ats-section-${s.name.replace(/\s+/g, '-').toLowerCase()}`}
+              >
+                {statusIcon(s.status)}
+                <span className="text-sm text-foreground flex-1">{s.name}</span>
+                <span className="text-xs text-muted-foreground mr-1">{s.score}%</span>
+                {expandedSection === s.name ? (
+                  <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                ) : (
+                  <ChevronRight className="h-3 w-3 text-muted-foreground" />
+                )}
+              </button>
+              {expandedSection === s.name && (
+                <div className="ml-6 pl-2 border-l-2 border-border space-y-2 pb-2">
+                  {s.findings.length > 0 && (
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground mb-1">Findings</p>
+                      {s.findings.map((f, i) => (
+                        <p key={i} className="text-xs text-foreground">- {f}</p>
+                      ))}
+                    </div>
+                  )}
+                  {s.suggestions.length > 0 && (
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground mb-1">Suggestions</p>
+                      {s.suggestions.map((sg, i) => (
+                        <p key={i} className="text-xs text-foreground flex items-start gap-1">
+                          <ArrowRight className="h-3 w-3 mt-0.5 text-primary shrink-0" />
+                          {sg}
+                        </p>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {review.keywordAnalysis && (
+        <div>
+          <h4 className="text-sm font-medium text-foreground mb-2">Keyword Analysis</h4>
+          <p className="text-xs text-muted-foreground mb-2">{review.keywordAnalysis.advice}</p>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <p className="text-xs font-medium text-foreground mb-1">Strong Keywords</p>
+              <div className="flex flex-wrap gap-1">
+                {review.keywordAnalysis.strongKeywords?.slice(0, 8).map((kw) => (
+                  <Badge key={kw} variant="outline" className="text-xs bg-green-50 dark:bg-green-900/20">
+                    {kw}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-foreground mb-1">Missing Keywords</p>
+              <div className="flex flex-wrap gap-1">
+                {review.keywordAnalysis.missingKeywords?.slice(0, 8).map((kw) => (
+                  <Badge key={kw} variant="outline" className="text-xs bg-red-50 dark:bg-red-900/20">
+                    {kw}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {review.formatting && review.formatting.tips.length > 0 && (
+        <div>
+          <h4 className="text-sm font-medium text-foreground mb-2">Formatting Tips</h4>
+          <div className="space-y-1">
+            {review.formatting.tips.map((tip, i) => (
+              <p key={i} className="text-xs text-foreground flex items-start gap-1">
+                <ArrowRight className="h-3 w-3 mt-0.5 text-primary shrink-0" />
+                {tip}
+              </p>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Resumes() {
   const { isAuthenticated } = useAuth();
   const { track } = useActivityTracker();
   const { toast } = useToast();
   const [showUpload, setShowUpload] = useState(false);
+  const [atsReview, setAtsReview] = useState<ATSReview | null>(null);
+  const [selectedAtsResumeId, setSelectedAtsResumeId] = useState<number | null>(null);
 
   useEffect(() => { track({ eventType: "page_view", pagePath: "/resumes" }); }, []);
 
@@ -860,6 +1076,24 @@ export default function Resumes() {
       queryClient.invalidateQueries({ queryKey: ["/api/resumes"] });
     },
   });
+
+  const atsReviewMutation = useMutation({
+    mutationFn: async (resumeId?: number) => {
+      const res = await apiRequest("POST", "/api/resume/ats-review", resumeId ? { resumeId } : {});
+      return res.json() as Promise<ATSReview>;
+    },
+    onSuccess: (data) => {
+      setAtsReview(data);
+    },
+    onError: (err: Error) => {
+      toast({ title: "ATS review failed", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const runAtsReview = (resumeId?: number) => {
+    setSelectedAtsResumeId(resumeId || null);
+    atsReviewMutation.mutate(resumeId);
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -946,29 +1180,71 @@ export default function Resumes() {
             )}
 
             {userResumes.length >= 1 && (
-              <Button
-                className="w-full"
-                onClick={() => matchMutation.mutate()}
-                disabled={matchMutation.isPending}
-                data-testid="button-run-match"
-              >
-                {matchMutation.isPending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Analyzing matches...
-                  </>
-                ) : (
-                  <>
-                    <Target className="h-4 w-4 mr-2" />
-                    Find Matching Jobs
-                  </>
-                )}
-              </Button>
+              <div className="space-y-2">
+                <Button
+                  className="w-full"
+                  onClick={() => matchMutation.mutate()}
+                  disabled={matchMutation.isPending}
+                  data-testid="button-run-match"
+                >
+                  {matchMutation.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Analyzing matches...
+                    </>
+                  ) : (
+                    <>
+                      <Target className="h-4 w-4 mr-2" />
+                      Find Matching Jobs
+                    </>
+                  )}
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => {
+                    const primary = userResumes.find(r => r.isPrimary);
+                    runAtsReview(primary?.id || userResumes[0]?.id);
+                  }}
+                  disabled={atsReviewMutation.isPending}
+                  data-testid="button-ats-review"
+                >
+                  {atsReviewMutation.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Reviewing...
+                    </>
+                  ) : (
+                    <>
+                      <ShieldCheck className="h-4 w-4 mr-2" />
+                      ATS Review
+                    </>
+                  )}
+                </Button>
+              </div>
             )}
           </div>
 
           <div className="lg:col-span-2">
-            {matchMutation.isPending ? (
+            {atsReviewMutation.isPending ? (
+              <Card className="overflow-visible">
+                <CardContent className="p-8 text-center">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
+                  <p className="text-sm font-medium text-foreground">
+                    Analyzing your resume for ATS compatibility...
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Checking formatting, keywords, and structure
+                  </p>
+                </CardContent>
+              </Card>
+            ) : atsReview ? (
+              <Card className="overflow-visible">
+                <CardContent className="p-5">
+                  <ATSReviewPanel review={atsReview} onClose={() => setAtsReview(null)} />
+                </CardContent>
+              </Card>
+            ) : matchMutation.isPending ? (
               <Card className="overflow-visible">
                 <CardContent className="p-8 text-center">
                   <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
