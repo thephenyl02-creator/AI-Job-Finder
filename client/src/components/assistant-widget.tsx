@@ -236,7 +236,7 @@ export function AssistantWidget() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
-            className="fixed bottom-20 right-4 z-50 w-[380px] max-w-[calc(100vw-2rem)]"
+            className="fixed bottom-20 right-2 sm:right-4 z-50 w-[calc(100vw-1rem)] sm:w-[380px] sm:max-w-[calc(100vw-2rem)]"
           >
             <Card className="flex flex-col shadow-lg border overflow-visible" style={{ height: "500px", maxHeight: "calc(100vh - 8rem)" }}>
               <div className="flex items-center justify-between gap-3 px-4 py-3 border-b bg-muted/30">
@@ -341,11 +341,11 @@ export function AssistantWidget() {
                         : "Ask me anything..."
                     }
                     rows={1}
-                    className="flex-1 resize-none bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none min-h-[36px] max-h-[80px] py-2"
-                    style={{ height: "36px" }}
+                    className="flex-1 resize-none bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none min-h-[44px] max-h-[80px] py-3"
+                    style={{ height: "44px" }}
                     onInput={(e) => {
                       const target = e.target as HTMLTextAreaElement;
-                      target.style.height = "36px";
+                      target.style.height = "44px";
                       target.style.height = Math.min(target.scrollHeight, 80) + "px";
                     }}
                     data-testid="input-assistant-message"
@@ -373,7 +373,7 @@ export function AssistantWidget() {
         <Button
           size="lg"
           onClick={() => setIsOpen(!isOpen)}
-          className="rounded-full h-12 w-12 shadow-lg"
+          className="rounded-full h-14 w-14 shadow-lg"
           data-testid="button-open-assistant"
         >
           {isOpen ? (

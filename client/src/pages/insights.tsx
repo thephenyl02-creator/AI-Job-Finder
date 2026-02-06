@@ -267,7 +267,7 @@ function InsightsChat() {
                   key={i}
                   variant="outline"
                   size="sm"
-                  className="text-xs h-auto py-1.5 px-3 font-normal"
+                  className="text-xs h-auto py-2.5 px-3 font-normal min-h-[44px]"
                   onClick={() => handleSubmit(q)}
                   data-testid={`button-suggested-question-${i}`}
                 >
@@ -366,7 +366,7 @@ function SkeletonDashboard() {
           <Skeleton className="h-8 w-64 mb-2" />
           <Skeleton className="h-5 w-96" />
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-8">
           {[1, 2, 3, 4].map((i) => (
             <Card key={i}>
               <CardContent className="p-5">
@@ -460,7 +460,7 @@ export default function Insights() {
 
         <InsightsChat />
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-10">
           <StatCard
             icon={Briefcase}
             label="Active Positions"

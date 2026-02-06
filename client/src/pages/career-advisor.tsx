@@ -835,7 +835,7 @@ export default function CareerAdvisor() {
       {showJobPicker && (
         <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm" onClick={() => setShowJobPicker(false)}>
           <div 
-            className="fixed right-0 top-0 h-full w-full max-w-md bg-background border-l shadow-xl flex flex-col"
+            className="fixed right-0 top-0 h-full w-full sm:max-w-md bg-background border-l shadow-xl flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-4 border-b">
@@ -873,7 +873,7 @@ export default function CareerAdvisor() {
                     {Object.entries(filteredGroupedJobs).map(([category, categoryJobs]) => (
                       <div key={category}>
                         <button
-                          className="w-full flex items-center gap-2 py-2 px-2 text-left hover:bg-muted/50 rounded-lg transition-colors"
+                          className="w-full flex items-center gap-2 py-2.5 px-2 text-left hover:bg-muted/50 rounded-lg transition-colors min-h-[44px]"
                           onClick={() => toggleCategory(category)}
                           data-testid={`button-category-${category.replace(/\s+/g, '-').toLowerCase()}`}
                         >
@@ -893,7 +893,7 @@ export default function CareerAdvisor() {
                             {categoryJobs.map((job) => (
                               <button
                                 key={job.id}
-                                className="w-full text-left p-3 rounded-lg border border-transparent hover:border-primary/30 hover:bg-muted/30 transition-all group"
+                                className="w-full text-left p-3 rounded-lg border border-transparent hover:border-primary/30 hover:bg-muted/30 transition-all group min-h-[44px]"
                                 onClick={() => jobPickerTarget && selectPortalJob(job, jobPickerTarget)}
                                 data-testid={`button-select-job-${job.id}`}
                               >
@@ -1008,7 +1008,7 @@ function ComparisonResults({
             <table className="w-full border-collapse">
               <thead>
                 <tr className="border-b">
-                  <th className="text-left p-4 font-medium text-muted-foreground w-48">Aspect</th>
+                  <th className="text-left p-3 sm:p-4 font-medium text-muted-foreground w-28 sm:w-48 text-sm">Aspect</th>
                   {result.jobs.map((job, i) => (
                     <th key={i} className="text-left p-4 font-medium">
                       {job.jobTitle}

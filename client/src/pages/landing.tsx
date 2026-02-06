@@ -81,23 +81,23 @@ export default function Landing() {
   return (
     <div className="min-h-screen bg-background overflow-hidden">
       <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border/40">
-        <nav className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+        <nav className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-2 sm:gap-4">
           <Link href="/">
-            <div className="flex items-center gap-3 cursor-pointer" data-testid="logo-landing">
+            <div className="flex items-center gap-2 sm:gap-3 cursor-pointer min-h-[44px]" data-testid="logo-landing">
               <LogoMark className="h-6 w-6 text-foreground" />
-              <span className="text-base font-semibold text-foreground tracking-tight">
+              <span className="text-sm sm:text-base font-semibold text-foreground tracking-tight">
                 Legal Tech Careers
               </span>
             </div>
           </Link>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1 sm:gap-3">
             <Link href="/pricing">
-              <Button variant="ghost" size="sm" className="text-muted-foreground" data-testid="link-landing-pricing">
+              <Button variant="ghost" size="sm" className="text-muted-foreground min-h-[44px]" data-testid="link-landing-pricing">
                 Pricing
               </Button>
             </Link>
             <ThemeToggle />
-            <Button asChild data-testid="button-header-login">
+            <Button asChild className="min-h-[44px]" data-testid="button-header-login">
               <a href="/api/login">Sign In</a>
             </Button>
           </div>
@@ -119,7 +119,7 @@ export default function Landing() {
                 </ScrollReveal>
 
                 <ScrollReveal delay={0.2}>
-                  <h1 className="text-4xl sm:text-5xl lg:text-[3.25rem] xl:text-5xl font-serif font-medium text-foreground mb-5 leading-[1.15] tracking-tight" data-testid="text-hero-title">
+                  <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[3.25rem] xl:text-5xl font-serif font-medium text-foreground mb-5 leading-[1.15] tracking-tight" data-testid="text-hero-title">
                     Every legal tech role.
                     <br />
                     <span className="relative">
@@ -222,9 +222,9 @@ export default function Landing() {
             </div>
 
             <ScrollReveal delay={0.6}>
-              <div className="grid grid-cols-3 gap-3 sm:gap-4 mt-10 sm:mt-14" data-testid="stats-section">
-                <div className="rounded-md bg-primary/10 dark:bg-primary/15 p-4 sm:p-5 text-center" data-testid="stat-jobs">
-                  <div className="text-2xl sm:text-3xl font-serif font-semibold text-primary tabular-nums">
+              <div className="grid grid-cols-3 gap-2 sm:gap-4 mt-10 sm:mt-14" data-testid="stats-section">
+                <div className="rounded-md bg-primary/10 dark:bg-primary/15 p-3 sm:p-5 text-center" data-testid="stat-jobs">
+                  <div className="text-xl sm:text-3xl font-serif font-semibold text-primary tabular-nums">
                     {stats?.totalJobs ? (
                       <AnimatedCounter value={stats.totalJobs} duration={2} />
                     ) : (
@@ -233,8 +233,8 @@ export default function Landing() {
                   </div>
                   <div className="text-xs sm:text-sm text-primary/70 dark:text-primary/60 mt-0.5 font-medium">Open positions</div>
                 </div>
-                <div className="rounded-md bg-chart-2/10 dark:bg-chart-2/15 p-4 sm:p-5 text-center" data-testid="stat-companies">
-                  <div className="text-2xl sm:text-3xl font-serif font-semibold text-chart-2 tabular-nums">
+                <div className="rounded-md bg-chart-2/10 dark:bg-chart-2/15 p-3 sm:p-5 text-center" data-testid="stat-companies">
+                  <div className="text-xl sm:text-3xl font-serif font-semibold text-chart-2 tabular-nums">
                     {stats?.totalCompanies ? (
                       <AnimatedCounter value={stats.totalCompanies} duration={1.6} />
                     ) : (
@@ -243,8 +243,8 @@ export default function Landing() {
                   </div>
                   <div className="text-xs sm:text-sm text-chart-2/70 dark:text-chart-2/60 mt-0.5 font-medium">Companies hiring</div>
                 </div>
-                <div className="rounded-md bg-chart-4/10 dark:bg-chart-4/15 p-4 sm:p-5 text-center" data-testid="stat-categories">
-                  <div className="text-2xl sm:text-3xl font-serif font-semibold text-chart-4 tabular-nums">
+                <div className="rounded-md bg-chart-4/10 dark:bg-chart-4/15 p-3 sm:p-5 text-center" data-testid="stat-categories">
+                  <div className="text-xl sm:text-3xl font-serif font-semibold text-chart-4 tabular-nums">
                     {stats?.totalCategories ? (
                       <AnimatedCounter value={stats.totalCategories} duration={1.2} />
                     ) : (

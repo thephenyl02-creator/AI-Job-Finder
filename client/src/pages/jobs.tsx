@@ -302,19 +302,20 @@ export default function Jobs() {
       <Header />
       
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-        <div className="flex items-center gap-4 mb-6">
+        <div className="flex items-center gap-2 sm:gap-4 mb-6 flex-wrap">
           {searchResults && (
             <Button
               variant="ghost"
               size="sm"
               onClick={() => { setSearchResults(null); setSearchQuery(null); }}
+              className="min-h-[44px]"
               data-testid="button-back-search"
             >
               <ArrowLeft className="h-4 w-4 mr-1" />
               All Jobs
             </Button>
           )}
-          <h1 className="text-xl font-semibold text-foreground tracking-tight" data-testid="text-page-title">
+          <h1 className="text-lg sm:text-xl font-semibold text-foreground tracking-tight" data-testid="text-page-title">
             {searchResults ? `Results for "${searchQuery}"` : "Browse Jobs"}
           </h1>
           <span className="text-sm text-muted-foreground" data-testid="text-job-count">
@@ -322,35 +323,38 @@ export default function Jobs() {
           </span>
         </div>
 
-        <div className="flex flex-wrap gap-4 mb-6">
-          <div className="flex items-center gap-2 flex-1 min-w-[200px] max-w-md">
-            <Search className="h-4 w-4 text-muted-foreground" />
+        <div className="flex flex-wrap gap-2 sm:gap-4 mb-6">
+          <div className="flex items-center gap-2 w-full sm:flex-1 sm:w-auto sm:min-w-[200px] sm:max-w-md">
+            <Search className="h-4 w-4 text-muted-foreground shrink-0" />
             <Input
               placeholder="Filter by title, company, or location..."
               value={filterText}
               onChange={(e) => setFilterText(e.target.value)}
+              className="min-h-[44px]"
               data-testid="input-filter"
             />
           </div>
-          <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-1">
+          <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-1 overflow-x-auto w-full sm:w-auto">
             {SENIORITY_LEVELS.map((level) => (
               <Button
                 key={level.value}
                 variant={selectedLevel === level.value ? "default" : "ghost"}
                 size="sm"
                 onClick={() => { setSelectedLevel(level.value); track({ eventType: "filter_change", metadata: { filterType: "level", value: level.value } }); }}
+                className="min-h-[44px] whitespace-nowrap shrink-0"
                 data-testid={`button-level-${level.value}`}
               >
                 {level.label}
               </Button>
             ))}
           </div>
+          <div className="flex items-center gap-2 flex-wrap">
           {selectedCategory === "all" && (
             <Button
               variant={showCategories ? "default" : "outline"}
               size="sm"
               onClick={() => setShowCategories(!showCategories)}
-              className="gap-1"
+              className="gap-1 min-h-[44px]"
               data-testid="button-browse-categories"
             >
               <Layers className="h-3 w-3" />
@@ -363,7 +367,7 @@ export default function Jobs() {
               variant={selectedLocation !== "all" ? "default" : "outline"}
               size="sm"
               onClick={() => setLocationDropdownOpen(!locationDropdownOpen)}
-              className="gap-1"
+              className="gap-1 min-h-[44px]"
               data-testid="button-location-filter"
             >
               <MapPin className="h-3 w-3" />
@@ -382,14 +386,14 @@ export default function Jobs() {
                 </div>
                 <div className="overflow-y-auto max-h-52">
                   <button
-                    className={`w-full text-left px-3 py-2 text-sm hover-elevate ${selectedLocation === "all" ? "bg-muted font-medium" : ""}`}
+                    className={`w-full text-left px-3 py-2.5 text-sm hover-elevate min-h-[44px] ${selectedLocation === "all" ? "bg-muted font-medium" : ""}`}
                     onClick={() => { setSelectedLocation("all"); setLocationDropdownOpen(false); setLocationSearch(""); track({ eventType: "filter_change", metadata: { filterType: "location", value: "all" } }); }}
                     data-testid="button-location-all"
                   >
                     All Locations
                   </button>
                   <button
-                    className={`w-full text-left px-3 py-2 text-sm hover-elevate flex items-center justify-between gap-2 ${selectedLocation === "remote" ? "bg-muted font-medium" : ""}`}
+                    className={`w-full text-left px-3 py-2.5 text-sm hover-elevate flex items-center justify-between gap-2 min-h-[44px] ${selectedLocation === "remote" ? "bg-muted font-medium" : ""}`}
                     onClick={() => { setSelectedLocation("remote"); setLocationDropdownOpen(false); setLocationSearch(""); track({ eventType: "filter_change", metadata: { filterType: "location", value: "remote" } }); }}
                     data-testid="button-location-remote"
                   >
@@ -402,7 +406,7 @@ export default function Jobs() {
                     .map((loc) => (
                     <button
                       key={loc.key}
-                      className={`w-full text-left px-3 py-2 text-sm hover-elevate flex items-center justify-between gap-2 ${selectedLocation === loc.key ? "bg-muted font-medium" : ""}`}
+                      className={`w-full text-left px-3 py-2.5 text-sm hover-elevate flex items-center justify-between gap-2 min-h-[44px] ${selectedLocation === loc.key ? "bg-muted font-medium" : ""}`}
                       onClick={() => { setSelectedLocation(loc.key); setLocationDropdownOpen(false); setLocationSearch(""); track({ eventType: "filter_change", metadata: { filterType: "location", value: loc.key } }); }}
                       data-testid={`button-location-${loc.key}`}
                     >
@@ -414,12 +418,13 @@ export default function Jobs() {
               </div>
             )}
           </div>
+          </div>
           {selectedCategory !== "all" && (
             <Button
               variant="outline"
               size="sm"
               onClick={() => setSelectedCategory("all")}
-              className="gap-1"
+              className="gap-1 min-h-[44px]"
               data-testid="button-clear-category"
             >
               <X className="h-3 w-3" />
@@ -570,7 +575,7 @@ export default function Jobs() {
         <AnimatePresence>
           {selectedJobIds.size > 0 && (
             <motion.div
-              className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50"
+              className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] sm:w-auto max-w-lg"
               initial={{ y: 80, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: 80, opacity: 0 }}
@@ -578,24 +583,25 @@ export default function Jobs() {
               data-testid="compare-action-bar"
             >
               <Card className="shadow-lg border-primary/20">
-                <CardContent className="flex items-center gap-4 py-3 px-5">
-                  <div className="flex items-center gap-2">
-                    <Target className="h-5 w-5 text-primary" />
-                    <span className="font-medium">
+                <CardContent className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 py-3 px-4 sm:px-5">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Target className="h-5 w-5 text-primary shrink-0" />
+                    <span className="font-medium text-sm sm:text-base">
                       {selectedJobIds.size} job{selectedJobIds.size > 1 ? "s" : ""} selected
                     </span>
                     {selectedJobIds.size < 2 && (
-                      <span className="text-sm text-muted-foreground">(select at least 2)</span>
+                      <span className="text-xs sm:text-sm text-muted-foreground">(select at least 2)</span>
                     )}
                     {selectedJobIds.size >= 3 && (
-                      <span className="text-sm text-muted-foreground">(max 3)</span>
+                      <span className="text-xs sm:text-sm text-muted-foreground">(max 3)</span>
                     )}
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 w-full sm:w-auto">
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={clearSelection}
+                      className="min-h-[44px] flex-1 sm:flex-none"
                       data-testid="button-clear-selection"
                     >
                       <X className="h-4 w-4 mr-1" />
@@ -605,10 +611,11 @@ export default function Jobs() {
                       size="sm"
                       onClick={handleCompareSelected}
                       disabled={selectedJobIds.size < 2}
+                      className="min-h-[44px] flex-1 sm:flex-none"
                       data-testid="button-compare-selected"
                     >
                       <Target className="h-4 w-4 mr-1" />
-                      Compare Selected
+                      Compare
                     </Button>
                   </div>
                 </CardContent>
@@ -672,19 +679,19 @@ function CategorySection({
     <Card className="overflow-hidden">
       <button
         onClick={onToggle}
-        className="w-full text-left"
+        className="w-full text-left min-h-[44px]"
         data-testid={`button-toggle-${category.replace(/\s+/g, '-').toLowerCase()}`}
       >
-        <CardHeader className="flex flex-row items-center gap-3 py-4 hover:bg-muted/30 transition-colors">
-          <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center shrink-0">
-            <Icon className="h-5 w-5 text-foreground" />
+        <CardHeader className="flex flex-row items-center gap-2 sm:gap-3 py-3 sm:py-4 hover:bg-muted/30 transition-colors">
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-md bg-muted flex items-center justify-center shrink-0">
+            <Icon className="h-4 w-4 sm:h-5 sm:w-5 text-foreground" />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <h3 className="font-semibold text-foreground">{category}</h3>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="font-semibold text-foreground text-sm sm:text-base">{category}</h3>
               <Badge variant="secondary">{jobs.length}</Badge>
             </div>
-            <p className="text-sm text-muted-foreground truncate">{taxonomy.description}</p>
+            <p className="text-xs sm:text-sm text-muted-foreground truncate">{taxonomy.description}</p>
           </div>
           {expanded ? (
             <ChevronDown className="h-5 w-5 text-muted-foreground shrink-0" />
@@ -726,65 +733,76 @@ function CategorySection({
                                 onJobClick(job.id);
                               }}
                             >
-                              <div className="flex items-start justify-between gap-4">
-                                <div className="flex items-start gap-3 min-w-0 flex-1">
-                                  <div onClick={(e) => e.stopPropagation()}>
-                                    <Checkbox
-                                      checked={selectedJobIds.has(job.id)}
-                                      onCheckedChange={() => onToggleSelection(job.id)}
-                                      disabled={!selectedJobIds.has(job.id) && selectedJobIds.size >= 3}
-                                      className="mt-1"
-                                      data-testid={`checkbox-job-${job.id}`}
-                                    />
-                                  </div>
-                                  <div className="min-w-0 flex-1">
-                                    <h4 className="font-medium text-foreground" data-testid={`text-job-title-${job.id}`}>
+                              <div className="flex items-start gap-2 sm:gap-3">
+                                <div onClick={(e) => e.stopPropagation()} className="pt-0.5">
+                                  <Checkbox
+                                    checked={selectedJobIds.has(job.id)}
+                                    onCheckedChange={() => onToggleSelection(job.id)}
+                                    disabled={!selectedJobIds.has(job.id) && selectedJobIds.size >= 3}
+                                    className="min-h-[20px] min-w-[20px]"
+                                    data-testid={`checkbox-job-${job.id}`}
+                                  />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-start justify-between gap-2">
+                                    <h4 className="font-medium text-foreground text-sm sm:text-base" data-testid={`text-job-title-${job.id}`}>
                                       {job.title}
                                     </h4>
-                                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-sm text-muted-foreground">
-                                      <span className="flex items-center gap-1">
-                                        <Building2 className="h-3 w-3" />
-                                        <span data-testid={`text-job-company-${job.id}`}>{job.company}</span>
+                                    <Button
+                                      size="sm"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        onApply(job);
+                                      }}
+                                      className="min-h-[44px] shrink-0 hidden sm:flex"
+                                      data-testid={`button-apply-${job.id}`}
+                                    >
+                                      <ExternalLink className="h-3 w-3 mr-1" />
+                                      Apply
+                                    </Button>
+                                  </div>
+                                  <div className="flex flex-wrap items-center gap-x-2 sm:gap-x-3 gap-y-1 mt-1 text-xs sm:text-sm text-muted-foreground">
+                                    <span className="flex items-center gap-1">
+                                      <Building2 className="h-3 w-3 shrink-0" />
+                                      <span data-testid={`text-job-company-${job.id}`}>{job.company}</span>
+                                    </span>
+                                    <span className="flex items-center gap-1">
+                                      <MapPin className="h-3 w-3 shrink-0" />
+                                      <span data-testid={`text-job-location-${job.id}`}>{job.location || "Not specified"}</span>
+                                    </span>
+                                    {salaryDisplay && (
+                                      <span className="flex items-center gap-1 text-green-600 dark:text-green-400">
+                                        <DollarSign className="h-3 w-3 shrink-0" />
+                                        <span data-testid={`text-salary-${job.id}`}>{salaryDisplay}</span>
                                       </span>
-                                      <span className="flex items-center gap-1">
-                                        <MapPin className="h-3 w-3" />
-                                        <span data-testid={`text-job-location-${job.id}`}>{job.location || "Not specified"}</span>
-                                      </span>
-                                      {salaryDisplay && (
-                                        <span className="flex items-center gap-1 text-green-600 dark:text-green-400">
-                                          <DollarSign className="h-3 w-3" />
-                                          <span data-testid={`text-salary-${job.id}`}>{salaryDisplay}</span>
-                                        </span>
-                                      )}
-                                      {job.seniorityLevel && (
-                                        <Badge variant="outline" className="text-xs">
-                                          {job.seniorityLevel}
-                                        </Badge>
-                                      )}
-                                      {searchResults && "matchScore" in job && (job as JobWithScore).matchScore && (
-                                        <Badge 
-                                          variant={(job as JobWithScore).matchScore! >= 80 ? "default" : "secondary"}
-                                          data-testid={`badge-match-${job.id}`}
-                                        >
-                                          {(job as JobWithScore).matchScore}% match
-                                        </Badge>
-                                      )}
-                                    </div>
-                                    {job.aiSummary && (
-                                      <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
-                                        {job.aiSummary}
-                                      </p>
+                                    )}
+                                    {job.seniorityLevel && (
+                                      <Badge variant="outline" className="text-xs">
+                                        {job.seniorityLevel}
+                                      </Badge>
+                                    )}
+                                    {searchResults && "matchScore" in job && (job as JobWithScore).matchScore && (
+                                      <Badge 
+                                        variant={(job as JobWithScore).matchScore! >= 80 ? "default" : "secondary"}
+                                        data-testid={`badge-match-${job.id}`}
+                                      >
+                                        {(job as JobWithScore).matchScore}% match
+                                      </Badge>
                                     )}
                                   </div>
-                                </div>
-                                <div className="flex items-center gap-2 shrink-0">
+                                  {job.aiSummary && (
+                                    <p className="text-xs sm:text-sm text-muted-foreground mt-2 line-clamp-2">
+                                      {job.aiSummary}
+                                    </p>
+                                  )}
                                   <Button
                                     size="sm"
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       onApply(job);
                                     }}
-                                    data-testid={`button-apply-${job.id}`}
+                                    className="min-h-[44px] mt-2 sm:hidden w-full"
+                                    data-testid={`button-apply-mobile-${job.id}`}
                                   >
                                     <ExternalLink className="h-3 w-3 mr-1" />
                                     Apply
