@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { usePageTitle } from "@/hooks/use-page-title";
-import { useLocation, useSearch } from "wouter";
+import { useLocation, useSearch, Link } from "wouter";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -125,9 +125,9 @@ export default function Auth() {
       if (result.resetToken) {
         setResetToken(result.resetToken);
         setView("reset");
-        toast({ title: "Set your new password below." });
+        toast({ title: "Email verified. Set your new password below." });
       } else {
-        toast({ title: "If an account with that email exists, check your email for a reset link." });
+        toast({ title: "If an account exists with that email, you'll be able to reset your password. Please try again or contact support." });
       }
     } catch (err: any) {
       toast({ title: "Something went wrong. Please try again.", variant: "destructive" });
@@ -180,7 +180,7 @@ export default function Auth() {
                 Reset Your Password
               </h1>
               <p className="text-sm text-muted-foreground mt-1">
-                Enter the email address associated with your account
+                Enter your email to verify your account and set a new password
               </p>
             </div>
           </div>
@@ -209,9 +209,9 @@ export default function Auth() {
                   {forgotMutation.isPending ? (
                     <Loader2 className="h-4 w-4 animate-spin mr-2" />
                   ) : (
-                    <KeyRound className="h-4 w-4 mr-2" />
+                    <ArrowRight className="h-4 w-4 mr-2" />
                   )}
-                  Send Reset Link
+                  Continue
                 </Button>
               </form>
               <Button
@@ -517,7 +517,10 @@ export default function Auth() {
           </Card>
 
           <p className="text-center text-xs text-muted-foreground mt-6">
-            By continuing, you agree to our Terms of Service and Privacy Policy.
+            By continuing, you agree to our{" "}
+            <Link href="/terms" className="underline hover:text-foreground transition-colors">Terms of Service</Link>
+            {" "}and{" "}
+            <Link href="/privacy" className="underline hover:text-foreground transition-colors">Privacy Policy</Link>.
           </p>
         </div>
       </div>

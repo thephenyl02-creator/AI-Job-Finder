@@ -1,5 +1,6 @@
 import { usePageTitle } from "@/hooks/use-page-title";
 import { Header } from "@/components/header";
+import { Footer } from "@/components/footer";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
@@ -98,6 +99,7 @@ export default function TermsPage() {
           </Card>
         </div>
       </main>
+      <Footer />
     </>
   );
 }
