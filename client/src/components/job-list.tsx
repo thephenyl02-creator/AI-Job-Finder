@@ -1,5 +1,4 @@
 import { JobCard } from "@/components/job-card";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
 import { Briefcase, Search, Sparkles } from "lucide-react";
 import type { JobWithScore } from "@shared/schema";
@@ -21,25 +20,25 @@ function JobCardSkeleton() {
       <CardContent className="p-5 sm:p-6">
         <div className="flex flex-col gap-4">
           <div className="flex items-start gap-4">
-            <Skeleton className="h-14 w-14 rounded-lg" />
+            <div className="h-14 w-14 rounded-lg skeleton-shimmer" />
             <div className="flex-1 space-y-2">
-              <Skeleton className="h-4 w-32" />
-              <Skeleton className="h-6 w-48" />
+              <div className="h-4 w-32 skeleton-shimmer rounded-md" />
+              <div className="h-6 w-48 skeleton-shimmer rounded-md" />
             </div>
-            <Skeleton className="h-8 w-20 rounded-full" />
+            <div className="h-8 w-20 skeleton-shimmer rounded-full" />
           </div>
           <div className="flex gap-2">
-            <Skeleton className="h-6 w-24 rounded-full" />
-            <Skeleton className="h-6 w-20 rounded-full" />
-            <Skeleton className="h-6 w-28 rounded-full" />
+            <div className="h-6 w-24 skeleton-shimmer rounded-full" />
+            <div className="h-6 w-20 skeleton-shimmer rounded-full" />
+            <div className="h-6 w-28 skeleton-shimmer rounded-full" />
           </div>
-          <Skeleton className="h-12 w-full" />
+          <div className="h-12 w-full skeleton-shimmer rounded-md" />
           <div className="flex justify-between pt-2 border-t border-border">
             <div className="flex gap-4">
-              <Skeleton className="h-5 w-28" />
-              <Skeleton className="h-5 w-24" />
+              <div className="h-5 w-28 skeleton-shimmer rounded-md" />
+              <div className="h-5 w-24 skeleton-shimmer rounded-md" />
             </div>
-            <Skeleton className="h-9 w-28" />
+            <div className="h-9 w-28 skeleton-shimmer rounded-md" />
           </div>
         </div>
       </CardContent>

@@ -7,10 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Logo } from "@/components/logo";
-import { Loader2, ArrowRight, ArrowLeft, Mail, KeyRound, CheckCircle2 } from "lucide-react";
+import { Loader2, ArrowRight, ArrowLeft, Mail, KeyRound, CheckCircle2, Briefcase, Scale, TrendingUp } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { GradientOrb } from "@/components/animations";
 
 function GoogleIcon({ className }: { className?: string }) {
   return (
@@ -322,12 +323,45 @@ export default function Auth() {
     );
   }
 
+  const valueProps = [
+    { icon: Briefcase, text: "Curated legal tech opportunities" },
+    { icon: Scale, text: "Built for lawyers & law students" },
+    { icon: TrendingUp, text: "Resume matching & career insights" },
+  ];
+
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center px-4">
-      <div className="w-full max-w-sm">
-        <div className="flex flex-col items-center gap-4 mb-8">
-          <Logo className="h-8 w-8 text-foreground" />
-          <div className="text-center">
+    <div className="min-h-screen bg-background flex relative">
+      <GradientOrb className="w-[500px] h-[500px] bg-primary -top-32 -left-32" />
+      <GradientOrb className="w-[400px] h-[400px] bg-chart-2 bottom-0 right-0" />
+
+      <div className="hidden lg:flex lg:flex-1 items-center justify-center p-12 relative">
+        <div className="max-w-md animate-fade-in">
+          <Logo className="h-10 w-10 text-foreground mb-8" />
+          <h2 className="text-3xl font-serif font-medium text-foreground tracking-tight mb-3" data-testid="text-auth-hero">
+            Your legal tech career starts here
+          </h2>
+          <p className="text-muted-foreground leading-relaxed mb-8">
+            Join legal professionals who are discovering opportunities at the intersection of law and technology.
+          </p>
+          <div className="space-y-4">
+            {valueProps.map((item, i) => (
+              <div key={i} className={`flex items-center gap-3 animate-fade-in-up opacity-0 stagger-${i + 2}`}>
+                <div className="w-9 h-9 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
+                  <item.icon className="h-4 w-4 text-primary" />
+                </div>
+                <span className="text-sm text-foreground/80">{item.text}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="flex-1 flex items-center justify-center px-4 py-12 relative">
+        <div className="w-full max-w-sm animate-scale-in">
+          <div className="flex flex-col items-center gap-4 mb-8 lg:hidden">
+            <Logo className="h-8 w-8 text-foreground" />
+          </div>
+          <div className="text-center mb-6">
             <h1 className="font-serif text-2xl font-semibold text-foreground tracking-tight" data-testid="text-auth-title">
               {mode === "login" ? "Welcome Back" : "Create Account"}
             </h1>
@@ -337,155 +371,155 @@ export default function Auth() {
                 : "Join thousands of legal professionals exploring tech careers"}
             </p>
           </div>
-        </div>
 
-        <Card>
-          <CardHeader className="pb-4">
-            <div className="flex gap-1">
-              <Button
-                variant={mode === "login" ? "default" : "ghost"}
-                size="sm"
-                onClick={() => { setMode("login"); setView("login"); setShowEmailForm(false); }}
-                className="flex-1"
-                data-testid="button-tab-login"
-              >
-                Sign In
-              </Button>
-              <Button
-                variant={mode === "register" ? "default" : "ghost"}
-                size="sm"
-                onClick={() => { setMode("register"); setView("register"); setShowEmailForm(false); }}
-                className="flex-1"
-                data-testid="button-tab-register"
-              >
-                Create Account
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {googleAvailable && (
-              <>
+          <Card>
+            <CardHeader className="pb-4">
+              <div className="flex gap-1">
                 <Button
-                  variant="outline"
-                  className="w-full min-h-[44px] gap-3 text-sm font-medium"
-                  onClick={handleGoogleLogin}
-                  data-testid="button-google-login"
+                  variant={mode === "login" ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => { setMode("login"); setView("login"); setShowEmailForm(false); }}
+                  className="flex-1"
+                  data-testid="button-tab-login"
                 >
-                  <GoogleIcon className="h-5 w-5" />
-                  Continue with Google
+                  Sign In
                 </Button>
-
-                {!showEmailForm && (
+                <Button
+                  variant={mode === "register" ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => { setMode("register"); setView("register"); setShowEmailForm(false); }}
+                  className="flex-1"
+                  data-testid="button-tab-register"
+                >
+                  Create Account
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {googleAvailable && (
+                <>
                   <Button
-                    variant="ghost"
-                    className="w-full min-h-[44px] gap-3 text-sm font-medium text-muted-foreground"
-                    onClick={() => setShowEmailForm(true)}
-                    data-testid="button-show-email"
+                    variant="outline"
+                    className="w-full min-h-[44px] gap-3 text-sm font-medium"
+                    onClick={handleGoogleLogin}
+                    data-testid="button-google-login"
                   >
-                    <Mail className="h-4 w-4" />
-                    Continue with Email
+                    <GoogleIcon className="h-5 w-5" />
+                    Continue with Google
                   </Button>
-                )}
 
-                {showEmailForm && (
-                  <div className="relative">
-                    <div className="absolute inset-0 flex items-center">
-                      <span className="w-full border-t" />
-                    </div>
-                    <div className="relative flex justify-center text-xs uppercase">
-                      <span className="bg-card px-2 text-muted-foreground">or</span>
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
-
-            {(showEmailForm || !googleAvailable) && (
-              <form onSubmit={handleSubmit} className="space-y-4">
-                {mode === "register" && (
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-2">
-                      <Label htmlFor="firstName">First Name</Label>
-                      <Input
-                        id="firstName"
-                        type="text"
-                        placeholder="Jane"
-                        value={firstName}
-                        onChange={(e) => setFirstName(e.target.value)}
-                        data-testid="input-first-name"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="lastName">Last Name</Label>
-                      <Input
-                        id="lastName"
-                        type="text"
-                        placeholder="Smith"
-                        value={lastName}
-                        onChange={(e) => setLastName(e.target.value)}
-                        data-testid="input-last-name"
-                      />
-                    </div>
-                  </div>
-                )}
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="you@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    data-testid="input-email"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="password">Password</Label>
-                    {mode === "login" && (
-                      <button
-                        type="button"
-                        onClick={() => switchToView("forgot")}
-                        className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-                        data-testid="link-forgot-password"
-                      >
-                        Forgot password?
-                      </button>
-                    )}
-                  </div>
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder={mode === "register" ? "At least 8 characters" : "Enter your password"}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    minLength={mode === "register" ? 8 : undefined}
-                    data-testid="input-password"
-                  />
-                </div>
-                <Button
-                  type="submit"
-                  className="w-full min-h-[44px]"
-                  disabled={isSubmitting}
-                  data-testid="button-submit-auth"
-                >
-                  {isSubmitting ? (
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  ) : (
-                    <ArrowRight className="h-4 w-4 mr-2" />
+                  {!showEmailForm && (
+                    <Button
+                      variant="ghost"
+                      className="w-full min-h-[44px] gap-3 text-sm font-medium text-muted-foreground"
+                      onClick={() => setShowEmailForm(true)}
+                      data-testid="button-show-email"
+                    >
+                      <Mail className="h-4 w-4" />
+                      Continue with Email
+                    </Button>
                   )}
-                  {mode === "login" ? "Sign In" : "Create Account"}
-                </Button>
-              </form>
-            )}
-          </CardContent>
-        </Card>
 
-        <p className="text-center text-xs text-muted-foreground mt-6">
-          By continuing, you agree to our Terms of Service and Privacy Policy.
-        </p>
+                  {showEmailForm && (
+                    <div className="relative">
+                      <div className="absolute inset-0 flex items-center">
+                        <span className="w-full border-t" />
+                      </div>
+                      <div className="relative flex justify-center text-xs uppercase">
+                        <span className="bg-card px-2 text-muted-foreground">or</span>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {(showEmailForm || !googleAvailable) && (
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  {mode === "register" && (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-2">
+                        <Label htmlFor="firstName">First Name</Label>
+                        <Input
+                          id="firstName"
+                          type="text"
+                          placeholder="Jane"
+                          value={firstName}
+                          onChange={(e) => setFirstName(e.target.value)}
+                          data-testid="input-first-name"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="lastName">Last Name</Label>
+                        <Input
+                          id="lastName"
+                          type="text"
+                          placeholder="Smith"
+                          value={lastName}
+                          onChange={(e) => setLastName(e.target.value)}
+                          data-testid="input-last-name"
+                        />
+                      </div>
+                    </div>
+                  )}
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="you@example.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                      data-testid="input-email"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="password">Password</Label>
+                      {mode === "login" && (
+                        <button
+                          type="button"
+                          onClick={() => switchToView("forgot")}
+                          className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                          data-testid="link-forgot-password"
+                        >
+                          Forgot password?
+                        </button>
+                      )}
+                    </div>
+                    <Input
+                      id="password"
+                      type="password"
+                      placeholder={mode === "register" ? "At least 8 characters" : "Enter your password"}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      minLength={mode === "register" ? 8 : undefined}
+                      data-testid="input-password"
+                    />
+                  </div>
+                  <Button
+                    type="submit"
+                    className="w-full min-h-[44px]"
+                    disabled={isSubmitting}
+                    data-testid="button-submit-auth"
+                  >
+                    {isSubmitting ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : (
+                      <ArrowRight className="h-4 w-4 mr-2" />
+                    )}
+                    {mode === "login" ? "Sign In" : "Create Account"}
+                  </Button>
+                </form>
+              )}
+            </CardContent>
+          </Card>
+
+          <p className="text-center text-xs text-muted-foreground mt-6">
+            By continuing, you agree to our Terms of Service and Privacy Policy.
+          </p>
+        </div>
       </div>
     </div>
   );

@@ -52,22 +52,24 @@ export function Header() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className={isActive("/") ? "text-foreground" : "text-muted-foreground"}
+                  className={`relative ${isActive("/") ? "text-foreground" : "text-muted-foreground"}`}
                   data-testid="link-search"
                 >
                   <Search className="h-3.5 w-3.5 mr-1.5" />
                   Search
+                  {isActive("/") && <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-primary rounded-full" />}
                 </Button>
               </Link>
               <Link href="/jobs">
                 <Button
                   variant="ghost"
                   size="sm"
-                  className={isActive("/jobs") || location.startsWith("/jobs/") ? "text-foreground" : "text-muted-foreground"}
+                  className={`relative ${isActive("/jobs") || location.startsWith("/jobs/") ? "text-foreground" : "text-muted-foreground"}`}
                   data-testid="link-jobs"
                 >
                   <Briefcase className="h-3.5 w-3.5 mr-1.5" />
                   Jobs
+                  {(isActive("/jobs") || location.startsWith("/jobs/")) && <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-primary rounded-full" />}
                 </Button>
               </Link>
             </div>

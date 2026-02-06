@@ -84,8 +84,20 @@ export default function Home() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-pulse text-muted-foreground">Loading...</div>
+      <div className="min-h-screen bg-background">
+        <div className="h-14 border-b border-border/40 skeleton-shimmer" />
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+          <div className="flex flex-col items-center gap-3 mb-8">
+            <div className="h-8 w-64 skeleton-shimmer rounded-md" />
+            <div className="h-5 w-80 skeleton-shimmer rounded-md" />
+          </div>
+          <div className="h-12 w-full skeleton-shimmer rounded-md mb-8" />
+          <div className="space-y-4">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="h-32 w-full skeleton-shimmer rounded-md" />
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
@@ -111,7 +123,7 @@ export default function Home() {
       
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
         <div className="text-center mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">
+          <h1 className="text-2xl sm:text-3xl font-serif font-medium text-foreground mb-2 tracking-tight">
             Find Your Next Role
           </h1>
           <p className="text-muted-foreground">

@@ -157,12 +157,12 @@ function MetricCard({ icon: Icon, label, value, subtext, iconColor }: {
   iconColor?: string;
 }) {
   return (
-    <Card>
+    <Card className="transition-all duration-200">
       <CardContent className="p-4">
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
-            <p className="text-xs text-muted-foreground mb-1">{label}</p>
-            <p className="text-2xl font-bold text-foreground tracking-tight">{value}</p>
+            <p className="text-xs text-muted-foreground mb-1 font-medium">{label}</p>
+            <p className="text-2xl font-bold text-foreground tracking-tight tabular-nums">{value}</p>
             {subtext && <p className="text-xs text-muted-foreground mt-0.5">{subtext}</p>}
           </div>
           <div className={`p-2 rounded-md bg-muted/50 ${iconColor || "text-muted-foreground"}`}>
@@ -171,6 +171,50 @@ function MetricCard({ icon: Icon, label, value, subtext, iconColor }: {
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+function DashboardSkeleton() {
+  return (
+    <>
+      <Header />
+      <main className="container mx-auto px-4 py-6 pb-20">
+        <div className="max-w-6xl mx-auto">
+          <div className="flex items-center justify-between gap-3 mb-6">
+            <div>
+              <div className="h-7 w-48 skeleton-shimmer rounded-md mb-2" />
+              <div className="h-4 w-72 skeleton-shimmer rounded-md" />
+            </div>
+            <div className="h-9 w-[140px] skeleton-shimmer rounded-md" />
+          </div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+            {[...Array(4)].map((_, i) => (
+              <Card key={i}>
+                <CardContent className="p-4">
+                  <div className="h-4 w-16 skeleton-shimmer rounded-md mb-2" />
+                  <div className="h-7 w-12 skeleton-shimmer rounded-md mb-1" />
+                  <div className="h-3 w-20 skeleton-shimmer rounded-md" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <Card className="lg:col-span-2">
+              <CardContent className="p-4">
+                <div className="h-5 w-32 skeleton-shimmer rounded-md mb-4" />
+                <div className="h-40 skeleton-shimmer rounded-md" />
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="h-5 w-28 skeleton-shimmer rounded-md mb-4" />
+                <div className="h-40 skeleton-shimmer rounded-md" />
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </main>
+    </>
   );
 }
 
@@ -190,16 +234,7 @@ export default function DashboardPage() {
   }, [dataUpdatedAt]);
 
   if (isLoading) {
-    return (
-      <>
-        <Header />
-        <main className="container mx-auto px-4 py-8">
-          <div className="flex items-center justify-center min-h-[400px]">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          </div>
-        </main>
-      </>
-    );
+    return <DashboardSkeleton />;
   }
 
   if (error || !data) {

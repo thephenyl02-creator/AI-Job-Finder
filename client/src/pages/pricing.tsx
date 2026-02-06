@@ -423,11 +423,16 @@ export default function Pricing() {
                     <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
                   )}
                 </button>
-                {openFaq === i && (
-                  <div className="px-4 pb-4">
-                    <p className="text-sm text-muted-foreground leading-relaxed">{item.a}</p>
+                <div
+                  className="grid transition-all duration-200 ease-in-out"
+                  style={{ gridTemplateRows: openFaq === i ? "1fr" : "0fr" }}
+                >
+                  <div className="overflow-hidden">
+                    <div className="px-4 pb-4">
+                      <p className="text-sm text-muted-foreground leading-relaxed">{item.a}</p>
+                    </div>
                   </div>
-                )}
+                </div>
               </div>
             ))}
           </div>
