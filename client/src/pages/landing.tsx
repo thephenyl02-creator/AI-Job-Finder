@@ -460,10 +460,10 @@ export default function Landing() {
                   </p>
                   <div className="flex flex-col sm:flex-row items-start gap-3">
                     <Button asChild data-testid="button-browse-entry-level">
-                      <Link href="/jobs?level=entry">
+                      <a href="/api/login">
                         Browse Student & Entry-Level Roles
                         <ArrowRight className="ml-2 h-4 w-4" />
-                      </Link>
+                      </a>
                     </Button>
                     {stats?.entryLevelJobs ? (
                       <p className="text-sm text-muted-foreground self-center" data-testid="text-entry-level-count">
