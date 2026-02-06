@@ -437,7 +437,7 @@ export default function Insights() {
   );
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-x-hidden">
       <Header />
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-10">
