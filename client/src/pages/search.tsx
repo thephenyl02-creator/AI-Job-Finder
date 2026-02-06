@@ -388,12 +388,14 @@ export default function Search() {
           </div>
         </ScrollReveal>
 
-        <div className="mb-8">
-          <ProgressSteps
-            steps={["Search", "Refine", "Match", "Results"]}
-            currentStep={STEP_MAP[step]}
-          />
-        </div>
+        {step !== "input" && (
+          <div className="mb-8">
+            <ProgressSteps
+              steps={["Search", "Refine", "Match", "Results"]}
+              currentStep={STEP_MAP[step]}
+            />
+          </div>
+        )}
 
         <AnimatePresence mode="wait">
           {step === "input" && (
@@ -404,18 +406,76 @@ export default function Search() {
               animate="center"
               exit="exit"
               transition={{ duration: 0.3 }}
-              className="space-y-6"
+              className="space-y-5"
             >
               <div className="relative">
                 <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                 <Input
-                  placeholder="e.g., product manager at an AI legal tech startup, remote..."
+                  placeholder="e.g., product manager at a legal tech startup, remote..."
                   className="pl-12 pr-4 h-14 text-base"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleInitialSearch()}
                   data-testid="input-search-query"
                 />
+              </div>
+
+              {!query && !isUploading && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.15 }}
+                  className="space-y-2.5"
+                >
+                  <p className="text-xs text-muted-foreground text-center uppercase tracking-wide">
+                    Try something like
+                  </p>
+                  <div className="flex flex-wrap gap-2 justify-center">
+                    {SEARCH_SUGGESTIONS.map((suggestion) => (
+                      <Badge
+                        key={suggestion}
+                        variant="outline"
+                        className="cursor-pointer py-1.5 px-3 text-xs"
+                        onClick={() => setQuery(suggestion)}
+                        data-testid={`suggestion-${suggestion.slice(0, 20).replace(/\s+/g, "-")}`}
+                      >
+                        {suggestion}
+                      </Badge>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+
+              <div className="flex flex-col items-center gap-3 pt-1">
+                <Button 
+                  size="lg" 
+                  onClick={handleInitialSearch}
+                  disabled={!query.trim()}
+                  className="gap-2 w-full sm:w-auto sm:min-w-[200px]"
+                  data-testid="button-guided-search"
+                >
+                  <SearchIcon className="h-4 w-4" />
+                  Search
+                </Button>
+                {query.trim() && (
+                  <button
+                    onClick={() => {
+                      if (query.trim()) {
+                        regularSearchMutation.mutate(query);
+                      }
+                    }}
+                    disabled={regularSearchMutation.isPending}
+                    className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                    data-testid="button-quick-search"
+                  >
+                    {regularSearchMutation.isPending ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <ArrowRight className="h-3.5 w-3.5" />
+                    )}
+                    Skip questions, show results now
+                  </button>
+                )}
               </div>
 
               <input
@@ -456,18 +516,13 @@ export default function Search() {
                   animate={{ opacity: 1, y: 0 }}
                 >
                   <Card className="bg-muted/40">
-                    <CardContent className="py-4 px-5">
+                    <CardContent className="py-3 px-4">
                       <div className="flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-3 min-w-0 flex-wrap">
-                          <div className="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/40 flex items-center justify-center shrink-0">
-                            <CheckCircle2 className="h-4 w-4 text-green-600" />
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-sm font-medium text-foreground" data-testid="text-resume-filename">
-                              {resumeStatus.filename}
-                            </p>
-                            <p className="text-xs text-muted-foreground">Resume uploaded</p>
-                          </div>
+                        <div className="flex items-center gap-2.5 min-w-0 flex-wrap">
+                          <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />
+                          <span className="text-sm text-foreground truncate" data-testid="text-resume-filename">
+                            {resumeStatus.filename}
+                          </span>
                           {resumeStatus.extractedData?.preferredRoles && (
                             <div className="flex flex-wrap gap-1.5">
                               {resumeStatus.extractedData.preferredRoles.slice(0, 2).map((role: string, idx: number) => (
@@ -507,10 +562,10 @@ export default function Search() {
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  transition={{ delay: 0.2 }}
+                  transition={{ delay: 0.25 }}
                 >
                   <div
-                    className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
+                    className={`rounded-lg p-3 text-center cursor-pointer transition-colors border ${
                       isDragOver
                         ? "border-primary bg-primary/5"
                         : "border-border hover:border-muted-foreground/40"
@@ -521,77 +576,15 @@ export default function Search() {
                     onClick={() => fileInputRef.current?.click()}
                     data-testid="dropzone-resume"
                   >
-                    <Upload className="h-6 w-6 text-muted-foreground mx-auto mb-2" />
-                    <p className="text-sm font-medium text-foreground mb-1">
-                      Upload your resume
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Drop a PDF or Word file here, or click to browse
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      We'll match you with the best roles based on your experience
-                    </p>
+                    <div className="flex items-center justify-center gap-2">
+                      <Upload className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">
+                        Have a resume? <span className="text-foreground font-medium">Upload it</span> for better matches
+                      </span>
+                    </div>
                   </div>
                 </motion.div>
               )}
-
-              {!query && !resumeStatus?.hasResume && !isUploading && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.3 }}
-                  className="space-y-3"
-                >
-                  <p className="text-xs text-muted-foreground text-center uppercase tracking-wide">
-                    Try something like
-                  </p>
-                  <div className="flex flex-wrap gap-2 justify-center">
-                    {SEARCH_SUGGESTIONS.map((suggestion) => (
-                      <Badge
-                        key={suggestion}
-                        variant="outline"
-                        className="cursor-pointer py-1.5 px-3 text-xs"
-                        onClick={() => setQuery(suggestion)}
-                        data-testid={`suggestion-${suggestion.slice(0, 20).replace(/\s+/g, "-")}`}
-                      >
-                        {suggestion}
-                      </Badge>
-                    ))}
-                  </div>
-                </motion.div>
-              )}
-              
-              <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                <Button 
-                  size="lg" 
-                  onClick={handleInitialSearch}
-                  disabled={!query.trim()}
-                  className="gap-2"
-                  data-testid="button-guided-search"
-                >
-                  <SearchIcon className="h-4 w-4" />
-                  Guided Search
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="lg"
-                  onClick={() => {
-                    if (query.trim()) {
-                      regularSearchMutation.mutate(query);
-                    }
-                  }}
-                  disabled={!query.trim() || regularSearchMutation.isPending}
-                  className="gap-2"
-                  data-testid="button-quick-search"
-                >
-                  {regularSearchMutation.isPending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <ArrowRight className="h-4 w-4" />
-                  )}
-                  Quick Search
-                </Button>
-              </div>
 
               {resumeStatus?.hasResume && !isUploading && (
                 <motion.div
@@ -603,7 +596,7 @@ export default function Search() {
                 </motion.div>
               )}
 
-              <div className="text-center pt-4">
+              <div className="text-center pt-2">
                 <Button
                   variant="ghost"
                   size="sm"
