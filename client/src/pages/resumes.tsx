@@ -1023,6 +1023,7 @@ function ATSReviewPanel({ review, onClose }: { review: ATSReview; onClose: () =>
 
 export default function Resumes() {
   usePageTitle("My Resumes");
+  const [, setLocation] = useLocation();
   const { isAuthenticated } = useAuth();
   const { track } = useActivityTracker();
   const { toast } = useToast();
@@ -1113,6 +1114,24 @@ export default function Resumes() {
             Lawyers often have multiple career angles -- see which path has the strongest opportunities.
           </p>
         </div>
+
+        <Card className="mb-6 bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20">
+          <CardContent className="p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <h3 className="text-sm font-semibold text-foreground">Resume Builder</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Build ATS-optimized resumes from scratch or import your uploaded resume. Get real-time scoring and AI-powered suggestions.
+              </p>
+            </div>
+            <Button
+              onClick={() => setLocation("/resume-builder")}
+              data-testid="button-go-to-builder"
+            >
+              <Zap className="h-4 w-4 mr-1.5" />
+              Open Builder
+            </Button>
+          </CardContent>
+        </Card>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-1 space-y-3">

@@ -23,6 +23,7 @@ import {
   CheckCircle2,
   MessageCircle,
   Send,
+  FileText,
 } from "lucide-react";
 
 const BULLET_PATTERN = /^(?:[-•*]\s|(?:\d+)[.)]\s)/;
@@ -604,7 +605,15 @@ export default function JobDetail() {
                 </div>
               </div>
 
-              <div className="shrink-0">
+              <div className="shrink-0 flex flex-col sm:flex-row gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setLocation(`/resume-builder?jobId=${job.id}`)}
+                  data-testid="button-optimize-resume"
+                >
+                  <FileText className="h-4 w-4 mr-2" />
+                  Optimize Resume
+                </Button>
                 <Button
                   size="lg"
                   onClick={handleApplyClick}

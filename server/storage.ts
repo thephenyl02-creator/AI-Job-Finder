@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { jobs, users, userPreferences, jobCategories, jobSubmissions, jobAlerts, notifications, resumes, userActivities, userPersonas, type Job, type InsertJob, type User, type UserPreferences, type InsertUserPreferences, type ResumeExtractedData, type JobCategory, type JobSubmission, type InsertJobSubmission, type JobAlert, type InsertJobAlert, type Notification, type InsertNotification, type Resume, type InsertResume, type UserActivity, type InsertUserActivity, type UserPersona, type InsertUserPersona, JOB_TAXONOMY } from "@shared/schema";
+import { jobs, users, userPreferences, jobCategories, jobSubmissions, jobAlerts, notifications, resumes, builtResumes, userActivities, userPersonas, type Job, type InsertJob, type User, type UserPreferences, type InsertUserPreferences, type ResumeExtractedData, type JobCategory, type JobSubmission, type InsertJobSubmission, type JobAlert, type InsertJobAlert, type Notification, type InsertNotification, type Resume, type InsertResume, type BuiltResume, type InsertBuiltResume, type UserActivity, type InsertUserActivity, type UserPersona, type InsertUserPersona, JOB_TAXONOMY } from "@shared/schema";
 import { eq, desc, and, sql, inArray, lt, gte, count } from "drizzle-orm";
 
 export interface IStorage {
@@ -69,6 +69,12 @@ export interface IStorage {
   // User Personas
   getUserPersona(userId: string): Promise<UserPersona | undefined>;
   upsertUserPersona(userId: string, data: Partial<InsertUserPersona>): Promise<UserPersona>;
+  // Built Resumes
+  createBuiltResume(resume: InsertBuiltResume): Promise<BuiltResume>;
+  getUserBuiltResumes(userId: string): Promise<BuiltResume[]>;
+  getBuiltResumeById(id: number, userId: string): Promise<BuiltResume | undefined>;
+  updateBuiltResume(id: number, userId: string, data: Partial<InsertBuiltResume>): Promise<BuiltResume | undefined>;
+  deleteBuiltResume(id: number, userId: string): Promise<void>;
 }
 
 class DatabaseStorage implements IStorage {
@@ -779,6 +785,36 @@ class DatabaseStorage implements IStorage {
       .values({ userId, ...data, updatedAt: new Date() })
       .returning();
     return created;
+  }
+
+  async createBuiltResume(resume: InsertBuiltResume): Promise<BuiltResume> {
+    const [created] = await db.insert(builtResumes).values(resume).returning();
+    return created;
+  }
+
+  async getUserBuiltResumes(userId: string): Promise<BuiltResume[]> {
+    return db.select().from(builtResumes)
+      .where(eq(builtResumes.userId, userId))
+      .orderBy(desc(builtResumes.updatedAt));
+  }
+
+  async getBuiltResumeById(id: number, userId: string): Promise<BuiltResume | undefined> {
+    const [resume] = await db.select().from(builtResumes)
+      .where(and(eq(builtResumes.id, id), eq(builtResumes.userId, userId)));
+    return resume;
+  }
+
+  async updateBuiltResume(id: number, userId: string, data: Partial<InsertBuiltResume>): Promise<BuiltResume | undefined> {
+    const [updated] = await db.update(builtResumes)
+      .set({ ...data, updatedAt: new Date() })
+      .where(and(eq(builtResumes.id, id), eq(builtResumes.userId, userId)))
+      .returning();
+    return updated;
+  }
+
+  async deleteBuiltResume(id: number, userId: string): Promise<void> {
+    await db.delete(builtResumes)
+      .where(and(eq(builtResumes.id, id), eq(builtResumes.userId, userId)));
   }
 }
 

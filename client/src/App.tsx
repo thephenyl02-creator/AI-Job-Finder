@@ -20,6 +20,7 @@ import CareerAdvisor from "@/pages/career-advisor";
 import Insights from "@/pages/insights";
 import Alerts from "@/pages/alerts";
 import Resumes from "@/pages/resumes";
+import ResumeBuilder from "@/pages/resume-builder";
 import Pricing from "@/pages/pricing";
 import { AssistantWidget } from "@/components/assistant-widget";
 
@@ -55,6 +56,7 @@ function AppRouter() {
       <Route path="/insights">{isAuthenticated ? <Insights /> : <Landing />}</Route>
       <Route path="/alerts">{isAuthenticated ? <Alerts /> : <Landing />}</Route>
       <Route path="/resumes">{isAuthenticated ? <Resumes /> : <Landing />}</Route>
+      <Route path="/resume-builder">{isAuthenticated ? <ResumeBuilder /> : <Landing />}</Route>
       <Route path="/auth" component={Auth} />
       <Route path="/pricing" component={Pricing} />
       <Route path="/about" component={About} />

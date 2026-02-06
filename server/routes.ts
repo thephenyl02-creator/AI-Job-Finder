@@ -3217,6 +3217,381 @@ ${matchDetails}`;
     }
   });
 
+  // ==================== RESUME BUILDER ROUTES ====================
+
+  // Get all built resumes for user
+  app.get("/api/built-resumes", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req.user as any)?.id;
+      if (!userId) return res.status(401).json({ error: "Unauthorized" });
+      const resumes = await storage.getUserBuiltResumes(userId);
+      res.json(resumes);
+    } catch (error) {
+      console.error("Error fetching built resumes:", error);
+      res.status(500).json({ error: "Failed to fetch resumes" });
+    }
+  });
+
+  // Get single built resume
+  app.get("/api/built-resumes/:id", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req.user as any)?.id;
+      if (!userId) return res.status(401).json({ error: "Unauthorized" });
+      const id = parseInt(req.params.id);
+      const resume = await storage.getBuiltResumeById(id, userId);
+      if (!resume) return res.status(404).json({ error: "Resume not found" });
+      res.json(resume);
+    } catch (error) {
+      console.error("Error fetching built resume:", error);
+      res.status(500).json({ error: "Failed to fetch resume" });
+    }
+  });
+
+  // Create new built resume
+  app.post("/api/built-resumes", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req.user as any)?.id;
+      if (!userId) return res.status(401).json({ error: "Unauthorized" });
+      const { title, sections, templateId, targetJobId } = req.body;
+      if (!title || !sections) return res.status(400).json({ error: "Title and sections are required" });
+      const resume = await storage.createBuiltResume({
+        userId,
+        title,
+        sections,
+        templateId: templateId || "professional",
+        targetJobId: targetJobId || null,
+        isPrimary: false,
+        atsScore: null,
+        atsAnalysis: null,
+      });
+      res.json(resume);
+    } catch (error) {
+      console.error("Error creating built resume:", error);
+      res.status(500).json({ error: "Failed to create resume" });
+    }
+  });
+
+  // Update built resume
+  app.patch("/api/built-resumes/:id", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req.user as any)?.id;
+      if (!userId) return res.status(401).json({ error: "Unauthorized" });
+      const id = parseInt(req.params.id);
+      const updated = await storage.updateBuiltResume(id, userId, req.body);
+      if (!updated) return res.status(404).json({ error: "Resume not found" });
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating built resume:", error);
+      res.status(500).json({ error: "Failed to update resume" });
+    }
+  });
+
+  // Delete built resume
+  app.delete("/api/built-resumes/:id", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req.user as any)?.id;
+      if (!userId) return res.status(401).json({ error: "Unauthorized" });
+      const id = parseInt(req.params.id);
+      await storage.deleteBuiltResume(id, userId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting built resume:", error);
+      res.status(500).json({ error: "Failed to delete resume" });
+    }
+  });
+
+  // AI-assisted section writing
+  app.post("/api/built-resumes/ai-assist", isAuthenticated, requirePro, async (req, res) => {
+    try {
+      const userId = (req.user as any)?.id;
+      if (!userId) return res.status(401).json({ error: "Unauthorized" });
+      const { section, currentContent, targetJobTitle, targetJobDescription, resumeContext } = req.body;
+      if (!section) return res.status(400).json({ error: "Section is required" });
+
+      const openai = new OpenAI({
+        apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+        baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+      });
+
+      const jobContext = targetJobTitle ? `\nTarget Job: ${targetJobTitle}\nJob Description: ${(targetJobDescription || "").substring(0, 2000)}` : "";
+      const existingContext = resumeContext ? `\nExisting Resume Context: ${JSON.stringify(resumeContext).substring(0, 2000)}` : "";
+
+      const prompts: Record<string, string> = {
+        summary: `Write a powerful 3-4 sentence professional summary for a legal technology professional. ${currentContent ? `Current summary to improve: "${currentContent}"` : "Write from scratch."} Focus on: quantifiable achievements, legal tech expertise, and ATS-friendly keywords. Be specific and impactful, avoiding generic language.${jobContext}${existingContext}
+Return JSON: { "suggestion": "<the improved summary text>", "tips": ["<tip1>", "<tip2>", "<tip3>"] }`,
+        experience_bullets: `Generate 4-5 strong resume bullet points for this role. ${currentContent ? `Current role: ${currentContent}` : ""}
+Rules: Start each with a powerful action verb. Include metrics/numbers where possible. Use legal tech industry keywords. Make them ATS-friendly.${jobContext}${existingContext}
+Return JSON: { "bullets": ["<bullet1>", "<bullet2>", ...], "tips": ["<tip1>", "<tip2>"] }`,
+        skills: `Suggest relevant skills for a legal tech professional's resume, organized by category.${currentContent ? ` Current skills: ${currentContent}` : ""}
+Focus on ATS-critical skills that legal tech employers search for. Include both technical and legal domain skills.${jobContext}${existingContext}
+Return JSON: { "technical": ["<skill>", ...], "legal": ["<skill>", ...], "soft": ["<skill>", ...], "tips": ["<tip1>", "<tip2>"] }`,
+        keywords: `Analyze this job and suggest critical ATS keywords the resume must include.${jobContext}
+Return JSON: { "mustHave": ["<keyword>", ...], "niceToHave": ["<keyword>", ...], "industryTerms": ["<keyword>", ...], "tips": ["<tip1>", "<tip2>"] }`,
+      };
+
+      const prompt = prompts[section] || `Improve this resume section "${section}" for a legal tech professional. Current: ${currentContent || "empty"}.${jobContext}${existingContext}
+Return JSON: { "suggestion": "<improved content>", "tips": ["<tip>"] }`;
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: "You are an expert legal tech resume writer and career coach. Provide specific, actionable advice optimized for ATS systems. Always return valid JSON." },
+          { role: "user", content: prompt }
+        ],
+        response_format: { type: "json_object" },
+        max_completion_tokens: 2000,
+      });
+
+      const content = completion.choices[0]?.message?.content;
+      if (!content) return res.status(500).json({ error: "AI generation failed" });
+      res.json(JSON.parse(content));
+    } catch (error) {
+      console.error("AI assist error:", error);
+      res.status(500).json({ error: "Failed to generate suggestions" });
+    }
+  });
+
+  // Job-specific ATS review for built resume
+  app.post("/api/built-resumes/:id/ats-review", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req.user as any)?.id;
+      if (!userId) return res.status(401).json({ error: "Unauthorized" });
+      const id = parseInt(req.params.id);
+      const builtResume = await storage.getBuiltResumeById(id, userId);
+      if (!builtResume) return res.status(404).json({ error: "Resume not found" });
+
+      const sections = builtResume.sections as any;
+      const { jobId } = req.body;
+      let jobContext = "";
+      let jobData: Job | undefined;
+
+      if (jobId) {
+        jobData = await storage.getJob(parseInt(jobId));
+        if (jobData) {
+          jobContext = `\n\nTARGET JOB (score resume against this specific job):\nTitle: ${jobData.title}\nCompany: ${jobData.company}\nDescription: ${(jobData.description || "").substring(0, 3000)}\nKey Skills: ${(jobData.keySkills || []).join(", ")}\nRequirements: ${(jobData.requirements || "").substring(0, 1500)}`;
+        }
+      }
+
+      const resumeText = [
+        sections.contact?.fullName,
+        sections.contact?.email,
+        sections.contact?.phone,
+        sections.contact?.location,
+        sections.summary,
+        ...(sections.experience || []).map((e: any) => `${e.title} at ${e.company}: ${(e.bullets || []).join(". ")}`),
+        ...(sections.education || []).map((e: any) => `${e.degree} in ${e.field} from ${e.institution}`),
+        `Technical: ${(sections.skills?.technical || []).join(", ")}`,
+        `Legal: ${(sections.skills?.legal || []).join(", ")}`,
+        `Soft Skills: ${(sections.skills?.soft || []).join(", ")}`,
+        ...(sections.certifications || []).map((c: any) => `${c.name} - ${c.issuer}`),
+      ].filter(Boolean).join("\n");
+
+      const openai = new OpenAI({
+        apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+        baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+      });
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: `You are an expert ATS resume analyst for legal tech careers. ${jobData ? "Score this resume SPECIFICALLY against the target job posting." : "Provide a general ATS audit."} 
+
+Return valid JSON:
+{
+  "overallScore": <0-100>,
+  "verdict": "<one-line verdict>",
+  ${jobData ? `"jobFitScore": <0-100>,
+  "jobFitVerdict": "<how well resume fits this specific job>",
+  "missingJobKeywords": ["<critical keywords from job not in resume>"],
+  "matchedJobKeywords": ["<keywords matching between resume and job>"],` : ""}
+  "sectionScores": {
+    "contact": { "score": <0-100>, "issues": ["<issue>"], "fixes": ["<fix>"] },
+    "summary": { "score": <0-100>, "issues": ["<issue>"], "fixes": ["<fix>"] },
+    "experience": { "score": <0-100>, "issues": ["<issue>"], "fixes": ["<fix>"] },
+    "skills": { "score": <0-100>, "issues": ["<issue>"], "fixes": ["<fix>"] },
+    "education": { "score": <0-100>, "issues": ["<issue>"], "fixes": ["<fix>"] }
+  },
+  "quickFixes": [
+    { "section": "<section>", "issue": "<what's wrong>", "fix": "<exact text to add/change>", "impact": "high"|"medium"|"low" }
+  ],
+  "keywordAnalysis": {
+    "strong": ["<keyword present>"],
+    "missing": ["<keyword to add>"],
+    "suggestions": ["<where to add missing keywords>"]
+  },
+  "scoreBreakdown": {
+    "formatting": <0-25>,
+    "keywords": <0-25>,
+    "content": <0-25>,
+    "relevance": <0-25>
+  }
+}`
+          },
+          {
+            role: "user",
+            content: `Analyze this resume:\n\n${resumeText.substring(0, 6000)}${jobContext}`
+          }
+        ],
+        response_format: { type: "json_object" },
+        max_completion_tokens: 3000,
+      });
+
+      const content = completion.choices[0]?.message?.content;
+      if (!content) return res.status(500).json({ error: "ATS review failed" });
+      const analysis = JSON.parse(content);
+
+      await storage.updateBuiltResume(id, userId, {
+        atsScore: analysis.overallScore,
+        atsAnalysis: analysis,
+      });
+
+      res.json(analysis);
+    } catch (error) {
+      console.error("Built resume ATS review error:", error);
+      res.status(500).json({ error: "Failed to generate ATS review" });
+    }
+  });
+
+  // Import uploaded resume into resume builder
+  app.post("/api/built-resumes/import-from-upload", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req.user as any)?.id;
+      if (!userId) return res.status(401).json({ error: "Unauthorized" });
+      const { resumeId } = req.body;
+
+      let resumeText: string | null = null;
+      let extractedData: ResumeExtractedData | null = null;
+      let label = "Imported Resume";
+
+      if (resumeId) {
+        const resume = await storage.getResumeWithText(parseInt(resumeId), userId);
+        if (!resume) return res.status(404).json({ error: "Resume not found" });
+        resumeText = resume.resumeText;
+        extractedData = resume.extractedData as ResumeExtractedData;
+        label = resume.label || "Imported Resume";
+      } else {
+        const primaryResume = await storage.getPrimaryResume(userId);
+        if (!primaryResume?.resumeText) return res.status(400).json({ error: "No resume to import" });
+        resumeText = primaryResume.resumeText;
+        extractedData = primaryResume.extractedData as ResumeExtractedData;
+      }
+
+      const openai = new OpenAI({
+        apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+        baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+      });
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: `Parse this resume into structured sections. Return valid JSON:
+{
+  "contact": { "fullName": "", "email": "", "phone": "", "location": "", "linkedin": "", "website": "" },
+  "summary": "<professional summary text>",
+  "experience": [{ "id": "<unique>", "title": "", "company": "", "location": "", "startDate": "", "endDate": "", "current": false, "bullets": [""] }],
+  "education": [{ "id": "<unique>", "institution": "", "degree": "", "field": "", "graduationDate": "", "honors": "" }],
+  "skills": { "technical": [""], "legal": [""], "soft": [""] },
+  "certifications": [{ "id": "<unique>", "name": "", "issuer": "", "date": "" }]
+}
+Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a section is empty, use empty arrays/strings.`
+          },
+          {
+            role: "user",
+            content: `Parse this resume:\n\nExtracted Data: ${JSON.stringify(extractedData || {}).substring(0, 3000)}\n\nFull Text:\n${(resumeText || "").substring(0, 6000)}`
+          }
+        ],
+        response_format: { type: "json_object" },
+        max_completion_tokens: 3000,
+      });
+
+      const content = completion.choices[0]?.message?.content;
+      if (!content) return res.status(500).json({ error: "Failed to parse resume" });
+      const sections = JSON.parse(content);
+
+      const builtResume = await storage.createBuiltResume({
+        userId,
+        title: label,
+        sections,
+        templateId: "professional",
+        targetJobId: null,
+        isPrimary: false,
+        atsScore: null,
+        atsAnalysis: null,
+      });
+
+      res.json(builtResume);
+    } catch (error) {
+      console.error("Import resume error:", error);
+      res.status(500).json({ error: "Failed to import resume" });
+    }
+  });
+
+  // Optimize resume for a specific job
+  app.post("/api/built-resumes/:id/optimize-for-job", isAuthenticated, requirePro, async (req, res) => {
+    try {
+      const userId = (req.user as any)?.id;
+      if (!userId) return res.status(401).json({ error: "Unauthorized" });
+      const id = parseInt(req.params.id);
+      const builtResume = await storage.getBuiltResumeById(id, userId);
+      if (!builtResume) return res.status(404).json({ error: "Resume not found" });
+
+      const { jobId } = req.body;
+      if (!jobId) return res.status(400).json({ error: "Job ID is required" });
+
+      const job = await storage.getJob(parseInt(jobId));
+      if (!job) return res.status(404).json({ error: "Job not found" });
+
+      const sections = builtResume.sections as any;
+
+      const openai = new OpenAI({
+        apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+        baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+      });
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: `You are an expert resume optimizer for legal tech careers. Given a resume and a target job, provide specific optimizations to tailor the resume for this job. Return valid JSON:
+{
+  "optimizedSummary": "<rewritten summary targeting this job>",
+  "keywordInjections": [
+    { "section": "summary"|"experience"|"skills", "keyword": "<keyword>", "context": "<how to naturally include it>" }
+  ],
+  "bulletRewrites": [
+    { "experienceIndex": <0-based>, "bulletIndex": <0-based>, "original": "<current bullet>", "optimized": "<rewritten bullet for this job>" }
+  ],
+  "missingSkills": { "technical": ["<skill to add>"], "legal": ["<skill to add>"] },
+  "overallAdvice": "<strategic advice for this specific application>",
+  "estimatedScoreBoost": <estimated ATS score improvement 0-30>
+}`
+          },
+          {
+            role: "user",
+            content: `Resume:\n${JSON.stringify(sections).substring(0, 4000)}\n\nTarget Job:\nTitle: ${job.title}\nCompany: ${job.company}\nDescription: ${(job.description || "").substring(0, 3000)}\nSkills: ${(job.keySkills || []).join(", ")}\nRequirements: ${(job.requirements || "").substring(0, 1500)}`
+          }
+        ],
+        response_format: { type: "json_object" },
+        max_completion_tokens: 3000,
+      });
+
+      const content = completion.choices[0]?.message?.content;
+      if (!content) return res.status(500).json({ error: "Optimization failed" });
+      const optimizations = JSON.parse(content);
+
+      await storage.updateBuiltResume(id, userId, { targetJobId: parseInt(jobId) });
+      res.json(optimizations);
+    } catch (error) {
+      console.error("Optimize for job error:", error);
+      res.status(500).json({ error: "Failed to optimize resume" });
+    }
+  });
+
   // Run startup cleanup and start the scheduler when the server starts
   runStartupCleanup();
   startScheduler();

@@ -376,3 +376,67 @@ export const insertUserPersonaSchema = createInsertSchema(userPersonas).omit({
 
 export type UserPersona = typeof userPersonas.$inferSelect;
 export type InsertUserPersona = z.infer<typeof insertUserPersonaSchema>;
+
+export const builtResumes = pgTable("built_resumes", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id", { length: 255 }).notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  templateId: varchar("template_id", { length: 50 }).default("professional"),
+  targetJobId: integer("target_job_id"),
+  sections: jsonb("sections").notNull(),
+  atsScore: integer("ats_score"),
+  atsAnalysis: jsonb("ats_analysis"),
+  isPrimary: boolean("is_primary").default(false),
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: timestamp("updated_at").default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const insertBuiltResumeSchema = createInsertSchema(builtResumes).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type BuiltResume = typeof builtResumes.$inferSelect;
+export type InsertBuiltResume = z.infer<typeof insertBuiltResumeSchema>;
+
+export interface ResumeSections {
+  contact: {
+    fullName: string;
+    email: string;
+    phone: string;
+    location: string;
+    linkedin?: string;
+    website?: string;
+  };
+  summary: string;
+  experience: Array<{
+    id: string;
+    title: string;
+    company: string;
+    location: string;
+    startDate: string;
+    endDate: string;
+    current: boolean;
+    bullets: string[];
+  }>;
+  education: Array<{
+    id: string;
+    institution: string;
+    degree: string;
+    field: string;
+    graduationDate: string;
+    honors?: string;
+  }>;
+  skills: {
+    technical: string[];
+    legal: string[];
+    soft: string[];
+  };
+  certifications: Array<{
+    id: string;
+    name: string;
+    issuer: string;
+    date: string;
+  }>;
+}
