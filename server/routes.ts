@@ -349,7 +349,7 @@ Only include jobs with a score above 40. Sort by score descending.`;
       let response;
       try {
         response = await getOpenAIClient().chat.completions.create({
-          model: "gpt-5-mini",
+          model: "gpt-4o-mini",
           messages: [
             { role: "system", content: systemPrompt },
             { 
@@ -2347,7 +2347,7 @@ Return a JSON response with this exact structure:
 }`;
 
       const completion = await getOpenAIClient().chat.completions.create({
-        model: "gpt-5-mini",
+        model: "gpt-4o-mini",
         messages: [
           { role: "system", content: systemPrompt },
           {

@@ -80,7 +80,7 @@ Return JSON with:
 
   try {
     const completion = await getOpenAIClient().chat.completions.create({
-      model: "gpt-5-mini",
+      model: "gpt-4o-mini",
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: `Parse this resume:\n\n${resumeText}` },
@@ -111,7 +111,7 @@ Return JSON with:
 export async function generateSearchQueryFromResume(parsedData: ResumeExtractedData): Promise<string> {
   try {
     const completion = await getOpenAIClient().chat.completions.create({
-      model: "gpt-5-mini",
+      model: "gpt-4o-mini",
       messages: [
         {
           role: "system",
