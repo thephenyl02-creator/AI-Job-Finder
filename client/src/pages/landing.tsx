@@ -118,21 +118,22 @@ export default function Landing() {
               <div>
                 <ScrollReveal delay={0.1} direction="none">
                   <p className="text-sm font-medium text-muted-foreground tracking-wide uppercase mb-5" data-testid="text-hero-label">
-                    Built for lawyers moving into tech
+                    Built for lawyers & law students moving into tech
                   </p>
                 </ScrollReveal>
 
                 <ScrollReveal delay={0.2}>
-                  <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[3.25rem] xl:text-5xl font-serif font-medium text-foreground mb-5 leading-[1.15] tracking-tight" data-testid="text-hero-title">
+                  <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[3.25rem] xl:text-5xl font-serif font-medium text-foreground mb-6 leading-[1.25] tracking-tight" data-testid="text-hero-title">
                     Every legal tech role.
-                    <br className="hidden sm:block" />
-                    <span className="block mt-2 sm:mt-3 relative">
+                    <br />
+                    <span className="relative inline-block mt-3 sm:mt-4 pb-2">
                       One place to find it.
                       <motion.span
-                        className="absolute -bottom-1 left-0 h-[3px] bg-primary/30 rounded-full"
-                        initial={{ width: 0 }}
-                        animate={{ width: "100%" }}
+                        className="absolute bottom-0 left-0 right-0 h-[3px] bg-primary/40 rounded-full"
+                        initial={{ scaleX: 0 }}
+                        animate={{ scaleX: 1 }}
                         transition={{ delay: 1, duration: 0.8, ease: "easeOut" }}
+                        style={{ transformOrigin: "left" }}
                       />
                     </span>
                   </h1>
@@ -140,7 +141,7 @@ export default function Landing() {
 
                 <ScrollReveal delay={0.35}>
                   <p className="text-lg text-muted-foreground mb-8 leading-relaxed" data-testid="text-hero-subtitle">
-                    Legal tech companies need people who understand the law <em>and</em> technology. That's you. We collect the roles, match them to your experience, and show you exactly where you fit.
+                    Whether you're a practicing attorney, paralegal, or law student &mdash; legal tech companies need people who understand the law <em>and</em> technology. We collect the roles, match them to your experience, and show you exactly where you fit.
                   </p>
                 </ScrollReveal>
 
