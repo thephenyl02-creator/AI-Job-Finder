@@ -47,6 +47,27 @@ interface FeaturedJob {
   seniorityLevel: string | null;
 }
 
+function shortenLocation(location: string): string {
+  if (location.includes(";")) {
+    const parts = location.split(";").map(s => s.trim());
+    const first = shortenLocation(parts[0]);
+    return parts.length > 1 ? `${first} +${parts.length - 1}` : first;
+  }
+  if (location.includes("·")) {
+    const parts = location.split("·").map(s => s.trim());
+    const first = shortenLocation(parts[0]);
+    return parts.length > 1 ? `${first} +${parts.length - 1}` : first;
+  }
+  const commas = location.split(",").map(s => s.trim());
+  if (commas.length >= 3) {
+    return `${commas[0]}, ${commas[1]}`;
+  }
+  if (commas.length === 2) {
+    return location;
+  }
+  return location;
+}
+
 export default function Landing() {
   const { data: stats } = useQuery<Stats>({
     queryKey: ["/api/stats"],
@@ -170,7 +191,7 @@ export default function Landing() {
                                   {job.location && (
                                     <span className="flex items-center gap-1 text-xs text-muted-foreground">
                                       <MapPin className="h-3 w-3 shrink-0" />
-                                      <span className="truncate">{job.isRemote ? "Remote" : job.location}</span>
+                                      <span className="truncate">{job.isRemote ? "Remote" : shortenLocation(job.location)}</span>
                                     </span>
                                   )}
                                 </div>

@@ -190,7 +190,33 @@ export async function registerRoutes(
   app.get("/api/featured-jobs", async (req, res) => {
     try {
       const jobs = await storage.getActiveJobs();
-      const featured = jobs.slice(0, 6).map(j => ({
+      const seenCompanies = new Set<string>();
+      const seenCategories = new Set<string>();
+      const featured: typeof jobs = [];
+
+      for (const job of jobs) {
+        if (featured.length >= 6) break;
+        const company = (job.company || "").toLowerCase();
+        const category = (job.roleCategory || "").toLowerCase();
+        if (seenCompanies.has(company)) continue;
+        if (seenCategories.has(category) && featured.length > 2) continue;
+        seenCompanies.add(company);
+        if (category) seenCategories.add(category);
+        featured.push(job);
+      }
+
+      if (featured.length < 6) {
+        for (const job of jobs) {
+          if (featured.length >= 6) break;
+          if (featured.some(f => f.id === job.id)) continue;
+          const company = (job.company || "").toLowerCase();
+          if (seenCompanies.has(company)) continue;
+          seenCompanies.add(company);
+          featured.push(job);
+        }
+      }
+
+      res.json(featured.map(j => ({
         id: j.id,
         title: j.title,
         company: j.company,
@@ -198,8 +224,7 @@ export async function registerRoutes(
         isRemote: j.isRemote,
         roleCategory: j.roleCategory,
         seniorityLevel: j.seniorityLevel,
-      }));
-      res.json(featured);
+      })));
     } catch (error) {
       console.error("Error fetching featured jobs:", error);
       res.status(500).json({ error: "Failed to fetch featured jobs" });
