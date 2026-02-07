@@ -988,7 +988,7 @@ export default function JobDetail() {
   });
 
 
-  const [showFullDescription, setShowFullDescription] = useState(false);
+  const [showFullDescription, setShowFullDescription] = useState(true);
 
   const formatSalary = (min?: number | null, max?: number | null) => {
     if (!min && !max) return null;
@@ -1052,43 +1052,19 @@ export default function JobDetail() {
     );
   }
 
-  const hasStructuredData = (job.aiResponsibilities && job.aiResponsibilities.length > 0) ||
-    (job.aiQualifications && job.aiQualifications.length > 0);
-
-  const postedAgo = job.postedDate ? (() => {
-    const days = Math.floor((Date.now() - new Date(job.postedDate).getTime()) / (1000 * 60 * 60 * 24));
-    if (days === 0) return 'Today';
-    if (days === 1) return '1 day ago';
-    if (days < 7) return `${days} days ago`;
-    if (days < 30) return `${Math.floor(days / 7)}w ago`;
-    return `${Math.floor(days / 30)}mo ago`;
-  })() : null;
-
-  const metaItems = [
-    salary ? { label: salary, icon: DollarSign, accent: true } : null,
-    job.seniorityLevel ? { label: job.seniorityLevel, icon: TrendingUp } : null,
-    job.locationType === 'remote' || job.isRemote ? { label: 'Remote', icon: MapPin } : job.locationType === 'hybrid' ? { label: 'Hybrid', icon: MapPin } : null,
-    job.roleSubcategory || job.roleCategory ? { label: job.roleSubcategory || job.roleCategory!, icon: Briefcase } : null,
-  ].filter(Boolean) as { label: string; icon: typeof DollarSign; accent?: boolean }[];
-
   return (
     <div className="min-h-screen bg-background">
       <Header />
 
       <main className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setLocation("/jobs")}
-          className="mb-6 text-muted-foreground"
-          data-testid="button-back-jobs"
-        >
-          <ArrowLeft className="h-4 w-4 mr-1.5" />
+        {/* Back link */}
+        <Link href="/jobs" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-6" data-testid="button-back-jobs">
+          <ArrowLeft className="h-4 w-4" />
           Back to Jobs
-        </Button>
+        </Link>
 
-        {/* === HEADER ZONE === */}
-        <div className="mb-8">
+        {/* === HEADER === */}
+        <div className="mb-6">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
               <h1
@@ -1098,20 +1074,30 @@ export default function JobDetail() {
                 {job.title}
               </h1>
               <div className="flex flex-wrap items-center gap-x-1.5 text-muted-foreground text-sm mt-2">
-                <span className="font-medium text-foreground/80" data-testid="text-job-detail-company">{job.company}</span>
+                <span className="flex items-center gap-1">
+                  <Building2 className="h-3.5 w-3.5" />
+                  <span className="font-medium text-foreground/80" data-testid="text-job-detail-company">{job.company}</span>
+                </span>
                 {job.location && (
                   <>
-                    <span className="text-border">·</span>
-                    <span data-testid="text-job-detail-location">{job.location}</span>
-                  </>
-                )}
-                {postedAgo && (
-                  <>
-                    <span className="text-border">·</span>
-                    <span data-testid="text-posted-ago">{postedAgo}</span>
+                    <span className="flex items-center gap-1">
+                      <MapPin className="h-3.5 w-3.5" />
+                      <span data-testid="text-job-detail-location">{job.location}</span>
+                    </span>
                   </>
                 )}
               </div>
+              {/* Category badges */}
+              {(job.roleCategory || job.roleSubcategory) && (
+                <div className="flex flex-wrap gap-1.5 mt-3" data-testid="section-category-badges">
+                  {job.roleCategory && (
+                    <Badge variant="outline" data-testid="badge-role-category">{job.roleCategory}</Badge>
+                  )}
+                  {job.roleSubcategory && job.roleSubcategory !== job.roleCategory && (
+                    <Badge variant="outline" data-testid="badge-role-subcategory">{job.roleSubcategory}</Badge>
+                  )}
+                </div>
+              )}
             </div>
             <div className="shrink-0 flex items-center gap-1">
               <Button
@@ -1124,146 +1110,123 @@ export default function JobDetail() {
               >
                 <Bookmark className={`h-5 w-5 ${jobIsSaved ? "fill-current" : ""}`} />
               </Button>
+              <Button
+                variant="outline"
+                onClick={() => setLocation(`/resume-builder?jobId=${job.id}`)}
+                data-testid="button-optimize-resume"
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                Optimize Resume
+              </Button>
             </div>
-          </div>
-
-          {/* Inline metadata strip */}
-          {metaItems.length > 0 && (
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-4 text-sm" data-testid="section-quick-facts">
-              {metaItems.map((item, i) => (
-                <span
-                  key={i}
-                  className={`flex items-center gap-1.5 ${item.accent ? 'text-green-600 dark:text-green-400 font-medium' : 'text-muted-foreground'}`}
-                  data-testid={`text-fact-${i}`}
-                >
-                  <item.icon className="h-3.5 w-3.5" />
-                  {item.label}
-                </span>
-              ))}
-            </div>
-          )}
-
-          {/* Action buttons */}
-          <div className="flex flex-wrap items-center gap-2 mt-5">
-            <Button
-              onClick={handleApplyClick}
-              data-testid="button-apply-detail"
-            >
-              <ExternalLink className="h-4 w-4 mr-2" />
-              Read Full JD & Apply
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => setLocation(`/resume-builder?jobId=${job.id}`)}
-              data-testid="button-optimize-resume"
-            >
-              <FileText className="h-4 w-4 mr-2" />
-              Optimize Resume
-            </Button>
           </div>
         </div>
 
-        {/* === SUMMARY === */}
+        {/* === AI SUMMARY CARD === */}
         {job.aiSummary && (
-          <div data-testid="section-ai-summary" className="mb-8">
-            <p className="text-[0.95rem] text-foreground/80 leading-[1.8]" data-testid="text-ai-summary">
-              {job.aiSummary}
-            </p>
-          </div>
+          <Card className="mb-5" data-testid="section-ai-summary">
+            <CardContent className="p-5">
+              <p className="text-[0.925rem] text-foreground/80 leading-[1.75]" data-testid="text-ai-summary">
+                {job.aiSummary}
+              </p>
+            </CardContent>
+          </Card>
         )}
 
-        {/* === SKILLS === */}
-        {job.keySkills && job.keySkills.length > 0 && (
-          <div className="mb-8" data-testid="section-skills">
-            <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Skills & Expertise</h2>
-            <div className="flex flex-wrap gap-1.5">
-              {job.keySkills.map((skill, i) => (
-                <Badge key={i} variant="outline" data-testid={`badge-skill-${i}`}>
-                  {skill}
-                </Badge>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* === STRUCTURED INTELLIGENCE BRIEF === */}
-        {hasStructuredData && (
-          <div className="mb-8 space-y-7" data-testid="section-intelligence-brief">
-            {job.aiResponsibilities && job.aiResponsibilities.length > 0 && (
-              <div className="border-l-2 border-primary/20 pl-5" data-testid="subsection-responsibilities">
-                <h2 className="text-base font-serif font-medium text-foreground mb-3">What You'd Do</h2>
-                <ul className="space-y-2.5">
-                  {job.aiResponsibilities.map((item, i) => (
-                    <li key={i} className="flex gap-3 text-[0.9rem] text-foreground/80 leading-relaxed" data-testid={`responsibility-${i}`}>
-                      <span className="shrink-0 mt-[0.55rem] w-[5px] h-[5px] rounded-full bg-primary/30" />
-                      <span>{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {job.aiQualifications && job.aiQualifications.length > 0 && (
-              <div className="border-l-2 border-primary/20 pl-5" data-testid="subsection-qualifications">
-                <h2 className="text-base font-serif font-medium text-foreground mb-3">What You Need</h2>
-                <ul className="space-y-2.5">
-                  {job.aiQualifications.map((item, i) => (
-                    <li key={i} className="flex gap-3 text-[0.9rem] text-foreground/80 leading-relaxed" data-testid={`qualification-${i}`}>
-                      <span className="shrink-0 mt-[0.55rem] w-[5px] h-[5px] rounded-full bg-primary/30" />
-                      <span>{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {job.aiNiceToHaves && job.aiNiceToHaves.length > 0 && (
-              <div className="border-l-2 border-border pl-5" data-testid="subsection-nice-to-haves">
-                <h2 className="text-base font-serif font-medium text-foreground/80 mb-3">Nice to Have</h2>
-                <ul className="space-y-2.5">
-                  {job.aiNiceToHaves.map((item, i) => (
-                    <li key={i} className="flex gap-3 text-[0.9rem] text-foreground/65 leading-relaxed" data-testid={`nice-to-have-${i}`}>
-                      <span className="shrink-0 mt-[0.55rem] w-[5px] h-[5px] rounded-full bg-foreground/15" />
-                      <span>{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* === ORIGINAL POSTING (collapsed) === */}
-        {job.description && (
-          <div className="mb-8" data-testid="section-full-description">
-            <button
-              onClick={() => setShowFullDescription(!showFullDescription)}
-              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors py-2 w-full text-left"
-              data-testid="button-toggle-full-description"
-            >
-              {showFullDescription ? (
-                <ChevronUp className="h-4 w-4 shrink-0" />
-              ) : (
-                <ChevronDown className="h-4 w-4 shrink-0" />
-              )}
-              <span className="font-medium">
-                {showFullDescription ? 'Hide original posting' : 'View original posting'}
-              </span>
-            </button>
-            {showFullDescription && (
-              <div className="mt-3 pl-4 border-l border-border/60">
-                <DescriptionContent text={job.description} testId="text-job-description" isPro={isPro} />
-
-                {job.requirements && (
-                  <div className="mt-6 pt-4 border-t border-border/30">
-                    <h3 className="text-sm font-semibold text-foreground mb-3">Requirements</h3>
-                    <DescriptionContent text={job.requirements} testId="text-job-requirements" isPro={isPro} />
+        {/* === COMPENSATION + LEVEL SIDE-BY-SIDE CARDS === */}
+        {(salary || job.seniorityLevel) && (
+          <div className="grid grid-cols-2 gap-3 mb-5" data-testid="section-quick-facts">
+            {salary && (
+              <Card data-testid="card-compensation">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                    <DollarSign className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
+                    Compensation
                   </div>
-                )}
-              </div>
+                  <p className="font-semibold text-foreground text-sm" data-testid="text-salary">{salary}</p>
+                </CardContent>
+              </Card>
+            )}
+            {job.seniorityLevel && (
+              <Card data-testid="card-level">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                    <TrendingUp className="h-3.5 w-3.5" />
+                    Level
+                  </div>
+                  <p className="font-semibold text-foreground text-sm" data-testid="text-level">{job.seniorityLevel}</p>
+                </CardContent>
+              </Card>
             )}
           </div>
         )}
+
+        {/* === SKILLS CARD === */}
+        {job.keySkills && job.keySkills.length > 0 && (
+          <Card className="mb-5" data-testid="section-skills">
+            <CardContent className="p-5">
+              <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Skills & Expertise Required</h2>
+              <div className="flex flex-wrap gap-1.5">
+                {job.keySkills.map((skill, i) => (
+                  <Badge key={i} variant="outline" data-testid={`badge-skill-${i}`}>
+                    {skill}
+                  </Badge>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* === FULL JOB DESCRIPTION CARD === */}
+        {job.description && (
+          <Card className="mb-5" data-testid="section-full-description">
+            <CardContent className="p-5">
+              <button
+                onClick={() => setShowFullDescription(!showFullDescription)}
+                className="flex items-center justify-between w-full text-left"
+                data-testid="button-toggle-full-description"
+              >
+                <div>
+                  <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Full Job Description</h2>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {showFullDescription ? 'Collapse to see the brief' : 'Expand to read the full description'}
+                  </p>
+                </div>
+                {showFullDescription ? (
+                  <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" />
+                ) : (
+                  <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
+                )}
+              </button>
+              {showFullDescription && (
+                <div className="mt-5 pt-4 border-t border-border/40">
+                  <DescriptionContent text={job.description} testId="text-job-description" isPro={isPro} />
+
+                  {job.requirements && (
+                    <div className="mt-6">
+                      <DescriptionContent text={job.requirements} testId="text-job-requirements" isPro={isPro} />
+                    </div>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* === BOTTOM CTA === */}
+        <div className="flex flex-wrap items-center gap-3 mb-8" data-testid="section-apply-cta">
+          <Button
+            size="lg"
+            onClick={handleApplyClick}
+            data-testid="button-apply-bottom"
+          >
+            <ExternalLink className="h-4 w-4 mr-2" />
+            Read Full JD & Apply
+          </Button>
+          <p className="text-xs text-muted-foreground">
+            You'll be taken to the company's careers page to read the complete posting and submit your application.
+          </p>
+        </div>
 
         {/* === CONTACT === */}
         {contactEmails.length > 0 && (
@@ -1282,30 +1245,14 @@ export default function JobDetail() {
           </div>
         )}
 
-        {/* === BOTTOM CTA === */}
-        <div className="flex flex-col sm:flex-row items-center gap-3 py-6 border-t border-border/40" data-testid="section-apply-cta">
-          <Button
-            size="lg"
-            onClick={handleApplyClick}
-            className="w-full sm:w-auto"
-            data-testid="button-apply-bottom"
-          >
-            <ExternalLink className="h-4 w-4 mr-2" />
-            Read Full JD & Apply
-          </Button>
-          <p className="text-xs text-muted-foreground">
-            You'll be taken to the company's careers page to read the complete posting and submit your application.
-          </p>
-        </div>
-
         {/* === QUESTIONS === */}
-        <div className="mt-8">
+        <div className="mb-8">
           <JobChat jobId={jobId || ""} />
         </div>
 
         {/* === SIMILAR ROLES === */}
         {similarJobs.length > 0 && (
-          <div className="mt-10" data-testid="section-similar-jobs">
+          <div className="mb-8" data-testid="section-similar-jobs">
             <h2 className="text-lg font-serif font-medium text-foreground mb-4 tracking-tight">Similar Roles</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {similarJobs.map(sj => {
