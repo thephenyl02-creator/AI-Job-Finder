@@ -47,8 +47,11 @@ function getUrgencyLevel(postedDate: Date | string | null | undefined): "urgent"
 
 function formatSalary(min?: number | null, max?: number | null): string | null {
   if (!min && !max) return null;
-  const fmt = (n: number) => `$${(n / 1000).toFixed(0)}K`;
-  if (min && max) return `${fmt(min)} - ${fmt(max)}`;
+  const fmt = (n: number) => {
+    const k = n / 1000;
+    return k % 1 === 0 ? `$${k.toFixed(0)}K` : `$${k.toFixed(1)}K`;
+  };
+  if (min && max) return `${fmt(min)} \u2013 ${fmt(max)}`;
   if (min) return `${fmt(min)}+`;
   return `Up to ${fmt(max!)}`;
 }

@@ -468,10 +468,13 @@ export default function Jobs() {
   const formatSalaryRange = (min?: number | null, max?: number | null) => {
     if (!min && !max) return null;
     const fmt = (n: number) => {
-      if (n >= 1000) return `$${Math.round(n / 1000)}K`;
+      if (n >= 1000) {
+        const k = n / 1000;
+        return k % 1 === 0 ? `$${k.toFixed(0)}K` : `$${k.toFixed(1)}K`;
+      }
       return `$${n}`;
     };
-    if (min && max) return `${fmt(min)} - ${fmt(max)}`;
+    if (min && max) return `${fmt(min)} \u2013 ${fmt(max)}`;
     if (min) return `${fmt(min)}+`;
     return `Up to ${fmt(max!)}`;
   };
@@ -1218,10 +1221,13 @@ function CategorySection({
   const formatSalaryRange = (min?: number | null, max?: number | null) => {
     if (!min && !max) return null;
     const fmt = (n: number) => {
-      if (n >= 1000) return `$${Math.round(n / 1000)}K`;
+      if (n >= 1000) {
+        const k = n / 1000;
+        return k % 1 === 0 ? `$${k.toFixed(0)}K` : `$${k.toFixed(1)}K`;
+      }
       return `$${n}`;
     };
-    if (min && max) return `${fmt(min)} - ${fmt(max)}`;
+    if (min && max) return `${fmt(min)} \u2013 ${fmt(max)}`;
     if (min) return `${fmt(min)}+`;
     return `Up to ${fmt(max!)}`;
   };

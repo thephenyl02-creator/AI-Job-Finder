@@ -1,8 +1,74 @@
 import axios from 'axios';
 import { transformToJobSchema, isLegalTechRole } from './law-firm-scraper';
-import { categorizeJob, type JobCategorizationResult } from './job-categorizer';
+import { categorizeJob, parseSalaryFromText, type JobCategorizationResult } from './job-categorizer';
 import { LAW_FIRMS_AND_COMPANIES } from './law-firms-list';
 import type { InsertJob } from '@shared/schema';
+
+function extractGreenhouseSalaryYC(job: any): { min?: number; max?: number; text?: string } {
+  const metadata = job.metadata || [];
+  for (const meta of metadata) {
+    const name = (meta.name || '').toLowerCase();
+    if (name.includes('salary') || name.includes('compensation') || name.includes('pay')) {
+      const val = meta.value;
+      if (typeof val === 'object' && val !== null) {
+        const min = val.min_value || val.min || undefined;
+        const max = val.max_value || val.max || undefined;
+        if (min || max) return { min, max };
+      }
+      if (typeof val === 'string') {
+        const parsed = parseSalaryFromText(val);
+        if (parsed.min || parsed.max) return { min: parsed.min, max: parsed.max, text: val };
+      }
+    }
+  }
+  if (job.pay) {
+    return {
+      min: job.pay.min_value || job.pay.min || undefined,
+      max: job.pay.max_value || job.pay.max || undefined,
+      text: job.pay.salary_range || undefined,
+    };
+  }
+  return {};
+}
+
+function extractLeverSalaryYC(job: any): { min?: number; max?: number; text?: string } {
+  if (job.salaryRange) {
+    return {
+      min: job.salaryRange.min || undefined,
+      max: job.salaryRange.max || undefined,
+      text: job.salaryRange.currency
+        ? `${job.salaryRange.currency} ${job.salaryRange.min?.toLocaleString()} - ${job.salaryRange.max?.toLocaleString()}`
+        : undefined,
+    };
+  }
+  const lists = job.lists || [];
+  for (const list of lists) {
+    if ((list.text || '').toLowerCase().match(/compensation|salary|pay/)) {
+      const content = (list.content || '').replace(/<[^>]*>/g, '');
+      const parsed = parseSalaryFromText(content);
+      if (parsed.min || parsed.max) return { min: parsed.min, max: parsed.max, text: content.trim() };
+    }
+  }
+  return {};
+}
+
+function detectLocationTypeYC(locationName: string, description: string, metadata?: any[]): 'remote' | 'hybrid' | 'onsite' | undefined {
+  if (metadata) {
+    for (const meta of metadata) {
+      const name = (meta.name || '').toLowerCase();
+      if (name.includes('location type') || name.includes('workplace') || name.includes('work arrangement')) {
+        const val = (typeof meta.value === 'string' ? meta.value : '').toLowerCase();
+        if (val.includes('hybrid')) return 'hybrid';
+        if (val.includes('remote')) return 'remote';
+        if (val.includes('on-site') || val.includes('onsite')) return 'onsite';
+      }
+    }
+  }
+  const combined = (locationName + ' ' + description).toLowerCase();
+  if (/\bhybrid\b/.test(combined)) return 'hybrid';
+  if (/\bremote\b/.test(combined) && !/\bnot remote\b/.test(combined)) return 'remote';
+  return undefined;
+}
 
 interface YCCompany {
   id: number;
@@ -208,40 +274,68 @@ export async function scrapeYCCompanies(
 
       if (greenhouse) {
         atsType = `greenhouse:${greenhouse.slug}`;
-        scrapedJobs = greenhouse.jobs.map((job: any) => ({
-          title: job.title,
-          company: company.name,
-          location: job.location?.name || 'Not specified',
-          description: job.content || '',
-          applyUrl: job.absolute_url,
-          postedDate: job.updated_at || new Date().toISOString(),
-          source: 'yc_greenhouse',
-          externalId: `yc_gh_${greenhouse.slug}_${job.id}`,
-        }));
+        scrapedJobs = greenhouse.jobs.map((job: any) => {
+          const salary = extractGreenhouseSalaryYC(job);
+          const locationType = detectLocationTypeYC(job.location?.name || '', job.content || '', job.metadata);
+          return {
+            title: job.title,
+            company: company.name,
+            location: job.location?.name || 'Not specified',
+            description: job.content || '',
+            applyUrl: job.absolute_url,
+            postedDate: job.updated_at || new Date().toISOString(),
+            source: 'yc_greenhouse',
+            externalId: `yc_gh_${greenhouse.slug}_${job.id}`,
+            salaryMin: salary.min,
+            salaryMax: salary.max,
+            compensationText: salary.text,
+            locationType,
+          };
+        });
       } else if (lever) {
         atsType = `lever:${lever.slug}`;
-        scrapedJobs = lever.jobs.map((job: any) => ({
-          title: job.text,
-          company: company.name,
-          location: job.categories?.location || 'Not specified',
-          description: job.description || '',
-          applyUrl: job.hostedUrl,
-          postedDate: new Date(job.createdAt).toISOString(),
-          source: 'yc_lever',
-          externalId: `yc_lever_${job.id}`,
-        }));
+        scrapedJobs = lever.jobs.map((job: any) => {
+          const salary = extractLeverSalaryYC(job);
+          const locType = job.categories?.locationType || job.workplaceType || '';
+          let locationType: string | undefined;
+          if (/hybrid/i.test(locType)) locationType = 'hybrid';
+          else if (/remote/i.test(locType)) locationType = 'remote';
+          else if (/on.?site|in.?office/i.test(locType)) locationType = 'onsite';
+          return {
+            title: job.text,
+            company: company.name,
+            location: job.categories?.location || 'Not specified',
+            description: job.description || '',
+            applyUrl: job.hostedUrl,
+            postedDate: new Date(job.createdAt).toISOString(),
+            source: 'yc_lever',
+            externalId: `yc_lever_${job.id}`,
+            salaryMin: salary.min,
+            salaryMax: salary.max,
+            compensationText: salary.text,
+            locationType,
+          };
+        });
       } else if (ashby) {
         atsType = `ashby:${ashby.slug}`;
-        scrapedJobs = ashby.jobs.map((job: any) => ({
-          title: job.title,
-          company: company.name,
-          location: job.location?.name || job.locationName || 'Not specified',
-          description: job.descriptionPlain || job.descriptionHtml || '',
-          applyUrl: job.applicationUrl || job.jobUrl || '',
-          postedDate: job.publishedDate || new Date().toISOString(),
-          source: 'yc_ashby',
-          externalId: `yc_ashby_${job.id}`,
-        }));
+        scrapedJobs = ashby.jobs.map((job: any) => {
+          const locationName = job.location?.name || job.locationName || 'Not specified';
+          const descText = job.descriptionPlain || job.descriptionHtml || '';
+          let locationType: string | undefined;
+          if (/\bhybrid\b/i.test(locationName + ' ' + descText)) locationType = 'hybrid';
+          else if (/\bremote\b/i.test(locationName)) locationType = 'remote';
+          return {
+            title: job.title,
+            company: company.name,
+            location: locationName,
+            description: descText,
+            applyUrl: job.applicationUrl || job.jobUrl || '',
+            postedDate: job.publishedDate || new Date().toISOString(),
+            source: 'yc_ashby',
+            externalId: `yc_ashby_${job.id}`,
+            locationType,
+          };
+        });
       }
 
       if (scrapedJobs.length === 0) {

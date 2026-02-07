@@ -13,10 +13,114 @@ interface ScrapedJob {
   postedDate: string;
   source: string;
   externalId: string;
+  salaryMin?: number;
+  salaryMax?: number;
+  compensationText?: string;
+  locationType?: 'remote' | 'hybrid' | 'onsite';
+  department?: string;
+  employmentType?: string;
 }
 
 function delay(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function detectLocationType(text: string): 'remote' | 'hybrid' | 'onsite' | undefined {
+  const lower = text.toLowerCase();
+  if (/\bhybrid\b/.test(lower)) return 'hybrid';
+  if (/\bremote\b/.test(lower) && !/\bnot remote\b|\bon[- ]?site only\b/.test(lower)) return 'remote';
+  if (/\bon[- ]?site\b|\bin[- ]?office\b|\bin[- ]?person\b/.test(lower)) return 'onsite';
+  return undefined;
+}
+
+function extractGreenhouseSalary(job: any): { min?: number; max?: number; text?: string } {
+  const metadata = job.metadata || [];
+  for (const meta of metadata) {
+    const name = (meta.name || '').toLowerCase();
+    if (name.includes('salary') || name.includes('compensation') || name.includes('pay')) {
+      const val = meta.value;
+      if (typeof val === 'object' && val !== null) {
+        const min = val.min_value || val.min || undefined;
+        const max = val.max_value || val.max || undefined;
+        if (min || max) return { min, max };
+      }
+      if (typeof val === 'string') {
+        const parsed = parseSalaryFromText(val);
+        if (parsed.min || parsed.max) {
+          return { min: parsed.min, max: parsed.max, text: val };
+        }
+      }
+    }
+  }
+
+  if (job.pay) {
+    const pay = job.pay;
+    return {
+      min: pay.min_value || pay.min || undefined,
+      max: pay.max_value || pay.max || undefined,
+      text: pay.salary_range || undefined,
+    };
+  }
+
+  return {};
+}
+
+function extractLeverSalary(job: any): { min?: number; max?: number; text?: string } {
+  if (job.salaryRange) {
+    const range = job.salaryRange;
+    return {
+      min: range.min || undefined,
+      max: range.max || undefined,
+      text: range.currency
+        ? `${range.currency} ${range.min?.toLocaleString()} - ${range.max?.toLocaleString()}`
+        : undefined,
+    };
+  }
+
+  if (job.categories?.commitment) {
+    const parsed = parseSalaryFromText(job.categories.commitment);
+    if (parsed.min || parsed.max) return { min: parsed.min, max: parsed.max };
+  }
+
+  const lists = job.lists || [];
+  for (const list of lists) {
+    const listText = (list.text || '').toLowerCase();
+    if (listText.includes('compensation') || listText.includes('salary') || listText.includes('pay')) {
+      const content = (list.content || '');
+      const parsed = parseSalaryFromText(content);
+      if (parsed.min || parsed.max) {
+        return { min: parsed.min, max: parsed.max, text: content.replace(/<[^>]*>/g, '').trim() };
+      }
+    }
+  }
+
+  return {};
+}
+
+function extractLeverLocationType(job: any): 'remote' | 'hybrid' | 'onsite' | undefined {
+  const locType = job.categories?.locationType || job.workplaceType || '';
+  if (locType) {
+    const lower = locType.toLowerCase();
+    if (lower.includes('hybrid')) return 'hybrid';
+    if (lower.includes('remote')) return 'remote';
+    if (lower.includes('on-site') || lower.includes('onsite') || lower.includes('in-office')) return 'onsite';
+  }
+  const location = job.categories?.location || '';
+  return detectLocationType(location);
+}
+
+function extractGreenhouseLocationType(job: any): 'remote' | 'hybrid' | 'onsite' | undefined {
+  const metadata = job.metadata || [];
+  for (const meta of metadata) {
+    const name = (meta.name || '').toLowerCase();
+    if (name.includes('location type') || name.includes('workplace') || name.includes('work arrangement')) {
+      const val = typeof meta.value === 'string' ? meta.value : '';
+      const detected = detectLocationType(val);
+      if (detected) return detected;
+    }
+  }
+  const locationName = job.location?.name || '';
+  return detectLocationType(locationName);
 }
 
 export async function scrapeGreenhouse(companyId: string, companyName: string): Promise<ScrapedJob[]> {
@@ -29,16 +133,25 @@ export async function scrapeGreenhouse(companyId: string, companyName: string): 
       timeout: 15000,
     });
     
-    const jobs: ScrapedJob[] = response.data.jobs.map((job: any) => ({
-      title: job.title,
-      company: companyName,
-      location: job.location?.name || 'Not specified',
-      description: job.content || '',
-      applyUrl: job.absolute_url,
-      postedDate: job.updated_at || new Date().toISOString(),
-      source: 'greenhouse',
-      externalId: `gh_${companyId}_${job.id}`,
-    }));
+    const jobs: ScrapedJob[] = response.data.jobs.map((job: any) => {
+      const salary = extractGreenhouseSalary(job);
+      const locationType = extractGreenhouseLocationType(job);
+      return {
+        title: job.title,
+        company: companyName,
+        location: job.location?.name || 'Not specified',
+        description: job.content || '',
+        applyUrl: job.absolute_url,
+        postedDate: job.updated_at || new Date().toISOString(),
+        source: 'greenhouse',
+        externalId: `gh_${companyId}_${job.id}`,
+        salaryMin: salary.min,
+        salaryMax: salary.max,
+        compensationText: salary.text,
+        locationType,
+        department: job.departments?.[0]?.name || undefined,
+      };
+    });
     
     return jobs;
   } catch (error: any) {
@@ -58,16 +171,26 @@ export async function scrapeLever(leverUrl: string, companyName: string): Promis
       timeout: 15000,
     });
     
-    const jobs: ScrapedJob[] = response.data.map((job: any) => ({
-      title: job.text,
-      company: companyName,
-      location: job.categories?.location || 'Not specified',
-      description: job.description || '',
-      applyUrl: job.hostedUrl,
-      postedDate: new Date(job.createdAt).toISOString(),
-      source: 'lever',
-      externalId: `lever_${job.id}`,
-    }));
+    const jobs: ScrapedJob[] = response.data.map((job: any) => {
+      const salary = extractLeverSalary(job);
+      const locationType = extractLeverLocationType(job);
+      return {
+        title: job.text,
+        company: companyName,
+        location: job.categories?.location || 'Not specified',
+        description: job.description || '',
+        applyUrl: job.hostedUrl,
+        postedDate: new Date(job.createdAt).toISOString(),
+        source: 'lever',
+        externalId: `lever_${job.id}`,
+        salaryMin: salary.min,
+        salaryMax: salary.max,
+        compensationText: salary.text,
+        locationType,
+        department: job.categories?.department || undefined,
+        employmentType: job.categories?.commitment || undefined,
+      };
+    });
     
     return jobs;
   } catch (error: any) {
@@ -86,16 +209,27 @@ export async function scrapeAshby(ashbyUrl: string, companyName: string): Promis
       timeout: 15000,
     });
     
-    const jobs: ScrapedJob[] = (response.data.jobs || []).map((job: any) => ({
-      title: job.title,
-      company: companyName,
-      location: job.location?.name || job.locationName || 'Not specified',
-      description: job.descriptionPlain || job.descriptionHtml || '',
-      applyUrl: job.applicationUrl || job.jobUrl || '',
-      postedDate: job.publishedDate || new Date().toISOString(),
-      source: 'ashby',
-      externalId: `ashby_${job.id}`,
-    }));
+    const jobs: ScrapedJob[] = (response.data.jobs || []).map((job: any) => {
+      const locationName = job.location?.name || job.locationName || 'Not specified';
+      const locationType = detectLocationType(locationName + ' ' + (job.descriptionPlain || ''));
+      const descText = job.descriptionPlain || job.descriptionHtml || '';
+      const salary = parseSalaryFromText(descText);
+      return {
+        title: job.title,
+        company: companyName,
+        location: locationName,
+        description: descText,
+        applyUrl: job.applicationUrl || job.jobUrl || '',
+        postedDate: job.publishedDate || new Date().toISOString(),
+        source: 'ashby',
+        externalId: `ashby_${job.id}`,
+        salaryMin: salary.min,
+        salaryMax: salary.max,
+        locationType,
+        department: job.department || undefined,
+        employmentType: job.employmentType || undefined,
+      };
+    });
     
     return jobs;
   } catch (error: any) {
@@ -366,10 +500,22 @@ export function transformToJobSchema(job: ScrapedJob, categorization?: JobCatego
   const fullText = `${job.title} ${cleanDescription} ${locationText}`.toLowerCase();
   const negativeRemote = /\bnot remote\b|\bon[- ]?site only\b|\bin[- ]?office only\b|\bno remote\b/.test(fullText);
   const hasRemoteSignal = /\bremote\b/.test(fullText) || /\bwork from home\b/.test(fullText) || /\bhybrid\b/.test(fullText) || /\bwfh\b/.test(fullText);
-  const isRemoteDetected = !negativeRemote && (hasRemoteSignal || categorization?.isRemote === true);
 
-  let salaryMin = categorization?.salaryMin || null;
-  let salaryMax = categorization?.salaryMax || null;
+  const locationType = job.locationType || detectLocationType(fullText) || null;
+
+  let isRemoteDetected: boolean;
+  if (locationType) {
+    isRemoteDetected = locationType === 'remote' || locationType === 'hybrid';
+  } else {
+    isRemoteDetected = !negativeRemote && (hasRemoteSignal || categorization?.isRemote === true);
+  }
+
+  let salaryMin: number | null = job.salaryMin || null;
+  let salaryMax: number | null = job.salaryMax || null;
+  if (!salaryMin && !salaryMax) {
+    salaryMin = categorization?.salaryMin || null;
+    salaryMax = categorization?.salaryMax || null;
+  }
   if (!salaryMin && !salaryMax) {
     const parsed = parseSalaryFromText(cleanDescription);
     salaryMin = parsed.min ?? null;
@@ -382,6 +528,7 @@ export function transformToJobSchema(job: ScrapedJob, categorization?: JobCatego
     companyLogo: `https://logo.clearbit.com/${companySlug}.com`,
     location: locationText,
     isRemote: isRemoteDetected,
+    locationType,
     salaryMin,
     salaryMax,
     experienceMin: categorization?.experienceMin || null,

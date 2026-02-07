@@ -705,8 +705,11 @@ export default function JobDetail() {
 
   const formatSalary = (min?: number | null, max?: number | null) => {
     if (!min && !max) return null;
-    const fmt = (n: number) => `$${(n / 1000).toFixed(0)}k`;
-    if (min && max) return `${fmt(min)} - ${fmt(max)}`;
+    const fmt = (n: number) => {
+      const k = n / 1000;
+      return k % 1 === 0 ? `$${k.toFixed(0)}K` : `$${k.toFixed(1)}K`;
+    };
+    if (min && max) return `${fmt(min)} \u2013 ${fmt(max)}`;
     if (min) return `From ${fmt(min)}`;
     return `Up to ${fmt(max!)}`;
   };
@@ -780,8 +783,10 @@ export default function JobDetail() {
                       {job.roleSubcategory}
                     </Badge>
                   )}
-                  {job.isRemote && (
-                    <Badge variant="secondary">Remote</Badge>
+                  {(job.isRemote || job.locationType) && (
+                    <Badge variant="secondary" data-testid="badge-location-type">
+                      {job.locationType === 'hybrid' ? 'Hybrid' : job.locationType === 'onsite' ? 'On-site' : 'Remote'}
+                    </Badge>
                   )}
                   {job.roleType && (
                     <Badge variant="outline">{job.roleType}</Badge>
@@ -984,9 +989,7 @@ export default function JobDetail() {
             <h2 className="text-lg font-serif font-medium text-foreground mb-4 tracking-tight">Similar Roles</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {similarJobs.map(sj => {
-                const sjSalary = sj.salaryMin || sj.salaryMax
-                  ? `${sj.salaryMin ? `$${(sj.salaryMin / 1000).toFixed(0)}K` : ''}${sj.salaryMin && sj.salaryMax ? ' - ' : ''}${sj.salaryMax ? `$${(sj.salaryMax / 1000).toFixed(0)}K` : ''}`
-                  : null;
+                const sjSalary = formatSalary(sj.salaryMin, sj.salaryMax);
                 return (
                   <Link key={sj.id} href={`/jobs/${sj.id}`}>
                     <Card className="hover-elevate cursor-pointer h-full" data-testid={`card-similar-job-${sj.id}`}>
