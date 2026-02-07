@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   LogOut, Compass, BarChart3, Bell, FileText, Crown, Search,
-  Bookmark, LayoutDashboard, Menu, Calendar, Settings
+  Bookmark, LayoutDashboard, Menu, Calendar, Settings, PenLine
 } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { Link, useLocation } from "wouter";
@@ -165,6 +165,7 @@ export function Header() {
 
                       <MobileNavSection label="Tools">
                         <MobileNavItem href="/resumes" icon={FileText} label="Resumes" active={isResumesActive} testId="link-resumes-mobile" />
+                        <MobileNavItem href="/resume-builder" icon={PenLine} label="Resume Builder" active={isActive("/resume-builder")} testId="link-resume-builder-mobile" />
                         <MobileNavItem href="/career-advisor" icon={Compass} label="Career Advisor" active={isActive("/career-advisor")} testId="link-career-advisor-mobile" />
                         <MobileNavItem href="/insights" icon={BarChart3} label="Market Insights" active={isActive("/insights")} testId="link-insights-mobile" />
                         <MobileNavItem href="/alerts" icon={Bell} label="Job Alerts" active={isActive("/alerts")} testId="link-alerts-mobile" />
