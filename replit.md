@@ -43,7 +43,7 @@ A freemium SaaS job search platform specifically designed for legal professional
 - **Management**: Stripe Checkout for purchases, Stripe Billing Portal for subscription management, and webhooks for status updates.
 
 ### Core Features
-- **Unified Smart Search**: AI-powered natural language job search with guided queries.
+- **Unified Smart Search**: AI-powered natural language job search with guided queries (7 free trials server-enforced, unlimited for Pro).
 - **Job Categorization**: AI-driven classification of job postings into a 3-tier taxonomy.
 - **Resume Management**: Upload, parse, and manage multiple resumes (Pro-only for multiple).
 - **Resume-Job Matching**: AI comparison of resumes against job postings, providing match scores, gap analysis, and recommendations (Pro-only).

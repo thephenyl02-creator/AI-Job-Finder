@@ -686,7 +686,7 @@ Only include jobs with a score above 40. Sort by score descending.`;
   });
 
   // Guided search - analyze query and generate clarifying questions
-  // Available to all authenticated users (free users get limited trials, tracked client-side)
+  // Free users get 7 guided searches total (server-side enforced), Pro users get unlimited
   app.post("/api/search/analyze", isAuthenticated, async (req, res) => {
     try {
       const { query } = req.body;
@@ -695,10 +695,30 @@ Only include jobs with a score above 40. Sort by score descending.`;
         return res.status(400).json({ error: "Search query is required" });
       }
 
-      // Get user's resume data if available for personalization
       const user = req.user as any;
+      const userId = user?.id;
+      const FREE_GUIDED_LIMIT = 7;
+
+      if (userId) {
+        const subData = await storage.getUserSubscription(userId);
+        const isPro = subData?.subscriptionTier === "pro" && subData?.subscriptionStatus === "active";
+        if (!isPro) {
+          const guidedCount = await storage.getGuidedSearchCount(userId);
+          if (guidedCount >= FREE_GUIDED_LIMIT) {
+            return res.status(403).json({
+              error: `You've used all ${FREE_GUIDED_LIMIT} free guided searches. Upgrade to Pro for unlimited guided search.`,
+              upgradeUrl: "/pricing",
+              limitReached: true,
+              limit: FREE_GUIDED_LIMIT,
+              current: guidedCount,
+            });
+          }
+        }
+      }
+
+      // Get user's resume data if available for personalization
       let userContext = "";
-      if (user?.id) {
+      if (userId) {
         const userData = await storage.getUserResume(user.id);
         if (userData?.extractedData) {
           const skills = userData.extractedData.skills?.join(", ") || "";
@@ -757,6 +777,18 @@ Return ONLY valid JSON in this format:
       }
 
       const analysisResult = JSON.parse(content);
+
+      if (userId) {
+        try {
+          await storage.logActivity({
+            userId,
+            eventType: "guided_search",
+            pagePath: "/jobs",
+            metadata: { query },
+          });
+        } catch {}
+      }
+
       res.json({
         originalQuery: query,
         ...analysisResult,
@@ -768,7 +800,7 @@ Return ONLY valid JSON in this format:
   });
 
   // Refined search - use answers to curate precise results
-  // Available to all authenticated users (free users get limited trials, tracked client-side)
+  // Free users get limited guided searches (enforced on /api/search/analyze), Pro users get unlimited
   app.post("/api/search/refined", isAuthenticated, async (req, res) => {
     try {
       const { originalQuery, answers, refinedIntent } = req.body;
@@ -2762,10 +2794,12 @@ Be specific and actionable. Focus on legal tech industry keywords and ATS best p
       const isPro = subData?.subscriptionTier === "pro" && subData?.subscriptionStatus === "active";
       const dailyChatCount = await storage.getDailyAssistantChatCount(userId);
       const savedJobCount = await storage.getSavedJobCount(userId);
+      const guidedSearchCount = await storage.getGuidedSearchCount(userId);
       res.json({
         isPro,
         chat: { used: dailyChatCount, limit: isPro ? null : 3, resetsAt: new Date(new Date().setHours(24, 0, 0, 0)).toISOString() },
         savedJobs: { used: savedJobCount, limit: isPro ? null : 5 },
+        guidedSearch: { used: guidedSearchCount, limit: isPro ? null : 7 },
       });
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch usage limits" });

@@ -139,24 +139,19 @@ export default function Jobs() {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [refinedSummary, setRefinedSummary] = useState<string | null>(null);
 
-  const GUIDED_TRIAL_LIMIT = 7;
+  const { data: usageLimits } = useQuery<{
+    isPro: boolean;
+    guidedSearch: { used: number; limit: number | null };
+  }>({
+    queryKey: ["/api/usage/limits"],
+    enabled: isAuthenticated,
+    staleTime: 1000 * 30,
+  });
 
-  const getGuidedTrialCount = useCallback(() => {
-    const count = localStorage.getItem("guidedSearchCount");
-    return count ? parseInt(count, 10) : 0;
-  }, []);
-
-  const hasUsedGuidedTrial = useCallback(() => {
-    return getGuidedTrialCount() >= GUIDED_TRIAL_LIMIT;
-  }, [getGuidedTrialCount]);
-
-  const markGuidedTrialUsed = useCallback(() => {
-    const current = getGuidedTrialCount();
-    localStorage.setItem("guidedSearchCount", String(current + 1));
-  }, [getGuidedTrialCount]);
-
-  const guidedTrialsRemaining = isPro ? Infinity : GUIDED_TRIAL_LIMIT - getGuidedTrialCount();
-  const canUseGuidedSearch = isPro || !hasUsedGuidedTrial();
+  const guidedSearchUsed = usageLimits?.guidedSearch?.used ?? 0;
+  const guidedSearchLimit = usageLimits?.guidedSearch?.limit ?? 7;
+  const guidedTrialsRemaining = isPro ? Infinity : Math.max(0, guidedSearchLimit - guidedSearchUsed);
+  const canUseGuidedSearch = isPro || guidedTrialsRemaining > 0;
 
   const searchMutation = useMutation({
     mutationFn: async (query: string) => {
@@ -181,6 +176,7 @@ export default function Jobs() {
       return response.json() as Promise<AnalysisResult>;
     },
     onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/usage/limits"] });
       setAnalysis(data);
       if (data.questions && data.questions.length > 0) {
         setGuidedStep("questions");
@@ -192,8 +188,17 @@ export default function Jobs() {
         });
       }
     },
-    onError: () => {
-      toast({ title: "Let's try a quick search instead", variant: "default" });
+    onError: (error: any) => {
+      const isLimitError = error?.message?.includes("guided searches") || error?.message?.includes("Upgrade to Pro");
+      if (isLimitError) {
+        setGuidedStep("idle");
+        toast({
+          title: "Guided search limit reached",
+          description: "Upgrade to Pro for unlimited guided searches. Trying regular search instead.",
+        });
+      } else {
+        toast({ title: "Let's try a quick search instead", variant: "default" });
+      }
       searchMutation.mutate(smartQuery);
     },
   });
@@ -208,7 +213,6 @@ export default function Jobs() {
       setSearchQuery(smartQuery + " (refined)");
       setRefinedSummary(data.searchSummary);
       setGuidedStep("idle");
-      if (!isPro) markGuidedTrialUsed();
       track({ eventType: "search", metadata: { query: smartQuery, resultCount: data.jobs.length, guided: true } });
     },
     onError: () => {

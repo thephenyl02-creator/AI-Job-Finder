@@ -119,6 +119,7 @@ export interface IStorage {
   // Usage limits
   getSavedJobCount(userId: string): Promise<number>;
   getDailyAssistantChatCount(userId: string): Promise<number>;
+  getGuidedSearchCount(userId: string): Promise<number>;
   deactivatePastEvents(): Promise<number>;
   // Scrape Runs
   createScrapeRun(run: InsertScrapeRun): Promise<ScrapeRun>;
@@ -2156,6 +2157,15 @@ class DatabaseStorage implements IStorage {
         eq(userActivities.userId, userId),
         eq(userActivities.eventType, 'assistant_chat'),
         gte(userActivities.createdAt, todayStart)
+      ));
+    return result?.cnt || 0;
+  }
+
+  async getGuidedSearchCount(userId: string): Promise<number> {
+    const [result] = await db.select({ cnt: count() }).from(userActivities)
+      .where(and(
+        eq(userActivities.userId, userId),
+        eq(userActivities.eventType, 'guided_search')
       ));
     return result?.cnt || 0;
   }
