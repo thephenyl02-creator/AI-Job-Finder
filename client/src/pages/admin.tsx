@@ -19,6 +19,76 @@ import type { Job } from "@shared/schema";
 import { JOB_TAXONOMY } from "@shared/schema";
 
 const SENIORITY_OPTIONS = ["Intern", "Fellowship", "Entry", "Mid", "Senior", "Lead", "Director", "VP"];
+
+const ADMIN_HL_PATTERNS: { pattern: RegExp; cls: string }[] = [
+  { pattern: /\b(\d+)\+?\s*(?:[-–]?\s*\d+\s*)?(?:years?|yrs?)\b(?:\s+(?:of\s+)?(?:experience|exp))?/gi, cls: 'bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300' },
+  { pattern: /\b(?:JD|J\.D\.|Juris Doctor|Bar (?:Admission|License)|Licensed Attorney|LL\.?M\.?|CIPP|CIPM|PMP|CISSP|Certified)\b/gi, cls: 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300' },
+  { pattern: /\b(?:Bachelor'?s?|Master'?s?|MBA|Ph\.?D\.?|Doctorate|B\.?S\.?|B\.?A\.?|M\.?S\.?|M\.?A\.?)\b(?:\s+(?:degree|in))?\b/gi, cls: 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300' },
+  { pattern: /\b(?:Python|JavaScript|TypeScript|SQL|React|Node\.?js|AWS|Azure|Salesforce|Relativity|Everlaw|DISCO|NetDocuments|iManage|Clio|Luminance|Kira|LexisNexis|Westlaw|Docker|Jira|Tableau|Power BI|Excel|Agile)\b/gi, cls: 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300' },
+];
+
+function adminHighlight(text: string): (string | JSX.Element)[] {
+  const matches: { start: number; end: number; cls: string }[] = [];
+  for (const { pattern, cls } of ADMIN_HL_PATTERNS) {
+    const re = new RegExp(pattern.source, pattern.flags);
+    let m;
+    while ((m = re.exec(text)) !== null) {
+      const overlap = matches.some(ex => m!.index < ex.end && m!.index + m![0].length > ex.start);
+      if (!overlap) matches.push({ start: m.index, end: m.index + m[0].length, cls });
+    }
+  }
+  if (matches.length === 0) return [text];
+  matches.sort((a, b) => a.start - b.start);
+  const parts: (string | JSX.Element)[] = [];
+  let last = 0;
+  matches.forEach((match, idx) => {
+    if (match.start > last) parts.push(text.slice(last, match.start));
+    parts.push(<mark key={`ah-${idx}`} className={`${match.cls} px-0.5 py-0 rounded text-[0.92em] font-medium no-underline`}>{text.slice(match.start, match.end)}</mark>);
+    last = match.end;
+  });
+  if (last < text.length) parts.push(text.slice(last));
+  return parts;
+}
+
+function AdminJobDescription({ description }: { description?: string | null }) {
+  if (!description) return <p className="text-xs text-muted-foreground italic">No description</p>;
+  let text = description;
+  if (text.includes('&lt;') || text.includes('&gt;') || text.includes('&amp;') || /<[a-z][^>]*>/i.test(text)) {
+    text = text.replace(/<br\s*\/?>/gi, '\n').replace(/<\/(?:p|div|h[1-6]|li)>/gi, '\n').replace(/<li(?:\s[^>]*)?>/gi, '- ').replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&nbsp;/g, ' ').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&[a-z]+;/gi, ' ');
+  }
+  text = text.replace(/\n{3,}/g, '\n\n');
+
+  const lines = text.split('\n').filter(l => l.trim());
+  const headingRe = /^(?:About|What|Who|Responsibilities|Qualifications|Requirements|Skills|Benefits|Perks|Compensation|Getting|In this|How you|Why|Our|The|Your|Key|Core|Preferred|Required|Nice|Education|Experience|Pluses?)\b/i;
+
+  return (
+    <div className="space-y-1 text-xs leading-relaxed max-h-[300px] overflow-y-auto pr-2" data-testid="admin-job-description">
+      {lines.slice(0, 40).map((line, i) => {
+        const trimmed = line.trim();
+        if (!trimmed) return null;
+        const isBullet = /^[-•*]\s/.test(trimmed) || /^\d+[.)]\s/.test(trimmed);
+        const isHead = headingRe.test(trimmed) && trimmed.length < 80;
+
+        if (isHead) {
+          return <p key={i} className="font-semibold text-foreground pt-2 first:pt-0 text-xs">{adminHighlight(trimmed)}</p>;
+        }
+        if (isBullet) {
+          const content = trimmed.replace(/^[-•*]\s+|^\d+[.)]\s+/, '');
+          return (
+            <div key={i} className="flex gap-1.5 pl-2 py-0.5">
+              <span className="text-muted-foreground/60 shrink-0 mt-1 w-1 h-1 rounded-full bg-foreground/25" />
+              <span className="text-foreground/80">{adminHighlight(content)}</span>
+            </div>
+          );
+        }
+        return <p key={i} className="text-foreground/80">{adminHighlight(trimmed)}</p>;
+      })}
+      {lines.length > 40 && (
+        <p className="text-muted-foreground italic pt-1">...{lines.length - 40} more lines</p>
+      )}
+    </div>
+  );
+}
 const TAXONOMY_CATEGORIES = Object.entries(JOB_TAXONOMY).map(([name, data]) => ({
   value: name,
   label: data.shortName,
@@ -120,6 +190,7 @@ export default function AdminPage() {
   const [jobsSeniorityFilter, setJobsSeniorityFilter] = useState("");
   const [editingJob, setEditingJob] = useState<Job | null>(null);
   const [editForm, setEditForm] = useState<Partial<Job>>({});
+  const [expandedJobId, setExpandedJobId] = useState<number | null>(null);
 
   const { data: companies, isLoading: loadingCompanies } = useQuery<Company[]>({
     queryKey: ["/api/admin/scraper/companies"],
@@ -1608,6 +1679,14 @@ export default function AdminPage() {
                               <Button
                                 size="icon"
                                 variant="ghost"
+                                onClick={() => setExpandedJobId(expandedJobId === job.id ? null : job.id)}
+                                data-testid={`button-expand-job-${job.id}`}
+                              >
+                                {expandedJobId === job.id ? <ChevronUp /> : <ChevronDown />}
+                              </Button>
+                              <Button
+                                size="icon"
+                                variant="ghost"
                                 onClick={() => openEditDialog(job)}
                                 data-testid={`button-edit-job-${job.id}`}
                               >
@@ -1656,6 +1735,14 @@ export default function AdminPage() {
                             {job.seniorityLevel && (
                               <Badge variant="secondary" className="text-xs" data-testid={`badge-seniority-${job.id}`}>{job.seniorityLevel}</Badge>
                             )}
+                            {job.keySkills && job.keySkills.length > 0 && job.keySkills.slice(0, 3).map((skill, si) => (
+                              <Badge key={si} variant="outline" className="text-xs bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800">
+                                {skill}
+                              </Badge>
+                            ))}
+                            {job.keySkills && job.keySkills.length > 3 && (
+                              <span className="text-xs text-muted-foreground">+{job.keySkills.length - 3}</span>
+                            )}
                             <Badge
                               variant={job.isActive ? "default" : "destructive"}
                               className="text-xs"
@@ -1664,6 +1751,18 @@ export default function AdminPage() {
                               {job.isActive ? "Active" : "Inactive"}
                             </Badge>
                           </div>
+                          {expandedJobId === job.id && (
+                            <div className="pt-3 mt-3 border-t border-border/50">
+                              <div className="flex items-center gap-3 mb-2 text-[10px] text-muted-foreground">
+                                <span className="font-medium uppercase tracking-wider">Description Preview</span>
+                                <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-sm bg-amber-200 dark:bg-amber-800" />Exp</span>
+                                <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-sm bg-purple-200 dark:bg-purple-800" />Certs</span>
+                                <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-sm bg-blue-200 dark:bg-blue-800" />Edu</span>
+                                <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-sm bg-emerald-200 dark:bg-emerald-800" />Tools</span>
+                              </div>
+                              <AdminJobDescription description={job.description} />
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>

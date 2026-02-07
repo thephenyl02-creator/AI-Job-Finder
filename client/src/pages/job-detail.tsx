@@ -27,6 +27,16 @@ import {
   FileText,
   Bookmark,
   Mail,
+  ChevronDown,
+  ChevronUp,
+  Award,
+  GraduationCap,
+  Clock,
+  Target,
+  Users,
+  Gift,
+  Star,
+  Zap,
 } from "lucide-react";
 
 function extractContactEmails(text: string | null | undefined): string[] {
@@ -353,31 +363,330 @@ function linkifyEmails(content: string) {
   });
 }
 
-function DescriptionContent({ text, testId }: { text?: string | null; testId: string }) {
+const HIGHLIGHT_PATTERNS: { pattern: RegExp; type: 'experience' | 'certification' | 'skill' | 'education' | 'tool' }[] = [
+  { pattern: /\b(\d+)\+?\s*(?:[-–]?\s*\d+\s*)?(?:years?|yrs?)\b(?:\s+(?:of\s+)?(?:experience|exp))?/gi, type: 'experience' },
+  { pattern: /\b(?:JD|J\.D\.|Juris Doctor|Bar (?:Admission|License|Certified)|Licensed Attorney|Bar Exam|Esq\.|LL\.?M\.?|LL\.?B\.?|Certified|CIPP|CIPM|CIPT|PMP|CISSP|AWS Certified|Scrum Master|Six Sigma|CLE)\b/gi, type: 'certification' },
+  { pattern: /\b(?:Bachelor'?s?|Master'?s?|MBA|Ph\.?D\.?|Doctorate|B\.?S\.?|B\.?A\.?|M\.?S\.?|M\.?A\.?)\b(?:\s+(?:degree|in))?\b/gi, type: 'education' },
+  { pattern: /\b(?:Python|JavaScript|TypeScript|SQL|Java|C\+\+|React|Angular|Vue|Node\.?js|AWS|Azure|GCP|Docker|Kubernetes|Salesforce|Tableau|Power BI|Excel|Jira|Confluence|Slack|Notion|Figma|Sketch|REST(?:ful)?|GraphQL|API|Git|CI\/CD|Agile|NLP|Machine Learning|AI|Blockchain|Relativity|Everlaw|Reveal|Concordance|Clearwell|Brainspace|DISCO|NetDocuments|iManage|Clio|Aderant|Elite|ProLaw|Legal Tracker|Luminance|Kira|Eigen|Diligent|Thomson Reuters|LexisNexis|Westlaw)\b/gi, type: 'tool' },
+];
+
+function highlightKeywords(content: string | (string | JSX.Element)[]): (string | JSX.Element)[] {
+  if (typeof content !== 'string') {
+    if (Array.isArray(content)) return content;
+    return [content];
+  }
+  const text = content;
+  const matches: { start: number; end: number; type: string }[] = [];
+  for (const { pattern, type } of HIGHLIGHT_PATTERNS) {
+    const re = new RegExp(pattern.source, pattern.flags);
+    let m;
+    while ((m = re.exec(text)) !== null) {
+      const overlap = matches.some(
+        (ex) => m!.index < ex.end && m!.index + m![0].length > ex.start
+      );
+      if (!overlap) {
+        matches.push({ start: m.index, end: m.index + m[0].length, type });
+      }
+    }
+  }
+  if (matches.length === 0) return [text];
+  matches.sort((a, b) => a.start - b.start);
+  const parts: (string | JSX.Element)[] = [];
+  let last = 0;
+  matches.forEach((match, idx) => {
+    if (match.start > last) parts.push(text.slice(last, match.start));
+    const highlighted = text.slice(match.start, match.end);
+    const colorClass =
+      match.type === 'experience' ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300' :
+      match.type === 'certification' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300' :
+      match.type === 'education' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300' :
+      match.type === 'tool' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300' :
+      'bg-muted text-foreground';
+    parts.push(
+      <mark key={`hl-${idx}`} className={`${colorClass} px-1 py-0.5 rounded text-[0.92em] font-medium no-underline`}>
+        {highlighted}
+      </mark>
+    );
+    last = match.end;
+  });
+  if (last < text.length) parts.push(text.slice(last));
+  return parts;
+}
+
+function renderHighlightedContent(content: string) {
+  const emailified = linkifyEmails(content);
+  if (typeof emailified === 'string') {
+    return highlightKeywords(emailified);
+  }
+  if (Array.isArray(emailified)) {
+    return emailified.flatMap((part, i) => {
+      if (typeof part === 'string') return highlightKeywords(part);
+      return [part];
+    });
+  }
+  return [emailified];
+}
+
+interface DescriptionSection {
+  heading: string;
+  blocks: Block[];
+  icon: typeof Briefcase;
+  priority: number;
+}
+
+const SECTION_CLASSIFY: { pattern: RegExp; label: string; icon: typeof Briefcase; priority: number }[] = [
+  { pattern: /(?:responsibilities|what you(?:'ll| will) do|in this role|your role|day.to.day|daily|your impact|key duties)/i, label: 'Responsibilities', icon: Target, priority: 1 },
+  { pattern: /(?:qualifications|requirements|what (?:you(?:'ll| will) need|we(?:'re| are) looking for)|skills|experience|about you|who you are|must.have)/i, label: 'Qualifications', icon: GraduationCap, priority: 2 },
+  { pattern: /(?:preferred|nice.to.have|plus|bonus|desired|ideal)/i, label: 'Nice to Have', icon: Star, priority: 3 },
+  { pattern: /(?:benefits|perks|compensation|salary|pay|what we offer|why (?:join|work))/i, label: 'Benefits & Perks', icon: Gift, priority: 4 },
+  { pattern: /(?:about (?:the |this )?(?:company|team|us)|our (?:mission|culture|values|team)|who we are)/i, label: 'About the Company', icon: Users, priority: 5 },
+  { pattern: /(?:getting started|onboarding|how to apply|application|apply)/i, label: 'Getting Started', icon: Zap, priority: 6 },
+];
+
+function classifySection(heading: string): { label: string; icon: typeof Briefcase; priority: number } {
+  for (const { pattern, label, icon, priority } of SECTION_CLASSIFY) {
+    if (pattern.test(heading)) return { label, icon, priority };
+  }
+  return { label: heading.replace(/:$/, ''), icon: Briefcase, priority: 10 };
+}
+
+function groupBlocksIntoSections(blocks: Block[]): DescriptionSection[] {
+  const sections: DescriptionSection[] = [];
+  let currentSection: DescriptionSection | null = null;
+  let introBlocks: Block[] = [];
+  let sectionIdx = 0;
+
+  for (const block of blocks) {
+    if (block.type === 'heading') {
+      if (currentSection) {
+        sections.push(currentSection);
+      } else if (introBlocks.length > 0) {
+        sections.push({ heading: 'Overview', blocks: introBlocks, icon: FileText, priority: 0 });
+        introBlocks = [];
+      }
+      const classified = classifySection(block.content);
+      currentSection = {
+        heading: classified.label,
+        blocks: [],
+        icon: classified.icon,
+        priority: classified.priority,
+      };
+      sectionIdx++;
+    } else {
+      if (currentSection) {
+        currentSection.blocks.push(block);
+      } else {
+        introBlocks.push(block);
+      }
+    }
+  }
+  if (currentSection) sections.push(currentSection);
+  if (introBlocks.length > 0 && sections.length === 0) {
+    sections.push({ heading: 'Overview', blocks: introBlocks, icon: FileText, priority: 0 });
+  } else if (introBlocks.length > 0) {
+    sections.unshift({ heading: 'Overview', blocks: introBlocks, icon: FileText, priority: 0 });
+  }
+  return sections;
+}
+
+function extractKeyRequirements(text: string): { experience: string[]; certifications: string[]; tools: string[] } {
+  const experience: string[] = [];
+  const certifications: string[] = [];
+  const tools: string[] = [];
+  const seen = new Set<string>();
+
+  const expMatches = text.matchAll(/\b(\d+)\+?\s*(?:[-–]?\s*\d+\s*)?(?:years?|yrs?)\b(?:\s+(?:of\s+)?(?:[\w\s]+?)(?=\.|,|\n|$))?/gi);
+  for (const m of expMatches) {
+    const val = m[0].trim().replace(/[.,]$/, '');
+    if (val.length < 60 && !seen.has(val.toLowerCase())) {
+      experience.push(val);
+      seen.add(val.toLowerCase());
+    }
+    if (experience.length >= 3) break;
+  }
+
+  const certMatches = text.matchAll(/\b(JD|J\.D\.|Juris Doctor|Bar (?:Admission|License)|Licensed Attorney|LL\.?M\.?|LL\.?B\.?|CIPP|CIPM|CIPT|PMP|CISSP|Certified[\w\s]{3,30}?(?=\.|,|\n|$))\b/gi);
+  for (const m of certMatches) {
+    const val = m[0].trim().replace(/[.,]$/, '');
+    if (!seen.has(val.toLowerCase())) {
+      certifications.push(val);
+      seen.add(val.toLowerCase());
+    }
+    if (certifications.length >= 4) break;
+  }
+
+  const toolMatches = text.matchAll(/\b(Python|JavaScript|TypeScript|SQL|React|Node\.?js|AWS|Azure|Salesforce|Relativity|Everlaw|Reveal|DISCO|NetDocuments|iManage|Clio|Luminance|Kira|Diligent|LexisNexis|Westlaw|Tableau|Power BI|Docker|Kubernetes|GraphQL|Jira|Figma)\b/gi);
+  for (const m of toolMatches) {
+    const val = m[0].trim();
+    if (!seen.has(val.toLowerCase())) {
+      tools.push(val);
+      seen.add(val.toLowerCase());
+    }
+    if (tools.length >= 6) break;
+  }
+
+  return { experience, certifications, tools };
+}
+
+function CollapsibleSection({ section, defaultOpen }: { section: DescriptionSection; defaultOpen: boolean }) {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+  const Icon = section.icon;
+
+  return (
+    <div className="border-b border-border/50 last:border-b-0" data-testid={`section-${section.heading.toLowerCase().replace(/\s+/g, '-')}`}>
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center justify-between w-full py-3 px-1 text-left group"
+        data-testid={`button-toggle-${section.heading.toLowerCase().replace(/\s+/g, '-')}`}
+      >
+        <div className="flex items-center gap-2.5">
+          <div className="w-7 h-7 rounded-md bg-muted flex items-center justify-center shrink-0">
+            <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+          </div>
+          <span className="font-medium text-sm text-foreground">{section.heading}</span>
+          <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+            {section.blocks.length}
+          </Badge>
+        </div>
+        {isOpen ? (
+          <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" />
+        ) : (
+          <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
+        )}
+      </button>
+      {isOpen && (
+        <div className="pb-4 px-1 space-y-1.5 text-sm leading-relaxed">
+          {section.blocks.map((block, i) => {
+            if (block.type === 'bullet') {
+              return (
+                <div key={i} className="flex gap-2.5 pl-2 py-0.5">
+                  <span className="text-muted-foreground/60 shrink-0 mt-1.5 w-1.5 h-1.5 rounded-full bg-foreground/25" />
+                  <span className="text-foreground/90">{renderHighlightedContent(block.content)}</span>
+                </div>
+              );
+            }
+            return (
+              <p key={i} className="text-foreground/90 pl-2">
+                {renderHighlightedContent(block.content)}
+              </p>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DescriptionContent({ text, testId, compact }: { text?: string | null; testId: string; compact?: boolean }) {
   if (!text) return null;
 
   const blocks = parseTextIntoBlocks(cleanDescription(text));
+  const sections = groupBlocksIntoSections(blocks);
+  const keyReqs = extractKeyRequirements(text);
+  const hasKeyReqs = keyReqs.experience.length > 0 || keyReqs.certifications.length > 0 || keyReqs.tools.length > 0;
+
+  if (compact) {
+    return (
+      <div className="max-w-none text-foreground leading-relaxed space-y-2" data-testid={testId}>
+        {blocks.slice(0, 15).map((block, i) => {
+          if (block.type === 'heading') {
+            return (
+              <p key={i} className="font-medium text-foreground text-sm pt-2 first:pt-0">
+                {renderHighlightedContent(block.content)}
+              </p>
+            );
+          }
+          if (block.type === 'bullet') {
+            return (
+              <div key={i} className="flex gap-2 pl-1 py-0.5 text-sm">
+                <span className="text-muted-foreground/60 shrink-0 mt-1.5 w-1.5 h-1.5 rounded-full bg-foreground/25" />
+                <span className="text-foreground/90">{renderHighlightedContent(block.content)}</span>
+              </div>
+            );
+          }
+          return <p key={i} className="text-sm text-foreground/90">{renderHighlightedContent(block.content)}</p>;
+        })}
+        {blocks.length > 15 && (
+          <p className="text-xs text-muted-foreground italic">...and {blocks.length - 15} more items</p>
+        )}
+      </div>
+    );
+  }
+
+  if (sections.length <= 1) {
+    return (
+      <div className="max-w-none text-foreground leading-relaxed space-y-2" data-testid={testId}>
+        {hasKeyReqs && (
+          <div className="flex flex-wrap gap-2 pb-3 mb-3 border-b border-border/50">
+            {keyReqs.experience.map((e, i) => (
+              <Badge key={`exp-${i}`} variant="secondary" className="bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800 text-xs">
+                <Clock className="h-3 w-3 mr-1" />{e}
+              </Badge>
+            ))}
+            {keyReqs.certifications.map((c, i) => (
+              <Badge key={`cert-${i}`} variant="secondary" className="bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 border-purple-200 dark:border-purple-800 text-xs">
+                <Award className="h-3 w-3 mr-1" />{c}
+              </Badge>
+            ))}
+            {keyReqs.tools.map((t, i) => (
+              <Badge key={`tool-${i}`} variant="secondary" className="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800 text-xs">
+                {t}
+              </Badge>
+            ))}
+          </div>
+        )}
+        {blocks.map((block, i) => {
+          if (block.type === 'heading') {
+            return (
+              <p key={i} className="font-medium text-foreground pt-3 first:pt-0">
+                {renderHighlightedContent(block.content)}
+              </p>
+            );
+          }
+          if (block.type === 'bullet') {
+            return (
+              <div key={i} className="flex gap-2.5 pl-1 py-0.5">
+                <span className="text-muted-foreground/60 shrink-0 mt-1.5 w-1.5 h-1.5 rounded-full bg-foreground/25" />
+                <span className="text-foreground/90">{renderHighlightedContent(block.content)}</span>
+              </div>
+            );
+          }
+          return <p key={i} className="text-foreground/90">{renderHighlightedContent(block.content)}</p>;
+        })}
+      </div>
+    );
+  }
 
   return (
-    <div className="max-w-none text-foreground leading-relaxed space-y-2" data-testid={testId}>
-      {blocks.map((block, i) => {
-        if (block.type === 'heading') {
-          return (
-            <p key={i} className="font-medium text-foreground pt-3 first:pt-0">
-              {linkifyEmails(block.content)}
-            </p>
-          );
-        }
-        if (block.type === 'bullet') {
-          return (
-            <div key={i} className="flex gap-2 pl-1 py-0.5">
-              <span className="text-muted-foreground shrink-0">&#8226;</span>
-              <span>{linkifyEmails(block.content)}</span>
-            </div>
-          );
-        }
-        return <p key={i}>{linkifyEmails(block.content)}</p>;
-      })}
+    <div className="max-w-none" data-testid={testId}>
+      {hasKeyReqs && (
+        <div className="flex flex-wrap gap-2 pb-3 mb-1 border-b border-border/50" data-testid="key-requirements-bar">
+          {keyReqs.experience.map((e, i) => (
+            <Badge key={`exp-${i}`} variant="secondary" className="bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800 text-xs">
+              <Clock className="h-3 w-3 mr-1" />{e}
+            </Badge>
+          ))}
+          {keyReqs.certifications.map((c, i) => (
+            <Badge key={`cert-${i}`} variant="secondary" className="bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 border-purple-200 dark:border-purple-800 text-xs">
+              <Award className="h-3 w-3 mr-1" />{c}
+            </Badge>
+          ))}
+          {keyReqs.tools.map((t, i) => (
+            <Badge key={`tool-${i}`} variant="secondary" className="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800 text-xs">
+              {t}
+            </Badge>
+          ))}
+        </div>
+      )}
+      <div>
+        {sections.map((section, i) => (
+          <CollapsibleSection
+            key={`${section.heading}-${i}`}
+            section={section}
+            defaultOpen={i < 2}
+          />
+        ))}
+      </div>
     </div>
   );
 }
@@ -833,7 +1142,15 @@ export default function JobDetail() {
 
             <Card>
               <CardContent className="pt-5 pb-5">
-                <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">Full Description</h2>
+                <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+                  <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Full Description</h2>
+                  <div className="flex flex-wrap items-center gap-3 text-[10px] text-muted-foreground">
+                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-amber-200 dark:bg-amber-800" />Experience</span>
+                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-purple-200 dark:bg-purple-800" />Certifications</span>
+                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-blue-200 dark:bg-blue-800" />Education</span>
+                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-emerald-200 dark:bg-emerald-800" />Tools</span>
+                  </div>
+                </div>
                 <DescriptionContent text={job.description} testId="text-job-description" />
               </CardContent>
             </Card>
