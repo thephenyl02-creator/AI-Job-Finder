@@ -473,6 +473,35 @@ export async function runScheduledScrape(triggeredBy: string = 'scheduler'): Pro
       }
     }
     
+    // === PHASE 3.5: Post-scrape relevance guardrail ===
+    logInfo('PHASE', '--- Phase 3.5: Relevance guardrail ---');
+    let guardrailDeactivated = 0;
+    try {
+      const companyOrgTypes = new Map<string, OrgType>();
+      for (const s of [...GREENHOUSE_SOURCES, ...LEVER_SOURCES]) {
+        companyOrgTypes.set(s.name, s.type);
+      }
+
+      const activeJobs = await storage.getActiveJobs();
+      for (const job of activeJobs) {
+        const orgType = companyOrgTypes.get(job.company);
+        if (!orgType) continue;
+        if (!isRelevantRole(job.title, job.description || '', orgType)) {
+          await storage.updateJob(job.id, { isActive: false });
+          guardrailDeactivated++;
+        }
+      }
+
+      if (guardrailDeactivated > 0) {
+        logWarn('GUARDRAIL', `Deactivated ${guardrailDeactivated} jobs that no longer pass relevance filter`);
+      } else {
+        logInfo('GUARDRAIL', 'All active jobs pass relevance filter');
+      }
+    } catch (err: any) {
+      logError('GUARDRAIL', 'Relevance guardrail failed', { error: err.message });
+      errors.push(`Relevance guardrail: ${err.message}`);
+    }
+
     // === PHASE 4: AI Categorization of uncategorized jobs ===
     logInfo('PHASE', '--- Phase 4: AI Categorization ---');
     
@@ -707,6 +736,35 @@ export async function enrichShortDescriptions(): Promise<number> {
 
 let schedulerInterval: NodeJS.Timeout | null = null;
 
+async function runStartupGuardrail(): Promise<void> {
+  logInfo('GUARDRAIL', 'Running startup relevance cleanup...');
+  try {
+    const companyOrgTypes = new Map<string, OrgType>();
+    for (const s of [...GREENHOUSE_SOURCES, ...LEVER_SOURCES]) {
+      companyOrgTypes.set(s.name, s.type);
+    }
+
+    const activeJobs = await storage.getActiveJobs();
+    let deactivated = 0;
+    for (const job of activeJobs) {
+      const orgType = companyOrgTypes.get(job.company);
+      if (!orgType) continue;
+      if (!isRelevantRole(job.title, job.description || '', orgType)) {
+        await storage.updateJob(job.id, { isActive: false });
+        deactivated++;
+      }
+    }
+
+    if (deactivated > 0) {
+      logWarn('GUARDRAIL', `Startup cleanup: deactivated ${deactivated} irrelevant jobs`);
+    } else {
+      logInfo('GUARDRAIL', 'Startup cleanup: all jobs pass relevance filter');
+    }
+  } catch (err: any) {
+    logError('GUARDRAIL', 'Startup cleanup failed', { error: err.message });
+  }
+}
+
 export function startScheduler(): void {
   if (schedulerInterval) {
     logWarn('SCHEDULER', 'Scheduler already running');
@@ -716,6 +774,8 @@ export function startScheduler(): void {
   logInfo('SCHEDULER', `Scheduler started - will run every 24 hours`);
 
   setTimeout(async () => {
+    await runStartupGuardrail();
+
     logInfo('SCHEDULER', 'Running initial scrape on startup...');
     try {
       await runScheduledScrape('startup');

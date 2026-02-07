@@ -44,8 +44,7 @@ export function stripHtml(html: string): string {
 }
 
 export function isRelevantRole(title: string, desc: string = '', orgType?: string): boolean {
-  const titleLower = title.toLowerCase();
-  const text = `${title} ${desc}`.toLowerCase();
+  const titleLower = title.toLowerCase().trim();
 
   if (orgType === 'lawfirm' || orgType === 'legalaid') return true;
 
@@ -54,41 +53,32 @@ export function isRelevantRole(title: string, desc: string = '', orgType?: strin
   const exclude = ['janitor', 'maintenance', 'facilities', 'cafeteria', 'cook', 'custodian'];
   if (exclude.some(e => titleLower.includes(e))) return false;
 
-  const legalKeywords = [
-    'attorney', 'lawyer', 'counsel', 'paralegal', 'legal assistant',
-    'litigation', 'associate attorney', 'legal operations', 'legal ops',
-    'contract manager', 'contract analyst', 'compliance', 'regulatory',
-    'corporate counsel', 'in-house counsel', 'general counsel',
-    'legal analyst', 'legal specialist', 'legal advisor', 'legal consultant',
-    'jd required', 'jd preferred', 'law clerk', 'legal intern',
-    'legal engineer', 'legal tech', 'legaltech', 'ediscovery', 'e-discovery',
-    'legal ai', 'legal data', 'legal product', 'legal design',
-    'trust & safety', 'trust and safety', 'policy counsel',
-    'privacy counsel', 'ip counsel', 'patent',
+  const legalTitleKeywords = [
+    'attorney', 'lawyer', 'counsel', 'paralegal', 'legal',
+    'litigation', 'compliance', 'regulatory', 'patent',
+    'contract manager', 'contract analyst', 'contracts manager',
+    'law clerk', 'ediscovery', 'e-discovery',
+    'trust & safety', 'trust and safety',
+    'privacy', 'policy',
   ];
 
-  if (legalKeywords.some(k => text.includes(k))) return true;
-
-  const titleHasLegal = titleLower.includes('legal') || titleLower.includes('law')
-    || titleLower.includes('compliance') || titleLower.includes('counsel')
-    || titleLower.includes('privacy') || titleLower.includes('regulatory')
-    || titleLower.includes('contract') || titleLower.includes('policy');
-
-  if (titleHasLegal) return true;
+  if (legalTitleKeywords.some(k => titleLower.includes(k))) return true;
 
   if (orgType === 'legaltech') {
     const relevantTechRoles = [
       'engineer', 'developer', 'product manager', 'product designer',
       'data scientist', 'data analyst', 'data engineer',
-      'machine learning', 'ml engineer', 'ai researcher', 'nlp',
+      'machine learning', 'ml engineer', 'ai researcher',
       'software', 'solutions engineer', 'solutions architect',
-      'implementation', 'customer success', 'sales engineer',
-      'technical account', 'devops', 'sre', 'platform engineer',
+      'customer success', 'sales engineer',
+      'technical account', 'devops', 'platform engineer',
       'qa engineer', 'quality engineer', 'ux researcher', 'ux designer',
       'frontend', 'backend', 'full stack', 'fullstack',
-      'cto', 'vp engineering', 'head of product', 'head of engineering',
+      'vp engineering', 'head of engineering',
     ];
-    return relevantTechRoles.some(k => titleLower.includes(k));
+    const wordBoundaryRoles = ['cto', 'sre', 'nlp'];
+    return relevantTechRoles.some(k => titleLower.includes(k))
+      || wordBoundaryRoles.some(k => new RegExp(`\\b${k}\\b`).test(titleLower));
   }
 
   return false;
