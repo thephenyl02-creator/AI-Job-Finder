@@ -99,8 +99,10 @@ export default function AdminPage() {
   const [lastResult, setLastResult] = useState<ScrapeResult | null>(null);
   const [customUrl, setCustomUrl] = useState("");
   const [pasteText, setPasteText] = useState("");
-  const [addJobMode, setAddJobMode] = useState<"smart" | "file">("smart");
+  const [addJobMode, setAddJobMode] = useState<"quick" | "smart" | "file">("quick");
   const [smartInput, setSmartInput] = useState("");
+  const [quickAddUrls, setQuickAddUrls] = useState("");
+  const [quickAddResults, setQuickAddResults] = useState<Array<{ url: string; status: 'added' | 'updated' | 'failed' | 'skipped'; title?: string; company?: string; error?: string }>>([]);
   const [previewJob, setPreviewJob] = useState<Record<string, any> | null>(null);
   const [previewEdits, setPreviewEdits] = useState<Record<string, any>>({});
   const [addJobError, setAddJobError] = useState<string | null>(null);
@@ -399,6 +401,32 @@ export default function AdminPage() {
     onError: (error: Error) => {
       setAddJobError(error.message);
       toast({ title: "Extraction failed", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const quickAddMutation = useMutation({
+    mutationFn: async (urlText: string) => {
+      const urls = urlText.split(/[\n,]+/).map(u => u.trim()).filter(u => u.length > 5);
+      const res = await apiRequest("POST", "/api/admin/jobs/quick-add", { urls });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      if (data.success) {
+        setQuickAddResults(data.results || []);
+        setQuickAddUrls("");
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/jobs"] });
+        const { added, updated, failed } = data.summary;
+        toast({
+          title: `${added} added, ${updated} updated${failed > 0 ? `, ${failed} failed` : ''}`,
+          description: `Processed ${data.summary.total} URL${data.summary.total > 1 ? 's' : ''}`,
+        });
+      } else {
+        setAddJobError(data.error || "Failed to process URLs");
+      }
+    },
+    onError: (error: Error) => {
+      setAddJobError(error.message);
+      toast({ title: "Quick add failed", description: error.message, variant: "destructive" });
     },
   });
 
@@ -874,12 +902,21 @@ export default function AdminPage() {
                     <div className="flex gap-1 p-1 bg-muted rounded-md w-fit">
                       <Button
                         size="sm"
+                        variant={addJobMode === "quick" ? "default" : "ghost"}
+                        onClick={() => { setAddJobMode("quick"); setAddJobError(null); setQuickAddResults([]); }}
+                        data-testid="button-mode-quick"
+                      >
+                        <Zap className="mr-1.5 h-3.5 w-3.5" />
+                        Quick Add
+                      </Button>
+                      <Button
+                        size="sm"
                         variant={addJobMode === "smart" ? "default" : "ghost"}
                         onClick={() => { setAddJobMode("smart"); setAddJobError(null); }}
                         data-testid="button-mode-smart"
                       >
                         <Sparkles className="mr-1.5 h-3.5 w-3.5" />
-                        Smart Input
+                        Review First
                       </Button>
                       <Button
                         size="sm"
@@ -891,6 +928,72 @@ export default function AdminPage() {
                         File
                       </Button>
                     </div>
+
+                    {addJobMode === "quick" && (
+                      <div className="space-y-3">
+                        <Textarea
+                          placeholder={"Paste one or more job URLs (one per line):\n\nhttps://boards.greenhouse.io/company/jobs/123\nhttps://jobs.lever.co/company/abc-def\nhttps://company.bamboohr.com/careers/456"}
+                          value={quickAddUrls}
+                          onChange={(e) => setQuickAddUrls(e.target.value)}
+                          rows={4}
+                          data-testid="input-quick-add"
+                        />
+                        <div className="flex items-center justify-between flex-wrap gap-2">
+                          <p className="text-xs text-muted-foreground">
+                            Paste URLs and they'll be scraped, categorized, and saved automatically. Up to 20 at a time.
+                          </p>
+                          <Button
+                            onClick={() => {
+                              if (quickAddUrls.trim()) {
+                                setAddJobError(null);
+                                setQuickAddResults([]);
+                                quickAddMutation.mutate(quickAddUrls.trim());
+                              }
+                            }}
+                            disabled={quickAddMutation.isPending || quickAddUrls.trim().length < 10}
+                            data-testid="button-quick-add"
+                          >
+                            {quickAddMutation.isPending ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Processing...
+                              </>
+                            ) : (
+                              <>
+                                <Zap className="mr-2 h-4 w-4" />
+                                Add Jobs
+                              </>
+                            )}
+                          </Button>
+                        </div>
+
+                        {quickAddResults.length > 0 && (
+                          <div className="space-y-1.5" data-testid="quick-add-results">
+                            {quickAddResults.map((r, idx) => (
+                              <div key={idx} className="flex items-start gap-2 p-2.5 border rounded-md text-sm" data-testid={`quick-add-result-${idx}`}>
+                                {r.status === 'added' && <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 shrink-0" />}
+                                {r.status === 'updated' && <RefreshCw className="h-4 w-4 text-blue-500 mt-0.5 shrink-0" />}
+                                {r.status === 'failed' && <XCircle className="h-4 w-4 text-destructive mt-0.5 shrink-0" />}
+                                {r.status === 'skipped' && <XCircle className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />}
+                                <div className="min-w-0 flex-1">
+                                  {r.title ? (
+                                    <p className="font-medium truncate">{r.title} at {r.company}</p>
+                                  ) : (
+                                    <p className="font-medium truncate text-muted-foreground break-all">{r.url}</p>
+                                  )}
+                                  <p className="text-xs text-muted-foreground">
+                                    {r.status === 'added' && 'Added successfully'}
+                                    {r.status === 'updated' && 'Updated existing job'}
+                                    {r.status === 'failed' && (r.error || 'Failed to extract')}
+                                    {r.status === 'skipped' && (r.error || 'Skipped')}
+                                  </p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     {addJobMode === "smart" && (
                       <div className="space-y-2">
@@ -923,8 +1026,8 @@ export default function AdminPage() {
                               </>
                             ) : (
                               <>
-                                <Zap className="mr-2 h-4 w-4" />
-                                Extract
+                                <Sparkles className="mr-2 h-4 w-4" />
+                                Extract & Review
                               </>
                             )}
                           </Button>

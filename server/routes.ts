@@ -1940,6 +1940,109 @@ Be specific and actionable. Focus on legal tech industry keywords and ATS best p
     }
   });
 
+  app.post("/api/admin/jobs/quick-add", isAuthenticated, async (req, res) => {
+    if (!(await isAdminCheck(req))) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    try {
+      const { urls } = req.body;
+      if (!urls || !Array.isArray(urls) || urls.length === 0) {
+        return res.status(400).json({ error: "Provide an array of URLs" });
+      }
+
+      if (urls.length > 20) {
+        return res.status(400).json({ error: "Maximum 20 URLs at a time" });
+      }
+
+      const validUrls: string[] = [];
+      const results: Array<{ url: string; status: 'added' | 'updated' | 'failed' | 'skipped'; title?: string; company?: string; error?: string }> = [];
+      for (const raw of urls) {
+        const u = String(raw).trim();
+        if (!u) continue;
+        try {
+          const parsed = new URL(u);
+          if (['http:', 'https:'].includes(parsed.protocol)) {
+            validUrls.push(u);
+          } else {
+            results.push({ url: u, status: 'skipped', error: 'Not a valid HTTP/HTTPS URL' });
+          }
+        } catch {
+          results.push({ url: u, status: 'skipped', error: 'Invalid URL format' });
+        }
+      }
+
+      if (validUrls.length === 0) {
+        return res.status(400).json({ error: "No valid URLs found", results });
+      }
+
+      for (const url of validUrls) {
+        try {
+          console.log(`[Quick Add] Processing: ${url}`);
+          const job = await scrapeSingleJobUrl(url);
+          if (!job) {
+            results.push({ url, status: 'failed', error: 'Could not extract job details' });
+            continue;
+          }
+
+          const companySlug = (job.company || '').toLowerCase().replace(/[^a-z0-9]/g, "");
+          const insertData: any = {
+            title: job.title?.substring(0, 255),
+            company: job.company?.substring(0, 255),
+            companyLogo: companySlug ? `https://logo.clearbit.com/${companySlug}.com` : null,
+            location: job.location || "Not specified",
+            isRemote: Boolean(job.isRemote),
+            locationType: job.locationType || (job.isRemote ? 'remote' : 'onsite'),
+            salaryMin: job.salaryMin ? Number(job.salaryMin) : null,
+            salaryMax: job.salaryMax ? Number(job.salaryMax) : null,
+            experienceMin: job.experienceMin ? Number(job.experienceMin) : null,
+            experienceMax: job.experienceMax ? Number(job.experienceMax) : null,
+            roleType: job.roleType || null,
+            description: job.description || `${job.title} at ${job.company}`,
+            requirements: null,
+            applyUrl: job.applyUrl || url,
+            isActive: true,
+            externalId: job.externalId || `quick_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
+            source: job.source || "quick-add",
+            roleCategory: job.roleCategory || null,
+            roleSubcategory: job.roleSubcategory || null,
+            seniorityLevel: job.seniorityLevel || null,
+            keySkills: job.keySkills || null,
+            aiSummary: job.aiSummary || null,
+            matchKeywords: job.matchKeywords || null,
+          };
+
+          const { inserted, updated, newJobs } = await storage.bulkUpsertJobs([insertData]);
+          if (newJobs.length > 0) {
+            matchNewJobsAgainstAlerts(newJobs).catch(err => console.error("Alert matching error:", err));
+          }
+
+          results.push({
+            url,
+            status: inserted > 0 ? 'added' : 'updated',
+            title: job.title || undefined,
+            company: job.company || undefined,
+          });
+        } catch (err: any) {
+          console.error(`[Quick Add] Error processing ${url}:`, err.message);
+          results.push({ url, status: 'failed', error: err.message || 'Unknown error' });
+        }
+      }
+
+      const added = results.filter(r => r.status === 'added').length;
+      const updated = results.filter(r => r.status === 'updated').length;
+      const failed = results.filter(r => r.status === 'failed').length;
+
+      res.json({
+        success: true,
+        summary: { total: validUrls.length, added, updated, failed },
+        results,
+      });
+    } catch (error: any) {
+      console.error("[Quick Add] Error:", error);
+      res.status(500).json({ error: error.message || "Failed to process URLs" });
+    }
+  });
+
   app.post("/api/admin/scraper/upload", isAuthenticated, adminUpload.array("files", 10), async (req, res) => {
     if (!(await isAdminCheck(req))) {
       return res.status(403).json({ error: "Admin access required" });
