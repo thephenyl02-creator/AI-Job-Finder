@@ -309,6 +309,8 @@ function stripBoilerplate(text: string): string {
   cleaned = cleaned.replace(/^(?:The Opportunity|The Role|Overview|Position Summary|Job Summary|Role Summary|Position Overview)\s*:?\s*\n*/i, '');
 
   const trailingPatterns = [
+    /(?<=\.)\s*\S[\w\s&.'()-]{0,40}\s+is an?\s+(?:equal opportunity|affirmative action)\s+employer[\s\S]*$/i,
+    /(?<=\.)\s*\S[\w\s&.'()-]{0,40}\s+provides equal employment[\s\S]*$/i,
     /\n*(?:Equal\s+(?:Opportunity|Employment)|EEO|EOE)\s*(?:Statement|Employer|Policy)?[^\n]*(?:\n[^\n]*){0,10}$/i,
     /\n*(?:We are (?:an?|committed to being an?) (?:equal opportunity|EEO) employer)[^\n]*(?:\n[^\n]*){0,5}$/i,
     /\n*(?:Disclaimer|Notice|Legal Notice):?\s*(?:This job (?:posting|description|ad))[^\n]*(?:\n[^\n]*){0,5}$/i,
