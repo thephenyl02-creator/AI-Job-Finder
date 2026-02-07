@@ -2,7 +2,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { MapPin, DollarSign, Clock, ExternalLink, Sparkles, Building2, Briefcase, Brain, Scale, Zap, Bookmark } from "lucide-react";
+import { MapPin, DollarSign, Clock, ExternalLink, Sparkles, Building2, Briefcase, Brain, Scale, Zap, Bookmark, Wifi, Home, Laptop } from "lucide-react";
 import type { JobWithScore } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useMutation } from "@tanstack/react-query";
@@ -174,9 +174,18 @@ export function JobCard({ job, showMatchScore = false, hasResume = false, isSave
                 {job.location}
               </Badge>
             )}
-            {job.isRemote && (
-              <Badge variant="secondary" className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800">
-                Remote
+            {(job.locationType || job.isRemote) && (
+              <Badge variant="secondary" className={`gap-1 ${
+                (job.locationType === 'remote' || (!job.locationType && job.isRemote))
+                  ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800'
+                  : job.locationType === 'hybrid'
+                  ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800'
+                  : 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 border-orange-200 dark:border-orange-800'
+              }`} data-testid={`badge-work-setting-${job.id}`}>
+                {(job.locationType === 'remote' || (!job.locationType && job.isRemote)) && <Wifi className="h-3 w-3" />}
+                {job.locationType === 'hybrid' && <Laptop className="h-3 w-3" />}
+                {job.locationType === 'onsite' && <Building2 className="h-3 w-3" />}
+                {job.locationType === 'hybrid' ? 'Hybrid' : job.locationType === 'onsite' ? 'On-site' : 'Remote'}
               </Badge>
             )}
           </div>

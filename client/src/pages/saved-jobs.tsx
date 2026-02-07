@@ -202,8 +202,16 @@ export default function SavedJobs() {
                               {sj.job.location}
                             </span>
                           )}
-                          {sj.job.isRemote && (
-                            <Badge variant="secondary" className="text-[10px]">Remote</Badge>
+                          {(sj.job.locationType || sj.job.isRemote) && (
+                            <Badge variant="secondary" className={`text-[10px] ${
+                              (sj.job.locationType === 'remote' || (!sj.job.locationType && sj.job.isRemote))
+                                ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                                : sj.job.locationType === 'hybrid'
+                                ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
+                                : 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400'
+                            }`}>
+                              {sj.job.locationType === 'hybrid' ? 'Hybrid' : sj.job.locationType === 'onsite' ? 'On-site' : 'Remote'}
+                            </Badge>
                           )}
                           {salary && (
                             <span className="flex items-center gap-1">

@@ -26,10 +26,60 @@ function delay(ms: number): Promise<void> {
 }
 
 function detectLocationType(text: string): 'remote' | 'hybrid' | 'onsite' | undefined {
-  const lower = text.toLowerCase();
-  if (/\bhybrid\b/.test(lower)) return 'hybrid';
-  if (/\bremote\b/.test(lower) && !/\bnot remote\b|\bon[- ]?site only\b/.test(lower)) return 'remote';
-  if (/\bon[- ]?site\b|\bin[- ]?office\b|\bin[- ]?person\b/.test(lower)) return 'onsite';
+  const lower = text.toLowerCase().replace(/\s+/g, ' ');
+
+  const negativeRemote = /\bnot\s+remote\b|\bno\s+remote\b|\bnon[- ]?remote\b/.test(lower);
+  const onsiteOnly = /\bon[- ]?site\s+only\b|\bin[- ]?office\s+only\b|\bin[- ]?person\s+only\b|\boffice[- ]?based\s+only\b|\bno\s+remote\s+option\b|\bfully\s+on[- ]?site\b|\b100%?\s+on[- ]?site\b|\b100%?\s+in[- ]?office\b/.test(lower);
+
+  const hybridPatterns = [
+    /\bhybrid\b/,
+    /\bflex(?:ible)?\s+work(?:place|ing|space)?\b/,
+    /\bremote\s*(?:\/|\+|&|and)\s*(?:on[- ]?site|office|in[- ]?person)\b/,
+    /\b(?:on[- ]?site|office|in[- ]?person)\s*(?:\/|\+|&|and)\s*remote\b/,
+    /\b(?:2|3|4)\s*(?:days?\s+)?(?:in[- ]?)?office\b/,
+    /\bpartially?\s+remote\b/,
+    /\bsplit\s+(?:between|time)\b.*(?:remote|office)/,
+    /\bwork\s+from\s+(?:home|anywhere)\s+.*(?:days?\s+(?:in|at)\s+(?:the\s+)?office)/,
+    /\b(?:some|partial)\s+(?:remote|in[- ]?office)\b/,
+    /\bremote[- ]?first\b/,
+    /\boffice[- ]?optional\b/,
+  ];
+
+  const remotePatterns = [
+    /\bremote\b/,
+    /\bwork\s+from\s+(?:home|anywhere)\b/,
+    /\bwfh\b/,
+    /\btelecommute\b/,
+    /\btele[- ]?work(?:ing)?\b/,
+    /\bfully\s+remote\b/,
+    /\b100%?\s+remote\b/,
+    /\bdistributed\s+(?:team|company|workforce)\b/,
+    /\bvirtual\s+(?:position|role|opportunity)\b/,
+    /\banywhere\s+in\s+(?:the\s+)?(?:us|u\.s\.|united\s+states|world|globe|country)\b/,
+    /\blocation[: ]+?\s*(?:fully\s+)?remote\b/,
+    /\bremote\s*[-–]\s*(?:us|u\.s\.|united\s+states|worldwide|global|anywhere)\b/,
+  ];
+
+  const onsitePatterns = [
+    /\bon[- ]?site\b/,
+    /\bin[- ]?office\b/,
+    /\bin[- ]?person\b/,
+    /\boffice[- ]?based\b/,
+    /\bphysical\s+(?:office|location|presence)\b/,
+    /\bmust\s+(?:be\s+)?(?:located|based|work)\s+(?:in|at|from)\s+(?:our|the)?\s*(?:office|hq|headquarters)/,
+    /\bon\s+premises?\b/,
+    /\b(?:5|five)\s+days?\s+(?:a\s+week\s+)?(?:in[- ]?)?(?:office|on[- ]?site)\b/,
+    /\brequires?\s+(?:daily\s+)?(?:office|on[- ]?site|in[- ]?person)\s+(?:presence|attendance)\b/,
+    /\brelocate\s+to\b/,
+    /\bcommute\s+to\s+(?:our|the)\s+office\b/,
+  ];
+
+  if (hybridPatterns.some(p => p.test(lower))) return 'hybrid';
+
+  if (!negativeRemote && !onsiteOnly && remotePatterns.some(p => p.test(lower))) return 'remote';
+
+  if (onsiteOnly || onsitePatterns.some(p => p.test(lower))) return 'onsite';
+
   return undefined;
 }
 

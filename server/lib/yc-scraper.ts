@@ -56,17 +56,68 @@ function detectLocationTypeYC(locationName: string, description: string, metadat
   if (metadata) {
     for (const meta of metadata) {
       const name = (meta.name || '').toLowerCase();
-      if (name.includes('location type') || name.includes('workplace') || name.includes('work arrangement')) {
+      if (name.includes('location type') || name.includes('workplace') || name.includes('work arrangement') || name.includes('work model') || name.includes('work setting')) {
         const val = (typeof meta.value === 'string' ? meta.value : '').toLowerCase();
-        if (val.includes('hybrid')) return 'hybrid';
-        if (val.includes('remote')) return 'remote';
-        if (val.includes('on-site') || val.includes('onsite')) return 'onsite';
+        if (val.includes('hybrid') || val.includes('flexible')) return 'hybrid';
+        if (val.includes('remote') || val.includes('distributed') || val.includes('virtual')) return 'remote';
+        if (val.includes('on-site') || val.includes('onsite') || val.includes('in-office') || val.includes('in office') || val.includes('in-person')) return 'onsite';
       }
     }
   }
-  const combined = (locationName + ' ' + description).toLowerCase();
-  if (/\bhybrid\b/.test(combined)) return 'hybrid';
-  if (/\bremote\b/.test(combined) && !/\bnot remote\b/.test(combined)) return 'remote';
+  const combined = (locationName + ' ' + description).toLowerCase().replace(/\s+/g, ' ');
+
+  const negativeRemote = /\bnot\s+remote\b|\bno\s+remote\b|\bnon[- ]?remote\b/.test(combined);
+  const onsiteOnly = /\bon[- ]?site\s+only\b|\bin[- ]?office\s+only\b|\bin[- ]?person\s+only\b|\boffice[- ]?based\s+only\b|\bno\s+remote\s+option\b|\bfully\s+on[- ]?site\b|\b100%?\s+on[- ]?site\b|\b100%?\s+in[- ]?office\b/.test(combined);
+
+  const hybridPatterns = [
+    /\bhybrid\b/,
+    /\bflex(?:ible)?\s+work(?:place|ing|space)?\b/,
+    /\bremote\s*(?:\/|\+|&|and)\s*(?:on[- ]?site|office|in[- ]?person)\b/,
+    /\b(?:on[- ]?site|office|in[- ]?person)\s*(?:\/|\+|&|and)\s*remote\b/,
+    /\b(?:2|3|4)\s*(?:days?\s+)?(?:in[- ]?)?office\b/,
+    /\bpartially?\s+remote\b/,
+    /\bsplit\s+(?:between|time)\b.*(?:remote|office)/,
+    /\bwork\s+from\s+(?:home|anywhere)\s+.*(?:days?\s+(?:in|at)\s+(?:the\s+)?office)/,
+    /\b(?:some|partial)\s+(?:remote|in[- ]?office)\b/,
+    /\bremote[- ]?first\b/,
+    /\boffice[- ]?optional\b/,
+  ];
+
+  const remotePatterns = [
+    /\bremote\b/,
+    /\bwork\s+from\s+(?:home|anywhere)\b/,
+    /\bwfh\b/,
+    /\btelecommute\b/,
+    /\btele[- ]?work(?:ing)?\b/,
+    /\bfully\s+remote\b/,
+    /\b100%?\s+remote\b/,
+    /\bdistributed\s+(?:team|company|workforce)\b/,
+    /\bvirtual\s+(?:position|role|opportunity)\b/,
+    /\banywhere\s+in\s+(?:the\s+)?(?:us|u\.s\.|united\s+states|world|globe|country)\b/,
+    /\blocation[: ]+?\s*(?:fully\s+)?remote\b/,
+    /\bremote\s*[-–]\s*(?:us|u\.s\.|united\s+states|worldwide|global|anywhere)\b/,
+  ];
+
+  const onsitePatterns = [
+    /\bon[- ]?site\b/,
+    /\bin[- ]?office\b/,
+    /\bin[- ]?person\b/,
+    /\boffice[- ]?based\b/,
+    /\bphysical\s+(?:office|location|presence)\b/,
+    /\bmust\s+(?:be\s+)?(?:located|based|work)\s+(?:in|at|from)\s+(?:our|the)?\s*(?:office|hq|headquarters)/,
+    /\bon\s+premises?\b/,
+    /\b(?:5|five)\s+days?\s+(?:a\s+week\s+)?(?:in[- ]?)?(?:office|on[- ]?site)\b/,
+    /\brequires?\s+(?:daily\s+)?(?:office|on[- ]?site|in[- ]?person)\s+(?:presence|attendance)\b/,
+    /\brelocate\s+to\b/,
+    /\bcommute\s+to\s+(?:our|the)\s+office\b/,
+  ];
+
+  if (hybridPatterns.some(p => p.test(combined))) return 'hybrid';
+
+  if (!negativeRemote && !onsiteOnly && remotePatterns.some(p => p.test(combined))) return 'remote';
+
+  if (onsiteOnly || onsitePatterns.some(p => p.test(combined))) return 'onsite';
+
   return undefined;
 }
 

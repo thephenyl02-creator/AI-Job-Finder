@@ -502,7 +502,11 @@ export default function Jobs() {
 
     let matchesLocation = true;
     if (selectedLocation === "remote") {
-      matchesLocation = !!job.isRemote || (job.location?.toLowerCase().includes("remote") ?? false);
+      matchesLocation = job.locationType === 'remote' || (!job.locationType && (!!job.isRemote || (job.location?.toLowerCase().includes("remote") ?? false)));
+    } else if (selectedLocation === "hybrid") {
+      matchesLocation = job.locationType === 'hybrid';
+    } else if (selectedLocation === "onsite") {
+      matchesLocation = job.locationType === 'onsite';
     } else if (selectedLocation !== "all") {
       const jobCity = normalizeLocation(job.location || "");
       matchesLocation = jobCity === selectedLocation;
@@ -876,7 +880,7 @@ export default function Jobs() {
               data-testid="button-location-filter"
             >
               <MapPin className="h-3 w-3" />
-              {selectedLocation === "all" ? "All Locations" : selectedLocation === "remote" ? "Remote Only" : uniqueLocations.find(l => l.key === selectedLocation)?.display || selectedLocation}
+              {selectedLocation === "all" ? "All Locations" : selectedLocation === "remote" ? "Remote" : selectedLocation === "hybrid" ? "Hybrid" : selectedLocation === "onsite" ? "On-site" : uniqueLocations.find(l => l.key === selectedLocation)?.display || selectedLocation}
             </Button>
             {locationDropdownOpen && (
               <div className="absolute top-full mt-1 left-0 z-50 w-64 max-h-72 bg-card border rounded-lg shadow-lg overflow-hidden">
@@ -902,8 +906,24 @@ export default function Jobs() {
                     onClick={() => { setSelectedLocation("remote"); setLocationDropdownOpen(false); setLocationSearch(""); track({ eventType: "filter_change", metadata: { filterType: "location", value: "remote" } }); }}
                     data-testid="button-location-remote"
                   >
-                    <span>Remote Only</span>
-                    <Badge variant="secondary" className="text-xs">{allJobs.filter(j => j.isRemote).length}</Badge>
+                    <span>Remote</span>
+                    <Badge variant="secondary" className="text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400">{allJobs.filter(j => j.locationType === 'remote' || (!j.locationType && j.isRemote)).length}</Badge>
+                  </button>
+                  <button
+                    className={`w-full text-left px-3 py-2.5 text-sm hover-elevate flex items-center justify-between gap-2 min-h-[44px] ${selectedLocation === "hybrid" ? "bg-muted font-medium" : ""}`}
+                    onClick={() => { setSelectedLocation("hybrid"); setLocationDropdownOpen(false); setLocationSearch(""); track({ eventType: "filter_change", metadata: { filterType: "location", value: "hybrid" } }); }}
+                    data-testid="button-location-hybrid"
+                  >
+                    <span>Hybrid</span>
+                    <Badge variant="secondary" className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400">{allJobs.filter(j => j.locationType === 'hybrid').length}</Badge>
+                  </button>
+                  <button
+                    className={`w-full text-left px-3 py-2.5 text-sm hover-elevate flex items-center justify-between gap-2 min-h-[44px] ${selectedLocation === "onsite" ? "bg-muted font-medium" : ""}`}
+                    onClick={() => { setSelectedLocation("onsite"); setLocationDropdownOpen(false); setLocationSearch(""); track({ eventType: "filter_change", metadata: { filterType: "location", value: "onsite" } }); }}
+                    data-testid="button-location-onsite"
+                  >
+                    <span>On-site</span>
+                    <Badge variant="secondary" className="text-xs bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400">{allJobs.filter(j => j.locationType === 'onsite').length}</Badge>
                   </button>
                   <div className="border-t my-1" />
                   {uniqueLocations
@@ -957,7 +977,7 @@ export default function Jobs() {
               data-testid="button-clear-location"
             >
               <X className="h-3 w-3" />
-              {selectedLocation === "remote" ? "Remote" : uniqueLocations.find(l => l.key === selectedLocation)?.display}
+              {selectedLocation === "remote" ? "Remote" : selectedLocation === "hybrid" ? "Hybrid" : selectedLocation === "onsite" ? "On-site" : uniqueLocations.find(l => l.key === selectedLocation)?.display}
             </Button>
           )}
         </div>
