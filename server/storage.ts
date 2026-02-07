@@ -1,6 +1,7 @@
 import { db } from "./db";
 import { jobs, users, userPreferences, jobCategories, jobSubmissions, jobAlerts, notifications, resumes, builtResumes, userActivities, userPersonas, savedJobs, jobApplications, events, scrapeRuns, type Job, type InsertJob, type User, type UserPreferences, type InsertUserPreferences, type ResumeExtractedData, type JobCategory, type JobSubmission, type InsertJobSubmission, type JobAlert, type InsertJobAlert, type Notification, type InsertNotification, type Resume, type InsertResume, type BuiltResume, type InsertBuiltResume, type UserActivity, type InsertUserActivity, type UserPersona, type InsertUserPersona, type SavedJob, type InsertSavedJob, type JobApplication, type InsertJobApplication, type JobApplicationWithJob, type Event, type InsertEvent, type ScrapeRun, type InsertScrapeRun, JOB_TAXONOMY } from "@shared/schema";
 import { eq, desc, and, sql, inArray, lt, gte, count } from "drizzle-orm";
+import { fixMissingSentenceSpaces } from "./lib/html-utils";
 
 export interface IStorage {
   // Jobs
@@ -135,14 +136,16 @@ class DatabaseStorage implements IStorage {
   }
 
   async createJob(job: InsertJob): Promise<Job> {
-    const [newJob] = await db.insert(jobs).values(job).returning();
+    const cleaned = job.description ? { ...job, description: fixMissingSentenceSpaces(job.description) } : job;
+    const [newJob] = await db.insert(jobs).values(cleaned).returning();
     return newJob;
   }
 
   async updateJob(id: number, job: Partial<InsertJob>): Promise<Job | undefined> {
+    const cleaned = job.description ? { ...job, description: fixMissingSentenceSpaces(job.description) } : job;
     const [updatedJob] = await db
       .update(jobs)
-      .set(job)
+      .set(cleaned)
       .where(eq(jobs.id, id))
       .returning();
     return updatedJob;
@@ -205,7 +208,7 @@ class DatabaseStorage implements IStorage {
       if (job.salaryMin) updateData.salaryMin = job.salaryMin;
       if (job.salaryMax) updateData.salaryMax = job.salaryMax;
 
-      const newDesc = job.description || '';
+      const newDesc = job.description ? fixMissingSentenceSpaces(job.description) : '';
       const existingDesc = existing.description || '';
       if (newDesc.length >= existingDesc.length * 0.5 && newDesc.length >= 50) {
         updateData.description = newDesc;

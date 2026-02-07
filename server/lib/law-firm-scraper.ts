@@ -3,7 +3,6 @@ import * as cheerio from 'cheerio';
 import { LAW_FIRMS_AND_COMPANIES, type LawFirmConfig } from './law-firms-list';
 import type { InsertJob } from '@shared/schema';
 import { categorizeJob, parseSalaryFromText, type JobCategorizationResult } from './job-categorizer';
-import { fixMissingSentenceSpaces } from './html-utils';
 
 interface ScrapedJob {
   title: string;
@@ -494,7 +493,6 @@ function cleanDescriptionText(raw: string): string {
   text = text.replace(/[ \t]+/g, ' ');
   text = text.replace(/\n /g, '\n');
   text = text.replace(/\n{3,}/g, '\n\n');
-  text = fixMissingSentenceSpaces(text);
   return text.trim();
 }
 

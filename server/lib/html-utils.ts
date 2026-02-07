@@ -40,7 +40,6 @@ export function stripHtml(html: string): string {
   decoded = decoded.replace(/[ \t]+/g, ' ');
   decoded = decoded.replace(/\n /g, '\n');
   decoded = decoded.replace(/\n{3,}/g, '\n\n');
-  decoded = fixMissingSentenceSpaces(decoded);
   return decoded.trim();
 }
 
