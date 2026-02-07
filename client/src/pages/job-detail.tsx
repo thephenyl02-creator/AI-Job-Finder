@@ -41,7 +41,6 @@ import {
   ChevronDown,
   ChevronUp,
   TrendingUp,
-  CircleDot,
 } from "lucide-react";
 
 function extractContactEmails(text: string | null | undefined): string[] {
@@ -1056,253 +1055,257 @@ export default function JobDetail() {
   const hasStructuredData = (job.aiResponsibilities && job.aiResponsibilities.length > 0) ||
     (job.aiQualifications && job.aiQualifications.length > 0);
 
-  const quickFactItems = [
-    salary ? { icon: DollarSign, label: 'Compensation', value: salary, color: 'text-green-600 dark:text-green-400' } : null,
-    job.seniorityLevel ? { icon: TrendingUp, label: 'Level', value: job.seniorityLevel, color: 'text-muted-foreground' } : null,
-    job.isRemote ? { icon: MapPin, label: 'Work Style', value: 'Remote', color: 'text-muted-foreground' } : null,
-    job.roleCategory ? { icon: Briefcase, label: 'Category', value: job.roleSubcategory || job.roleCategory, color: 'text-muted-foreground' } : null,
-  ].filter(Boolean) as { icon: typeof DollarSign; label: string; value: string; color: string }[];
+  const postedAgo = job.postedDate ? (() => {
+    const days = Math.floor((Date.now() - new Date(job.postedDate).getTime()) / (1000 * 60 * 60 * 24));
+    if (days === 0) return 'Today';
+    if (days === 1) return '1 day ago';
+    if (days < 7) return `${days} days ago`;
+    if (days < 30) return `${Math.floor(days / 7)}w ago`;
+    return `${Math.floor(days / 30)}mo ago`;
+  })() : null;
+
+  const metaItems = [
+    salary ? { label: salary, icon: DollarSign, accent: true } : null,
+    job.seniorityLevel ? { label: job.seniorityLevel, icon: TrendingUp } : null,
+    job.locationType === 'remote' || job.isRemote ? { label: 'Remote', icon: MapPin } : job.locationType === 'hybrid' ? { label: 'Hybrid', icon: MapPin } : null,
+    job.roleSubcategory || job.roleCategory ? { label: job.roleSubcategory || job.roleCategory!, icon: Briefcase } : null,
+  ].filter(Boolean) as { label: string; icon: typeof DollarSign; accent?: boolean }[];
 
   return (
     <div className="min-h-screen bg-background">
       <Header />
 
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
+      <main className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
         <Button
           variant="ghost"
           size="sm"
           onClick={() => setLocation("/jobs")}
-          className="mb-5 text-muted-foreground"
+          className="mb-6 text-muted-foreground"
           data-testid="button-back-jobs"
         >
           <ArrowLeft className="h-4 w-4 mr-1.5" />
           Back to Jobs
         </Button>
 
-        <div className="flex items-start justify-between gap-4 mb-2">
-          <div className="min-w-0 flex-1">
-            <h1
-              className="text-2xl sm:text-3xl font-serif font-medium text-foreground tracking-tight leading-tight"
-              data-testid="text-job-detail-title"
-            >
-              {job.title}
-            </h1>
-            <div className="flex flex-wrap items-center gap-x-1 text-muted-foreground text-sm mt-2">
-              <span className="flex items-center gap-1.5">
-                <Building2 className="h-3.5 w-3.5" />
-                <span className="font-medium" data-testid="text-job-detail-company">{job.company}</span>
-              </span>
-              {job.location && (
-                <>
-                  <span className="mx-1.5">·</span>
-                  <span className="flex items-center gap-1.5">
-                    <MapPin className="h-3.5 w-3.5" />
+        {/* === HEADER ZONE === */}
+        <div className="mb-8">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <h1
+                className="text-2xl sm:text-3xl font-serif font-medium text-foreground tracking-tight leading-tight"
+                data-testid="text-job-detail-title"
+              >
+                {job.title}
+              </h1>
+              <div className="flex flex-wrap items-center gap-x-1.5 text-muted-foreground text-sm mt-2">
+                <span className="font-medium text-foreground/80" data-testid="text-job-detail-company">{job.company}</span>
+                {job.location && (
+                  <>
+                    <span className="text-border">·</span>
                     <span data-testid="text-job-detail-location">{job.location}</span>
-                  </span>
-                </>
-              )}
+                  </>
+                )}
+                {postedAgo && (
+                  <>
+                    <span className="text-border">·</span>
+                    <span data-testid="text-posted-ago">{postedAgo}</span>
+                  </>
+                )}
+              </div>
+            </div>
+            <div className="shrink-0 flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => saveJobMutation.mutate()}
+                disabled={saveJobMutation.isPending}
+                data-testid="button-save-job-detail"
+                className={jobIsSaved ? "text-primary" : "text-muted-foreground"}
+              >
+                <Bookmark className={`h-5 w-5 ${jobIsSaved ? "fill-current" : ""}`} />
+              </Button>
             </div>
           </div>
-          <div className="shrink-0 flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => saveJobMutation.mutate()}
-              disabled={saveJobMutation.isPending}
-              data-testid="button-save-job-detail"
-              className={jobIsSaved ? "text-primary" : "text-muted-foreground"}
-            >
-              <Bookmark className={`h-5 w-5 ${jobIsSaved ? "fill-current" : ""}`} />
-            </Button>
-          </div>
-        </div>
 
-        <div className="flex flex-wrap items-center gap-2 mt-3 mb-6">
-          <Button
-            onClick={handleApplyClick}
-            data-testid="button-apply-detail"
-          >
-            <ExternalLink className="h-4 w-4 mr-2" />
-            Apply Now
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => setLocation(`/resume-builder?jobId=${job.id}`)}
-            data-testid="button-optimize-resume"
-          >
-            <FileText className="h-4 w-4 mr-2" />
-            Optimize Resume
-          </Button>
-        </div>
-
-        <div className="space-y-5">
-
-          {quickFactItems.length > 0 && (
-            <div className={`grid gap-3 ${quickFactItems.length === 1 ? 'grid-cols-1' : quickFactItems.length === 2 ? 'grid-cols-2' : quickFactItems.length === 3 ? 'grid-cols-3' : 'grid-cols-2 sm:grid-cols-4'}`} data-testid="section-quick-facts">
-              {quickFactItems.map((item) => (
-                <Card key={item.label}>
-                  <CardContent className="p-3.5 flex items-center gap-2.5">
-                    <item.icon className={`h-4 w-4 shrink-0 ${item.color}`} />
-                    <div className="min-w-0">
-                      <p className="text-[0.65rem] text-muted-foreground uppercase tracking-wider leading-none mb-0.5">{item.label}</p>
-                      <p className="text-sm font-semibold text-foreground truncate" data-testid={`text-fact-${item.label.toLowerCase()}`}>{item.value}</p>
-                    </div>
-                  </CardContent>
-                </Card>
+          {/* Inline metadata strip */}
+          {metaItems.length > 0 && (
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-4 text-sm" data-testid="section-quick-facts">
+              {metaItems.map((item, i) => (
+                <span
+                  key={i}
+                  className={`flex items-center gap-1.5 ${item.accent ? 'text-green-600 dark:text-green-400 font-medium' : 'text-muted-foreground'}`}
+                  data-testid={`text-fact-${i}`}
+                >
+                  <item.icon className="h-3.5 w-3.5" />
+                  {item.label}
+                </span>
               ))}
             </div>
           )}
 
-          {job.aiSummary && (
-            <div data-testid="section-ai-summary" className="py-1">
-              <p className="text-[0.925rem] text-foreground/80 leading-[1.75]" data-testid="text-ai-summary">
-                {job.aiSummary}
-              </p>
-            </div>
-          )}
+          {/* Action buttons */}
+          <div className="flex flex-wrap items-center gap-2 mt-5">
+            <Button
+              onClick={handleApplyClick}
+              data-testid="button-apply-detail"
+            >
+              <ExternalLink className="h-4 w-4 mr-2" />
+              Read Full JD & Apply
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setLocation(`/resume-builder?jobId=${job.id}`)}
+              data-testid="button-optimize-resume"
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              Optimize Resume
+            </Button>
+          </div>
+        </div>
 
-          {job.keySkills && job.keySkills.length > 0 && (
-            <div className="flex flex-wrap gap-1.5" data-testid="section-skills">
+        {/* === SUMMARY === */}
+        {job.aiSummary && (
+          <div data-testid="section-ai-summary" className="mb-8">
+            <p className="text-[0.95rem] text-foreground/80 leading-[1.8]" data-testid="text-ai-summary">
+              {job.aiSummary}
+            </p>
+          </div>
+        )}
+
+        {/* === SKILLS === */}
+        {job.keySkills && job.keySkills.length > 0 && (
+          <div className="mb-8" data-testid="section-skills">
+            <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Skills & Expertise</h2>
+            <div className="flex flex-wrap gap-1.5">
               {job.keySkills.map((skill, i) => (
                 <Badge key={i} variant="outline" data-testid={`badge-skill-${i}`}>
                   {skill}
                 </Badge>
               ))}
             </div>
-          )}
-
-          {hasStructuredData && (
-            <Card data-testid="section-intelligence-brief">
-              <CardContent className="p-5 sm:p-6 space-y-6">
-                {job.aiResponsibilities && job.aiResponsibilities.length > 0 && (
-                  <div data-testid="subsection-responsibilities">
-                    <div className="flex items-center gap-2 mb-3">
-                      <Target className="h-4 w-4 text-muted-foreground shrink-0" />
-                      <h2 className="text-sm font-semibold text-foreground">What You'd Do</h2>
-                    </div>
-                    <ul className="space-y-2 ml-6">
-                      {job.aiResponsibilities.map((item, i) => (
-                        <li key={i} className="flex gap-2.5 text-[0.9rem] text-foreground/80 leading-relaxed" data-testid={`responsibility-${i}`}>
-                          <span className="shrink-0 mt-[0.55rem] w-[5px] h-[5px] rounded-full bg-foreground/25" />
-                          <span>{item}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {job.aiQualifications && job.aiQualifications.length > 0 && (
-                  <div data-testid="subsection-qualifications">
-                    <div className="flex items-center gap-2 mb-3">
-                      <GraduationCap className="h-4 w-4 text-muted-foreground shrink-0" />
-                      <h2 className="text-sm font-semibold text-foreground">What You Need</h2>
-                    </div>
-                    <ul className="space-y-2 ml-6">
-                      {job.aiQualifications.map((item, i) => (
-                        <li key={i} className="flex gap-2.5 text-[0.9rem] text-foreground/80 leading-relaxed" data-testid={`qualification-${i}`}>
-                          <span className="shrink-0 mt-[0.55rem] w-[5px] h-[5px] rounded-full bg-foreground/25" />
-                          <span>{item}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {job.aiNiceToHaves && job.aiNiceToHaves.length > 0 && (
-                  <div data-testid="subsection-nice-to-haves">
-                    <div className="flex items-center gap-2 mb-3">
-                      <Star className="h-4 w-4 text-muted-foreground shrink-0" />
-                      <h2 className="text-sm font-semibold text-foreground">Nice to Have</h2>
-                    </div>
-                    <ul className="space-y-2 ml-6">
-                      {job.aiNiceToHaves.map((item, i) => (
-                        <li key={i} className="flex gap-2.5 text-[0.9rem] text-foreground/75 leading-relaxed" data-testid={`nice-to-have-${i}`}>
-                          <span className="shrink-0 mt-[0.55rem] w-[5px] h-[5px] rounded-full bg-foreground/20" />
-                          <span>{item}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
-
-          {job.description && (
-            <Card data-testid="section-full-description">
-              <CardContent className="p-5 sm:p-6">
-                <button
-                  onClick={() => setShowFullDescription(!showFullDescription)}
-                  className="flex items-center justify-between w-full text-left gap-4"
-                  data-testid="button-toggle-full-description"
-                >
-                  <div>
-                    <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Full Job Description</h2>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {showFullDescription ? 'Collapse to see the brief' : 'Expand to read the complete posting'}
-                    </p>
-                  </div>
-                  {showFullDescription ? (
-                    <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" />
-                  ) : (
-                    <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
-                  )}
-                </button>
-                {showFullDescription && (
-                  <div className="border-t border-border/40 pt-5 mt-4">
-                    <DescriptionContent text={job.description} testId="text-job-description" isPro={isPro} />
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
-
-          {job.requirements && (
-            <Card data-testid="section-requirements">
-              <CardContent className="p-5 sm:p-6">
-                <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">Requirements</h2>
-                <DescriptionContent text={job.requirements} testId="text-job-requirements" isPro={isPro} />
-              </CardContent>
-            </Card>
-          )}
-
-          {contactEmails.length > 0 && (
-            <div className="flex flex-wrap gap-3" data-testid="section-contact-emails">
-              {contactEmails.map((email) => (
-                <a
-                  key={email}
-                  href={`mailto:${email}`}
-                  className="flex items-center gap-1.5 text-sm text-foreground hover:underline"
-                  data-testid={`link-contact-email-${email.replace(/[@.]/g, '-')}`}
-                >
-                  <Mail className="h-3.5 w-3.5 text-muted-foreground" />
-                  {email}
-                </a>
-              ))}
-            </div>
-          )}
-
-          <div className="flex flex-col sm:flex-row items-center gap-3 pt-2" data-testid="section-apply-cta">
-            <Button
-              size="lg"
-              onClick={handleApplyClick}
-              className="w-full sm:w-auto"
-              data-testid="button-apply-bottom"
-            >
-              <ExternalLink className="h-4 w-4 mr-2" />
-              Read Full JD & Apply
-            </Button>
-            <p className="text-xs text-muted-foreground">
-              Opens the company's careers page.
-            </p>
           </div>
+        )}
 
-          <JobChat jobId={jobId || ""} />
+        {/* === STRUCTURED INTELLIGENCE BRIEF === */}
+        {hasStructuredData && (
+          <div className="mb-8 space-y-7" data-testid="section-intelligence-brief">
+            {job.aiResponsibilities && job.aiResponsibilities.length > 0 && (
+              <div className="border-l-2 border-primary/20 pl-5" data-testid="subsection-responsibilities">
+                <h2 className="text-base font-serif font-medium text-foreground mb-3">What You'd Do</h2>
+                <ul className="space-y-2.5">
+                  {job.aiResponsibilities.map((item, i) => (
+                    <li key={i} className="flex gap-3 text-[0.9rem] text-foreground/80 leading-relaxed" data-testid={`responsibility-${i}`}>
+                      <span className="shrink-0 mt-[0.55rem] w-[5px] h-[5px] rounded-full bg-primary/30" />
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
+            {job.aiQualifications && job.aiQualifications.length > 0 && (
+              <div className="border-l-2 border-primary/20 pl-5" data-testid="subsection-qualifications">
+                <h2 className="text-base font-serif font-medium text-foreground mb-3">What You Need</h2>
+                <ul className="space-y-2.5">
+                  {job.aiQualifications.map((item, i) => (
+                    <li key={i} className="flex gap-3 text-[0.9rem] text-foreground/80 leading-relaxed" data-testid={`qualification-${i}`}>
+                      <span className="shrink-0 mt-[0.55rem] w-[5px] h-[5px] rounded-full bg-primary/30" />
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {job.aiNiceToHaves && job.aiNiceToHaves.length > 0 && (
+              <div className="border-l-2 border-border pl-5" data-testid="subsection-nice-to-haves">
+                <h2 className="text-base font-serif font-medium text-foreground/80 mb-3">Nice to Have</h2>
+                <ul className="space-y-2.5">
+                  {job.aiNiceToHaves.map((item, i) => (
+                    <li key={i} className="flex gap-3 text-[0.9rem] text-foreground/65 leading-relaxed" data-testid={`nice-to-have-${i}`}>
+                      <span className="shrink-0 mt-[0.55rem] w-[5px] h-[5px] rounded-full bg-foreground/15" />
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* === ORIGINAL POSTING (collapsed) === */}
+        {job.description && (
+          <div className="mb-8" data-testid="section-full-description">
+            <button
+              onClick={() => setShowFullDescription(!showFullDescription)}
+              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors py-2 w-full text-left"
+              data-testid="button-toggle-full-description"
+            >
+              {showFullDescription ? (
+                <ChevronUp className="h-4 w-4 shrink-0" />
+              ) : (
+                <ChevronDown className="h-4 w-4 shrink-0" />
+              )}
+              <span className="font-medium">
+                {showFullDescription ? 'Hide original posting' : 'View original posting'}
+              </span>
+            </button>
+            {showFullDescription && (
+              <div className="mt-3 pl-4 border-l border-border/60">
+                <DescriptionContent text={job.description} testId="text-job-description" isPro={isPro} />
+
+                {job.requirements && (
+                  <div className="mt-6 pt-4 border-t border-border/30">
+                    <h3 className="text-sm font-semibold text-foreground mb-3">Requirements</h3>
+                    <DescriptionContent text={job.requirements} testId="text-job-requirements" isPro={isPro} />
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* === CONTACT === */}
+        {contactEmails.length > 0 && (
+          <div className="flex flex-wrap gap-3 mb-8" data-testid="section-contact-emails">
+            {contactEmails.map((email) => (
+              <a
+                key={email}
+                href={`mailto:${email}`}
+                className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                data-testid={`link-contact-email-${email.replace(/[@.]/g, '-')}`}
+              >
+                <Mail className="h-3.5 w-3.5" />
+                {email}
+              </a>
+            ))}
+          </div>
+        )}
+
+        {/* === BOTTOM CTA === */}
+        <div className="flex flex-col sm:flex-row items-center gap-3 py-6 border-t border-border/40" data-testid="section-apply-cta">
+          <Button
+            size="lg"
+            onClick={handleApplyClick}
+            className="w-full sm:w-auto"
+            data-testid="button-apply-bottom"
+          >
+            <ExternalLink className="h-4 w-4 mr-2" />
+            Read Full JD & Apply
+          </Button>
+          <p className="text-xs text-muted-foreground">
+            You'll be taken to the company's careers page to read the complete posting and submit your application.
+          </p>
         </div>
 
+        {/* === QUESTIONS === */}
+        <div className="mt-8">
+          <JobChat jobId={jobId || ""} />
+        </div>
+
+        {/* === SIMILAR ROLES === */}
         {similarJobs.length > 0 && (
-          <div className="mt-8" data-testid="section-similar-jobs">
+          <div className="mt-10" data-testid="section-similar-jobs">
             <h2 className="text-lg font-serif font-medium text-foreground mb-4 tracking-tight">Similar Roles</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {similarJobs.map(sj => {

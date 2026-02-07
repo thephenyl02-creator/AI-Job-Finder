@@ -72,6 +72,21 @@ export const scrapeRuns = pgTable("scrape_runs", {
 export type ScrapeRun = typeof scrapeRuns.$inferSelect;
 export type InsertScrapeRun = typeof scrapeRuns.$inferInsert;
 
+export const companyIntel = pgTable("company_intel", {
+  id: serial("id").primaryKey(),
+  companyName: varchar("company_name", { length: 255 }).notNull().unique(),
+  summary: text("summary"),
+  product: text("product"),
+  fundingStage: varchar("funding_stage", { length: 100 }),
+  recentNews: text("recent_news").array(),
+  growthSignals: text("growth_signals").array(),
+  citations: text("citations").array(),
+  fetchedAt: timestamp("fetched_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
+export type CompanyIntel = typeof companyIntel.$inferSelect;
+export type InsertCompanyIntel = typeof companyIntel.$inferInsert;
+
 export const insertJobSchema = createInsertSchema(jobs).omit({
   id: true,
   postedDate: true,
