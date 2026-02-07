@@ -330,6 +330,46 @@ function stripBoilerplate(text: string): string {
   return cleaned.trim();
 }
 
+function splitInlineBullets(text: string): string {
+  return text.replace(/^(.*?)$/gm, (line) => {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.length < 80) return line;
+    if (/^[-\u2013\u2022*]\s/.test(trimmed) && trimmed.length < 200) return line;
+
+    const sep = /\s+[-\u2013]\s+/g;
+    const matches: Array<{ index: number; len: number }> = [];
+    let m: RegExpExecArray | null;
+    while ((m = sep.exec(trimmed)) !== null) {
+      matches.push({ index: m.index, len: m[0].length });
+    }
+    if (matches.length < 2) return line;
+
+    const segments: string[] = [];
+    let lastEnd = 0;
+    for (const mt of matches) {
+      const chunk = trimmed.slice(lastEnd, mt.index).trim();
+      if (chunk) segments.push(chunk);
+      lastEnd = mt.index + mt.len;
+    }
+    const tail = trimmed.slice(lastEnd).trim();
+    if (tail) segments.push(tail);
+
+    const bulletLike = segments.filter(s => s.length > 15);
+    if (bulletLike.length < 3) return line;
+
+    const firstBulletIdx = segments[0].length < 15 ? 1 : 0;
+    const lines: string[] = [];
+
+    if (firstBulletIdx === 1 && segments[0]) {
+      lines.push(segments[0]);
+    }
+    for (let i = firstBulletIdx; i < segments.length; i++) {
+      lines.push('- ' + segments[i]);
+    }
+    return lines.join('\n');
+  });
+}
+
 function cleanDescription(text: string): string {
   let cleaned = text;
   if (cleaned.includes('&lt;') || cleaned.includes('&gt;') || cleaned.includes('&amp;') || /<[a-z][^>]*>/i.test(cleaned)) {
@@ -342,6 +382,7 @@ function cleanDescription(text: string): string {
     cleaned = stripBoilerplate(cleaned);
     iterations++;
   }
+  cleaned = splitInlineBullets(cleaned);
   return cleaned;
 }
 
@@ -509,18 +550,12 @@ function groupBlocksIntoSections(blocks: Block[]): DescriptionSection[] {
 }
 
 
-function DescriptionContent({ text, testId, compact, isPro, skipSections }: { text?: string | null; testId: string; compact?: boolean; isPro?: boolean; skipSections?: string[] }) {
+function DescriptionContent({ text, testId, compact, isPro }: { text?: string | null; testId: string; compact?: boolean; isPro?: boolean }) {
   if (!text) return null;
 
   const cleanedText = useMemo(() => cleanDescription(text), [text]);
   const blocks = useMemo(() => parseTextIntoBlocks(cleanedText), [cleanedText]);
-  const rawSections = useMemo(() => groupBlocksIntoSections(blocks), [blocks]);
-  const sections = useMemo(() => {
-    if (skipSections && skipSections.length > 0 && rawSections.length > 1) {
-      return rawSections.filter(s => !skipSections.includes(s.heading));
-    }
-    return rawSections;
-  }, [rawSections, skipSections]);
+  const sections = useMemo(() => groupBlocksIntoSections(blocks), [blocks]);
 
   const activeCategories = useMemo(() => {
     if (isPro) return new Set(Object.keys(HIGHLIGHT_CATEGORIES) as HighlightCategory[]);
@@ -589,79 +624,6 @@ function DescriptionContent({ text, testId, compact, isPro, skipSections }: { te
   );
 }
 
-function extractSnapshot(description: string): { overview: string; responsibilities: string[]; extractedHeadings: string[] } {
-  const cleaned = cleanDescription(description);
-  const blocks = parseTextIntoBlocks(cleaned);
-  const sections = groupBlocksIntoSections(blocks);
-
-  let overview = '';
-  const responsibilities: string[] = [];
-  const extractedHeadings: string[] = [];
-
-  const overviewSection = sections.find(s => s.heading === 'Overview' || s.heading === 'About the Company');
-  if (overviewSection) {
-    const paragraphs = overviewSection.blocks.filter(b => b.type === 'paragraph');
-    const bullets = overviewSection.blocks.filter(b => b.type === 'bullet');
-    if (paragraphs.length > 0) {
-      overview = paragraphs[0].content;
-    } else if (bullets.length > 0) {
-      overview = bullets[0].content;
-    }
-  }
-
-  const RESP_HEADINGS = ['Responsibilities', 'Your Impact', 'Key Duties'];
-  const respSection = sections.find(s => RESP_HEADINGS.includes(s.heading) || /responsibilit|what you(?:'ll| will) do|your role|in this role|day.to.day|your impact|key duties/i.test(s.heading));
-  if (respSection) {
-    extractedHeadings.push(respSection.heading);
-    const bullets = respSection.blocks.filter(b => b.type === 'bullet');
-    const paras = respSection.blocks.filter(b => b.type === 'paragraph');
-    if (bullets.length > 0) {
-      for (const b of bullets.slice(0, 6)) {
-        responsibilities.push(b.content);
-      }
-    } else if (paras.length > 0) {
-      for (const p of paras.slice(0, 4)) {
-        const sentences = p.content.split(/(?<=[.!?])\s+(?=[A-Z])/).filter(s => s.trim().length > 10);
-        for (const s of sentences.slice(0, 3)) {
-          responsibilities.push(s);
-          if (responsibilities.length >= 6) break;
-        }
-        if (responsibilities.length >= 6) break;
-      }
-    }
-  }
-
-  if (overview) extractedHeadings.push('Overview');
-
-  return { overview, responsibilities, extractedHeadings };
-}
-
-function JobSnapshot({ overview, responsibilities, testId }: { overview: string; responsibilities: string[]; testId: string }) {
-  if (!overview && responsibilities.length === 0) return null;
-
-  return (
-    <div className="space-y-4" data-testid={testId}>
-      {overview && (
-        <p className="text-foreground leading-relaxed" data-testid="text-snapshot-overview">
-          {overview}
-        </p>
-      )}
-      {responsibilities.length > 0 && (
-        <div>
-          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2.5">What You'll Do</h3>
-          <div className="space-y-2">
-            {responsibilities.map((item, i) => (
-              <div key={i} className="flex gap-2.5 pl-0.5" data-testid={`text-snapshot-resp-${i}`}>
-                <span className="shrink-0 mt-2 w-1.5 h-1.5 rounded-full bg-primary/40" />
-                <span className="text-foreground/90 leading-relaxed">{item}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
 
 interface ChatMsg {
   id: string;
@@ -899,10 +861,6 @@ export default function JobDetail() {
     enabled: isAuthenticated && !!jobId,
   });
 
-  const snapshotData = useMemo(() => {
-    if (!job?.description) return { overview: '', responsibilities: [], extractedHeadings: [] };
-    return extractSnapshot(job.description);
-  }, [job?.description]);
 
   const handleApplyClick = async () => {
     if (!job) return;
@@ -1078,18 +1036,9 @@ export default function JobDetail() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
-            {(snapshotData.overview || snapshotData.responsibilities.length > 0) && (
-              <Card>
-                <CardContent className="pt-5 pb-5">
-                  <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">At a Glance</h2>
-                  <JobSnapshot overview={snapshotData.overview} responsibilities={snapshotData.responsibilities} testId="snapshot-job" />
-                </CardContent>
-              </Card>
-            )}
-
             <Card>
               <CardContent className="pt-5 pb-5">
-                <DescriptionContent text={job.description} testId="text-job-description" isPro={isPro} skipSections={snapshotData.extractedHeadings} />
+                <DescriptionContent text={job.description} testId="text-job-description" isPro={isPro} />
               </CardContent>
             </Card>
 
