@@ -44,9 +44,9 @@ const GREENHOUSE_SOURCES = [
   { name: 'Gibson Dunn', id: 'gibsondunn', type: 'lawfirm' },
   { name: 'Legal Services NYC', id: 'legalservicesnyc', type: 'legalaid' },
   { name: 'Axiom', id: 'axiom', type: 'legaltech' },
-  { name: 'Anthropic', id: 'anthropic', type: 'legaltech' },
+  { name: 'Anthropic', id: 'anthropic', type: 'general' },
   { name: 'OneTrust', id: 'onetrust', type: 'legaltech' },
-  { name: 'Notion', id: 'notion', type: 'legaltech' },
+  { name: 'Notion', id: 'notion', type: 'general' },
 ];
 
 const LEVER_SOURCES = [

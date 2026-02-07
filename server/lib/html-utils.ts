@@ -20,16 +20,7 @@ export function fixMissingSentenceSpaces(text: string): string {
 }
 
 export function stripHtml(html: string): string {
-  let decoded = html
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&apos;/g, "'")
-    .replace(/&#x27;/g, "'")
-    .replace(/&#(\d+);/g, (_, num) => String.fromCharCode(parseInt(num)));
+  let decoded = html;
 
   decoded = decoded.replace(/<br\s*\/?>/gi, '\n');
   decoded = decoded.replace(/<\/p>/gi, '\n\n');
@@ -37,6 +28,20 @@ export function stripHtml(html: string): string {
   decoded = decoded.replace(/<li[^>]*>/gi, '- ');
   decoded = decoded.replace(/<\/h[1-6]>/gi, '\n\n');
   decoded = decoded.replace(/<[^>]*>/g, ' ');
+
+  decoded = decoded.replace(/&amp;/g, '&');
+  decoded = decoded.replace(/&nbsp;/g, ' ');
+  decoded = decoded.replace(/&lt;/g, '<');
+  decoded = decoded.replace(/&gt;/g, '>');
+  decoded = decoded.replace(/&quot;/g, '"');
+  decoded = decoded.replace(/&#39;/g, "'");
+  decoded = decoded.replace(/&apos;/g, "'");
+  decoded = decoded.replace(/&#x27;/g, "'");
+  decoded = decoded.replace(/&#(\d+);/g, (_, num) => String.fromCharCode(parseInt(num)));
+
+  decoded = decoded.replace(/&nbsp;/g, ' ');
+  decoded = decoded.replace(/&amp;/g, '&');
+
   decoded = decoded.replace(/[ \t]+/g, ' ');
   decoded = decoded.replace(/\n /g, '\n');
   decoded = decoded.replace(/\n{3,}/g, '\n\n');
@@ -44,32 +49,102 @@ export function stripHtml(html: string): string {
 }
 
 export function isRelevantRole(title: string, desc: string = '', orgType?: string): boolean {
-  const text = `${title} ${desc}`.toLowerCase();
+  const titleLower = title.toLowerCase().trim();
+  const descLower = desc.toLowerCase();
 
   if (orgType === 'lawfirm' || orgType === 'legalaid') return true;
 
-  const legalKeywords = [
-    'attorney', 'lawyer', 'counsel', 'paralegal', 'legal assistant',
-    'litigation', 'associate', 'legal operations', 'legal ops',
-    'contract', 'compliance', 'regulatory', 'corporate counsel',
-    'in-house', 'general counsel', 'legal analyst', 'legal specialist',
-    'legal advisor', 'legal consultant', 'jd', 'law clerk', 'legal intern',
+  const hardExcludeTitlePatterns = [
+    'general application', 'open application',
+    'janitor', 'maintenance', 'facilities', 'cafeteria', 'custodian',
+    'receptionist', 'office assistant', 'mail clerk',
+    'data center', 'datacenter', 'hardware engineer', 'network engineer',
+    'site reliability', 'sre ', 'devops', 'dev ops', 'linux admin',
+    'electrical engineer', 'mechanical engineer', 'civil engineer',
+    'threat intelligence', 'threat collection', 'offensive security',
+    'penetration test', 'red team', 'blue team', 'soc analyst',
+    'encoding librar', 'ml infrastructure', 'gpu ', 'accelerator',
+    'pre-training', 'pretraining', 'sandboxing',
+    'chef ', 'cook ', 'driver ', 'warehouse', 'shipping', 'logistics',
+    'hvac', 'plumber', 'electrician',
   ];
+  if (hardExcludeTitlePatterns.some(p => titleLower.includes(p))) return false;
 
-  const techKeywords = [
-    'engineer', 'developer', 'product', 'designer', 'data', 'ml', 'ai ',
-    'machine learning', 'nlp', 'software', 'technical', 'solutions',
-    'implementation', 'customer success', 'sales', 'operations',
-    'innovation', 'technology', 'ediscovery', 'analytics', 'platform',
-    'devops', 'cloud', 'security', 'qa', 'quality', 'ux', 'ui', 'frontend',
-    'backend', 'full stack', 'fullstack', 'manager', 'director', 'architect',
-    'marketing', 'finance', 'hr', 'people', 'business', 'admin', 'support',
-    'api',
+  if (orgType === 'legaltech') return true;
+
+  const legalTitleKeywords = [
+    'legal', 'attorney', 'lawyer', 'counsel', 'paralegal',
+    'litigation', 'compliance', 'regulatory', 'governance',
+    'ediscovery', 'e-discovery', 'contract', 'privacy',
+    'policy', 'grc', 'risk', 'ethics', 'patent', 'ip ',
+    'intellectual property', 'law clerk', 'notary',
+    'trust ', 'trust&', 'antitrust', 'arbitration',
   ];
+  if (legalTitleKeywords.some(k => titleLower.includes(k))) return true;
 
-  const exclude = ['janitor', 'maintenance', 'facilities', 'cafeteria'];
-  if (exclude.some(e => text.includes(e))) return false;
+  const legalTechTitleKeywords = [
+    'product', 'solutions', 'customer success', 'implementation',
+    'sales engineer', 'account executive', 'account manager',
+    'business development', 'partnership', 'enablement',
+    'proposal', 'presales', 'pre-sales', 'onboarding',
+    'professional services', 'consulting',
+  ];
+  const isLegalTechTitle = legalTechTitleKeywords.some(k => titleLower.includes(k));
 
-  return legalKeywords.some(k => text.includes(k)) ||
-         techKeywords.some(k => text.includes(k));
+  const descLegalSignals = [
+    'legal', 'law firm', 'attorney', 'lawyer', 'litigation',
+    'ediscovery', 'e-discovery', 'compliance', 'regulatory',
+    'contract management', 'legal tech', 'legaltech', 'legal technology',
+    'legal operations', 'legal ops', 'corporate counsel', 'in-house counsel',
+    'legal department', 'legal team', 'legal industry', 'legal market',
+    'legal professional', 'legal workflow', 'legal document',
+    'legal service', 'legal solution', 'legal software',
+    'court', 'judicial', 'paralegal', 'governance',
+  ];
+  const hasLegalDescSignal = descLegalSignals.some(k => descLower.includes(k));
+
+  if (isLegalTechTitle && hasLegalDescSignal) return true;
+
+  const coreEngineeringTitles = [
+    'software engineer', 'senior software engineer', 'staff software engineer',
+    'principal software engineer', 'frontend engineer', 'backend engineer',
+    'full stack engineer', 'fullstack engineer', 'data engineer',
+    'data scientist', 'machine learning engineer', 'ml engineer',
+    'platform engineer', 'infrastructure engineer', 'security engineer',
+    'ux designer', 'ui designer', 'product designer',
+    'qa engineer', 'quality engineer', 'test engineer',
+    'data analyst', 'business analyst',
+  ];
+  const isCoreEngineering = coreEngineeringTitles.some(k => titleLower.includes(k));
+
+  if (isCoreEngineering) {
+    const strongLegalDescSignals = [
+      'legal tech', 'legaltech', 'legal technology', 'legal industry',
+      'legal operations', 'legal ops', 'ediscovery', 'e-discovery',
+      'legal workflow', 'legal document', 'legal solution', 'legal software',
+      'contract management', 'contract lifecycle', 'clm',
+      'legal department', 'compliance platform', 'regulatory tech', 'regtech',
+      'legal ai', 'legal nlp', 'legal automation',
+    ];
+    return strongLegalDescSignals.some(k => descLower.includes(k));
+  }
+
+  const directLegalTechRoles = [
+    'innovation', 'knowledge management', 'knowledge engineer',
+    'legal engineer', 'legal technologist', 'practice technology',
+    'court technology', 'judicial', 'tax manager', 'tax analyst',
+    'billing analyst', 'billing team',
+  ];
+  if (directLegalTechRoles.some(k => titleLower.includes(k))) return true;
+
+  if (hasLegalDescSignal) {
+    const broadRelevantTitles = [
+      'manager', 'director', 'head of', 'vp ', 'vice president',
+      'chief', 'lead', 'senior', 'specialist', 'coordinator',
+      'strategist', 'architect', 'consultant', 'advisor',
+    ];
+    if (broadRelevantTitles.some(k => titleLower.includes(k))) return true;
+  }
+
+  return false;
 }
