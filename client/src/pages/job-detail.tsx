@@ -682,13 +682,13 @@ function CollapsibleSection({ section, isOpen, onToggle, activeCategories, searc
     if (block.type === 'bullet') {
       return (
         <div key={i} className="flex gap-2.5 pl-2 py-0.5">
-          <span className="text-muted-foreground/60 shrink-0 mt-1.5 w-1.5 h-1.5 rounded-full bg-foreground/25" />
-          <span className="text-foreground/90">{withSearch}</span>
+          <span className="shrink-0 mt-2 w-1.5 h-1.5 rounded-full bg-foreground/30" />
+          <span className="text-foreground/85 leading-relaxed">{withSearch}</span>
         </div>
       );
     }
     return (
-      <p key={i} className="text-foreground/90 pl-2">
+      <p key={i} className="text-foreground/85 leading-relaxed pl-2">
         {withSearch}
       </p>
     );
@@ -706,9 +706,6 @@ function CollapsibleSection({ section, isOpen, onToggle, activeCategories, searc
             <Icon className="h-3.5 w-3.5 text-muted-foreground" />
           </div>
           <span className="font-medium text-sm text-foreground">{section.heading}</span>
-          <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-            {section.blocks.length}
-          </Badge>
         </div>
         {isOpen ? (
           <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -717,7 +714,7 @@ function CollapsibleSection({ section, isOpen, onToggle, activeCategories, searc
         )}
       </button>
       {isOpen && (
-        <div className="pb-4 px-1 space-y-1.5 text-sm leading-relaxed">
+        <div className="pb-5 px-1 space-y-2.5 text-sm leading-relaxed">
           {section.blocks.map(renderBlock)}
         </div>
       )}
@@ -990,9 +987,7 @@ function DescriptionContent({ text, testId, compact, isPro }: { text?: string | 
   const [activeCategories, setActiveCategories] = useState<Set<HighlightCategory>>(isPro ? allCategories : freeCategories);
   const [searchQuery, setSearchQuery] = useState('');
   const [openSections, setOpenSections] = useState<Set<number>>(() => {
-    const initial = new Set<number>();
-    sections.forEach((_, i) => { if (i < 2) initial.add(i); });
-    return initial;
+    return new Set(sections.map((_, i) => i));
   });
 
   const toggleSection = useCallback((index: number) => {
@@ -1052,24 +1047,24 @@ function DescriptionContent({ text, testId, compact, isPro }: { text?: string | 
             readingTime={readingTime}
           />
         )}
-        <div className="space-y-2 mt-3">
+        <div className="space-y-3 mt-3">
           {blocks.map((block, i) => {
             if (block.type === 'heading') {
               return (
-                <p key={i} className="font-medium text-foreground pt-3 first:pt-0">
+                <p key={i} className="font-semibold text-foreground pt-4 first:pt-0 text-[0.94rem]">
                   {renderHighlightedContent(block.content, activeCategories)}
                 </p>
               );
             }
             if (block.type === 'bullet') {
               return (
-                <div key={i} className="flex gap-2.5 pl-1 py-0.5">
-                  <span className="text-muted-foreground/60 shrink-0 mt-1.5 w-1.5 h-1.5 rounded-full bg-foreground/25" />
-                  <span className="text-foreground/90">{renderHighlightedContent(block.content, activeCategories)}</span>
+                <div key={i} className="flex gap-2.5 pl-2 py-0.5">
+                  <span className="shrink-0 mt-2 w-1.5 h-1.5 rounded-full bg-foreground/30" />
+                  <span className="text-foreground/85 leading-relaxed">{renderHighlightedContent(block.content, activeCategories)}</span>
                 </div>
               );
             }
-            return <p key={i} className="text-foreground/90">{renderHighlightedContent(block.content, activeCategories)}</p>;
+            return <p key={i} className="text-foreground/85 leading-relaxed">{renderHighlightedContent(block.content, activeCategories)}</p>;
           })}
         </div>
       </div>
@@ -1567,24 +1562,17 @@ export default function JobDetail() {
             <Card>
               <CardContent className="pt-5 pb-5">
                 <div className="mb-4">
-                  <div className="flex items-center justify-between flex-wrap gap-2">
-                    <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Job Description</h2>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2.5 text-[10px] text-muted-foreground mt-2">
-                    {isPro ? (
-                      (Object.entries(HIGHLIGHT_DOT_COLORS) as [HighlightCategory, string][]).map(([cat, dotColor]) => (
+                  <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Job Description</h2>
+                  {isPro && (
+                    <div className="flex flex-wrap items-center gap-2.5 text-[10px] text-muted-foreground mt-2">
+                      {(Object.entries(HIGHLIGHT_DOT_COLORS) as [HighlightCategory, string][]).map(([cat, dotColor]) => (
                         <span key={cat} className="flex items-center gap-1">
                           <span className={`w-2 h-2 rounded-sm ${dotColor}`} />
                           {HIGHLIGHT_CATEGORIES[cat].label}
                         </span>
-                      ))
-                    ) : (
-                      <span className="flex items-center gap-1">
-                        <span className={`w-2 h-2 rounded-sm ${HIGHLIGHT_DOT_COLORS.experience}`} />
-                        {HIGHLIGHT_CATEGORIES.experience.label}
-                      </span>
-                    )}
-                  </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <DescriptionContent text={job.description} testId="text-job-description" isPro={isPro} />
               </CardContent>
