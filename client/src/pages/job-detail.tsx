@@ -821,6 +821,30 @@ export default function JobDetail() {
           </div>
         </ScrollReveal>
 
+        <Card className="bg-muted/30 border-border/50 mb-6" data-testid="card-resume-match">
+          <CardContent className="p-4 sm:p-5">
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-md bg-background border border-border/60 flex items-center justify-center shrink-0">
+                  <Upload className="h-4 w-4 text-muted-foreground" />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="font-semibold text-foreground text-sm" data-testid="text-resume-match-title">See how well you match this role</h3>
+                  <p className="text-xs text-muted-foreground" data-testid="text-resume-match-description">Upload your resume to get a personalized match score and gap analysis.</p>
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                onClick={() => setLocation(`/resumes?jobId=${job.id}`)}
+                data-testid="button-upload-resume-match"
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                Upload Resume
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
             {job.aiSummary && (
