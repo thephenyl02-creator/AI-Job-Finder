@@ -974,12 +974,18 @@ function DescriptionToolbar({ sections, openSections, setOpenSections, activeCat
   );
 }
 
-function DescriptionContent({ text, testId, compact, isPro }: { text?: string | null; testId: string; compact?: boolean; isPro?: boolean }) {
+function DescriptionContent({ text, testId, compact, isPro, hasAiSummary }: { text?: string | null; testId: string; compact?: boolean; isPro?: boolean; hasAiSummary?: boolean }) {
   if (!text) return null;
 
   const cleanedText = useMemo(() => cleanDescription(text), [text]);
   const blocks = useMemo(() => parseTextIntoBlocks(cleanedText), [cleanedText]);
-  const sections = useMemo(() => groupBlocksIntoSections(blocks), [blocks]);
+  const rawSections = useMemo(() => groupBlocksIntoSections(blocks), [blocks]);
+  const sections = useMemo(() => {
+    if (hasAiSummary && rawSections.length > 1 && rawSections[0].heading === 'Overview') {
+      return rawSections.slice(1);
+    }
+    return rawSections;
+  }, [rawSections, hasAiSummary]);
   const keyReqs = useMemo(() => isPro ? extractKeyRequirements(text) : null, [text, isPro]);
   const highlightCounts = useMemo(() => isPro ? countHighlightsByCategory(text) : {} as Record<HighlightCategory, number>, [text, isPro]);
   const readingTime = useMemo(() => isPro ? estimateReadingTime(cleanedText) : 0, [cleanedText, isPro]);
@@ -1576,7 +1582,7 @@ export default function JobDetail() {
                     </div>
                   )}
                 </div>
-                <DescriptionContent text={job.description} testId="text-job-description" isPro={isPro} />
+                <DescriptionContent text={job.description} testId="text-job-description" isPro={isPro} hasAiSummary={!!job.aiSummary} />
               </CardContent>
             </Card>
 
