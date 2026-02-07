@@ -71,10 +71,18 @@ A freemium SaaS job search platform specifically designed for legal professional
 - **Stale Job Detection**: After scheduled scrapes, jobs from scraped sources that no longer appear in API results are automatically deactivated.
 - **Lever Description Fix**: Lever scrapers use HTML description (with paragraphs/lists) instead of `descriptionPlain` (flat text) for better formatting.
 - **Freshness Tracking**: `lastScrapedAt` timestamp on jobs tracks when each job was last refreshed by a scraper.
+- **Description Cleaning**: `fixMissingSentenceSpaces()` in `html-utils.ts` fixes jammed sentences (e.g., "work.Our" → "work. Our") at the storage layer, so all paths through `createJob`/`updateJob`/`upsertJobByExternalId` are covered. Client-side `normalizeFlatText()` in `job-detail.tsx` serves as an additional safety net.
 - **Client-Side Normalization**: `job-detail.tsx` contains `normalizeFlatText()` which fixes remaining flat-text descriptions at render time (ALL-CAPS heading detection, inline bullet splitting, sentence-boundary paragraphing).
 - **Autopilot Pipeline**: The scheduled scraper (`runScheduledScrape`) runs a 7-phase pipeline: (1) Scrape sources with retry, (2) Smart upsert to DB, (3) Stale job detection, (4) AI categorization of uncategorized jobs, (5) Alert matching for new jobs, (6) Link validation, (7) Run recording to `scrape_runs` table.
 - **Scrape Run Tracking**: `scrape_runs` table records every run with timestamps, duration, counts (found/inserted/updated/categorized/alerts), source details, errors, and trigger source (scheduler/manual).
 - **Admin Dashboard**: `/admin/scraper` page shows real-time scraper status, run history, health metrics, source breakdown, cumulative stats, and manual controls (start/stop/run-now).
+
+### Events Autopilot
+- **Event Discovery Pipeline**: `server/lib/event-scraper.ts` uses OpenAI to discover real legal tech events from 5 global regions: North America, Europe, Asia-Pacific, Global Virtual, and Middle East/Africa/Latin America.
+- **Scheduling**: Runs automatically every 7 days on startup (30s delay for initial run). Uses `startEventScheduler()` from `event-scraper.ts`.
+- **Deduplication**: Events are upserted by `externalId` (MD5 hash of title+organizer+date) via `upsertEventByExternalId` in storage.
+- **Auto-cleanup**: Past events are automatically deactivated after each discovery run.
+- **Admin Controls**: `POST /api/admin/events/refresh` triggers manual discovery. `GET /api/admin/events/scraper-status` shows scheduler status.
 
 ## External Dependencies
 

@@ -50,6 +50,7 @@ import {
 } from "./lib/scheduled-scraper";
 import { getLogFiles, readLogFile, getRecentLogs, runStartupCleanup } from "./lib/logger";
 import { scrapeYCCompanies } from "./lib/yc-scraper";
+import { startEventScheduler, runEventDiscovery, getEventScraperStatus } from "./lib/event-scraper";
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -429,13 +430,23 @@ export async function registerRoutes(
     try {
       const user = req.user as any;
       if (!(await storage.isUserAdmin(user?.id))) return res.status(403).json({ error: "Admin access required" });
-      const deactivated = await storage.deactivatePastEvents();
+      const result = await runEventDiscovery();
       const allEvents = await storage.getEvents();
       const upcoming = allEvents.filter(e => new Date(e.startDate) >= new Date()).length;
-      res.json({ deactivated, totalEvents: allEvents.length, upcomingEvents: upcoming });
+      res.json({ ...result, totalEvents: allEvents.length, upcomingEvents: upcoming });
     } catch (error) {
       console.error("Error refreshing events:", error);
       res.status(500).json({ error: "Failed to refresh events" });
+    }
+  });
+
+  app.get("/api/admin/events/scraper-status", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      if (!(await storage.isUserAdmin(user?.id))) return res.status(403).json({ error: "Admin access required" });
+      res.json(getEventScraperStatus());
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get event scraper status" });
     }
   });
 
@@ -4657,9 +4668,9 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
     }
   });
 
-  // Run startup cleanup and start the scheduler when the server starts
   runStartupCleanup();
   startScheduler();
+  startEventScheduler();
 
   return httpServer;
 }

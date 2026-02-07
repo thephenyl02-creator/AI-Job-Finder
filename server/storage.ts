@@ -84,6 +84,8 @@ export interface IStorage {
   createEvent(event: InsertEvent): Promise<Event>;
   updateEvent(id: number, data: Partial<InsertEvent>): Promise<Event | undefined>;
   deleteEvent(id: number): Promise<void>;
+  upsertEventByExternalId(event: InsertEvent): Promise<{ event: Event; isNew: boolean }>;
+  bulkUpsertEvents(eventsList: InsertEvent[]): Promise<{ inserted: number; updated: number }>;
   getFeaturedEvents(limit?: number): Promise<Event[]>;
   trackEventView(eventId: number): Promise<void>;
   trackRegistrationClick(eventId: number): Promise<void>;
@@ -1835,6 +1837,53 @@ class DatabaseStorage implements IStorage {
 
   async deleteEvent(id: number): Promise<void> {
     await db.delete(events).where(eq(events.id, id));
+  }
+
+  async upsertEventByExternalId(event: InsertEvent): Promise<{ event: Event; isNew: boolean }> {
+    if (!event.externalId) {
+      const created = await this.createEvent(event);
+      return { event: created, isNew: true };
+    }
+
+    const [existing] = await db.select().from(events).where(eq(events.externalId, event.externalId));
+    if (existing) {
+      const [updated] = await db.update(events).set({
+        title: event.title,
+        organizer: event.organizer,
+        organizerLogo: event.organizerLogo,
+        eventType: event.eventType,
+        startDate: event.startDate,
+        endDate: event.endDate,
+        location: event.location,
+        attendanceType: event.attendanceType,
+        virtualUrl: event.virtualUrl,
+        description: event.description,
+        registrationUrl: event.registrationUrl,
+        cost: event.cost,
+        isFree: event.isFree,
+        topics: event.topics,
+        speakers: event.speakers,
+        cleCredits: event.cleCredits,
+        isActive: true,
+        isFeatured: event.isFeatured ?? existing.isFeatured,
+        source: event.source,
+      }).where(eq(events.externalId, event.externalId)).returning();
+      return { event: updated, isNew: false };
+    }
+
+    const created = await this.createEvent(event);
+    return { event: created, isNew: true };
+  }
+
+  async bulkUpsertEvents(eventsList: InsertEvent[]): Promise<{ inserted: number; updated: number }> {
+    let inserted = 0;
+    let updated = 0;
+    for (const event of eventsList) {
+      const result = await this.upsertEventByExternalId(event);
+      if (result.isNew) inserted++;
+      else updated++;
+    }
+    return { inserted, updated };
   }
 
   async getFeaturedEvents(limit: number = 6): Promise<Event[]> {
