@@ -5,12 +5,12 @@ import { logInfo, logWarn, logError, logSuccess, cleanupOldLogs } from './logger
 import { stripHtml, isRelevantRole } from './html-utils';
 import { categorizeJob } from './job-categorizer';
 import { matchNewJobsAgainstAlerts } from './alert-matcher';
+import { GREENHOUSE_SOURCES, LEVER_SOURCES, type OrgType } from './scraper-sources';
 
 const SCRAPE_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 hours
 const LINK_CHECK_TIMEOUT = 10000; // 10 seconds for each request
 const VALIDATION_DELAY_MS = 10000; // 10 seconds between validations
 
-// Validation state for background processing
 interface ValidationState {
   isRunning: boolean;
   currentIndex: number;
@@ -34,24 +34,6 @@ const validationState: ValidationState = {
   lastCheckedAt: null,
   abortController: null,
 };
-
-const GREENHOUSE_SOURCES = [
-  { name: 'Everlaw', id: 'everlaw', type: 'legaltech-core' },
-  { name: 'NetDocuments', id: 'netdocuments', type: 'legaltech-core' },
-  { name: 'Mitratech', id: 'mitratech', type: 'legaltech-core' },
-  { name: 'Brightflag', id: 'brightflag', type: 'legaltech-core' },
-  { name: 'Rocket Lawyer', id: 'rocketlawyer', type: 'legaltech-core' },
-  { name: 'Gibson Dunn', id: 'gibsondunn', type: 'lawfirm' },
-  { name: 'Legal Services NYC', id: 'legalservicesnyc', type: 'legalaid' },
-  { name: 'Axiom', id: 'axiom', type: 'legaltech-core' },
-  { name: 'Anthropic', id: 'anthropic', type: 'legaltech' },
-  { name: 'OneTrust', id: 'onetrust', type: 'legaltech' },
-  { name: 'Notion', id: 'notion', type: 'legaltech' },
-];
-
-const LEVER_SOURCES = [
-  { name: 'Factor', id: 'factor' },
-];
 
 async function scrapeGreenhouse(name: string, id: string, orgType: string): Promise<InsertJob[]> {
   const jobs: InsertJob[] = [];
@@ -93,7 +75,7 @@ async function scrapeGreenhouse(name: string, id: string, orgType: string): Prom
   return jobs;
 }
 
-async function scrapeLever(name: string, id: string): Promise<InsertJob[]> {
+async function scrapeLever(name: string, id: string, orgType?: OrgType): Promise<InsertJob[]> {
   const jobs: InsertJob[] = [];
   
   try {
@@ -101,7 +83,7 @@ async function scrapeLever(name: string, id: string): Promise<InsertJob[]> {
     const res = await axios.get(url, { timeout: 15000 });
     
     for (const job of res.data || []) {
-      if (!isRelevantRole(job.text || '', job.descriptionPlain || '')) continue;
+      if (!isRelevantRole(job.text || '', job.descriptionPlain || '', orgType)) continue;
       
       const descHtml = job.description || '';
       const descPlain = job.descriptionPlain || '';
@@ -422,7 +404,7 @@ export async function runScheduledScrape(triggeredBy: string = 'scheduler'): Pro
     
     logInfo('SCRAPE', `Scraping ${LEVER_SOURCES.length} Lever sources...`);
     const leverResults = await Promise.allSettled(
-      LEVER_SOURCES.map(s => scrapeLever(s.name, s.id))
+      LEVER_SOURCES.map(s => scrapeLever(s.name, s.id, s.type))
     );
     
     let leverSuccessCount = 0;
@@ -443,7 +425,7 @@ export async function runScheduledScrape(triggeredBy: string = 'scheduler'): Pro
     if (failedLeverSources.length > 0) {
       logWarn('RETRY', `Retrying ${failedLeverSources.length} failed Lever sources...`);
       const retryResults = await Promise.allSettled(
-        failedLeverSources.map(s => scrapeLever(s.name, s.id))
+        failedLeverSources.map(s => scrapeLever(s.name, s.id, s.type))
       );
       for (let i = 0; i < retryResults.length; i++) {
         const result = retryResults[i];
