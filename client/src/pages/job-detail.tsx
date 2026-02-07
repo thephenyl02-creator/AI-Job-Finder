@@ -318,25 +318,25 @@ function stripBoilerplate(text: string): string {
   cleaned = cleaned.replace(/^(?:The Opportunity|The Role|Overview|Position Summary|Job Summary|Role Summary|Position Overview)\s*:?\s*\n*/i, '');
 
   const trailingPatterns = [
-    /(?<=\.)\s*\S[\w\s&.'()-]{0,40}\s+is an?\s+(?:equal opportunity|affirmative action)\s+employer[\s\S]*$/i,
-    /(?<=\.)\s*\S[\w\s&.'()-]{0,40}\s+provides equal employment[\s\S]*$/i,
-    /\n*(?:Equal\s+(?:Opportunity|Employment)|EEO|EOE)\s*(?:Statement|Employer|Policy)?[^\n]*(?:\n[^\n]*){0,10}$/i,
-    /\n*(?:We are (?:an?|committed to being an?) (?:equal opportunity|EEO) employer)[^\n]*(?:\n[^\n]*){0,5}$/i,
-    /\n*(?:Disclaimer|Notice|Legal Notice):?\s*(?:This job (?:posting|description|ad))[^\n]*(?:\n[^\n]*){0,5}$/i,
-    /\n*(?:This (?:employer|company|organization) is an equal opportunity employer)[^\n]*/i,
-    /\n*(?:[\w\s&.'()-]{2,50} is an? (?:equal opportunity|affirmative action) employer)[^\n]*(?:\n[^\n]*){0,5}$/i,
-    /\n*(?:[\w\s&.'()-]{2,50} provides equal employment)[^\n]*(?:\n[^\n]*){0,5}$/i,
-    /\n*We pride ourselves on having a diverse workforce[^\n]*(?:\n[^\n]*){0,8}$/i,
-    /\n*We collect and process the personal information[^\n]*(?:\n[^\n]*){0,5}$/i,
-    /\n*We use Covey as part of our[^\n]*(?:\n[^\n]*){0,5}$/i,
-    /\n*When preparing to engage with[^\n]*(?:\n[^\n]*){0,5}$/i,
-    /\n*(?:Pursue Truth While Finding Yours|Find Your Truth)[^\n]*(?:\n[^\n]*){0,15}$/i,
-    /\n*[\u200B\s]*About [\w\s&.'()-]{2,40}\n+We help[^\n]*(?:\n[^\n]*){0,15}$/i,
-    /\n*(?:By applying for this role, you acknowledge)[^\n]*(?:\n[^\n]*){0,3}$/i,
-    /\n*(?:Your privacy is important to us)[^\n]*(?:\n[^\n]*){0,3}$/i,
-    /\n*(?:Individuals with Disabilities|Reasonable Accommodation)[^\n]*(?:\n[^\n]*){0,5}$/i,
-    /\n*(?:To learn more, visit:?\s*everify\.com)[^\n]*(?:\n[^\n]*){0,3}$/i,
-    /\n*(?:NetDocuments believes diversity)[^\n]*(?:\n[^\n]*){0,3}$/i,
+    /(?<=\.)\s*\n\s*\S[\w\s&.'()-]{0,40}\s+is an?\s+(?:equal opportunity|affirmative action)\s+employer[\s\S]*$/i,
+    /(?<=\.)\s*\n\s*\S[\w\s&.'()-]{0,40}\s+provides equal employment[\s\S]*$/i,
+    /\n+(?:Equal\s+(?:Opportunity|Employment)|EEO|EOE)\s*(?:Statement|Employer|Policy)?[^\n]*(?:\n[^\n]*){0,10}$/i,
+    /\n+(?:We are (?:an?|committed to being an?) (?:equal opportunity|EEO) employer)[^\n]*(?:\n[^\n]*){0,5}$/i,
+    /\n+(?:Disclaimer|Notice|Legal Notice):?\s*(?:This job (?:posting|description|ad))[^\n]*(?:\n[^\n]*){0,5}$/i,
+    /\n+(?:This (?:employer|company|organization) is an equal opportunity employer)[^\n]*/i,
+    /\n+(?:[\w\s&.'()-]{2,50} is an? (?:equal opportunity|affirmative action) employer)[^\n]*(?:\n[^\n]*){0,5}$/i,
+    /\n+(?:[\w\s&.'()-]{2,50} provides equal employment)[^\n]*(?:\n[^\n]*){0,5}$/i,
+    /\n+We pride ourselves on having a diverse workforce[^\n]*(?:\n[^\n]*){0,8}$/i,
+    /\n+We collect and process the personal information[^\n]*(?:\n[^\n]*){0,5}$/i,
+    /\n+We use Covey as part of our[^\n]*(?:\n[^\n]*){0,5}$/i,
+    /\n+When preparing to engage with[^\n]*(?:\n[^\n]*){0,5}$/i,
+    /\n+(?:Pursue Truth While Finding Yours|Find Your Truth)[^\n]*(?:\n[^\n]*){0,15}$/i,
+    /\n+[\u200B\s]*About [\w\s&.'()-]{2,40}\n+We help[^\n]*(?:\n[^\n]*){0,15}$/i,
+    /\n+(?:By applying for this role, you acknowledge)[^\n]*(?:\n[^\n]*){0,3}$/i,
+    /\n+(?:Your privacy is important to us)[^\n]*(?:\n[^\n]*){0,3}$/i,
+    /\n+(?:Individuals with Disabilities|Reasonable Accommodation)[^\n]*(?:\n[^\n]*){0,5}$/i,
+    /\n+(?:To learn more, visit:?\s*everify\.com)[^\n]*(?:\n[^\n]*){0,3}$/i,
+    /\n+(?:NetDocuments believes diversity)[^\n]*(?:\n[^\n]*){0,3}$/i,
   ];
   for (const p of trailingPatterns) {
     cleaned = cleaned.replace(p, '');
@@ -1234,32 +1234,40 @@ export default function JobDetail() {
             </Card>
           )}
 
-          <Card>
-            <CardContent className="pt-5 pb-5 px-6">
-              <button
-                onClick={() => setShowFullDescription(!showFullDescription)}
-                className="flex items-center justify-between w-full text-left group"
-                data-testid="button-toggle-full-description"
-              >
-                <div>
-                  <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Full Job Description</h2>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {showFullDescription ? 'Collapse to see the brief' : 'Expand to read the complete posting'}
-                  </p>
-                </div>
-                {showFullDescription ? (
-                  <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" />
-                ) : (
-                  <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
-                )}
-              </button>
-              {showFullDescription && (
-                <div className="mt-4 pt-4 border-t border-border/40">
-                  <DescriptionContent text={job.description} testId="text-job-description" isPro={isPro} />
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          {(() => {
+            const descLen = (job.description || '').length;
+            const summaryLen = (job.aiSummary || '').length;
+            const hasSubstantialDescription = descLen > 500 || (descLen > 200 && descLen > summaryLen * 2);
+            if (!hasSubstantialDescription) return null;
+            return (
+              <Card>
+                <CardContent className="pt-5 pb-5 px-6">
+                  <button
+                    onClick={() => setShowFullDescription(!showFullDescription)}
+                    className="flex items-center justify-between w-full text-left group"
+                    data-testid="button-toggle-full-description"
+                  >
+                    <div>
+                      <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Full Job Description</h2>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {showFullDescription ? 'Collapse to see the brief' : 'Expand to read the complete posting'}
+                      </p>
+                    </div>
+                    {showFullDescription ? (
+                      <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
+                    )}
+                  </button>
+                  {showFullDescription && (
+                    <div className="mt-4 pt-4 border-t border-border/40">
+                      <DescriptionContent text={job.description} testId="text-job-description" isPro={isPro} />
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })()}
 
           <div className="flex flex-col sm:flex-row items-center gap-3 py-2">
             <Button
