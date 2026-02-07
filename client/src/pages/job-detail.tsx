@@ -1183,7 +1183,7 @@ export default function JobDetail() {
             <CardContent className="p-5">
               <button
                 onClick={() => setShowFullDescription(!showFullDescription)}
-                className="flex items-center justify-between w-full text-left"
+                className="flex items-center justify-between gap-3 w-full text-left"
                 data-testid="button-toggle-full-description"
               >
                 <div>
