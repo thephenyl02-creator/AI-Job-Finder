@@ -232,6 +232,42 @@ class DatabaseStorage implements IStorage {
         .returning();
       return { job: updatedJob, isNew: false };
     } else {
+      const normalizedTitle = (job.title || '').trim().toLowerCase();
+      const normalizedCompany = (job.company || '').trim().toLowerCase();
+      const normalizedLocation = (job.location || '').trim().toLowerCase();
+      if (normalizedTitle && normalizedCompany) {
+        const conditions = [
+          sql`lower(trim(${jobs.title})) = ${normalizedTitle}`,
+          sql`lower(trim(${jobs.company})) = ${normalizedCompany}`,
+          eq(jobs.isActive, true),
+        ];
+        if (normalizedLocation) {
+          conditions.push(sql`lower(trim(COALESCE(${jobs.location}, ''))) = ${normalizedLocation}`);
+        }
+        const [titleCompanyDupe] = await db.select().from(jobs).where(
+          and(...conditions)
+        ).limit(1);
+        if (titleCompanyDupe) {
+          const updateData: Record<string, any> = {
+            lastScrapedAt: new Date(),
+            isActive: true,
+          };
+          if (job.salaryMin && !titleCompanyDupe.salaryMin) updateData.salaryMin = job.salaryMin;
+          if (job.salaryMax && !titleCompanyDupe.salaryMax) updateData.salaryMax = job.salaryMax;
+          const newDesc = job.description ? fixMissingSentenceSpaces(job.description) : '';
+          const existingDesc = titleCompanyDupe.description || '';
+          if (newDesc.length > existingDesc.length) {
+            updateData.description = newDesc;
+          }
+          const [updatedJob] = await db
+            .update(jobs)
+            .set(updateData)
+            .where(eq(jobs.id, titleCompanyDupe.id))
+            .returning();
+          return { job: updatedJob, isNew: false };
+        }
+      }
+
       const [newJob] = await db.insert(jobs).values({
         ...job,
         lastScrapedAt: new Date(),

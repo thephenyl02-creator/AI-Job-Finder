@@ -41,6 +41,7 @@ import {
   ChevronDown,
   ChevronUp,
   TrendingUp,
+  CircleDot,
 } from "lucide-react";
 
 function extractContactEmails(text: string | null | undefined): string[] {
@@ -1100,12 +1101,12 @@ export default function JobDetail() {
 
         <div className="flex flex-wrap gap-2 mb-8">
           {job.roleCategory && (
-            <Badge variant="secondary" data-testid="badge-category">
+            <Badge variant="outline" data-testid="badge-category">
               {job.roleCategory}
             </Badge>
           )}
           {job.roleSubcategory && (
-            <Badge variant="secondary" data-testid="badge-subcategory">
+            <Badge variant="outline" data-testid="badge-subcategory">
               {job.roleSubcategory}
             </Badge>
           )}
@@ -1114,20 +1115,25 @@ export default function JobDetail() {
         <div className="space-y-5">
 
           {job.aiSummary && (
-            <div className="border border-border/60 rounded-md p-5" data-testid="section-ai-summary">
-              <p className="text-[0.9rem] text-foreground/85 leading-relaxed" data-testid="text-ai-summary">
-                {job.aiSummary}
-              </p>
-            </div>
+            <Card data-testid="section-ai-summary">
+              <CardContent className="p-5">
+                <p className="text-[0.9rem] text-foreground/85 leading-relaxed" data-testid="text-ai-summary">
+                  {job.aiSummary}
+                </p>
+              </CardContent>
+            </Card>
           )}
 
           {(salary || job.seniorityLevel) && (
             <div className="grid grid-cols-2 gap-3" data-testid="section-quick-facts">
               {salary && (
                 <Card>
-                  <CardContent className="p-4">
-                    <p className="text-xs text-muted-foreground mb-1">Compensation</p>
-                    <p className="text-sm font-semibold text-foreground" data-testid="text-fact-compensation">{salary}</p>
+                  <CardContent className="p-4 flex items-center gap-3">
+                    <DollarSign className="h-4 w-4 text-green-600 dark:text-green-400 shrink-0" />
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-0.5">Compensation</p>
+                      <p className="text-sm font-semibold text-foreground" data-testid="text-fact-compensation">{salary}</p>
+                    </div>
                   </CardContent>
                 </Card>
               )}
@@ -1136,6 +1142,7 @@ export default function JobDetail() {
                   <CardContent className="p-4 flex items-center gap-3">
                     <TrendingUp className="h-4 w-4 text-muted-foreground shrink-0" />
                     <div>
+                      <p className="text-xs text-muted-foreground mb-0.5">Level</p>
                       <p className="text-sm font-semibold text-foreground" data-testid="text-fact-level">{job.seniorityLevel}</p>
                     </div>
                   </CardContent>
@@ -1145,50 +1152,57 @@ export default function JobDetail() {
           )}
 
           {job.keySkills && job.keySkills.length > 0 && (
-            <div data-testid="section-skills">
-              <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Skills & Expertise Required</h2>
-              <div className="flex flex-wrap gap-2">
-                {job.keySkills.map((skill, i) => (
-                  <Badge key={i} variant="outline" data-testid={`badge-skill-${i}`}>
-                    {skill}
-                  </Badge>
-                ))}
-              </div>
-            </div>
+            <Card data-testid="section-skills">
+              <CardContent className="p-5">
+                <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Skills & Expertise Required</h2>
+                <div className="flex flex-wrap gap-2">
+                  {job.keySkills.map((skill, i) => (
+                    <Badge key={i} variant="outline" data-testid={`badge-skill-${i}`}>
+                      <CircleDot className="h-3 w-3 mr-1 shrink-0" />
+                      {skill}
+                    </Badge>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
           )}
 
           {job.description && (
-            <div data-testid="section-full-description">
-              <button
-                onClick={() => setShowFullDescription(!showFullDescription)}
-                className="flex items-center justify-between w-full text-left mb-3"
-                data-testid="button-toggle-full-description"
-              >
-                <div>
-                  <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Full Job Description</h2>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {showFullDescription ? 'Collapse to see the brief' : 'Expand to read the complete posting'}
-                  </p>
-                </div>
-                {showFullDescription ? (
-                  <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" />
-                ) : (
-                  <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
+            <Card data-testid="section-full-description">
+              <CardContent className="p-5">
+                <button
+                  onClick={() => setShowFullDescription(!showFullDescription)}
+                  className="flex items-center justify-between w-full text-left mb-3"
+                  data-testid="button-toggle-full-description"
+                >
+                  <div>
+                    <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Full Job Description</h2>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {showFullDescription ? 'Collapse to see the brief' : 'Expand to read the complete posting'}
+                    </p>
+                  </div>
+                  {showFullDescription ? (
+                    <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
+                  )}
+                </button>
+                {showFullDescription && (
+                  <div className="border-t border-border/40 pt-4">
+                    <DescriptionContent text={job.description} testId="text-job-description" isPro={isPro} />
+                  </div>
                 )}
-              </button>
-              {showFullDescription && (
-                <div className="border-t border-border/40 pt-4">
-                  <DescriptionContent text={job.description} testId="text-job-description" isPro={isPro} />
-                </div>
-              )}
-            </div>
+              </CardContent>
+            </Card>
           )}
 
           {job.requirements && (
-            <div data-testid="section-requirements">
-              <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Requirements</h2>
-              <DescriptionContent text={job.requirements} testId="text-job-requirements" isPro={isPro} />
-            </div>
+            <Card data-testid="section-requirements">
+              <CardContent className="p-5">
+                <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Requirements</h2>
+                <DescriptionContent text={job.requirements} testId="text-job-requirements" isPro={isPro} />
+              </CardContent>
+            </Card>
           )}
 
           {contactEmails.length > 0 && (
@@ -1207,22 +1221,20 @@ export default function JobDetail() {
             </div>
           )}
 
-          <Card data-testid="section-apply-cta">
-            <CardContent className="p-4 flex flex-col sm:flex-row items-center gap-3">
-              <Button
-                size="lg"
-                onClick={handleApplyClick}
-                className="w-full sm:w-auto"
-                data-testid="button-apply-detail"
-              >
-                <ExternalLink className="h-4 w-4 mr-2" />
-                Read Full JD & Apply
-              </Button>
-              <p className="text-xs text-muted-foreground">
-                You'll be taken to the company's careers page to read the complete posting and submit your application.
-              </p>
-            </CardContent>
-          </Card>
+          <div className="flex flex-col sm:flex-row items-center gap-3" data-testid="section-apply-cta">
+            <Button
+              size="lg"
+              onClick={handleApplyClick}
+              className="w-full sm:w-auto"
+              data-testid="button-apply-detail"
+            >
+              <ExternalLink className="h-4 w-4 mr-2" />
+              Read Full JD & Apply
+            </Button>
+            <p className="text-xs text-muted-foreground">
+              You'll be taken to the company's careers page to read the complete posting and submit your application.
+            </p>
+          </div>
 
           <JobChat jobId={jobId || ""} />
 
