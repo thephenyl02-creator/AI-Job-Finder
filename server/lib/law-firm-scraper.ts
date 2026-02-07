@@ -596,6 +596,9 @@ export function transformToJobSchema(job: ScrapedJob, categorization?: JobCatego
     keySkills: categorization?.keySkills || null,
     aiSummary: categorization?.aiSummary || null,
     matchKeywords: categorization?.matchKeywords || null,
+    aiResponsibilities: categorization?.aiResponsibilities || null,
+    aiQualifications: categorization?.aiQualifications || null,
+    aiNiceToHaves: categorization?.aiNiceToHaves || null,
   };
 }
 

@@ -193,7 +193,7 @@ class DatabaseStorage implements IStorage {
 
     const existing = await this.getJobByExternalId(job.externalId);
     if (existing) {
-      const aiFields = ['roleCategory', 'roleSubcategory', 'seniorityLevel', 'keySkills', 'aiSummary', 'matchKeywords'] as const;
+      const aiFields = ['roleCategory', 'roleSubcategory', 'seniorityLevel', 'keySkills', 'aiSummary', 'matchKeywords', 'aiResponsibilities', 'aiQualifications', 'aiNiceToHaves'] as const;
       const updateData: Record<string, any> = {
         title: job.title,
         company: job.company,
@@ -1889,38 +1889,60 @@ class DatabaseStorage implements IStorage {
     const job = await this.getJob(jobId);
     if (!job) return [];
 
-    const conditions = [
-      sql`${jobs.id} != ${jobId}`,
-      eq(jobs.isActive, true),
-    ];
+    const jobSkills = job.keySkills || [];
 
     if (job.roleCategory) {
-      conditions.push(eq(jobs.roleCategory, job.roleCategory));
-    }
-
-    let results = await db
-      .select()
-      .from(jobs)
-      .where(and(...conditions))
-      .orderBy(desc(jobs.postedDate))
-      .limit(limit);
-
-    if (results.length < limit) {
-      const excludeIds = [jobId, ...results.map(r => r.id)];
-      const fallback = await db
+      const sameCategoryJobs = await db
         .select()
         .from(jobs)
         .where(and(
-          sql`${jobs.id} NOT IN (${sql.join(excludeIds.map(id => sql`${id}`), sql`, `)})`,
+          sql`${jobs.id} != ${jobId}`,
           eq(jobs.isActive, true),
-          job.seniorityLevel ? eq(jobs.seniorityLevel, job.seniorityLevel) : sql`true`,
+          eq(jobs.roleCategory, job.roleCategory),
         ))
         .orderBy(desc(jobs.postedDate))
-        .limit(limit - results.length);
-      results = [...results, ...fallback];
+        .limit(limit * 3);
+
+      if (sameCategoryJobs.length > 0 && jobSkills.length > 0) {
+        const scored = sameCategoryJobs.map(sj => {
+          const sjSkills = (sj.keySkills || []).map(s => s.toLowerCase());
+          const overlap = jobSkills.filter(s => sjSkills.includes(s.toLowerCase())).length;
+          const subcategoryMatch = sj.roleSubcategory === job.roleSubcategory ? 2 : 0;
+          const seniorityMatch = sj.seniorityLevel === job.seniorityLevel ? 1 : 0;
+          return { job: sj, score: overlap + subcategoryMatch + seniorityMatch };
+        });
+        scored.sort((a, b) => b.score - a.score);
+        const results = scored.slice(0, limit).map(s => s.job);
+        if (results.length >= limit) return results;
+
+        const excludeIds = [jobId, ...results.map(r => r.id)];
+        const fallback = await db
+          .select()
+          .from(jobs)
+          .where(and(
+            sql`${jobs.id} NOT IN (${sql.join(excludeIds.map(id => sql`${id}`), sql`, `)})`,
+            eq(jobs.isActive, true),
+          ))
+          .orderBy(desc(jobs.postedDate))
+          .limit(limit - results.length);
+        return [...results, ...fallback];
+      }
+
+      if (sameCategoryJobs.length > 0) {
+        return sameCategoryJobs.slice(0, limit);
+      }
     }
 
-    return results;
+    const fallback = await db
+      .select()
+      .from(jobs)
+      .where(and(
+        sql`${jobs.id} != ${jobId}`,
+        eq(jobs.isActive, true),
+      ))
+      .orderBy(desc(jobs.postedDate))
+      .limit(limit);
+    return fallback;
   }
 
   async getEvents(filters?: { eventType?: string; attendanceType?: string; isFree?: boolean; topic?: string; upcoming?: boolean }): Promise<Event[]> {

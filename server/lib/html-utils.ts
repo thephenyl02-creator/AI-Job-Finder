@@ -52,8 +52,6 @@ export function isRelevantRole(title: string, desc: string = '', orgType?: strin
   const titleLower = title.toLowerCase().trim();
   const descLower = desc.toLowerCase();
 
-  if (orgType === 'lawfirm' || orgType === 'legalaid') return true;
-
   const hardExcludeTitlePatterns = [
     'general application', 'open application',
     'janitor', 'maintenance', 'facilities', 'cafeteria', 'custodian',
@@ -67,24 +65,54 @@ export function isRelevantRole(title: string, desc: string = '', orgType?: strin
     'pre-training', 'pretraining', 'sandboxing',
     'chef ', 'cook ', 'driver ', 'warehouse', 'shipping', 'logistics',
     'hvac', 'plumber', 'electrician',
+    'account executive', 'demand generation', 'demand gen',
+    'gift planning', 'fundrais', 'donor', 'development officer',
+    'personal injury attorney', 'family law attorney',
+    'right to counsel', 'tenant rights', 'homeowner defense',
+    'disability advocacy', 'voting rights', 'immigrant justice',
+    'foreclosure prevention', 'government benefits unit',
+    'ask a lawyer',
   ];
   if (hardExcludeTitlePatterns.some(p => titleLower.includes(p))) return false;
 
+  const traditionalLegalPatterns = [
+    /^staff attorney/i, /^supervising attorney/i, /^senior staff attorney/i,
+    /^senior counsel,?\s/i, /^deputy director/i,
+  ];
+  if (traditionalLegalPatterns.some(p => p.test(titleLower))) {
+    const hasLegalTechContext = [
+      'legal tech', 'legaltech', 'legal technology', 'legal ops',
+      'legal operations', 'legal ai', 'legal software', 'legal automation',
+      'ediscovery', 'e-discovery', 'contract lifecycle', 'clm',
+      'compliance platform', 'regulatory tech', 'regtech',
+    ].some(k => descLower.includes(k));
+    if (!hasLegalTechContext) return false;
+  }
+
   if (orgType === 'legaltech') return true;
 
+  if (orgType === 'lawfirm' || orgType === 'legalaid') {
+    const techRelevantTitles = [
+      'engineer', 'developer', 'architect', 'designer', 'product',
+      'technology', 'innovation', 'knowledge management', 'data',
+      'analytics', 'automation', 'digital', 'solutions', 'implementation',
+      'operations', 'project manager', 'program manager',
+    ];
+    return techRelevantTitles.some(k => titleLower.includes(k));
+  }
+
   const legalTitleKeywords = [
-    'legal', 'attorney', 'lawyer', 'counsel', 'paralegal',
-    'litigation', 'compliance', 'regulatory', 'governance',
+    'legal', 'counsel', 'compliance', 'regulatory', 'governance',
     'ediscovery', 'e-discovery', 'contract', 'privacy',
     'policy', 'grc', 'risk', 'ethics', 'patent', 'ip ',
-    'intellectual property', 'law clerk', 'notary',
-    'trust ', 'trust&', 'antitrust', 'arbitration',
+    'intellectual property', 'law clerk',
+    'antitrust', 'arbitration',
   ];
   if (legalTitleKeywords.some(k => titleLower.includes(k))) return true;
 
   const legalTechTitleKeywords = [
     'product', 'solutions', 'customer success', 'implementation',
-    'sales engineer', 'account executive', 'account manager',
+    'sales engineer', 'account manager',
     'business development', 'partnership', 'enablement',
     'proposal', 'presales', 'pre-sales', 'onboarding',
     'professional services', 'consulting',

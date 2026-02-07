@@ -2296,6 +2296,9 @@ Be specific and actionable. Focus on legal tech industry keywords and ATS best p
         keySkills: categorization.keySkills,
         aiSummary: categorization.aiSummary,
         matchKeywords: categorization.matchKeywords,
+        aiResponsibilities: categorization.aiResponsibilities || null,
+        aiQualifications: categorization.aiQualifications || null,
+        aiNiceToHaves: categorization.aiNiceToHaves || null,
       });
 
       res.json({ success: true, job: updated, categorization });
@@ -2400,6 +2403,9 @@ Be specific and actionable. Focus on legal tech industry keywords and ATS best p
                 keySkills: result.keySkills,
                 aiSummary: result.aiSummary,
                 matchKeywords: result.matchKeywords,
+                aiResponsibilities: result.aiResponsibilities || null,
+                aiQualifications: result.aiQualifications || null,
+                aiNiceToHaves: result.aiNiceToHaves || null,
               });
               done++;
               if (done % 10 === 0) {
@@ -2417,6 +2423,70 @@ Be specific and actionable. Focus on legal tech industry keywords and ATS best p
       console.log(`Finished re-categorizing ${done}/${needsCategorization.length} jobs`);
     } catch (error: any) {
       console.error("Error re-categorizing jobs:", error);
+    }
+  });
+
+  app.post("/api/admin/enrich-structured", isAuthenticated, async (req, res) => {
+    if (!(await isAdminCheck(req))) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    try {
+      const allJobs = await storage.getActiveJobs();
+      const needsEnrichment = allJobs.filter(
+        (j) => j.roleCategory && (!j.aiResponsibilities || j.aiResponsibilities.length === 0)
+      );
+
+      const batchLimit = req.body.limit ? Math.min(parseInt(req.body.limit), 100) : 50;
+      const toProcess = needsEnrichment.slice(0, batchLimit);
+
+      console.log(`Enriching ${toProcess.length} of ${needsEnrichment.length} jobs needing structured data...`);
+      res.json({
+        success: true,
+        message: `Enriching ${toProcess.length} jobs in background (${needsEnrichment.length} total need enrichment)...`,
+        total: needsEnrichment.length,
+        processing: toProcess.length,
+      });
+
+      let done = 0;
+      const batchSize = 3;
+      for (let i = 0; i < toProcess.length; i += batchSize) {
+        const batch = toProcess.slice(i, i + batchSize);
+        await Promise.all(
+          batch.map(async (job) => {
+            try {
+              const result = await categorizeJob(job.title, job.description, job.company);
+              const structuredUpdate: Record<string, any> = {};
+              if (result.aiResponsibilities && result.aiResponsibilities.length > 0) {
+                structuredUpdate.aiResponsibilities = result.aiResponsibilities;
+              }
+              if (result.aiQualifications && result.aiQualifications.length > 0) {
+                structuredUpdate.aiQualifications = result.aiQualifications;
+              }
+              if (result.aiNiceToHaves && result.aiNiceToHaves.length > 0) {
+                structuredUpdate.aiNiceToHaves = result.aiNiceToHaves;
+              }
+              if (!job.aiSummary && result.aiSummary) {
+                structuredUpdate.aiSummary = result.aiSummary;
+              }
+              if (Object.keys(structuredUpdate).length > 0) {
+                await storage.updateJob(job.id, structuredUpdate);
+              }
+              done++;
+              if (done % 5 === 0) {
+                console.log(`Enriched ${done}/${toProcess.length} jobs`);
+              }
+            } catch (err) {
+              console.error(`Failed to enrich job ${job.id} (${job.title}):`, err);
+            }
+          })
+        );
+        if (i + batchSize < toProcess.length) {
+          await new Promise((r) => setTimeout(r, 1500));
+        }
+      }
+      console.log(`Finished enriching ${done}/${toProcess.length} jobs with structured data`);
+    } catch (error: any) {
+      console.error("Error enriching jobs:", error);
     }
   });
 

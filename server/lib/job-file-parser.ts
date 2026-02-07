@@ -180,6 +180,9 @@ export async function parseMultipleJobsFromText(rawText: string): Promise<Insert
       roleSubcategory: categorization?.subcategory || null,
       seniorityLevel: categorization?.seniorityLevel || null,
       matchKeywords: categorization?.matchKeywords || null,
+      aiResponsibilities: categorization?.aiResponsibilities || null,
+      aiQualifications: categorization?.aiQualifications || null,
+      aiNiceToHaves: categorization?.aiNiceToHaves || null,
     });
   }
 
@@ -272,5 +275,8 @@ export async function parseJobFile(
     roleSubcategory: categorization?.subcategory || null,
     seniorityLevel: categorization?.seniorityLevel || null,
     matchKeywords: categorization?.matchKeywords || null,
+    aiResponsibilities: categorization?.aiResponsibilities || null,
+    aiQualifications: categorization?.aiQualifications || null,
+    aiNiceToHaves: categorization?.aiNiceToHaves || null,
   };
 }

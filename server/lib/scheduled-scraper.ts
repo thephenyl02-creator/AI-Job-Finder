@@ -514,6 +514,9 @@ export async function runScheduledScrape(triggeredBy: string = 'scheduler'): Pro
                   keySkills: result.keySkills,
                   aiSummary: result.aiSummary,
                   matchKeywords: result.matchKeywords,
+                  aiResponsibilities: result.aiResponsibilities || null,
+                  aiQualifications: result.aiQualifications || null,
+                  aiNiceToHaves: result.aiNiceToHaves || null,
                 });
                 categorizedCount++;
               } catch (err: any) {

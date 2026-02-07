@@ -8,6 +8,9 @@ export interface JobCategorizationResult {
   keySkills: string[];
   aiSummary: string;
   matchKeywords: string[];
+  aiResponsibilities?: string[];
+  aiQualifications?: string[];
+  aiNiceToHaves?: string[];
   experienceMin?: number;
   experienceMax?: number;
   isRemote?: boolean;
@@ -74,6 +77,9 @@ Also extract:
 - Employment type: Set employmentType to one of: "full-time", "part-time", "contract", "temporary", "internship". Default to "full-time" if not specified.
 - Summary (3 sentences max, focus on: what you'll do, what they're looking for, what makes it interesting)
 - Match keywords for search (5-10 relevant terms)
+- aiResponsibilities: Extract 4-8 bullet points describing what the person will actually DO in this role. Focus on concrete activities, not vague corporate speak. Strip boilerplate. Each bullet should be one clear sentence. If description is too short, set to null.
+- aiQualifications: Extract 4-8 REQUIRED qualifications (must-haves). Include years of experience, degrees, certifications, specific tools/skills they explicitly require. Each bullet should be one clear sentence. If description is too short, set to null.
+- aiNiceToHaves: Extract 2-5 PREFERRED/nice-to-have qualifications. These are things they say "preferred", "bonus", "a plus", "ideally", etc. If none mentioned, set to null.
 
 Return ONLY valid JSON:
 {
@@ -88,13 +94,17 @@ Return ONLY valid JSON:
   "isRemote": false,
   "employmentType": "full-time",
   "aiSummary": "Brief 3-sentence summary here.",
-  "matchKeywords": ["ai", "machine learning", "legal", "nlp"]
+  "matchKeywords": ["ai", "machine learning", "legal", "nlp"],
+  "aiResponsibilities": ["Build NLP models for contract analysis", "Lead technical architecture for legal AI products"],
+  "aiQualifications": ["5+ years Python experience", "Experience with NLP/LLM frameworks", "JD or legal domain knowledge preferred"],
+  "aiNiceToHaves": ["Experience in legal tech industry", "Published research in NLP"]
 }
 
 CRITICAL RULES:
 - experienceMin/experienceMax: MUST be null if NOT explicitly stated. Do not guess.
 - salaryMin/salaryMax: MUST be null if NOT explicitly stated. Convert all amounts to annual USD.
 - isRemote: Check BOTH title and description for remote indicators.
+- aiResponsibilities/aiQualifications/aiNiceToHaves: Extract from the actual posting. Be specific and concise. Strip corporate fluff. Set to null if description is too short to extract meaningful data.
 - If the description is very short or empty, rely more heavily on the title for categorization.`;
 
   try {
@@ -125,6 +135,9 @@ CRITICAL RULES:
       keySkills: Array.isArray(result.keySkills) ? result.keySkills.slice(0, 8) : [],
       aiSummary: result.aiSummary || `${title} position at ${company}.`,
       matchKeywords: Array.isArray(result.matchKeywords) ? result.matchKeywords.slice(0, 10) : [],
+      aiResponsibilities: Array.isArray(result.aiResponsibilities) ? result.aiResponsibilities.slice(0, 8) : undefined,
+      aiQualifications: Array.isArray(result.aiQualifications) ? result.aiQualifications.slice(0, 8) : undefined,
+      aiNiceToHaves: Array.isArray(result.aiNiceToHaves) ? result.aiNiceToHaves.slice(0, 5) : undefined,
       experienceMin: typeof result.experienceMin === "number" ? result.experienceMin : undefined,
       experienceMax: typeof result.experienceMax === "number" ? result.experienceMax : undefined,
       isRemote: result.isRemote === true || detectRemote(title, description),
