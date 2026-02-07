@@ -675,14 +675,14 @@ function DescriptionContent({ text, testId, compact, isPro }: { text?: string | 
     const highlighted = renderHighlightedContent(block.content, activeCategories);
     if (block.type === 'bullet') {
       return (
-        <li key={i} className="flex gap-2.5 text-[0.9rem] text-foreground/85 leading-relaxed" data-testid={`bullet-${i}`}>
-          <span className="shrink-0 mt-[0.55rem] w-1.5 h-1.5 rounded-full bg-foreground/25" />
+        <li key={i} className="flex gap-3 text-[0.925rem] text-foreground/80 leading-[1.7]" data-testid={`bullet-${i}`}>
+          <span className="shrink-0 mt-[0.65rem] w-[5px] h-[5px] rounded-full bg-foreground/30" />
           <span>{highlighted}</span>
         </li>
       );
     }
     return (
-      <p key={i} className="text-[0.9rem] text-foreground/85 leading-relaxed" data-testid={`para-${i}`}>
+      <p key={i} className="text-[0.925rem] text-foreground/80 leading-[1.7]" data-testid={`para-${i}`}>
         {highlighted}
       </p>
     );
@@ -711,20 +711,20 @@ function DescriptionContent({ text, testId, compact, isPro }: { text?: string | 
 
   if (sections.length <= 1) {
     return (
-      <div className="space-y-3" data-testid={testId}>
+      <div className="space-y-3.5" data-testid={testId}>
         {blocks.map(renderBlock)}
       </div>
     );
   }
 
   return (
-    <div className="space-y-6" data-testid={testId}>
+    <div className="space-y-8" data-testid={testId}>
       {sections.map((section, si) => (
         <div key={`${section.heading}-${si}`} data-testid={`section-${section.heading.toLowerCase().replace(/\s+/g, '-')}`}>
-          <h3 className="text-sm font-semibold text-foreground mb-3 pb-1.5 border-b border-border/40">
+          <h3 className="text-[0.95rem] font-bold text-foreground mb-3">
             {section.heading}
           </h3>
-          <div className="space-y-2">
+          <div className="space-y-2.5">
             {section.blocks.map((block, i) => renderBlock(block, si * 100 + i))}
           </div>
         </div>
@@ -1112,12 +1112,12 @@ export default function JobDetail() {
           )}
         </div>
 
-        <div className="space-y-5">
+        <div className="space-y-6">
 
           {job.aiSummary && (
             <Card data-testid="section-ai-summary">
-              <CardContent className="p-5">
-                <p className="text-[0.9rem] text-foreground/85 leading-relaxed" data-testid="text-ai-summary">
+              <CardContent className="p-5 sm:p-6">
+                <p className="text-[0.925rem] text-foreground/80 leading-[1.75]" data-testid="text-ai-summary">
                   {job.aiSummary}
                 </p>
               </CardContent>
@@ -1153,7 +1153,7 @@ export default function JobDetail() {
 
           {job.keySkills && job.keySkills.length > 0 && (
             <Card data-testid="section-skills">
-              <CardContent className="p-5">
+              <CardContent className="p-5 sm:p-6">
                 <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Skills & Expertise Required</h2>
                 <div className="flex flex-wrap gap-2">
                   {job.keySkills.map((skill, i) => (
@@ -1169,10 +1169,10 @@ export default function JobDetail() {
 
           {job.description && (
             <Card data-testid="section-full-description">
-              <CardContent className="p-5">
+              <CardContent className="p-5 sm:p-6">
                 <button
                   onClick={() => setShowFullDescription(!showFullDescription)}
-                  className="flex items-center justify-between w-full text-left mb-3"
+                  className="flex items-center justify-between w-full text-left"
                   data-testid="button-toggle-full-description"
                 >
                   <div>
@@ -1188,7 +1188,7 @@ export default function JobDetail() {
                   )}
                 </button>
                 {showFullDescription && (
-                  <div className="border-t border-border/40 pt-4">
+                  <div className="border-t border-border/40 pt-5 mt-4">
                     <DescriptionContent text={job.description} testId="text-job-description" isPro={isPro} />
                   </div>
                 )}
@@ -1198,8 +1198,8 @@ export default function JobDetail() {
 
           {job.requirements && (
             <Card data-testid="section-requirements">
-              <CardContent className="p-5">
-                <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Requirements</h2>
+              <CardContent className="p-5 sm:p-6">
+                <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">Requirements</h2>
                 <DescriptionContent text={job.requirements} testId="text-job-requirements" isPro={isPro} />
               </CardContent>
             </Card>
