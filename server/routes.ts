@@ -30,6 +30,8 @@ import {
   scrapeAllLawFirmsWithAI,
   scrapeSingleJobUrl,
   validateJobUrl,
+  scrapeBulkUrls,
+  discoverJobLinksFromUrl,
 } from "./lib/law-firm-scraper";
 import { LAW_FIRMS_AND_COMPANIES } from "./lib/law-firms-list";
 import { categorizeJob } from "./lib/job-categorizer";
@@ -1587,6 +1589,98 @@ Be specific and actionable. Focus on legal tech industry keywords and ATS best p
     } catch (error: any) {
       console.error("Error scraping URL:", error);
       res.status(500).json({ error: error.message || "Failed to scrape URL" });
+    }
+  });
+
+  app.post("/api/admin/scraper/bulk-urls", isAuthenticated, async (req, res) => {
+    if (!(await isAdminCheck(req))) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    try {
+      const { urls } = req.body;
+      if (!urls || !Array.isArray(urls) || urls.length === 0) {
+        return res.status(400).json({ error: "An array of URLs is required" });
+      }
+      if (urls.length > 50) {
+        return res.status(400).json({ error: "Maximum 50 URLs at a time" });
+      }
+
+      const validUrls = urls.filter((u: string) => {
+        try { new URL(u.trim()); return true; } catch { return false; }
+      });
+
+      console.log(`[Bulk Scraper] Processing ${validUrls.length} URLs...`);
+
+      const { results, summary } = await scrapeBulkUrls(validUrls);
+
+      let inserted = 0;
+      let updated = 0;
+      const savedJobs: any[] = [];
+
+      for (const result of results) {
+        if (!result.job) continue;
+        try {
+          let existing = await storage.getJobByExternalId(result.job.externalId!);
+          if (!existing && result.job.applyUrl) {
+            const { jobs: allJobs } = await storage.getJobs({ limit: 5000 });
+            existing = allJobs.find((j: any) => j.applyUrl === result.job!.applyUrl) || null;
+          }
+          if (existing) {
+            await storage.updateJob(existing.id, result.job);
+            updated++;
+            savedJobs.push({ ...result.job, id: existing.id, status: 'updated' });
+          } else {
+            const saved = await storage.createJob(result.job);
+            inserted++;
+            savedJobs.push({ ...saved, status: 'created' });
+          }
+        } catch (e: any) {
+          console.error(`[Bulk Scraper] Error saving job from ${result.url}:`, e.message);
+        }
+      }
+
+      res.json({
+        success: true,
+        summary: { ...summary, inserted, updated },
+        results: results.map(r => ({
+          url: r.url,
+          success: !!r.job,
+          title: r.job?.title,
+          company: r.job?.company,
+          error: r.error,
+        })),
+      });
+    } catch (error: any) {
+      console.error("Error bulk scraping:", error);
+      res.status(500).json({ error: error.message || "Failed to bulk scrape URLs" });
+    }
+  });
+
+  app.post("/api/admin/scraper/discover", isAuthenticated, async (req, res) => {
+    if (!(await isAdminCheck(req))) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    try {
+      const { url } = req.body;
+      if (!url || typeof url !== 'string') {
+        return res.status(400).json({ error: "URL is required" });
+      }
+      try { new URL(url); } catch { return res.status(400).json({ error: "Invalid URL format" }); }
+
+      console.log(`[Discovery] Analyzing ${url} for job links...`);
+      const discovery = await discoverJobLinksFromUrl(url);
+
+      res.json({
+        success: true,
+        url,
+        isListing: discovery.isListing,
+        linksFound: discovery.links.length,
+        links: discovery.links.slice(0, 50),
+        embeddedATS: discovery.embeddedATS,
+      });
+    } catch (error: any) {
+      console.error("Error discovering links:", error);
+      res.status(500).json({ error: error.message || "Failed to discover job links" });
     }
   });
 
