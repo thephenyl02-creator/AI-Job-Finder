@@ -294,6 +294,29 @@ function stripHtmlToText(html: string): string {
   return text.trim();
 }
 
+function ensureCompleteSentence(text: string): string {
+  const trimmed = text.trim();
+  if (!trimmed) return trimmed;
+  if (/[.!?:)\]"'\u201D\u2019]$/.test(trimmed)) return trimmed;
+  const lastSentenceEnd = Math.max(
+    trimmed.lastIndexOf('. '),
+    trimmed.lastIndexOf('.\n'),
+    trimmed.lastIndexOf('? '),
+    trimmed.lastIndexOf('?\n'),
+    trimmed.lastIndexOf('! '),
+    trimmed.lastIndexOf('!\n'),
+  );
+  if (lastSentenceEnd > trimmed.length * 0.7) {
+    return trimmed.slice(0, lastSentenceEnd + 1).trim();
+  }
+  if (/\.\s*$/.test(trimmed) || /[.!?]$/.test(trimmed)) return trimmed;
+  const veryLastPeriod = trimmed.lastIndexOf('.');
+  if (veryLastPeriod > trimmed.length * 0.5) {
+    return trimmed.slice(0, veryLastPeriod + 1).trim();
+  }
+  return trimmed;
+}
+
 function stripBoilerplate(text: string): string {
   let cleaned = text;
 
@@ -308,9 +331,9 @@ function stripBoilerplate(text: string): string {
 
   const companyIntroWithSeparator = /^(?:[\w\s&.'()-]{2,50})\s+(?:is|are)\s+(?:a|an|the|on a|where|building)\s+[^]*?\n\n/;
   const introSepMatch = cleaned.match(companyIntroWithSeparator);
-  if (introSepMatch && introSepMatch[0].length < cleaned.length * 0.35) {
+  if (introSepMatch && introSepMatch[0].length < cleaned.length * 0.25) {
     const afterIntro = cleaned.slice(introSepMatch[0].length).trim();
-    if (afterIntro.length > 100) {
+    if (afterIntro.length > 200) {
       cleaned = afterIntro;
     }
   }
@@ -318,25 +341,13 @@ function stripBoilerplate(text: string): string {
   cleaned = cleaned.replace(/^(?:The Opportunity|The Role|Overview|Position Summary|Job Summary|Role Summary|Position Overview)\s*:?\s*\n*/i, '');
 
   const trailingPatterns = [
-    /(?<=\.)\s*\n\s*\S[\w\s&.'()-]{0,40}\s+is an?\s+(?:equal opportunity|affirmative action)\s+employer[\s\S]*$/i,
-    /(?<=\.)\s*\n\s*\S[\w\s&.'()-]{0,40}\s+provides equal employment[\s\S]*$/i,
-    /\n+(?:Equal\s+(?:Opportunity|Employment)|EEO|EOE)\s*(?:Statement|Employer|Policy)?[^\n]*(?:\n[^\n]*){0,10}$/i,
-    /\n+(?:We are (?:an?|committed to being an?) (?:equal opportunity|EEO) employer)[^\n]*(?:\n[^\n]*){0,5}$/i,
-    /\n+(?:Disclaimer|Notice|Legal Notice):?\s*(?:This job (?:posting|description|ad))[^\n]*(?:\n[^\n]*){0,5}$/i,
-    /\n+(?:This (?:employer|company|organization) is an equal opportunity employer)[^\n]*/i,
-    /\n+(?:[\w\s&.'()-]{2,50} is an? (?:equal opportunity|affirmative action) employer)[^\n]*(?:\n[^\n]*){0,5}$/i,
-    /\n+(?:[\w\s&.'()-]{2,50} provides equal employment)[^\n]*(?:\n[^\n]*){0,5}$/i,
-    /\n+We pride ourselves on having a diverse workforce[^\n]*(?:\n[^\n]*){0,8}$/i,
-    /\n+We collect and process the personal information[^\n]*(?:\n[^\n]*){0,5}$/i,
-    /\n+We use Covey as part of our[^\n]*(?:\n[^\n]*){0,5}$/i,
-    /\n+When preparing to engage with[^\n]*(?:\n[^\n]*){0,5}$/i,
-    /\n+(?:Pursue Truth While Finding Yours|Find Your Truth)[^\n]*(?:\n[^\n]*){0,15}$/i,
-    /\n+[\u200B\s]*About [\w\s&.'()-]{2,40}\n+We help[^\n]*(?:\n[^\n]*){0,15}$/i,
-    /\n+(?:By applying for this role, you acknowledge)[^\n]*(?:\n[^\n]*){0,3}$/i,
-    /\n+(?:Your privacy is important to us)[^\n]*(?:\n[^\n]*){0,3}$/i,
-    /\n+(?:Individuals with Disabilities|Reasonable Accommodation)[^\n]*(?:\n[^\n]*){0,5}$/i,
-    /\n+(?:To learn more, visit:?\s*everify\.com)[^\n]*(?:\n[^\n]*){0,3}$/i,
-    /\n+(?:NetDocuments believes diversity)[^\n]*(?:\n[^\n]*){0,3}$/i,
+    /\n{2,}\s*(?:Equal\s+(?:Opportunity|Employment)|EEO Statement|EOE Statement)[^\n]*(?:\n[^\n]*){0,10}$/i,
+    /\n{2,}\s*(?:OUR COMMITMENT TO (?:ACCESSIBILITY|EQUITY|DIVERSITY|INCLUSION))[^\n]*(?:\n[^\n]*){0,15}$/i,
+    /\n{2,}\s*(?:Disclaimer|Legal Notice):?\s*(?:This job (?:posting|description|ad))[^\n]*(?:\n[^\n]*){0,5}$/i,
+    /\n{2,}\s*(?:Pursue Truth While Finding Yours|Find Your Truth)[^\n]*(?:\n[^\n]*){0,15}$/i,
+    /\n{2,}\s*(?:By applying for this role, you acknowledge)[^\n]*(?:\n[^\n]*){0,3}$/i,
+    /\n{2,}\s*(?:Your privacy is important to us)[^\n]*(?:\n[^\n]*){0,3}$/i,
+    /\n{2,}\s*(?:To learn more, visit:?\s*everify\.com)[^\n]*(?:\n[^\n]*){0,3}$/i,
   ];
   for (const p of trailingPatterns) {
     cleaned = cleaned.replace(p, '');
@@ -346,6 +357,8 @@ function stripBoilerplate(text: string): string {
   cleaned = cleaned.replace(/#LI-(?:Remote|Hybrid|Onsite|DNI|\w+)\s*/g, '');
 
   cleaned = cleaned.replace(/\n*-?\s*Find out more about our Benefits and Perks\s*\n*/gi, '\n');
+
+  cleaned = ensureCompleteSentence(cleaned);
 
   return cleaned.trim();
 }
@@ -479,13 +492,7 @@ function cleanDescription(text: string): string {
     cleaned = stripHtmlToText(cleaned);
   }
   cleaned = fixMissingSentenceSpaces(cleaned);
-  let prev = '';
-  let iterations = 0;
-  while (prev !== cleaned && iterations < 5) {
-    prev = cleaned;
-    cleaned = stripBoilerplate(cleaned);
-    iterations++;
-  }
+  cleaned = stripBoilerplate(cleaned);
   cleaned = normalizeFlatText(cleaned);
   return cleaned;
 }
@@ -1234,40 +1241,43 @@ export default function JobDetail() {
             </Card>
           )}
 
-          {(() => {
-            const descLen = (job.description || '').length;
-            const summaryLen = (job.aiSummary || '').length;
-            const hasSubstantialDescription = descLen > 500 || (descLen > 200 && descLen > summaryLen * 2);
-            if (!hasSubstantialDescription) return null;
-            return (
-              <Card>
-                <CardContent className="pt-5 pb-5 px-6">
-                  <button
-                    onClick={() => setShowFullDescription(!showFullDescription)}
-                    className="flex items-center justify-between w-full text-left group"
-                    data-testid="button-toggle-full-description"
-                  >
-                    <div>
-                      <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Full Job Description</h2>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {showFullDescription ? 'Collapse to see the brief' : 'Expand to read the complete posting'}
-                      </p>
-                    </div>
-                    {showFullDescription ? (
-                      <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" />
-                    ) : (
-                      <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
+          {job.description && (
+            <Card>
+              <CardContent className="pt-5 pb-5 px-6">
+                {(job.description || '').length > 500 ? (
+                  <>
+                    <button
+                      onClick={() => setShowFullDescription(!showFullDescription)}
+                      className="flex items-center justify-between w-full text-left group"
+                      data-testid="button-toggle-full-description"
+                    >
+                      <div>
+                        <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Full Job Description</h2>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {showFullDescription ? 'Collapse to see the brief' : 'Expand to read the complete posting'}
+                        </p>
+                      </div>
+                      {showFullDescription ? (
+                        <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" />
+                      ) : (
+                        <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
+                      )}
+                    </button>
+                    {showFullDescription && (
+                      <div className="mt-4 pt-4 border-t border-border/40">
+                        <DescriptionContent text={job.description} testId="text-job-description" isPro={isPro} />
+                      </div>
                     )}
-                  </button>
-                  {showFullDescription && (
-                    <div className="mt-4 pt-4 border-t border-border/40">
-                      <DescriptionContent text={job.description} testId="text-job-description" isPro={isPro} />
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            );
-          })()}
+                  </>
+                ) : (
+                  <>
+                    <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Job Description</h2>
+                    <DescriptionContent text={job.description} testId="text-job-description" isPro={isPro} />
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           <div className="flex flex-col sm:flex-row items-center gap-3 py-2">
             <Button
