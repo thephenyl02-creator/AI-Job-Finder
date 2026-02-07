@@ -59,8 +59,16 @@ function stripHtml(html: string): string {
     .replace(/&#x27;/g, "'")
     .replace(/&#(\d+);/g, (_, num) => String.fromCharCode(parseInt(num)));
   
+  decoded = decoded.replace(/<br\s*\/?>/gi, '\n');
+  decoded = decoded.replace(/<\/p>/gi, '\n\n');
+  decoded = decoded.replace(/<\/li>/gi, '\n');
+  decoded = decoded.replace(/<li[^>]*>/gi, '- ');
+  decoded = decoded.replace(/<\/h[1-6]>/gi, '\n\n');
   decoded = decoded.replace(/<[^>]*>/g, ' ');
-  return decoded.replace(/\s+/g, ' ').trim();
+  decoded = decoded.replace(/[ \t]+/g, ' ');
+  decoded = decoded.replace(/\n /g, '\n');
+  decoded = decoded.replace(/\n{3,}/g, '\n\n');
+  return decoded.trim();
 }
 
 function isLegalCareerRole(title: string, desc: string = ''): boolean {
@@ -100,7 +108,7 @@ async function scrapeGreenhouse(name: string, id: string, orgType: string): Prom
       
       if (!isRelevant) continue;
       
-      const cleanDescription = stripHtml(job.content || '').slice(0, 2000);
+      const cleanDescription = stripHtml(job.content || '');
       
       let roleCategory = 'Legal Tech Startup Roles';
       if (orgType === 'lawfirm') roleCategory = 'Law Firm Tech & Innovation';
@@ -144,7 +152,7 @@ async function scrapeLever(name: string, id: string): Promise<InsertJob[]> {
         companyLogo: `https://logo.clearbit.com/${name.toLowerCase().replace(/[^a-z]/g, '')}.com`,
         location: job.categories?.location || 'Remote',
         isRemote: (job.categories?.location || '').toLowerCase().includes('remote'),
-        description: (job.descriptionPlain || '').slice(0, 2000),
+        description: stripHtml(job.descriptionPlain || ''),
         applyUrl: job.hostedUrl || '',
         externalId: `lever_${id}_${job.id}`,
         source: 'lever',

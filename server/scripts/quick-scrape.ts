@@ -30,6 +30,29 @@ function isLegalTechRole(title: string, description: string = ''): boolean {
   return keywords.some(keyword => combined.includes(keyword));
 }
 
+function stripHtml(html: string): string {
+  let decoded = html
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&apos;/g, "'")
+    .replace(/&#x27;/g, "'")
+    .replace(/&#(\d+);/g, (_, num) => String.fromCharCode(parseInt(num)));
+  decoded = decoded.replace(/<br\s*\/?>/gi, '\n');
+  decoded = decoded.replace(/<\/p>/gi, '\n\n');
+  decoded = decoded.replace(/<\/li>/gi, '\n');
+  decoded = decoded.replace(/<li[^>]*>/gi, '- ');
+  decoded = decoded.replace(/<\/h[1-6]>/gi, '\n\n');
+  decoded = decoded.replace(/<[^>]*>/g, ' ');
+  decoded = decoded.replace(/[ \t]+/g, ' ');
+  decoded = decoded.replace(/\n /g, '\n');
+  decoded = decoded.replace(/\n{3,}/g, '\n\n');
+  return decoded.trim();
+}
+
 interface LeverJob {
   id: string;
   text: string;
@@ -53,7 +76,7 @@ async function scrapeLever(name: string, url: string): Promise<InsertJob[]> {
         companyLogo: `https://logo.clearbit.com/${name.toLowerCase().replace(/[^a-z]/g, '')}.com`,
         location: job.categories?.location || 'Remote',
         isRemote: (job.categories?.location || '').toLowerCase().includes('remote'),
-        description: (job.descriptionPlain || '').slice(0, 2000),
+        description: stripHtml(job.descriptionPlain || ''),
         applyUrl: job.hostedUrl,
         externalId: `lever-${job.id}`,
         source: 'lever',

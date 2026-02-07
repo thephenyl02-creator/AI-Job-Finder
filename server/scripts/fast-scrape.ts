@@ -51,9 +51,7 @@ function isLegalCareerRole(title: string, desc: string = ''): boolean {
          techRoleKeywords.some(k => text.includes(k));
 }
 
-// Decode HTML entities and strip all HTML tags
 function stripHtml(html: string): string {
-  // First decode HTML entities (convert &lt; to <, etc.)
   let decoded = html
     .replace(/&nbsp;/g, ' ')
     .replace(/&amp;/g, '&')
@@ -64,12 +62,16 @@ function stripHtml(html: string): string {
     .replace(/&apos;/g, "'")
     .replace(/&#x27;/g, "'")
     .replace(/&#(\d+);/g, (_, num) => String.fromCharCode(parseInt(num)));
-  
-  // Then strip all HTML tags
+  decoded = decoded.replace(/<br\s*\/?>/gi, '\n');
+  decoded = decoded.replace(/<\/p>/gi, '\n\n');
+  decoded = decoded.replace(/<\/li>/gi, '\n');
+  decoded = decoded.replace(/<li[^>]*>/gi, '- ');
+  decoded = decoded.replace(/<\/h[1-6]>/gi, '\n\n');
   decoded = decoded.replace(/<[^>]*>/g, ' ');
-  
-  // Clean up whitespace
-  return decoded.replace(/\s+/g, ' ').trim();
+  decoded = decoded.replace(/[ \t]+/g, ' ');
+  decoded = decoded.replace(/\n /g, '\n');
+  decoded = decoded.replace(/\n{3,}/g, '\n\n');
+  return decoded.trim();
 }
 
 async function scrapeGreenhouse(name: string, id: string, orgType: string): Promise<InsertJob[]> {
@@ -89,7 +91,7 @@ async function scrapeGreenhouse(name: string, id: string, orgType: string): Prom
       
       // Clean up description from HTML
       const rawContent = job.content || '';
-      const cleanDescription = stripHtml(rawContent).slice(0, 10000);
+      const cleanDescription = stripHtml(rawContent);
       
       // Determine role category based on org type
       let roleCategory = 'Legal Tech Startup Roles';
