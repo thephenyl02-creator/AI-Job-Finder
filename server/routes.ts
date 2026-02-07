@@ -230,6 +230,7 @@ export async function registerRoutes(
         company: j.company,
         location: j.location,
         isRemote: j.isRemote,
+        locationType: j.locationType || (j.isRemote ? 'remote' : 'onsite'),
         roleCategory: j.roleCategory,
         seniorityLevel: j.seniorityLevel,
       })));
@@ -1872,6 +1873,7 @@ Be specific and actionable. Focus on legal tech industry keywords and ATS best p
           company: job.company,
           location: job.location,
           isRemote: job.isRemote,
+          locationType: job.locationType || (job.isRemote ? 'remote' : 'onsite'),
           salaryMin: job.salaryMin,
           salaryMax: job.salaryMax,
           roleCategory: job.roleCategory,
@@ -1909,6 +1911,7 @@ Be specific and actionable. Focus on legal tech industry keywords and ATS best p
         companyLogo: companySlug ? `https://logo.clearbit.com/${companySlug}.com` : null,
         location: jobData.location || "Not specified",
         isRemote: Boolean(jobData.isRemote),
+        locationType: jobData.locationType || (jobData.isRemote ? 'remote' : 'onsite'),
         salaryMin: jobData.salaryMin ? Number(jobData.salaryMin) : null,
         salaryMax: jobData.salaryMax ? Number(jobData.salaryMax) : null,
         experienceMin: jobData.experienceMin ? Number(jobData.experienceMin) : null,
@@ -2051,9 +2054,9 @@ Be specific and actionable. Focus on legal tech industry keywords and ATS best p
       if (isNaN(id)) return res.status(400).json({ error: "Invalid job ID" });
 
       const allowedFields = [
-        "title", "company", "location", "isRemote", "salaryMin", "salaryMax",
+        "title", "company", "location", "isRemote", "locationType", "salaryMin", "salaryMax",
         "roleType", "description", "requirements", "applyUrl", "isActive",
-        "roleCategory", "roleSubcategory", "seniorityLevel",
+        "roleCategory", "roleSubcategory", "seniorityLevel", "keySkills",
       ];
       const updates: Record<string, any> = {};
       for (const field of allowedFields) {
@@ -2996,14 +2999,16 @@ Return a JSON response with this exact structure:
       const totalJobs = allJobs.length;
       if (totalJobs === 0) {
         return res.json({
-          overview: { totalJobs: 0, totalCompanies: 0, totalCategories: 0, remoteJobs: 0, hybridOrOnsite: 0, remotePercentage: 0, avgSalaryMin: null, avgSalaryMax: null, totalViews: 0, totalApplyClicks: 0 },
+          overview: { totalJobs: 0, totalCompanies: 0, totalCategories: 0, remoteJobs: 0, hybridJobs: 0, onsiteJobs: 0, hybridOrOnsite: 0, remotePercentage: 0, avgSalaryMin: null, avgSalaryMax: null, totalViews: 0, totalApplyClicks: 0 },
           categoryBreakdown: [], seniorityBreakdown: [], topSkills: [], topCompanies: [], topSubcategories: [], experienceRanges: { entry: 0, mid: 0, senior: 0, expert: 0 },
         });
       }
 
       const companies = new Set(allJobs.map((j) => j.company));
       const totalCompanies = companies.size;
-      const remoteJobs = allJobs.filter((j) => j.isRemote).length;
+      const remoteJobs = allJobs.filter((j) => j.locationType === 'remote' || (!j.locationType && j.isRemote)).length;
+      const hybridJobs = allJobs.filter((j) => j.locationType === 'hybrid').length;
+      const onsiteJobs = allJobs.filter((j) => j.locationType === 'onsite' || (!j.locationType && !j.isRemote)).length;
       const hybridOrOnsite = totalJobs - remoteJobs;
 
       const jobsWithSalaryMin = allJobs.filter((j) => j.salaryMin && j.salaryMin > 0);
@@ -3078,8 +3083,12 @@ Return a JSON response with this exact structure:
           totalCompanies,
           totalCategories: categoryBreakdown.length,
           remoteJobs,
+          hybridJobs,
+          onsiteJobs,
           hybridOrOnsite,
           remotePercentage: Math.round((remoteJobs / totalJobs) * 100),
+          hybridPercentage: Math.round((hybridJobs / totalJobs) * 100),
+          onsitePercentage: Math.round((onsiteJobs / totalJobs) * 100),
           avgSalaryMin,
           avgSalaryMax,
           totalViews,

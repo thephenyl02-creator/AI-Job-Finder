@@ -47,6 +47,7 @@ interface BatchMatchResult {
   company: string;
   location: string | null;
   isRemote: boolean | null;
+  locationType: string | null;
   matchScore: number;
   tweakPercentage: number;
   brutalVerdict: string;
@@ -262,9 +263,12 @@ function MatchJobCard({
                   {match.location}
                 </span>
               )}
-              {match.isRemote && (
-                <Badge variant="outline" className="text-xs">Remote</Badge>
-              )}
+              {(() => {
+                const lt = match.locationType || (match.isRemote ? 'remote' : 'onsite');
+                if (lt === 'remote') return <Badge variant="outline" className="text-xs text-emerald-600 border-emerald-300">Remote</Badge>;
+                if (lt === 'hybrid') return <Badge variant="outline" className="text-xs text-blue-600 border-blue-300">Hybrid</Badge>;
+                return null;
+              })()}
             </div>
             {match.allScores && match.allScores.length > 1 && (
               <div className="mt-2">
@@ -569,6 +573,7 @@ function MatchDashboard({ results }: { results: ResumeMatchResult[] }) {
       company: string;
       location: string | null;
       isRemote: boolean | null;
+      locationType: string | null;
       bestScore: number;
       bestResumeId: number;
       bestResumeLabel: string;
@@ -592,6 +597,7 @@ function MatchDashboard({ results }: { results: ResumeMatchResult[] }) {
           company: m.company,
           location: m.location,
           isRemote: m.isRemote,
+          locationType: m.locationType,
           bestScore: m.matchScore,
           bestResumeId: r.resumeId,
           bestResumeLabel: r.label,
@@ -723,6 +729,7 @@ function MatchDashboard({ results }: { results: ResumeMatchResult[] }) {
                       company: job.company,
                       location: job.location,
                       isRemote: job.isRemote,
+                      locationType: job.locationType,
                       matchScore: job.bestScore,
                       tweakPercentage: job.tweakPercentage,
                       brutalVerdict: job.brutalVerdict,
@@ -758,6 +765,7 @@ function MatchDashboard({ results }: { results: ResumeMatchResult[] }) {
                     company: job.company,
                     location: job.location,
                     isRemote: job.isRemote,
+                    locationType: job.locationType,
                     matchScore: job.bestScore,
                     tweakPercentage: job.tweakPercentage,
                     brutalVerdict: job.brutalVerdict,

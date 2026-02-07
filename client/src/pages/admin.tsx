@@ -284,6 +284,7 @@ export default function AdminPage() {
       salaryMax: job.salaryMax,
       isActive: job.isActive,
       isRemote: job.isRemote,
+      locationType: job.locationType || (job.isRemote ? 'remote' : 'onsite'),
       roleCategory: job.roleCategory,
       roleSubcategory: job.roleSubcategory,
       seniorityLevel: job.seniorityLevel,
@@ -1207,20 +1208,20 @@ export default function AdminPage() {
                           </Select>
                         </div>
                         <div className="space-y-1.5">
-                          <Label className="text-xs">Remote</Label>
-                          <div className="pt-0.5">
-                            <Button
-                              variant={previewEdits.isRemote ? "default" : "outline"}
-                              size="sm"
-                              className="w-full"
-                              onClick={() => setPreviewEdits(p => ({ ...p, isRemote: !p.isRemote }))}
-                              data-testid="button-preview-remote"
-                            >
-                              {previewEdits.isRemote ? (
-                                <><Globe className="mr-1 h-3.5 w-3.5" /> Remote</>
-                              ) : "On-site"}
-                            </Button>
-                          </div>
+                          <Label className="text-xs">Work Setting</Label>
+                          <Select
+                            value={previewEdits.locationType || 'onsite'}
+                            onValueChange={(v) => setPreviewEdits(p => ({ ...p, locationType: v, isRemote: v === 'remote' }))}
+                          >
+                            <SelectTrigger data-testid="select-preview-location-type">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="remote">Remote</SelectItem>
+                              <SelectItem value="hybrid">Hybrid</SelectItem>
+                              <SelectItem value="onsite">On-site</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </div>
                       </div>
                       <div className="grid grid-cols-2 gap-3">
@@ -1723,21 +1724,20 @@ export default function AdminPage() {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label>Remote</Label>
-                    <div className="pt-1">
-                      <Button
-                        variant={editForm.isRemote ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setEditForm((f) => ({ ...f, isRemote: !f.isRemote }))}
-                        data-testid="button-edit-toggle-remote"
-                      >
-                        {editForm.isRemote ? (
-                          <><Globe className="mr-1 h-4 w-4" /> Remote</>
-                        ) : (
-                          "Not Remote"
-                        )}
-                      </Button>
-                    </div>
+                    <Label>Work Setting</Label>
+                    <Select
+                      value={editForm.locationType || (editForm.isRemote ? 'remote' : 'onsite')}
+                      onValueChange={(v) => setEditForm((f) => ({ ...f, locationType: v, isRemote: v === 'remote' }))}
+                    >
+                      <SelectTrigger data-testid="select-edit-location-type">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="remote">Remote</SelectItem>
+                        <SelectItem value="hybrid">Hybrid</SelectItem>
+                        <SelectItem value="onsite">On-site</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
                 <div className="space-y-2">

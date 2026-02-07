@@ -7,6 +7,7 @@ export interface BatchMatchResult {
   company: string;
   location: string | null;
   isRemote: boolean | null;
+  locationType: string | null;
   matchScore: number;
   tweakPercentage: number;
   brutalVerdict: string;
@@ -132,6 +133,7 @@ export async function batchMatchResume(
     company: job.company,
     location: job.location,
     isRemote: job.isRemote,
+    locationType: job.locationType || (job.isRemote ? 'remote' : 'onsite'),
     salaryMin: job.salaryMin,
     salaryMax: job.salaryMax,
     seniorityLevel: job.seniorityLevel,
@@ -241,6 +243,7 @@ ${JSON.stringify(jobSummaries, null, 2)}`;
           company: job.company,
           location: job.location,
           isRemote: job.isRemote,
+          locationType: job.locationType || (job.isRemote ? 'remote' : 'onsite'),
           matchScore: m.matchScore,
           tweakPercentage: m.tweakPercentage,
           brutalVerdict: m.brutalVerdict,
@@ -284,6 +287,7 @@ function fallbackBatchMatch(
         company: job.company,
         location: job.location,
         isRemote: job.isRemote,
+        locationType: job.locationType || (job.isRemote ? 'remote' : 'onsite'),
         matchScore: Math.min(score, 95),
         tweakPercentage: tweakPct,
         brutalVerdict: `You match ${matched.length} of ${jobSkills.length} listed skills. ${missing.length > 0 ? "Gaps exist." : "Solid alignment."}`,

@@ -48,6 +48,7 @@ interface FeaturedJob {
   company: string;
   location: string | null;
   isRemote: boolean | null;
+  locationType: string | null;
   roleCategory: string | null;
   seniorityLevel: string | null;
 }
@@ -209,7 +210,7 @@ export default function Landing() {
                                   {job.location && (
                                     <span className="flex items-center gap-1 text-xs text-muted-foreground">
                                       <MapPin className="h-3 w-3 shrink-0" />
-                                      <span className="truncate">{job.isRemote ? "Remote" : shortenLocation(job.location)}</span>
+                                      <span className="truncate">{(job.locationType === 'remote' || (!job.locationType && job.isRemote)) ? "Remote" : job.locationType === 'hybrid' ? "Hybrid" : shortenLocation(job.location)}</span>
                                     </span>
                                   )}
                                 </div>
@@ -269,7 +270,7 @@ export default function Landing() {
                             {job.location && (
                               <span className="flex items-center gap-1 text-xs text-muted-foreground mt-1 truncate">
                                 <MapPin className="h-3 w-3 shrink-0" />
-                                {job.isRemote ? "Remote" : shortenLocation(job.location)}
+                                {(job.locationType === 'remote' || (!job.locationType && job.isRemote)) ? "Remote" : job.locationType === 'hybrid' ? "Hybrid" : shortenLocation(job.location)}
                               </span>
                             )}
                           </CardContent>

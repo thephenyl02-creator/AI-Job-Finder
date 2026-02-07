@@ -39,8 +39,12 @@ interface MarketAnalytics {
     totalCompanies: number;
     totalCategories: number;
     remoteJobs: number;
+    hybridJobs: number;
+    onsiteJobs: number;
     hybridOrOnsite: number;
     remotePercentage: number;
+    hybridPercentage: number;
+    onsitePercentage: number;
     avgSalaryMin: number | null;
     avgSalaryMax: number | null;
     totalViews: number;
@@ -726,32 +730,53 @@ export default function Insights() {
               <div className="space-y-5">
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-foreground">Remote</span>
+                    <span className="text-sm text-foreground flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full bg-green-500 inline-block" />
+                      Remote
+                    </span>
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-semibold text-foreground tabular-nums" data-testid="text-remote-count">{overview.remoteJobs}</span>
                       <span className="text-xs text-muted-foreground tabular-nums w-8 text-right">{overview.remotePercentage}%</span>
                     </div>
                   </div>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-foreground">On-site / Hybrid</span>
+                    <span className="text-sm text-foreground flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full bg-blue-500 inline-block" />
+                      Hybrid
+                    </span>
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold text-foreground tabular-nums" data-testid="text-onsite-count">{overview.hybridOrOnsite}</span>
-                      <span className="text-xs text-muted-foreground tabular-nums w-8 text-right">{100 - overview.remotePercentage}%</span>
+                      <span className="text-sm font-semibold text-foreground tabular-nums" data-testid="text-hybrid-count">{overview.hybridJobs || 0}</span>
+                      <span className="text-xs text-muted-foreground tabular-nums w-8 text-right">{overview.hybridPercentage || 0}%</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-foreground flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full bg-orange-500 inline-block" />
+                      On-site
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-foreground tabular-nums" data-testid="text-onsite-count">{overview.onsiteJobs || 0}</span>
+                      <span className="text-xs text-muted-foreground tabular-nums w-8 text-right">{overview.onsitePercentage || 0}%</span>
                     </div>
                   </div>
                   <div className="h-3 rounded-full bg-muted/60 overflow-hidden flex">
                     <div
-                      className="h-full bg-primary/70 transition-all duration-700"
+                      className="h-full bg-green-500/70 transition-all duration-700"
                       style={{ width: `${overview.remotePercentage}%` }}
                     />
                     <div
-                      className="h-full bg-muted-foreground/20 transition-all duration-700"
-                      style={{ width: `${100 - overview.remotePercentage}%` }}
+                      className="h-full bg-blue-500/70 transition-all duration-700"
+                      style={{ width: `${overview.hybridPercentage || 0}%` }}
+                    />
+                    <div
+                      className="h-full bg-orange-500/40 transition-all duration-700"
+                      style={{ width: `${overview.onsitePercentage || 0}%` }}
                     />
                   </div>
                   <div className="flex items-center justify-between mt-1.5">
                     <span className="text-[10px] text-muted-foreground">Remote</span>
-                    <span className="text-[10px] text-muted-foreground">On-site / Hybrid</span>
+                    <span className="text-[10px] text-muted-foreground">Hybrid</span>
+                    <span className="text-[10px] text-muted-foreground">On-site</span>
                   </div>
                 </div>
 
