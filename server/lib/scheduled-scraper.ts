@@ -36,14 +36,14 @@ const validationState: ValidationState = {
 };
 
 const GREENHOUSE_SOURCES = [
-  { name: 'Everlaw', id: 'everlaw', type: 'legaltech' },
-  { name: 'NetDocuments', id: 'netdocuments', type: 'legaltech' },
-  { name: 'Mitratech', id: 'mitratech', type: 'legaltech' },
-  { name: 'Brightflag', id: 'brightflag', type: 'legaltech' },
-  { name: 'Rocket Lawyer', id: 'rocketlawyer', type: 'legaltech' },
+  { name: 'Everlaw', id: 'everlaw', type: 'legaltech-core' },
+  { name: 'NetDocuments', id: 'netdocuments', type: 'legaltech-core' },
+  { name: 'Mitratech', id: 'mitratech', type: 'legaltech-core' },
+  { name: 'Brightflag', id: 'brightflag', type: 'legaltech-core' },
+  { name: 'Rocket Lawyer', id: 'rocketlawyer', type: 'legaltech-core' },
   { name: 'Gibson Dunn', id: 'gibsondunn', type: 'lawfirm' },
   { name: 'Legal Services NYC', id: 'legalservicesnyc', type: 'legalaid' },
-  { name: 'Axiom', id: 'axiom', type: 'legaltech' },
+  { name: 'Axiom', id: 'axiom', type: 'legaltech-core' },
   { name: 'Anthropic', id: 'anthropic', type: 'legaltech' },
   { name: 'OneTrust', id: 'onetrust', type: 'legaltech' },
   { name: 'Notion', id: 'notion', type: 'legaltech' },
@@ -732,8 +732,16 @@ export function startScheduler(): void {
   }
   
   logInfo('SCHEDULER', `Scheduler started - will run every 24 hours`);
-  logInfo('SCHEDULER', `Next run at: ${new Date(Date.now() + SCRAPE_INTERVAL_MS).toISOString()}`);
-  
+
+  setTimeout(async () => {
+    logInfo('SCHEDULER', 'Running initial scrape on startup...');
+    try {
+      await runScheduledScrape('startup');
+    } catch (error: any) {
+      logError('SCHEDULER', 'Initial startup scrape failed', { error: error.message });
+    }
+  }, 60_000);
+
   schedulerInterval = setInterval(async () => {
     try {
       await runScheduledScrape();

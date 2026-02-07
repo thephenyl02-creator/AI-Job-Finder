@@ -44,32 +44,52 @@ export function stripHtml(html: string): string {
 }
 
 export function isRelevantRole(title: string, desc: string = '', orgType?: string): boolean {
+  const titleLower = title.toLowerCase();
   const text = `${title} ${desc}`.toLowerCase();
 
   if (orgType === 'lawfirm' || orgType === 'legalaid') return true;
 
+  if (orgType === 'legaltech-core') return true;
+
+  const exclude = ['janitor', 'maintenance', 'facilities', 'cafeteria', 'cook', 'custodian'];
+  if (exclude.some(e => titleLower.includes(e))) return false;
+
   const legalKeywords = [
     'attorney', 'lawyer', 'counsel', 'paralegal', 'legal assistant',
-    'litigation', 'associate', 'legal operations', 'legal ops',
-    'contract', 'compliance', 'regulatory', 'corporate counsel',
-    'in-house', 'general counsel', 'legal analyst', 'legal specialist',
-    'legal advisor', 'legal consultant', 'jd', 'law clerk', 'legal intern',
+    'litigation', 'associate attorney', 'legal operations', 'legal ops',
+    'contract manager', 'contract analyst', 'compliance', 'regulatory',
+    'corporate counsel', 'in-house counsel', 'general counsel',
+    'legal analyst', 'legal specialist', 'legal advisor', 'legal consultant',
+    'jd required', 'jd preferred', 'law clerk', 'legal intern',
+    'legal engineer', 'legal tech', 'legaltech', 'ediscovery', 'e-discovery',
+    'legal ai', 'legal data', 'legal product', 'legal design',
+    'trust & safety', 'trust and safety', 'policy counsel',
+    'privacy counsel', 'ip counsel', 'patent',
   ];
 
-  const techKeywords = [
-    'engineer', 'developer', 'product', 'designer', 'data', 'ml', 'ai ',
-    'machine learning', 'nlp', 'software', 'technical', 'solutions',
-    'implementation', 'customer success', 'sales', 'operations',
-    'innovation', 'technology', 'ediscovery', 'analytics', 'platform',
-    'devops', 'cloud', 'security', 'qa', 'quality', 'ux', 'ui', 'frontend',
-    'backend', 'full stack', 'fullstack', 'manager', 'director', 'architect',
-    'marketing', 'finance', 'hr', 'people', 'business', 'admin', 'support',
-    'api',
-  ];
+  if (legalKeywords.some(k => text.includes(k))) return true;
 
-  const exclude = ['janitor', 'maintenance', 'facilities', 'cafeteria'];
-  if (exclude.some(e => text.includes(e))) return false;
+  const titleHasLegal = titleLower.includes('legal') || titleLower.includes('law')
+    || titleLower.includes('compliance') || titleLower.includes('counsel')
+    || titleLower.includes('privacy') || titleLower.includes('regulatory')
+    || titleLower.includes('contract') || titleLower.includes('policy');
 
-  return legalKeywords.some(k => text.includes(k)) ||
-         techKeywords.some(k => text.includes(k));
+  if (titleHasLegal) return true;
+
+  if (orgType === 'legaltech') {
+    const relevantTechRoles = [
+      'engineer', 'developer', 'product manager', 'product designer',
+      'data scientist', 'data analyst', 'data engineer',
+      'machine learning', 'ml engineer', 'ai researcher', 'nlp',
+      'software', 'solutions engineer', 'solutions architect',
+      'implementation', 'customer success', 'sales engineer',
+      'technical account', 'devops', 'sre', 'platform engineer',
+      'qa engineer', 'quality engineer', 'ux researcher', 'ux designer',
+      'frontend', 'backend', 'full stack', 'fullstack',
+      'cto', 'vp engineering', 'head of product', 'head of engineering',
+    ];
+    return relevantTechRoles.some(k => titleLower.includes(k));
+  }
+
+  return false;
 }
