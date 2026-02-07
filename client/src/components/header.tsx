@@ -12,8 +12,8 @@ import {
   DropdownMenuGroup,
 } from "@/components/ui/dropdown-menu";
 import {
-  LogOut, Settings, Compass, BarChart3, Bell, FileText, Crown, Search,
-  Wrench, Bookmark, LayoutDashboard, MoreHorizontal, Menu, Calendar
+  LogOut, Compass, BarChart3, Bell, FileText, Crown, Search,
+  Bookmark, LayoutDashboard, Menu, Calendar, Settings
 } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { Link, useLocation } from "wouter";
@@ -71,6 +71,7 @@ export function Header() {
   const isActive = (path: string) => location === path;
   const isJobsActive = isActive("/jobs") || isActive("/") || location.startsWith("/jobs/");
   const isEventsActive = isActive("/events") || location.startsWith("/events/");
+  const isResumesActive = isActive("/resumes") || isActive("/resume-builder");
 
   return (
     <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border/40">
@@ -86,58 +87,10 @@ export function Header() {
           {isAuthenticated && (
             <div className="hidden lg:flex items-center gap-0.5">
               <NavLink href="/jobs" icon={Search} label="Find Jobs" isActive={isJobsActive} testId="link-jobs" />
-              <NavLink href="/saved-jobs" icon={Bookmark} label="Saved" isActive={isActive("/saved-jobs")} testId="link-saved-jobs" />
-              <NavLink href="/resumes" icon={FileText} label="Resumes" isActive={isActive("/resumes") || isActive("/resume-builder")} testId="link-resumes" />
-              <NavLink href="/career-advisor" icon={Compass} label="Advisor" isActive={isActive("/career-advisor")} testId="link-career-advisor" />
+              <NavLink href="/resumes" icon={FileText} label="Resumes" isActive={isResumesActive} testId="link-resumes" />
+              <NavLink href="/events" icon={Calendar} label="Events" isActive={isEventsActive} testId="link-events" />
               <NavLink href="/insights" icon={BarChart3} label="Insights" isActive={isActive("/insights")} testId="link-insights" />
-
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className={`relative ${
-                      isActive("/dashboard") || isActive("/alerts") || isEventsActive
-                        ? "text-foreground"
-                        : "text-muted-foreground"
-                    }`}
-                    data-testid="button-more-nav"
-                  >
-                    <MoreHorizontal className="h-3.5 w-3.5 mr-1.5" />
-                    More
-                    {(isActive("/dashboard") || isActive("/alerts") || isEventsActive) && (
-                      <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-primary rounded-full" />
-                    )}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-48">
-                  <DropdownMenuItem asChild>
-                    <Link href="/dashboard" className="cursor-pointer" data-testid="link-dashboard">
-                      <LayoutDashboard className="mr-2 h-4 w-4" />
-                      <span>Dashboard</span>
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/alerts" className="cursor-pointer" data-testid="link-alerts">
-                      <Bell className="mr-2 h-4 w-4" />
-                      <span>Job Alerts</span>
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/resume-builder" className="cursor-pointer" data-testid="link-resume-builder">
-                      <Wrench className="mr-2 h-4 w-4" />
-                      <span>Resume Builder</span>
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link href="/events" className="cursor-pointer" data-testid="link-events">
-                      <Calendar className="mr-2 h-4 w-4" />
-                      <span>Events</span>
-                    </Link>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <NavLink href="/alerts" icon={Bell} label="Alerts" isActive={isActive("/alerts")} testId="link-alerts" />
             </div>
           )}
         </div>
@@ -145,6 +98,16 @@ export function Header() {
         <div className="flex items-center gap-1.5">
           {isAuthenticated ? (
             <>
+              <Link href="/saved-jobs">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={`hidden md:inline-flex ${isActive("/saved-jobs") ? "text-foreground" : "text-muted-foreground"}`}
+                  data-testid="link-saved-jobs"
+                >
+                  <Bookmark className="h-4 w-4" />
+                </Button>
+              </Link>
               {!isPro && (
                 <Link href="/pricing">
                   <Button variant="ghost" size="sm" className="hidden md:inline-flex gap-1.5 text-muted-foreground" data-testid="link-upgrade-pro">
@@ -194,25 +157,21 @@ export function Header() {
                     </div>
 
                     <div className="flex-1 overflow-y-auto py-2">
-                      <MobileNavSection label="Main">
+                      <MobileNavSection label="Explore">
                         <MobileNavItem href="/jobs" icon={Search} label="Find Jobs" active={isJobsActive} testId="link-jobs-mobile" />
                         <MobileNavItem href="/saved-jobs" icon={Bookmark} label="Saved Jobs" active={isActive("/saved-jobs")} testId="link-saved-jobs-mobile" />
-                        <MobileNavItem href="/dashboard" icon={LayoutDashboard} label="Dashboard" active={isActive("/dashboard")} testId="link-dashboard-mobile" />
+                        <MobileNavItem href="/events" icon={Calendar} label="Events" active={isEventsActive} testId="link-events-mobile" />
                       </MobileNavSection>
 
                       <MobileNavSection label="Tools">
-                        <MobileNavItem href="/resumes" icon={FileText} label="Resumes" active={isActive("/resumes")} testId="link-resumes-mobile" />
-                        <MobileNavItem href="/resume-builder" icon={Wrench} label="Resume Builder" active={isActive("/resume-builder")} testId="link-resume-builder-mobile" />
+                        <MobileNavItem href="/resumes" icon={FileText} label="Resumes" active={isResumesActive} testId="link-resumes-mobile" />
                         <MobileNavItem href="/career-advisor" icon={Compass} label="Career Advisor" active={isActive("/career-advisor")} testId="link-career-advisor-mobile" />
                         <MobileNavItem href="/insights" icon={BarChart3} label="Market Insights" active={isActive("/insights")} testId="link-insights-mobile" />
                         <MobileNavItem href="/alerts" icon={Bell} label="Job Alerts" active={isActive("/alerts")} testId="link-alerts-mobile" />
                       </MobileNavSection>
 
-                      <MobileNavSection label="Discover">
-                        <MobileNavItem href="/events" icon={Calendar} label="Events" active={isEventsActive} testId="link-events-mobile" />
-                      </MobileNavSection>
-
                       <MobileNavSection label="Account">
+                        <MobileNavItem href="/dashboard" icon={LayoutDashboard} label="Dashboard" active={isActive("/dashboard")} testId="link-dashboard-mobile" />
                         <MobileNavItem href="/pricing" icon={Crown} label="Pricing" active={isActive("/pricing")} testId="link-pricing-mobile" />
                         {isAdmin && (
                           <MobileNavItem href="/admin" icon={Settings} label="Admin" active={isActive("/admin")} testId="link-admin-mobile" />
@@ -270,6 +229,18 @@ export function Header() {
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuGroup>
+                    <DropdownMenuItem asChild>
+                      <Link href="/dashboard" className="cursor-pointer" data-testid="link-dashboard">
+                        <LayoutDashboard className="mr-2 h-4 w-4" />
+                        <span>Dashboard</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/career-advisor" className="cursor-pointer" data-testid="link-career-advisor">
+                        <Compass className="mr-2 h-4 w-4" />
+                        <span>Career Advisor</span>
+                      </Link>
+                    </DropdownMenuItem>
                     <DropdownMenuItem asChild>
                       <Link href="/pricing" className="cursor-pointer" data-testid="link-pricing">
                         <Crown className="mr-2 h-4 w-4" />
