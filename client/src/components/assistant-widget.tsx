@@ -198,13 +198,16 @@ export function AssistantWidget() {
       };
 
       setMessages((prev) => [...prev, assistantMsg]);
-    } catch (err) {
+    } catch (err: any) {
+      const isLimitError = err?.message?.includes("daily limit") || err?.message?.includes("Upgrade to Pro");
       setMessages((prev) => [
         ...prev,
         {
           id: `error-${Date.now()}`,
           role: "assistant",
-          content: "Something went wrong. Please try again in a moment.",
+          content: isLimitError
+            ? "You've reached your 3 free messages for today. Upgrade to Pro for unlimited conversations, deeper career insights, and personalized guidance."
+            : "Something went wrong. Please try again in a moment.",
         },
       ]);
     } finally {

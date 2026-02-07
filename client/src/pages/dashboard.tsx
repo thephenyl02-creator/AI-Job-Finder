@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { usePageTitle } from "@/hooks/use-page-title";
 import { useActivityTracker } from "@/hooks/use-activity-tracker";
+import { useSubscription } from "@/hooks/use-subscription";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -13,7 +14,7 @@ import {
   Eye, Search, MousePointerClick, Flame, Calendar, Target,
   FileText, Bell, Bookmark, ArrowRight, TrendingUp,
   Building2, CheckCircle, Circle, ChevronRight, Briefcase,
-  Loader2, BarChart3, Zap, Award
+  Loader2, BarChart3, Zap, Award, Lock
 } from "lucide-react";
 
 interface DashboardData {
@@ -176,6 +177,26 @@ function MetricCard({ icon: Icon, label, value, subtext, iconColor }: {
   );
 }
 
+function ProLockedOverlay({ children, label }: { children: React.ReactNode; label?: string }) {
+  return (
+    <div className="relative">
+      <div className="pointer-events-none select-none blur-[3px] opacity-60">
+        {children}
+      </div>
+      <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/40 backdrop-blur-[1px] rounded-md">
+        <div className="flex flex-col items-center gap-2 text-center px-4">
+          <Lock className="h-5 w-5 text-muted-foreground" />
+          <p className="text-sm font-medium text-foreground">{label || "Pro Feature"}</p>
+          <p className="text-xs text-muted-foreground max-w-[200px]">Upgrade to Pro for full dashboard analytics</p>
+          <Link href="/pricing">
+            <Button size="sm" data-testid="button-upgrade-dashboard">Upgrade</Button>
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function DashboardSkeleton() {
   return (
     <>
@@ -223,6 +244,7 @@ function DashboardSkeleton() {
 export default function DashboardPage() {
   usePageTitle("My Dashboard");
   const { track } = useActivityTracker();
+  const { isPro } = useSubscription();
   const [timeRange, setTimeRange] = useState("30");
 
   useEffect(() => { track({ eventType: "page_view", pagePath: "/dashboard" }); }, []);
@@ -381,21 +403,36 @@ export default function DashboardPage() {
           </div>
 
           <div className="grid lg:grid-cols-3 gap-6 mb-6">
-            <Card className="lg:col-span-2">
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <CardTitle className="text-base">Activity Trend</CardTitle>
-                  <p className="text-xs text-muted-foreground">
-                    {activityMetrics.activeDaysInPeriod > 0
-                      ? `${Math.round((activityMetrics.period.jobViews + activityMetrics.period.searches + activityMetrics.period.applyClicks) / activityMetrics.activeDaysInPeriod)} actions/active day`
-                      : "Start exploring to see trends"}
-                  </p>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <ActivityChart data={dailyActivity} days={parseInt(timeRange)} />
-              </CardContent>
-            </Card>
+            {isPro ? (
+              <Card className="lg:col-span-2">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <CardTitle className="text-base">Activity Trend</CardTitle>
+                    <p className="text-xs text-muted-foreground">
+                      {activityMetrics.activeDaysInPeriod > 0
+                        ? `${Math.round((activityMetrics.period.jobViews + activityMetrics.period.searches + activityMetrics.period.applyClicks) / activityMetrics.activeDaysInPeriod)} actions/active day`
+                        : "Start exploring to see trends"}
+                    </p>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <ActivityChart data={dailyActivity} days={parseInt(timeRange)} />
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="lg:col-span-2">
+                <ProLockedOverlay label="Activity Trends">
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-base">Activity Trend</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="h-32" />
+                    </CardContent>
+                  </Card>
+                </ProLockedOverlay>
+              </div>
+            )}
 
             <Card>
               <CardHeader className="pb-3">
@@ -425,186 +462,209 @@ export default function DashboardPage() {
             </Card>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-            <Card>
-              <CardHeader className="pb-3">
-                <div className="flex items-center gap-2">
-                  <Target className="h-4 w-4 text-muted-foreground" />
-                  <CardTitle className="text-base">Top Categories</CardTitle>
-                </div>
-                <CardDescription className="text-xs">Based on jobs you've viewed</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {patterns.topCategories.length > 0 ? (
-                  <div className="space-y-2.5">
-                    {patterns.topCategories.map((cat, i) => {
-                      const maxCat = patterns.topCategories[0]?.count || 1;
-                      return (
-                        <div key={i}>
-                          <div className="flex items-center justify-between text-sm mb-1">
-                            <span className="text-foreground truncate mr-2">{cat.name}</span>
-                            <span className="text-muted-foreground text-xs shrink-0">{cat.count} views</span>
+          {isPro ? (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+              <Card>
+                <CardHeader className="pb-3">
+                  <div className="flex items-center gap-2">
+                    <Target className="h-4 w-4 text-muted-foreground" />
+                    <CardTitle className="text-base">Top Categories</CardTitle>
+                  </div>
+                  <CardDescription className="text-xs">Based on jobs you've viewed</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {patterns.topCategories.length > 0 ? (
+                    <div className="space-y-2.5">
+                      {patterns.topCategories.map((cat, i) => {
+                        const maxCat = patterns.topCategories[0]?.count || 1;
+                        return (
+                          <div key={i}>
+                            <div className="flex items-center justify-between text-sm mb-1">
+                              <span className="text-foreground truncate mr-2">{cat.name}</span>
+                              <span className="text-muted-foreground text-xs shrink-0">{cat.count} views</span>
+                            </div>
+                            <div className="h-1.5 bg-muted/40 rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-primary/60 rounded-full transition-all"
+                                style={{ width: `${(cat.count / maxCat) * 100}%` }}
+                              />
+                            </div>
                           </div>
-                          <div className="h-1.5 bg-muted/40 rounded-full overflow-hidden">
-                            <div
-                              className="h-full bg-primary/60 rounded-full transition-all"
-                              style={{ width: `${(cat.count / maxCat) * 100}%` }}
-                            />
-                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground text-center py-4">
+                      View some jobs to discover your interests
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-3">
+                  <div className="flex items-center gap-2">
+                    <Building2 className="h-4 w-4 text-muted-foreground" />
+                    <CardTitle className="text-base">Top Companies</CardTitle>
+                  </div>
+                  <CardDescription className="text-xs">Companies you've explored</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {patterns.topCompanies.length > 0 ? (
+                    <div className="space-y-2.5">
+                      {patterns.topCompanies.map((comp, i) => (
+                        <div key={i} className="flex items-center justify-between text-sm">
+                          <span className="text-foreground truncate mr-2">{comp.name}</span>
+                          <Badge variant="secondary" className="text-xs shrink-0">{comp.count}</Badge>
                         </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground text-center py-4">
-                    View some jobs to discover your interests
-                  </p>
-                )}
-              </CardContent>
-            </Card>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground text-center py-4">
+                      Explore jobs to see which companies interest you
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
 
-            <Card>
-              <CardHeader className="pb-3">
-                <div className="flex items-center gap-2">
-                  <Building2 className="h-4 w-4 text-muted-foreground" />
-                  <CardTitle className="text-base">Top Companies</CardTitle>
+              <Card>
+                <CardHeader className="pb-3">
+                  <div className="flex items-center gap-2">
+                    <Search className="h-4 w-4 text-muted-foreground" />
+                    <CardTitle className="text-base">Recent Searches</CardTitle>
+                  </div>
+                  <CardDescription className="text-xs">What you've been looking for</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {patterns.recentSearches.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {patterns.recentSearches.map((term, i) => (
+                        <Link href={`/search?q=${encodeURIComponent(term)}`} key={i}>
+                          <Badge variant="outline" className="cursor-pointer" data-testid={`search-term-${i}`}>
+                            {term}
+                          </Badge>
+                        </Link>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground text-center py-4">
+                      Try searching for roles that interest you
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          ) : (
+            <ProLockedOverlay label="Search Insights">
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+                <Card><CardHeader className="pb-3"><CardTitle className="text-base">Top Categories</CardTitle></CardHeader><CardContent><div className="h-24" /></CardContent></Card>
+                <Card><CardHeader className="pb-3"><CardTitle className="text-base">Top Companies</CardTitle></CardHeader><CardContent><div className="h-24" /></CardContent></Card>
+                <Card><CardHeader className="pb-3"><CardTitle className="text-base">Recent Searches</CardTitle></CardHeader><CardContent><div className="h-24" /></CardContent></Card>
+              </div>
+            </ProLockedOverlay>
+          )}
+
+          {isPro ? (
+            <>
+              {(marketAlignment.length > 0 || readiness.savedJobsCount > 0) && (
+                <div className="grid md:grid-cols-2 gap-6 mb-6">
+                  {marketAlignment.length > 0 && (
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <div className="flex items-center gap-2">
+                          <BarChart3 className="h-4 w-4 text-muted-foreground" />
+                          <CardTitle className="text-base">Market Alignment</CardTitle>
+                        </div>
+                        <CardDescription className="text-xs">
+                          Jobs available in your areas of interest ({totalActiveJobs} total active)
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-3">
+                          {marketAlignment.map((m, i) => (
+                            <div key={i}>
+                              <div className="flex items-center justify-between text-sm mb-1">
+                                <span className="text-foreground truncate mr-2">{m.category}</span>
+                                <span className="text-muted-foreground text-xs shrink-0">{m.availableJobs} jobs</span>
+                              </div>
+                              <div className="h-1.5 bg-muted/40 rounded-full overflow-hidden">
+                                <div
+                                  className="h-full bg-green-500/60 rounded-full transition-all"
+                                  style={{ width: `${Math.min(100, (m.availableJobs / totalActiveJobs) * 100 * 3)}%` }}
+                                />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {readiness.savedJobsCount > 0 && (
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <div className="flex items-center gap-2">
+                          <Bookmark className="h-4 w-4 text-muted-foreground" />
+                          <CardTitle className="text-base">Saved Jobs</CardTitle>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex items-center gap-6">
+                          <div>
+                            <p className="text-3xl font-bold text-foreground">{readiness.savedJobsCount}</p>
+                            <p className="text-xs text-muted-foreground">saved</p>
+                          </div>
+                          {readiness.expiringSoonCount > 0 && (
+                            <div className="text-amber-500">
+                              <p className="text-3xl font-bold">{readiness.expiringSoonCount}</p>
+                              <p className="text-xs">expiring soon</p>
+                            </div>
+                          )}
+                        </div>
+                        <Link href="/saved-jobs">
+                          <Button variant="outline" size="sm" className="mt-4 gap-1" data-testid="button-view-saved-jobs">
+                            View Saved Jobs
+                            <ArrowRight className="h-3 w-3" />
+                          </Button>
+                        </Link>
+                      </CardContent>
+                    </Card>
+                  )}
                 </div>
-                <CardDescription className="text-xs">Companies you've explored</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {patterns.topCompanies.length > 0 ? (
-                  <div className="space-y-2.5">
-                    {patterns.topCompanies.map((comp, i) => (
-                      <div key={i} className="flex items-center justify-between text-sm">
-                        <span className="text-foreground truncate mr-2">{comp.name}</span>
-                        <Badge variant="secondary" className="text-xs shrink-0">{comp.count}</Badge>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground text-center py-4">
-                    Explore jobs to see which companies interest you
-                  </p>
-                )}
-              </CardContent>
-            </Card>
+              )}
 
-            <Card>
-              <CardHeader className="pb-3">
-                <div className="flex items-center gap-2">
-                  <Search className="h-4 w-4 text-muted-foreground" />
-                  <CardTitle className="text-base">Recent Searches</CardTitle>
-                </div>
-                <CardDescription className="text-xs">What you've been looking for</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {patterns.recentSearches.length > 0 ? (
-                  <div className="flex flex-wrap gap-2">
-                    {patterns.recentSearches.map((term, i) => (
-                      <Link href={`/search?q=${encodeURIComponent(term)}`} key={i}>
-                        <Badge variant="outline" className="cursor-pointer" data-testid={`search-term-${i}`}>
-                          {term}
-                        </Badge>
-                      </Link>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground text-center py-4">
-                    Try searching for roles that interest you
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-
-          {(marketAlignment.length > 0 || readiness.savedJobsCount > 0) && (
-            <div className="grid md:grid-cols-2 gap-6 mb-6">
-              {marketAlignment.length > 0 && (
-                <Card>
+              {persona && persona.summary && (
+                <Card className="mb-6">
                   <CardHeader className="pb-3">
                     <div className="flex items-center gap-2">
-                      <BarChart3 className="h-4 w-4 text-muted-foreground" />
-                      <CardTitle className="text-base">Market Alignment</CardTitle>
+                      <Award className="h-4 w-4 text-muted-foreground" />
+                      <CardTitle className="text-base">Your Career Profile</CardTitle>
                     </div>
-                    <CardDescription className="text-xs">
-                      Jobs available in your areas of interest ({totalActiveJobs} total active)
-                    </CardDescription>
+                    <CardDescription className="text-xs">Based on your activity patterns</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-3">
-                      {marketAlignment.map((m, i) => (
-                        <div key={i}>
-                          <div className="flex items-center justify-between text-sm mb-1">
-                            <span className="text-foreground truncate mr-2">{m.category}</span>
-                            <span className="text-muted-foreground text-xs shrink-0">{m.availableJobs} jobs</span>
-                          </div>
-                          <div className="h-1.5 bg-muted/40 rounded-full overflow-hidden">
-                            <div
-                              className="h-full bg-green-500/60 rounded-full transition-all"
-                              style={{ width: `${Math.min(100, (m.availableJobs / totalActiveJobs) * 100 * 3)}%` }}
-                            />
-                          </div>
-                        </div>
+                    <p className="text-sm text-muted-foreground leading-relaxed mb-3" data-testid="text-persona-summary">{persona.summary}</p>
+                    <div className="flex flex-wrap gap-2">
+                      {persona.careerStage && (
+                        <Badge variant="outline">{persona.careerStage}</Badge>
+                      )}
+                      {persona.topSkills?.slice(0, 4).map((skill, i) => (
+                        <Badge key={i} variant="secondary">{skill}</Badge>
                       ))}
                     </div>
                   </CardContent>
                 </Card>
               )}
-
-              {readiness.savedJobsCount > 0 && (
-                <Card>
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center gap-2">
-                      <Bookmark className="h-4 w-4 text-muted-foreground" />
-                      <CardTitle className="text-base">Saved Jobs</CardTitle>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center gap-6">
-                      <div>
-                        <p className="text-3xl font-bold text-foreground">{readiness.savedJobsCount}</p>
-                        <p className="text-xs text-muted-foreground">saved</p>
-                      </div>
-                      {readiness.expiringSoonCount > 0 && (
-                        <div className="text-amber-500">
-                          <p className="text-3xl font-bold">{readiness.expiringSoonCount}</p>
-                          <p className="text-xs">expiring soon</p>
-                        </div>
-                      )}
-                    </div>
-                    <Link href="/saved-jobs">
-                      <Button variant="outline" size="sm" className="mt-4 gap-1" data-testid="button-view-saved-jobs">
-                        View Saved Jobs
-                        <ArrowRight className="h-3 w-3" />
-                      </Button>
-                    </Link>
-                  </CardContent>
-                </Card>
-              )}
+            </>
+          ) : (
+            <div className="space-y-6 mb-6">
+              <ProLockedOverlay label="Market & Career Insights">
+                <div className="grid md:grid-cols-2 gap-6">
+                  <Card><CardHeader className="pb-3"><CardTitle className="text-base">Market Alignment</CardTitle></CardHeader><CardContent><div className="h-24" /></CardContent></Card>
+                  <Card><CardHeader className="pb-3"><CardTitle className="text-base">Career Profile</CardTitle></CardHeader><CardContent><div className="h-24" /></CardContent></Card>
+                </div>
+              </ProLockedOverlay>
             </div>
-          )}
-
-          {persona && persona.summary && (
-            <Card className="mb-6">
-              <CardHeader className="pb-3">
-                <div className="flex items-center gap-2">
-                  <Award className="h-4 w-4 text-muted-foreground" />
-                  <CardTitle className="text-base">Your Career Profile</CardTitle>
-                </div>
-                <CardDescription className="text-xs">Based on your activity patterns</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground leading-relaxed mb-3" data-testid="text-persona-summary">{persona.summary}</p>
-                <div className="flex flex-wrap gap-2">
-                  {persona.careerStage && (
-                    <Badge variant="outline">{persona.careerStage}</Badge>
-                  )}
-                  {persona.topSkills?.slice(0, 4).map((skill, i) => (
-                    <Badge key={i} variant="secondary">{skill}</Badge>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
           )}
 
           {recommendations.length > 1 && (

@@ -112,6 +112,10 @@ export interface IStorage {
   getApplicationByUserAndJob(userId: string, jobId: number): Promise<JobApplication | undefined>;
   // Similar Jobs
   getSimilarJobs(jobId: number, limit?: number): Promise<Job[]>;
+  // Usage limits
+  getSavedJobCount(userId: string): Promise<number>;
+  getDailyAssistantChatCount(userId: string): Promise<number>;
+  deactivatePastEvents(): Promise<number>;
 }
 
 class DatabaseStorage implements IStorage {
@@ -2023,6 +2027,34 @@ class DatabaseStorage implements IStorage {
 
     await db.insert(events).values(seedData);
     console.log(`Seeded ${seedData.length} events`);
+  }
+
+  async getSavedJobCount(userId: string): Promise<number> {
+    const [result] = await db.select({ cnt: count() }).from(savedJobs).where(eq(savedJobs.userId, userId));
+    return result?.cnt || 0;
+  }
+
+  async getDailyAssistantChatCount(userId: string): Promise<number> {
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const [result] = await db.select({ cnt: count() }).from(userActivities)
+      .where(and(
+        eq(userActivities.userId, userId),
+        eq(userActivities.eventType, 'assistant_chat'),
+        gte(userActivities.createdAt, todayStart)
+      ));
+    return result?.cnt || 0;
+  }
+
+  async deactivatePastEvents(): Promise<number> {
+    const now = new Date();
+    const result = await db.update(events)
+      .set({ isActive: false })
+      .where(and(
+        eq(events.isActive, true),
+        lt(events.endDate, now)
+      ));
+    return result.rowCount || 0;
   }
 }
 

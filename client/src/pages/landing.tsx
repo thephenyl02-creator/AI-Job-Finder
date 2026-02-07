@@ -40,6 +40,8 @@ interface Stats {
   totalCompanies: number;
   totalCategories: number;
   entryLevelJobs: number;
+  totalEvents: number;
+  upcomingEvents: number;
 }
 
 interface FeaturedJob {
@@ -309,7 +311,7 @@ export default function Landing() {
                 </span>
               ) : null}
             </div>
-            <div className="grid grid-cols-3 gap-4 sm:gap-8">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-8">
               <div className="text-center" data-testid="stat-jobs">
                 <div className="text-3xl sm:text-5xl font-serif font-bold text-foreground tabular-nums tracking-tight">
                   {stats?.totalJobs ? (
@@ -320,7 +322,7 @@ export default function Landing() {
                 </div>
                 <div className="text-xs sm:text-sm text-muted-foreground mt-1.5 font-medium uppercase tracking-wide">Open Positions</div>
               </div>
-              <div className="text-center border-x border-border/40" data-testid="stat-companies">
+              <div className="text-center sm:border-x border-border/40" data-testid="stat-companies">
                 <div className="text-3xl sm:text-5xl font-serif font-bold text-foreground tabular-nums tracking-tight">
                   {stats?.totalCompanies ? (
                     <AnimatedCounter value={stats.totalCompanies} duration={1.6} />
@@ -339,6 +341,16 @@ export default function Landing() {
                   )}
                 </div>
                 <div className="text-xs sm:text-sm text-muted-foreground mt-1.5 font-medium uppercase tracking-wide">Career Paths</div>
+              </div>
+              <div className="text-center sm:border-l border-border/40" data-testid="stat-events">
+                <div className="text-3xl sm:text-5xl font-serif font-bold text-foreground tabular-nums tracking-tight">
+                  {stats?.upcomingEvents ? (
+                    <AnimatedCounter value={stats.upcomingEvents} duration={1} />
+                  ) : (
+                    <span className="text-muted-foreground/40">&mdash;</span>
+                  )}
+                </div>
+                <div className="text-xs sm:text-sm text-muted-foreground mt-1.5 font-medium uppercase tracking-wide">Upcoming Events</div>
               </div>
             </div>
           </div>
@@ -625,21 +637,22 @@ export default function Landing() {
           </div>
         </section>
 
-        {featuredEvents && featuredEvents.length > 0 && (
-          <section className="border-t border-border/40" data-testid="events-section">
-            <div className="max-w-5xl mx-auto px-4 sm:px-6 py-20 sm:py-28">
-              <ScrollReveal>
-                <p className="text-sm font-medium text-muted-foreground tracking-wide uppercase mb-4">
-                  Keep learning
-                </p>
-                <h2 className="text-3xl sm:text-4xl font-serif font-medium text-foreground mb-4 tracking-tight">
-                  Conferences, seminars & workshops
-                </h2>
-                <p className="text-lg text-muted-foreground max-w-2xl mb-12">
-                  Stay connected to the legal tech community. Attend industry events, earn CLE credits, and build your network with the people shaping the future of law.
-                </p>
-              </ScrollReveal>
+        <section className="border-t border-border/40" data-testid="events-section">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-20 sm:py-28">
+            <ScrollReveal>
+              <p className="text-sm font-medium text-muted-foreground tracking-wide uppercase mb-4">
+                Keep learning
+              </p>
+              <h2 className="text-3xl sm:text-4xl font-serif font-medium text-foreground mb-4 tracking-tight">
+                Conferences, seminars & workshops
+              </h2>
+              <p className="text-lg text-muted-foreground max-w-2xl mb-12">
+                Stay connected to the legal tech community. Attend industry events, earn CLE credits, and build your network with the people shaping the future of law.
+              </p>
+            </ScrollReveal>
 
+            {featuredEvents && featuredEvents.length > 0 ? (
+              <>
               <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" staggerDelay={0.1}>
                 {featuredEvents.slice(0, 6).map((event: any) => {
                   const startDate = new Date(event.startDate);
@@ -722,9 +735,22 @@ export default function Landing() {
                   </Button>
                 </div>
               </ScrollReveal>
-            </div>
-          </section>
-        )}
+              </>
+            ) : (
+              <ScrollReveal>
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground mb-4">Check back soon for upcoming legal tech events, conferences, and networking opportunities.</p>
+                  <Button variant="outline" asChild data-testid="button-browse-events-empty">
+                    <Link href="/events">
+                      View Events Calendar
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Link>
+                  </Button>
+                </div>
+              </ScrollReveal>
+            )}
+          </div>
+        </section>
 
         <section className="border-t border-border/40">
           <div className="max-w-5xl mx-auto px-4 sm:px-6 py-16 sm:py-20">

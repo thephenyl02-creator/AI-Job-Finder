@@ -10,7 +10,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ScrollReveal } from "@/components/animations";
 import { useAuth } from "@/hooks/use-auth";
+import { useSubscription } from "@/hooks/use-subscription";
 import { useActivityTracker } from "@/hooks/use-activity-tracker";
+import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Job } from "@shared/schema";
 import { Link } from "wouter";
@@ -48,6 +50,8 @@ import {
   Hash,
   Eye,
   EyeOff,
+  Crown,
+  Sparkles,
 } from "lucide-react";
 
 function extractContactEmails(text: string | null | undefined): string[] {
@@ -972,18 +976,36 @@ function DescriptionToolbar({ sections, openSections, setOpenSections, activeCat
   );
 }
 
-function DescriptionContent({ text, testId, compact }: { text?: string | null; testId: string; compact?: boolean }) {
+function ProHighlightBanner() {
+  return (
+    <div className="mt-4 p-3 rounded-md border border-border/50 bg-muted/30 flex items-center gap-3 flex-wrap" data-testid="pro-highlight-banner">
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <Sparkles className="h-4 w-4 text-amber-500" />
+        <span>Unlock full analysis: certifications, tools, legal domains, salary, and more</span>
+      </div>
+      <Link href="/pricing">
+        <Button size="sm" variant="outline" className="gap-1.5" data-testid="button-upgrade-highlights">
+          <Crown className="h-3 w-3" />
+          Upgrade to Pro
+        </Button>
+      </Link>
+    </div>
+  );
+}
+
+function DescriptionContent({ text, testId, compact, isPro }: { text?: string | null; testId: string; compact?: boolean; isPro?: boolean }) {
   if (!text) return null;
 
   const cleanedText = useMemo(() => cleanDescription(text), [text]);
   const blocks = useMemo(() => parseTextIntoBlocks(cleanedText), [cleanedText]);
   const sections = useMemo(() => groupBlocksIntoSections(blocks), [blocks]);
-  const keyReqs = useMemo(() => extractKeyRequirements(text), [text]);
-  const highlightCounts = useMemo(() => countHighlightsByCategory(text), [text]);
-  const readingTime = useMemo(() => estimateReadingTime(cleanedText), [cleanedText]);
+  const keyReqs = useMemo(() => isPro ? extractKeyRequirements(text) : null, [text, isPro]);
+  const highlightCounts = useMemo(() => isPro ? countHighlightsByCategory(text) : {} as Record<HighlightCategory, number>, [text, isPro]);
+  const readingTime = useMemo(() => isPro ? estimateReadingTime(cleanedText) : 0, [cleanedText, isPro]);
 
+  const freeCategories = useMemo(() => new Set<HighlightCategory>(['experience']), []);
   const allCategories = useMemo(() => new Set(Object.keys(HIGHLIGHT_CATEGORIES) as HighlightCategory[]), []);
-  const [activeCategories, setActiveCategories] = useState<Set<HighlightCategory>>(allCategories);
+  const [activeCategories, setActiveCategories] = useState<Set<HighlightCategory>>(isPro ? allCategories : freeCategories);
   const [searchQuery, setSearchQuery] = useState('');
   const [openSections, setOpenSections] = useState<Set<number>>(() => {
     const initial = new Set<number>();
@@ -1034,18 +1056,20 @@ function DescriptionContent({ text, testId, compact }: { text?: string | null; t
   if (sections.length <= 1) {
     return (
       <div className="max-w-none text-foreground leading-relaxed" data-testid={testId}>
-        <KeyRequirementsBar keyReqs={keyReqs} />
-        <DescriptionToolbar
-          sections={sections}
-          openSections={openSections}
-          setOpenSections={setOpenSections}
-          activeCategories={activeCategories}
-          setActiveCategories={setActiveCategories}
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          highlightCounts={highlightCounts}
-          readingTime={readingTime}
-        />
+        {isPro && keyReqs && <KeyRequirementsBar keyReqs={keyReqs} />}
+        {isPro && (
+          <DescriptionToolbar
+            sections={sections}
+            openSections={openSections}
+            setOpenSections={setOpenSections}
+            activeCategories={activeCategories}
+            setActiveCategories={setActiveCategories}
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            highlightCounts={highlightCounts}
+            readingTime={readingTime}
+          />
+        )}
         <div className="space-y-2 mt-3">
           {blocks.map((block, i) => {
             if (block.type === 'heading') {
@@ -1066,24 +1090,27 @@ function DescriptionContent({ text, testId, compact }: { text?: string | null; t
             return <p key={i} className="text-foreground/90">{renderHighlightedContent(block.content, activeCategories)}</p>;
           })}
         </div>
+        {!isPro && <ProHighlightBanner />}
       </div>
     );
   }
 
   return (
     <div className="max-w-none" data-testid={testId}>
-      <KeyRequirementsBar keyReqs={keyReqs} />
-      <DescriptionToolbar
-        sections={sections}
-        openSections={openSections}
-        setOpenSections={setOpenSections}
-        activeCategories={activeCategories}
-        setActiveCategories={setActiveCategories}
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
-        highlightCounts={highlightCounts}
-        readingTime={readingTime}
-      />
+      {isPro && keyReqs && <KeyRequirementsBar keyReqs={keyReqs} />}
+      {isPro && (
+        <DescriptionToolbar
+          sections={sections}
+          openSections={openSections}
+          setOpenSections={setOpenSections}
+          activeCategories={activeCategories}
+          setActiveCategories={setActiveCategories}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          highlightCounts={highlightCounts}
+          readingTime={readingTime}
+        />
+      )}
       <div className="mt-2">
         {sections.map((section, i) => (
           <CollapsibleSection
@@ -1092,10 +1119,11 @@ function DescriptionContent({ text, testId, compact }: { text?: string | null; t
             isOpen={openSections.has(i)}
             onToggle={() => toggleSection(i)}
             activeCategories={activeCategories}
-            searchQuery={searchQuery}
+            searchQuery={isPro ? searchQuery : ''}
           />
         ))}
       </div>
+      {!isPro && <ProHighlightBanner />}
     </div>
   );
 }
@@ -1320,6 +1348,7 @@ function JobChat({ jobId }: { jobId: string }) {
 export default function JobDetail() {
   usePageTitle("Job Details");
   const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { isPro } = useSubscription();
   const { trackNow } = useActivityTracker();
   const [, setLocation] = useLocation();
   const params = useParams<{ id: string }>();
@@ -1341,6 +1370,7 @@ export default function JobDetail() {
 
   const jobIsSaved = job ? savedJobIds.includes(job.id) : false;
 
+  const { toast } = useToast();
   const saveJobMutation = useMutation({
     mutationFn: async () => {
       if (!job) return;
@@ -1353,6 +1383,11 @@ export default function JobDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/saved-jobs/ids"] });
       queryClient.invalidateQueries({ queryKey: ["/api/saved-jobs"] });
+    },
+    onError: (error: any) => {
+      if (error?.message?.includes("5 jobs") || error?.message?.includes("Upgrade to Pro")) {
+        toast({ title: "Save limit reached", description: "Free accounts can save up to 5 jobs. Upgrade to Pro for unlimited saves.", variant: "destructive" });
+      }
     },
   });
 
@@ -1554,15 +1589,22 @@ export default function JobDetail() {
                 <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
                   <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Full Description</h2>
                   <div className="flex flex-wrap items-center gap-2.5 text-[10px] text-muted-foreground">
-                    {(Object.entries(HIGHLIGHT_DOT_COLORS) as [HighlightCategory, string][]).map(([cat, dotColor]) => (
-                      <span key={cat} className="flex items-center gap-1">
-                        <span className={`w-2 h-2 rounded-sm ${dotColor}`} />
-                        {HIGHLIGHT_CATEGORIES[cat].label}
+                    {isPro ? (
+                      (Object.entries(HIGHLIGHT_DOT_COLORS) as [HighlightCategory, string][]).map(([cat, dotColor]) => (
+                        <span key={cat} className="flex items-center gap-1">
+                          <span className={`w-2 h-2 rounded-sm ${dotColor}`} />
+                          {HIGHLIGHT_CATEGORIES[cat].label}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="flex items-center gap-1">
+                        <span className={`w-2 h-2 rounded-sm ${HIGHLIGHT_DOT_COLORS.experience}`} />
+                        {HIGHLIGHT_CATEGORIES.experience.label}
                       </span>
-                    ))}
+                    )}
                   </div>
                 </div>
-                <DescriptionContent text={job.description} testId="text-job-description" />
+                <DescriptionContent text={job.description} testId="text-job-description" isPro={isPro} />
               </CardContent>
             </Card>
 
@@ -1570,7 +1612,7 @@ export default function JobDetail() {
               <Card>
                 <CardContent className="pt-5 pb-5">
                   <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">Requirements</h2>
-                  <DescriptionContent text={job.requirements} testId="text-job-requirements" />
+                  <DescriptionContent text={job.requirements} testId="text-job-requirements" isPro={isPro} />
                 </CardContent>
               </Card>
             )}

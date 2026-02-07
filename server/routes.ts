@@ -118,6 +118,18 @@ export async function registerRoutes(
   await storage.seedJobCategories();
   await storage.seedEvents();
 
+  const deactivated = await storage.deactivatePastEvents();
+  if (deactivated > 0) console.log(`Deactivated ${deactivated} past events`);
+
+  setInterval(async () => {
+    try {
+      const count = await storage.deactivatePastEvents();
+      if (count > 0) console.log(`Scheduled: Deactivated ${count} past events`);
+    } catch (err) {
+      console.error("Event deactivation error:", err);
+    }
+  }, 6 * 60 * 60 * 1000);
+
   // Background re-categorization of jobs with invalid/old category names
   (async () => {
     try {
@@ -173,11 +185,15 @@ export async function registerRoutes(
       const uniqueCompanies = new Set(jobs.map(j => j.company)).size;
       const uniqueCategories = new Set(jobs.map(j => j.roleCategory).filter(Boolean)).size;
       const entryLevelJobs = jobs.filter(j => ["Entry", "Junior", "Associate", "Intern", "Fellowship"].includes(j.seniorityLevel || "")).length;
+      const allEvents = await storage.getEvents();
+      const upcomingEvents = allEvents.filter(e => new Date(e.startDate) >= new Date()).length;
       res.json({
         totalJobs: jobs.length,
         totalCompanies: uniqueCompanies,
         totalCategories: uniqueCategories,
         entryLevelJobs,
+        totalEvents: allEvents.length,
+        upcomingEvents,
       });
     } catch (error) {
       console.error("Error fetching stats:", error);
@@ -406,6 +422,20 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error deleting event:", error);
       res.status(500).json({ error: "Failed to delete event" });
+    }
+  });
+
+  app.post("/api/admin/events/refresh", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      if (!(await storage.isUserAdmin(user?.id))) return res.status(403).json({ error: "Admin access required" });
+      const deactivated = await storage.deactivatePastEvents();
+      const allEvents = await storage.getEvents();
+      const upcoming = allEvents.filter(e => new Date(e.startDate) >= new Date()).length;
+      res.json({ deactivated, totalEvents: allEvents.length, upcomingEvents: upcoming });
+    } catch (error) {
+      console.error("Error refreshing events:", error);
+      res.status(500).json({ error: "Failed to refresh events" });
     }
   });
 
@@ -2675,12 +2705,32 @@ Be specific and actionable. Focus on legal tech industry keywords and ATS best p
   // --- User Dashboard ---
   app.get("/api/dashboard", isAuthenticated, async (req, res) => {
     try {
+      const userId = req.user!.id;
       const days = parseInt(req.query.days as string) || 30;
-      const data = await storage.getUserDashboard(req.user!.id, Math.min(days, 90));
-      res.json(data);
+      const data = await storage.getUserDashboard(userId, Math.min(days, 90));
+      const subData = await storage.getUserSubscription(userId);
+      const isPro = subData?.subscriptionTier === "pro" && subData?.subscriptionStatus === "active";
+      res.json({ ...data, isPro });
     } catch (error) {
       console.error("Error fetching user dashboard:", error);
       res.status(500).json({ error: "Failed to load dashboard" });
+    }
+  });
+
+  app.get("/api/usage/limits", isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const subData = await storage.getUserSubscription(userId);
+      const isPro = subData?.subscriptionTier === "pro" && subData?.subscriptionStatus === "active";
+      const dailyChatCount = await storage.getDailyAssistantChatCount(userId);
+      const savedJobCount = await storage.getSavedJobCount(userId);
+      res.json({
+        isPro,
+        chat: { used: dailyChatCount, limit: isPro ? null : 3, resetsAt: new Date(new Date().setHours(24, 0, 0, 0)).toISOString() },
+        savedJobs: { used: savedJobCount, limit: isPro ? null : 5 },
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch usage limits" });
     }
   });
 
@@ -3354,6 +3404,23 @@ After your analysis, list 2-4 key data points you referenced as "Sources" - each
         return res.status(400).json({ error: "Please provide a message." });
       }
 
+      const subData = await storage.getUserSubscription(userId);
+      const isPro = subData?.subscriptionTier === "pro" && subData?.subscriptionStatus === "active";
+      const FREE_DAILY_CHAT_LIMIT = 3;
+      if (!isPro) {
+        const dailyCount = await storage.getDailyAssistantChatCount(userId);
+        if (dailyCount >= FREE_DAILY_CHAT_LIMIT) {
+          return res.status(403).json({
+            error: `You've used all ${FREE_DAILY_CHAT_LIMIT} free messages today. Upgrade to Pro for unlimited conversations.`,
+            upgradeUrl: "/pricing",
+            limitReached: true,
+            limit: FREE_DAILY_CHAT_LIMIT,
+            current: dailyCount,
+            resetsAt: new Date(new Date().setHours(24, 0, 0, 0)).toISOString(),
+          });
+        }
+      }
+
       const conversationHistory: { role: "user" | "assistant"; content: string }[] = Array.isArray(history)
         ? history.slice(-8).map((h: any) => ({
             role: h.role === "assistant" ? "assistant" as const : "user" as const,
@@ -3479,6 +3546,15 @@ ${platformContext}`;
       });
 
       const reply = completion.choices[0]?.message?.content || "I'm sorry, I couldn't generate a response. Please try again.";
+
+      if (userId) {
+        storage.createActivity({
+          userId,
+          eventType: 'assistant_chat',
+          entityType: 'chat',
+          metadata: { context: context?.pageContext || 'general' },
+        }).catch(() => {});
+      }
 
       res.json({ reply });
     } catch (error) {
@@ -4426,6 +4502,20 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
     const jobId = parseInt(req.params.jobId);
     if (isNaN(jobId)) return res.status(400).json({ error: "Invalid job ID" });
     try {
+      const subData = await storage.getUserSubscription(userId);
+      const isPro = subData?.subscriptionTier === "pro" && subData?.subscriptionStatus === "active";
+      if (!isPro) {
+        const savedCount = await storage.getSavedJobCount(userId);
+        if (savedCount >= 5) {
+          return res.status(403).json({
+            error: "Free accounts can save up to 5 jobs. Upgrade to Pro for unlimited saves.",
+            upgradeUrl: "/pricing",
+            limitReached: true,
+            limit: 5,
+            current: savedCount,
+          });
+        }
+      }
       const job = await storage.getJob(jobId);
       if (!job) return res.status(404).json({ error: "Job not found" });
       const saved = await storage.saveJob(userId, jobId, req.body?.notes);

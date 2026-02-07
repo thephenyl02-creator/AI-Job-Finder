@@ -7,6 +7,7 @@ import type { JobWithScore } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useMutation } from "@tanstack/react-query";
 import { JobComparison } from "./job-comparison";
+import { useToast } from "@/hooks/use-toast";
 
 function stripHtmlPreview(text: string): string {
   if (!text) return "";
@@ -35,6 +36,7 @@ interface JobCardProps {
 }
 
 export function JobCard({ job, showMatchScore = false, hasResume = false, isSaved = false, isAuthenticated = false }: JobCardProps) {
+  const { toast } = useToast();
   const formatSalary = (min?: number | null, max?: number | null) => {
     if (!min && !max) return null;
     const formatNum = (num: number) => `$${(num / 1000).toFixed(0)}K`;
@@ -98,6 +100,11 @@ export function JobCard({ job, showMatchScore = false, hasResume = false, isSave
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/saved-jobs/ids"] });
       queryClient.invalidateQueries({ queryKey: ["/api/saved-jobs"] });
+    },
+    onError: (error: any) => {
+      if (error?.message?.includes("5 jobs") || error?.message?.includes("Upgrade to Pro")) {
+        toast({ title: "Save limit reached", description: "Free accounts can save up to 5 jobs. Upgrade to Pro for unlimited saves.", variant: "destructive" });
+      }
     },
   });
 
