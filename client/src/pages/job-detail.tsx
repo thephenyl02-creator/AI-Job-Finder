@@ -649,7 +649,7 @@ function DescriptionContent({ text, testId, compact, isPro }: { text?: string | 
 
   const activeCategories = useMemo(() => {
     if (isPro) return new Set(Object.keys(HIGHLIGHT_CATEGORIES) as HighlightCategory[]);
-    return new Set<HighlightCategory>(['experience']);
+    return new Set<HighlightCategory>();
   }, [isPro]);
 
   const renderBlock = useCallback((block: Block, i: number) => {
@@ -1028,15 +1028,15 @@ export default function JobDetail() {
         </Button>
 
         <ScrollReveal>
-          <div className="mb-8">
-            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+          <div className="mb-10">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-6">
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-3 mb-3">
+                <div className="flex items-center gap-4 mb-4">
                   {job.companyLogo && (
                     <img
                       src={job.companyLogo}
                       alt={`${job.company} logo`}
-                      className="w-12 h-12 rounded-lg object-contain bg-muted p-1"
+                      className="w-14 h-14 rounded-lg object-contain bg-muted p-1.5"
                       onError={(e) => (e.currentTarget.style.display = "none")}
                     />
                   )}
@@ -1047,13 +1047,13 @@ export default function JobDetail() {
                     >
                       {job.title}
                     </h1>
-                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
-                      <span className="flex items-center gap-1 text-muted-foreground">
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2">
+                      <span className="flex items-center gap-1.5 text-muted-foreground">
                         <Building2 className="h-4 w-4" />
                         <span className="font-medium" data-testid="text-job-detail-company">{job.company}</span>
                       </span>
                       {job.location && (
-                        <span className="flex items-center gap-1 text-muted-foreground">
+                        <span className="flex items-center gap-1.5 text-muted-foreground">
                           <MapPin className="h-4 w-4" />
                           <span data-testid="text-job-detail-location">{job.location}</span>
                         </span>
@@ -1062,7 +1062,7 @@ export default function JobDetail() {
                   </div>
                 </div>
 
-                <div className="flex flex-wrap gap-2 mt-4">
+                <div className="flex flex-wrap gap-2.5 mt-5">
                   {job.seniorityLevel && (
                     <Badge variant="secondary" data-testid="badge-seniority">
                       {job.seniorityLevel}
@@ -1078,9 +1078,9 @@ export default function JobDetail() {
                       {job.roleSubcategory}
                     </Badge>
                   )}
-                  {(job.isRemote || job.locationType) && (
+                  {job.locationType && (
                     <Badge variant="secondary" className={
-                      (job.locationType === 'remote' || (!job.locationType && job.isRemote))
+                      job.locationType === 'remote'
                         ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800'
                         : job.locationType === 'hybrid'
                         ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800'
@@ -1127,17 +1127,17 @@ export default function JobDetail() {
           </div>
         </ScrollReveal>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-6">
             <Card>
-              <CardContent className="pt-5 pb-5">
+              <CardContent className="pt-6 pb-6 px-6">
                 <DescriptionContent text={job.description} testId="text-job-description" isPro={isPro} />
               </CardContent>
             </Card>
 
             {job.requirements && (
               <Card>
-                <CardContent className="pt-5 pb-5">
+                <CardContent className="pt-6 pb-6 px-6">
                   <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">Requirements</h2>
                   <DescriptionContent text={job.requirements} testId="text-job-requirements" isPro={isPro} />
                 </CardContent>
@@ -1145,9 +1145,9 @@ export default function JobDetail() {
             )}
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-5">
             <Card>
-              <CardContent className="pt-5 pb-5 space-y-4">
+              <CardContent className="pt-6 pb-6 space-y-5">
                 <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Details</h2>
 
                 {salary && (
@@ -1213,8 +1213,8 @@ export default function JobDetail() {
 
             {job.keySkills && job.keySkills.length > 0 && (
               <Card>
-                <CardContent className="pt-5 pb-5">
-                  <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Key Skills</h2>
+                <CardContent className="pt-6 pb-6">
+                  <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">Key Skills</h2>
                   <div className="flex flex-wrap gap-2">
                     {job.keySkills.map((skill, i) => (
                       <Badge key={i} variant="secondary" data-testid={`badge-skill-${i}`}>

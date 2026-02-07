@@ -115,6 +115,8 @@ export const JOB_TAXONOMY = {
     description: "Product management, innovation leadership, and digital transformation",
     subcategories: [
       "Legal Product Manager",
+      "Product Counsel",
+      "Product Attorney",
       "Head of Legal Innovation",
       "Legal Digital Transformation Lead",
       "Legal UX Designer",
@@ -175,6 +177,7 @@ export const JOB_TAXONOMY = {
       "Compliance Automation Specialist",
       "Regulatory Intelligence Analyst",
       "Privacy Technology Counsel",
+      "Privacy Counsel",
       "AML/KYC Technology Counsel",
       "Compliance Analytics Specialist",
     ],

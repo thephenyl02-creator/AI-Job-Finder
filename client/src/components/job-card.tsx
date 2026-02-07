@@ -115,7 +115,7 @@ export function JobCard({ job, showMatchScore = false, hasResume = false, isSave
   return (
     <Card className="group hover:border-primary/50 transition-all duration-200 hover-elevate" data-testid={`card-job-${job.id}`}>
       <CardContent className="p-5 sm:p-6">
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-3.5">
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-start gap-3 sm:gap-4 flex-1 min-w-0">
               <Avatar className="h-12 w-12 sm:h-14 sm:w-14 rounded-lg flex-shrink-0">
@@ -181,15 +181,15 @@ export function JobCard({ job, showMatchScore = false, hasResume = false, isSave
                 {job.location}
               </Badge>
             )}
-            {(job.locationType || job.isRemote) && (
+            {job.locationType && (
               <Badge variant="secondary" className={`gap-1 ${
-                (job.locationType === 'remote' || (!job.locationType && job.isRemote))
+                job.locationType === 'remote'
                   ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800'
                   : job.locationType === 'hybrid'
                   ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800'
                   : 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 border-orange-200 dark:border-orange-800'
               }`} data-testid={`badge-work-setting-${job.id}`}>
-                {(job.locationType === 'remote' || (!job.locationType && job.isRemote)) && <Wifi className="h-3 w-3" />}
+                {job.locationType === 'remote' && <Wifi className="h-3 w-3" />}
                 {job.locationType === 'hybrid' && <Laptop className="h-3 w-3" />}
                 {job.locationType === 'onsite' && <Building2 className="h-3 w-3" />}
                 {job.locationType === 'hybrid' ? 'Hybrid' : job.locationType === 'onsite' ? 'On-site' : 'Remote'}
