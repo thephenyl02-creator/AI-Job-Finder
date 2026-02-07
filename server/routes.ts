@@ -4718,7 +4718,6 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
 
   runStartupCleanup();
   startScheduler();
-  startEventScheduler();
 
   return httpServer;
 }

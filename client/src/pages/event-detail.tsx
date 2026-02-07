@@ -13,7 +13,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import {
   ArrowLeft,
@@ -28,8 +27,6 @@ import {
   Users,
   Share2,
   Tag,
-  Clock,
-  Loader2,
 } from "lucide-react";
 
 const EVENT_TYPE_STYLES: Record<string, string> = {
@@ -63,7 +60,8 @@ const ATTENDANCE_ICONS: Record<string, typeof Building2> = {
 function formatEventDate(startDate: string | Date, endDate?: string | Date | null): string {
   const start = new Date(startDate);
   const options: Intl.DateTimeFormatOptions = {
-    month: "short",
+    weekday: "long",
+    month: "long",
     day: "numeric",
     year: "numeric",
   };
@@ -77,16 +75,17 @@ function formatEventDate(startDate: string | Date, endDate?: string | Date | nul
     return start.toLocaleDateString("en-US", options);
   }
 
+  const shortOpts: Intl.DateTimeFormatOptions = { month: "long", day: "numeric" };
   if (start.getMonth() === end.getMonth() && start.getFullYear() === end.getFullYear()) {
-    return `${start.toLocaleDateString("en-US", { month: "short", day: "numeric" })}-${end.getDate()}, ${end.getFullYear()}`;
+    return `${start.toLocaleDateString("en-US", shortOpts)} - ${end.getDate()}, ${end.getFullYear()}`;
   }
 
-  return `${start.toLocaleDateString("en-US", { month: "short", day: "numeric" })} - ${end.toLocaleDateString("en-US", options)}`;
+  return `${start.toLocaleDateString("en-US", shortOpts)} - ${end.toLocaleDateString("en-US", options)}`;
 }
 
 function EventDetailSkeleton() {
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 space-y-6">
+    <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 space-y-6">
       <Skeleton className="h-8 w-24" />
       <div className="space-y-4">
         <Skeleton className="h-6 w-28" />
@@ -98,7 +97,6 @@ function EventDetailSkeleton() {
           <Skeleton className="h-5 w-64" />
           <Skeleton className="h-5 w-48" />
           <Skeleton className="h-5 w-56" />
-          <Skeleton className="h-5 w-40" />
         </CardContent>
       </Card>
       <Card>
@@ -137,7 +135,6 @@ export default function EventDetail() {
     try {
       await apiRequest("POST", `/api/events/${event.id}/register-click`);
     } catch {
-      // silently fail tracking
     }
     window.open(event.registrationUrl, "_blank", "noopener,noreferrer");
   };
@@ -203,7 +200,7 @@ export default function EventDetail() {
       <Header />
 
       <main className="flex-1">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
           <ScrollReveal>
             <Link href="/events">
               <Button variant="ghost" size="sm" className="mb-6 text-muted-foreground" data-testid="button-back">
@@ -214,73 +211,84 @@ export default function EventDetail() {
           </ScrollReveal>
 
           <ScrollReveal delay={0.05}>
-            <div className="mb-6 space-y-3">
-              <Badge
-                variant="secondary"
-                className={`no-default-hover-elevate no-default-active-elevate ${EVENT_TYPE_STYLES[event.eventType] || ""}`}
-                data-testid="badge-event-type"
-              >
-                {EVENT_TYPE_LABELS[event.eventType] || event.eventType}
-              </Badge>
+            <div className="mb-8">
+              <div className="flex items-center gap-2 mb-4 flex-wrap">
+                <Badge
+                  variant="secondary"
+                  className={`no-default-hover-elevate no-default-active-elevate ${EVENT_TYPE_STYLES[event.eventType] || ""}`}
+                  data-testid="badge-event-type"
+                >
+                  {EVENT_TYPE_LABELS[event.eventType] || event.eventType}
+                </Badge>
+                <Badge variant="outline" className="no-default-hover-elevate no-default-active-elevate" data-testid="badge-attendance">
+                  <AttendanceIcon className="h-3 w-3 mr-1" />
+                  {event.attendanceType === "in-person"
+                    ? "In-Person"
+                    : event.attendanceType.charAt(0).toUpperCase() + event.attendanceType.slice(1)}
+                </Badge>
+                {event.isFree && (
+                  <Badge variant="secondary" className="no-default-hover-elevate no-default-active-elevate bg-emerald-500/10 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400" data-testid="badge-free">
+                    Free
+                  </Badge>
+                )}
+              </div>
 
-              <h1 className="text-2xl sm:text-3xl font-bold text-foreground leading-tight" data-testid="text-event-title">
+              <h1 className="text-2xl sm:text-3xl font-serif font-medium text-foreground leading-tight mb-3 tracking-tight" data-testid="text-event-title">
                 {event.title}
               </h1>
 
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Building2 className="h-4 w-4 shrink-0" />
-                <span className="text-sm font-medium" data-testid="text-organizer">{event.organizer}</span>
-              </div>
+              <p className="text-muted-foreground font-medium" data-testid="text-organizer">
+                Hosted by {event.organizer}
+              </p>
             </div>
           </ScrollReveal>
 
           <ScrollReveal delay={0.1}>
             <Card className="mb-6" data-testid="card-event-details">
-              <CardContent className="p-6 space-y-4">
-                <div className="flex items-center gap-3">
-                  <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <span className="text-sm text-foreground" data-testid="text-date">
-                    {formatEventDate(event.startDate, event.endDate)}
-                  </span>
-                </div>
+              <CardContent className="p-5 sm:p-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="flex items-start gap-3">
+                    <Calendar className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-0.5">Date</p>
+                      <p className="text-sm text-foreground" data-testid="text-date">
+                        {formatEventDate(event.startDate, event.endDate)}
+                      </p>
+                    </div>
+                  </div>
 
-                <div className="flex items-center gap-3">
-                  <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <span className="text-sm text-foreground" data-testid="text-location">
-                    {event.attendanceType === "virtual" ? "Online" : event.location || "TBD"}
-                  </span>
-                </div>
+                  <div className="flex items-start gap-3">
+                    <MapPin className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-0.5">Location</p>
+                      <p className="text-sm text-foreground" data-testid="text-location">
+                        {event.attendanceType === "virtual" ? "Online" : event.location || "TBD"}
+                      </p>
+                    </div>
+                  </div>
 
-                <div className="flex items-center gap-3">
-                  <AttendanceIcon className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <span className="text-sm text-foreground" data-testid="text-attendance">
-                    {event.attendanceType === "in-person"
-                      ? "In-Person"
-                      : event.attendanceType.charAt(0).toUpperCase() + event.attendanceType.slice(1)}
-                  </span>
-                </div>
+                  <div className="flex items-start gap-3">
+                    <DollarSign className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-0.5">Cost</p>
+                      <p className="text-sm text-foreground" data-testid="text-cost">
+                        {event.isFree ? "Free" : event.cost || "See registration page"}
+                      </p>
+                    </div>
+                  </div>
 
-                <div className="flex items-center gap-3">
-                  <DollarSign className="h-4 w-4 text-muted-foreground shrink-0" />
-                  {event.isFree ? (
-                    <Badge variant="secondary" className="no-default-hover-elevate no-default-active-elevate bg-emerald-500/10 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400" data-testid="badge-free">
-                      Free
-                    </Badge>
-                  ) : (
-                    <span className="text-sm text-foreground" data-testid="text-cost">
-                      {event.cost || "See registration page"}
-                    </span>
+                  {event.cleCredits && (
+                    <div className="flex items-start gap-3">
+                      <GraduationCap className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-0.5">CLE Credits</p>
+                        <p className="text-sm text-foreground" data-testid="text-cle">
+                          {event.cleCredits}
+                        </p>
+                      </div>
+                    </div>
                   )}
                 </div>
-
-                {event.cleCredits && (
-                  <div className="flex items-center gap-3">
-                    <GraduationCap className="h-4 w-4 text-muted-foreground shrink-0" />
-                    <span className="text-sm text-foreground" data-testid="text-cle">
-                      {event.cleCredits} CLE Credits
-                    </span>
-                  </div>
-                )}
               </CardContent>
             </Card>
           </ScrollReveal>
@@ -298,24 +306,24 @@ export default function EventDetail() {
             </div>
           </ScrollReveal>
 
-          <ScrollReveal delay={0.2}>
-            <Card className="mb-6" data-testid="card-description">
-              <CardContent className="p-6">
-                <h2 className="text-lg font-semibold text-foreground mb-3">About this Event</h2>
-                <Separator className="mb-4" />
-                <div className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap" data-testid="text-description">
-                  {event.description}
-                </div>
-              </CardContent>
-            </Card>
-          </ScrollReveal>
+          {event.description && (
+            <ScrollReveal delay={0.2}>
+              <Card className="mb-6" data-testid="card-description">
+                <CardContent className="p-5 sm:p-6">
+                  <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">About this Event</h2>
+                  <div className="text-[0.925rem] text-foreground/80 leading-[1.7] whitespace-pre-wrap" data-testid="text-description">
+                    {event.description}
+                  </div>
+                </CardContent>
+              </Card>
+            </ScrollReveal>
+          )}
 
           {topics.length > 0 && (
             <ScrollReveal delay={0.25}>
               <Card className="mb-6" data-testid="card-topics">
-                <CardContent className="p-6">
-                  <h2 className="text-lg font-semibold text-foreground mb-3">Topics</h2>
-                  <Separator className="mb-4" />
+                <CardContent className="p-5 sm:p-6">
+                  <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">Topics</h2>
                   <div className="flex flex-wrap gap-2">
                     {topics.map((topic, i) => (
                       <Badge
@@ -337,13 +345,12 @@ export default function EventDetail() {
           {speakers.length > 0 && (
             <ScrollReveal delay={0.3}>
               <Card className="mb-6" data-testid="card-speakers">
-                <CardContent className="p-6">
-                  <h2 className="text-lg font-semibold text-foreground mb-3">
-                    <Users className="h-4 w-4 inline mr-2" />
+                <CardContent className="p-5 sm:p-6">
+                  <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">
+                    <Users className="h-3.5 w-3.5 inline mr-1.5 -mt-0.5" />
                     Speakers
                   </h2>
-                  <Separator className="mb-4" />
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {speakers.map((speaker, i) => (
                       <div
                         key={i}

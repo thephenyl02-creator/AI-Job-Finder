@@ -6,33 +6,21 @@ import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { ScrollReveal } from "@/components/animations";
 import type { Event } from "@shared/schema";
-import { EVENT_TYPES, ATTENDANCE_TYPES } from "@shared/schema";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Calendar,
   MapPin,
-  Users,
   ExternalLink,
-  Filter,
-  X,
   GraduationCap,
   Video,
   Building2,
   Globe,
   DollarSign,
   Tag,
-  Clock,
+  ArrowRight,
 } from "lucide-react";
 import { Link } from "wouter";
 
@@ -91,19 +79,36 @@ function formatEventDate(startDate: string | Date, endDate?: string | Date | nul
 function EventCardSkeleton() {
   return (
     <Card>
-      <CardContent className="p-5 space-y-3">
-        <Skeleton className="h-5 w-20" />
-        <Skeleton className="h-6 w-full" />
-        <Skeleton className="h-4 w-32" />
-        <Skeleton className="h-4 w-40" />
-        <Skeleton className="h-4 w-28" />
+      <CardContent className="p-5 sm:p-6 space-y-3">
         <div className="flex gap-2">
-          <Skeleton className="h-5 w-16" />
+          <Skeleton className="h-5 w-20" />
           <Skeleton className="h-5 w-16" />
         </div>
+        <Skeleton className="h-6 w-full" />
+        <Skeleton className="h-4 w-40" />
+        <Skeleton className="h-4 w-32" />
+        <Skeleton className="h-4 w-48" />
       </CardContent>
     </Card>
   );
+}
+
+function getRelativeTime(dateStr: string | Date): string {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffMs = date.getTime() - now.getTime();
+  const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffDays < 0) return "Past";
+  if (diffDays === 0) return "Today";
+  if (diffDays === 1) return "Tomorrow";
+  if (diffDays <= 7) return `In ${diffDays} days`;
+  if (diffDays <= 30) {
+    const weeks = Math.ceil(diffDays / 7);
+    return `In ${weeks} week${weeks > 1 ? "s" : ""}`;
+  }
+  const months = Math.ceil(diffDays / 30);
+  return `In ${months} month${months > 1 ? "s" : ""}`;
 }
 
 export default function Events() {
@@ -112,132 +117,38 @@ export default function Events() {
 
   useEffect(() => { track({ eventType: "page_view", pagePath: "/events" }); }, []);
 
-  const [eventType, setEventType] = useState<string>("all");
-  const [attendanceType, setAttendanceType] = useState<string>("all");
-  const [freeOnly, setFreeOnly] = useState(false);
-  const [upcomingOnly, setUpcomingOnly] = useState(true);
-
-  const hasFilters = eventType !== "all" || attendanceType !== "all" || freeOnly || !upcomingOnly;
-
-  const queryParams = new URLSearchParams();
-  if (eventType !== "all") queryParams.set("eventType", eventType);
-  if (attendanceType !== "all") queryParams.set("attendanceType", attendanceType);
-  if (freeOnly) queryParams.set("isFree", "true");
-  if (upcomingOnly) queryParams.set("upcoming", "true");
-  const queryString = queryParams.toString();
-
   const { data: events, isLoading } = useQuery<Event[]>({
-    queryKey: ["/api/events", queryString],
+    queryKey: ["/api/events", "upcoming=true"],
     queryFn: async () => {
-      const url = queryString ? `/api/events?${queryString}` : "/api/events";
-      const res = await fetch(url, { credentials: "include" });
+      const res = await fetch("/api/events?upcoming=true", { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch events");
       return res.json();
     },
   });
-
-  const { data: stats } = useQuery<{ total: number; upcoming: number; eventTypes: Record<string, number> }>({
-    queryKey: ["/api/events/stats"],
-  });
-
-  const clearFilters = () => {
-    setEventType("all");
-    setAttendanceType("all");
-    setFreeOnly(false);
-    setUpcomingOnly(true);
-  };
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Header />
 
       <main className="flex-1">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
           <ScrollReveal>
-            <div className="mb-8">
-              <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2" data-testid="text-events-title">
+            <div className="mb-10">
+              <p className="text-sm font-medium text-muted-foreground tracking-wide uppercase mb-3" data-testid="text-events-label">
+                Industry Calendar
+              </p>
+              <h1 className="text-2xl sm:text-3xl font-serif font-medium text-foreground mb-3 tracking-tight" data-testid="text-events-title">
                 Legal Tech Events
               </h1>
-              <p className="text-muted-foreground" data-testid="text-events-subtitle">
-                Conferences, seminars, workshops, and CLE programs for legal technology professionals
+              <p className="text-muted-foreground leading-relaxed max-w-2xl" data-testid="text-events-subtitle">
+                Curated conferences, summits, workshops, and networking events for legal technology professionals. Each event is hand-picked for relevance to your career.
               </p>
-              {stats && (
-                <div className="flex flex-wrap items-center gap-4 mt-4 text-sm text-muted-foreground">
-                  <span data-testid="text-events-total">{stats.total} total events</span>
-                  <span data-testid="text-events-upcoming">{stats.upcoming} upcoming</span>
-                </div>
-              )}
-            </div>
-          </ScrollReveal>
-
-          <ScrollReveal delay={0.1}>
-            <div className="flex flex-wrap items-center gap-3 mb-6 p-4 rounded-md border border-border/40 bg-muted/30" data-testid="filter-bar">
-              <Filter className="h-4 w-4 text-muted-foreground shrink-0" />
-
-              <Select value={eventType} onValueChange={setEventType}>
-                <SelectTrigger className="w-[160px]" data-testid="select-event-type">
-                  <SelectValue placeholder="Event Type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  {EVENT_TYPES.map((type) => (
-                    <SelectItem key={type} value={type}>
-                      {EVENT_TYPE_LABELS[type] || type}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Select value={attendanceType} onValueChange={setAttendanceType}>
-                <SelectTrigger className="w-[160px]" data-testid="select-attendance-type">
-                  <SelectValue placeholder="Attendance" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Formats</SelectItem>
-                  {ATTENDANCE_TYPES.map((type) => (
-                    <SelectItem key={type} value={type}>
-                      {type === "in-person" ? "In-Person" : type.charAt(0).toUpperCase() + type.slice(1)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <label className="flex items-center gap-2 cursor-pointer text-sm text-muted-foreground">
-                <Checkbox
-                  checked={freeOnly}
-                  onCheckedChange={(checked) => setFreeOnly(checked === true)}
-                  data-testid="checkbox-free-only"
-                />
-                Free events
-              </label>
-
-              <label className="flex items-center gap-2 cursor-pointer text-sm text-muted-foreground">
-                <Checkbox
-                  checked={upcomingOnly}
-                  onCheckedChange={(checked) => setUpcomingOnly(checked === true)}
-                  data-testid="checkbox-upcoming-only"
-                />
-                Upcoming only
-              </label>
-
-              {hasFilters && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={clearFilters}
-                  className="text-muted-foreground"
-                  data-testid="button-clear-filters"
-                >
-                  <X className="h-3.5 w-3.5 mr-1" />
-                  Clear
-                </Button>
-              )}
             </div>
           </ScrollReveal>
 
           {isLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {Array.from({ length: 6 }).map((_, i) => (
+            <div className="space-y-4">
+              {Array.from({ length: 4 }).map((_, i) => (
                 <EventCardSkeleton key={i} />
               ))}
             </div>
@@ -245,104 +156,119 @@ export default function Events() {
             <ScrollReveal>
               <div className="flex flex-col items-center justify-center py-20 text-center" data-testid="empty-state">
                 <Calendar className="h-12 w-12 text-muted-foreground/40 mb-4" />
-                <h3 className="text-lg font-medium text-foreground mb-1">No events found</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Try adjusting your filters to find more events.
+                <h3 className="text-lg font-medium text-foreground mb-1">No upcoming events</h3>
+                <p className="text-sm text-muted-foreground">
+                  Check back soon for new legal tech events and conferences.
                 </p>
-                {hasFilters && (
-                  <Button variant="outline" size="sm" onClick={clearFilters} data-testid="button-clear-filters-empty">
-                    Clear all filters
-                  </Button>
-                )}
               </div>
             </ScrollReveal>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="space-y-4">
               {events.map((event, index) => {
                 const AttendanceIcon = ATTENDANCE_ICONS[event.attendanceType] || Globe;
                 const topics = event.topics || [];
-                const displayTopics = topics.slice(0, 3);
-                const remainingTopics = topics.length - 3;
+                const displayTopics = topics.slice(0, 4);
+                const remainingTopics = topics.length - 4;
+                const timeUntil = getRelativeTime(event.startDate);
+                const isPast = timeUntil === "Past";
+                const isSoon = timeUntil === "Today" || timeUntil === "Tomorrow" || timeUntil.startsWith("In") && parseInt(timeUntil.split(" ")[1]) <= 7;
 
                 return (
                   <ScrollReveal key={event.id} delay={index * 0.05} direction="up">
-                    <Card className="h-full hover-elevate" data-testid={`card-event-${event.id}`}>
-                      <CardContent className="p-5 flex flex-col gap-3">
-                        <div className="flex items-center justify-between gap-2 flex-wrap">
-                          <Badge
-                            variant="secondary"
-                            className={`text-xs no-default-hover-elevate no-default-active-elevate ${EVENT_TYPE_STYLES[event.eventType] || ""}`}
-                            data-testid={`badge-event-type-${event.id}`}
-                          >
-                            {EVENT_TYPE_LABELS[event.eventType] || event.eventType}
-                          </Badge>
-                          {event.cleCredits && (
-                            <Badge variant="outline" className="text-xs no-default-hover-elevate no-default-active-elevate" data-testid={`badge-cle-${event.id}`}>
-                              <GraduationCap className="h-3 w-3 mr-1" />
-                              {event.cleCredits} CLE
-                            </Badge>
-                          )}
-                        </div>
+                    <Card className={`hover-elevate ${isPast ? "opacity-60" : ""}`} data-testid={`card-event-${event.id}`}>
+                      <CardContent className="p-5 sm:p-6">
+                        <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+                          <div className="hidden sm:flex flex-col items-center justify-center w-16 shrink-0 text-center">
+                            <span className="text-xs font-medium text-muted-foreground uppercase">
+                              {new Date(event.startDate).toLocaleDateString("en-US", { month: "short" })}
+                            </span>
+                            <span className="text-2xl font-bold text-foreground leading-tight">
+                              {new Date(event.startDate).getDate()}
+                            </span>
+                          </div>
 
-                        <Link href={`/events/${event.id}`}>
-                          <h3
-                            className="font-semibold text-foreground leading-snug line-clamp-2 cursor-pointer hover:text-primary transition-colors"
-                            data-testid={`link-event-title-${event.id}`}
-                          >
-                            {event.title}
-                          </h3>
-                        </Link>
-
-                        <p className="text-sm text-muted-foreground" data-testid={`text-organizer-${event.id}`}>
-                          {event.organizer}
-                        </p>
-
-                        <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                          <Calendar className="h-3.5 w-3.5 shrink-0" />
-                          <span data-testid={`text-date-${event.id}`}>
-                            {formatEventDate(event.startDate, event.endDate)}
-                          </span>
-                        </div>
-
-                        <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                          <MapPin className="h-3.5 w-3.5 shrink-0" />
-                          <span data-testid={`text-location-${event.id}`}>
-                            {event.attendanceType === "virtual" ? "Online" : event.location || "TBD"}
-                          </span>
-                        </div>
-
-                        <div className="flex flex-wrap items-center gap-2">
-                          <Badge variant="outline" className="text-xs no-default-hover-elevate no-default-active-elevate" data-testid={`badge-attendance-${event.id}`}>
-                            <AttendanceIcon className="h-3 w-3 mr-1" />
-                            {event.attendanceType === "in-person" ? "In-Person" : event.attendanceType.charAt(0).toUpperCase() + event.attendanceType.slice(1)}
-                          </Badge>
-
-                          <span className="text-xs text-muted-foreground flex items-center gap-1" data-testid={`text-cost-${event.id}`}>
-                            <DollarSign className="h-3 w-3" />
-                            {event.isFree ? "Free" : event.cost || "See details"}
-                          </span>
-                        </div>
-
-                        {displayTopics.length > 0 && (
-                          <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                            {displayTopics.map((topic, i) => (
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-2 flex-wrap">
                               <Badge
-                                key={i}
                                 variant="secondary"
-                                className="text-xs no-default-hover-elevate no-default-active-elevate"
-                                data-testid={`badge-topic-${event.id}-${i}`}
+                                className={`text-xs no-default-hover-elevate no-default-active-elevate ${EVENT_TYPE_STYLES[event.eventType] || ""}`}
+                                data-testid={`badge-event-type-${event.id}`}
                               >
-                                <Tag className="h-2.5 w-2.5 mr-1" />
-                                {topic}
+                                {EVENT_TYPE_LABELS[event.eventType] || event.eventType}
                               </Badge>
-                            ))}
-                            {remainingTopics > 0 && (
-                              <span className="text-xs text-muted-foreground">
-                                +{remainingTopics} more
+                              <Badge variant="outline" className="text-xs no-default-hover-elevate no-default-active-elevate" data-testid={`badge-attendance-${event.id}`}>
+                                <AttendanceIcon className="h-3 w-3 mr-1" />
+                                {event.attendanceType === "in-person" ? "In-Person" : event.attendanceType.charAt(0).toUpperCase() + event.attendanceType.slice(1)}
+                              </Badge>
+                              {event.cleCredits && (
+                                <Badge variant="outline" className="text-xs no-default-hover-elevate no-default-active-elevate" data-testid={`badge-cle-${event.id}`}>
+                                  <GraduationCap className="h-3 w-3 mr-1" />
+                                  {event.cleCredits} CLE
+                                </Badge>
+                              )}
+                              {isSoon && !isPast && (
+                                <Badge variant="secondary" className="text-xs no-default-hover-elevate no-default-active-elevate bg-amber-500/10 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400">
+                                  {timeUntil}
+                                </Badge>
+                              )}
+                            </div>
+
+                            <Link href={`/events/${event.id}`} data-testid={`link-event-title-${event.id}`}>
+                              <h3 className="text-lg font-semibold text-foreground leading-snug cursor-pointer mb-1">
+                                {event.title}
+                              </h3>
+                            </Link>
+
+                            <p className="text-sm text-muted-foreground mb-3" data-testid={`text-organizer-${event.id}`}>
+                              {event.organizer}
+                            </p>
+
+                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm text-muted-foreground mb-3">
+                              <span className="flex items-center gap-1.5" data-testid={`text-date-${event.id}`}>
+                                <Calendar className="h-3.5 w-3.5 shrink-0" />
+                                {formatEventDate(event.startDate, event.endDate)}
                               </span>
+                              <span className="flex items-center gap-1.5" data-testid={`text-location-${event.id}`}>
+                                <MapPin className="h-3.5 w-3.5 shrink-0" />
+                                {event.attendanceType === "virtual" ? "Online" : event.location || "TBD"}
+                              </span>
+                              <span className="flex items-center gap-1.5" data-testid={`text-cost-${event.id}`}>
+                                <DollarSign className="h-3.5 w-3.5 shrink-0" />
+                                {event.isFree ? "Free" : event.cost || "See details"}
+                              </span>
+                            </div>
+
+                            {displayTopics.length > 0 && (
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                {displayTopics.map((topic, i) => (
+                                  <Badge
+                                    key={i}
+                                    variant="secondary"
+                                    className="text-xs no-default-hover-elevate no-default-active-elevate"
+                                    data-testid={`badge-topic-${event.id}-${i}`}
+                                  >
+                                    <Tag className="h-2.5 w-2.5 mr-1" />
+                                    {topic}
+                                  </Badge>
+                                ))}
+                                {remainingTopics > 0 && (
+                                  <span className="text-xs text-muted-foreground">
+                                    +{remainingTopics} more
+                                  </span>
+                                )}
+                              </div>
                             )}
                           </div>
-                        )}
+
+                          <div className="sm:shrink-0 sm:self-center">
+                            <Link href={`/events/${event.id}`} data-testid={`link-view-event-${event.id}`}>
+                              <Button variant="outline" size="sm" data-testid={`button-view-event-${event.id}`}>
+                                View Details
+                                <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
+                              </Button>
+                            </Link>
+                          </div>
+                        </div>
                       </CardContent>
                     </Card>
                   </ScrollReveal>
