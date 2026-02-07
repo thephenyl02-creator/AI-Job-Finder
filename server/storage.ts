@@ -1440,7 +1440,7 @@ class DatabaseStorage implements IStorage {
       .orderBy(desc(userActivities.createdAt))
       .limit(10);
 
-    const uniqueSearchTerms = [...new Set(recentSearches.map(s => s.query))].slice(0, 5);
+    const uniqueSearchTerms = Array.from(new Set(recentSearches.map(s => s.query))).slice(0, 5);
 
     const topViewedCompanies = await db.select({
       company: sql<string>`${userActivities.metadata}->>'company'`,
