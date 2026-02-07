@@ -99,6 +99,8 @@ const SECTION_HEADING_PATTERNS = [
 ];
 
 function splitFlatTextIntoSections(text: string): string[] {
+  if (text.length < 400) return [text];
+
   const markers: { index: number; match: string }[] = [];
 
   for (const pattern of SECTION_HEADING_PATTERNS) {
@@ -222,6 +224,14 @@ function parseNewlinedText(text: string): Block[] {
 }
 
 function parseFlatText(text: string): Block[] {
+  if (text.length < 400) {
+    const sentences = splitSentences(text);
+    if (sentences.length <= 4) {
+      return [{ type: 'paragraph', content: text }];
+    }
+    return sentences.map(s => ({ type: 'paragraph' as const, content: s }));
+  }
+
   const sections = splitFlatTextIntoSections(text);
   const blocks: Block[] = [];
 
