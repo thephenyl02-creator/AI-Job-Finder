@@ -82,9 +82,8 @@ type GuidedStep = "idle" | "refining" | "questions" | "searching";
 const DEFAULT_SEARCH_SUGGESTIONS = [
   { label: "Compliance & Risk", query: "compliance or risk management role" },
   { label: "Remote Roles", query: "remote legal tech position" },
-  { label: "Student / Intern", query: "internship or fellowship in legal tech" },
   { label: "Legal AI", query: "legal AI company, any role" },
-  { label: "Operations", query: "legal operations at a growing company" },
+  { label: "Entry Level", query: "internship or fellowship in legal tech" },
 ];
 
 const CATEGORY_ICONS: Record<string, typeof Brain> = {
@@ -603,12 +602,6 @@ export default function Jobs() {
 
             {!smartQuery && !searchResults && guidedStep === "idle" && (
               <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-                {suggestionsData?.personalized && (
-                  <Badge variant="secondary" className="text-[10px] mr-0.5" data-testid="badge-personalized-suggestions">
-                    <User className="h-2.5 w-2.5 mr-0.5" />
-                    For you
-                  </Badge>
-                )}
                 {searchSuggestions.map((s) => (
                   <Button
                     key={s.label}
@@ -621,7 +614,6 @@ export default function Jobs() {
                     {s.label}
                   </Button>
                 ))}
-
               </div>
             )}
             {smartQuery.trim() && guidedStep === "idle" && !isSearching && !searchResults && (

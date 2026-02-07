@@ -462,15 +462,6 @@ export async function registerRoutes(
         usedLabels.add("remote");
       }
 
-      if (extractedData?.experience?.length) {
-        const recentRole = extractedData.experience[0];
-        const roleTitle = typeof recentRole === "string" ? recentRole : recentRole.title || recentRole.role;
-        if (roleTitle) {
-          personalized.push({ label: `Similar to ${roleTitle.slice(0, 25)}`, query: `roles similar to ${roleTitle}` });
-          usedLabels.add("experience");
-        }
-      }
-
       if (persona?.seniorityInterest?.length) {
         const seniority = persona.seniorityInterest[0];
         if (!personalized.some(s => s.label.toLowerCase().includes(seniority.toLowerCase()))) {
@@ -479,11 +470,11 @@ export async function registerRoutes(
       }
 
       const remaining = defaultSuggestions.filter(s => !usedLabels.has(s.label.toLowerCase()));
-      while (personalized.length < 5 && remaining.length > 0) {
+      while (personalized.length < 4 && remaining.length > 0) {
         personalized.push(remaining.shift()!);
       }
 
-      res.json({ suggestions: personalized.slice(0, 5), personalized: true });
+      res.json({ suggestions: personalized.slice(0, 4), personalized: true });
     } catch (error) {
       console.error("Search suggestions error:", error);
       res.json({
