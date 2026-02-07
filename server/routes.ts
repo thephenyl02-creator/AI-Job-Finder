@@ -3304,6 +3304,7 @@ ${matchDetails}`;
 
       const { events } = req.body;
 
+      const allEvents: any[] = [];
       if (Array.isArray(events) && events.length > 0) {
         const activities = events.slice(0, 20).map((e: any) => ({
           userId,
@@ -3315,6 +3316,7 @@ ${matchDetails}`;
           sessionId: e.sessionId ? String(e.sessionId).slice(0, 255) : null,
         }));
         await storage.logActivities(activities);
+        allEvents.push(...events.slice(0, 20));
       } else if (req.body.eventType) {
         await storage.logActivity({
           userId,
@@ -3325,6 +3327,18 @@ ${matchDetails}`;
           pagePath: req.body.pagePath ? String(req.body.pagePath).slice(0, 500) : null,
           sessionId: req.body.sessionId ? String(req.body.sessionId).slice(0, 255) : null,
         });
+        allEvents.push(req.body);
+      }
+
+      for (const evt of allEvents) {
+        const jobId = evt.entityId ? Number(evt.entityId) : null;
+        if (jobId && !isNaN(jobId)) {
+          if (evt.eventType === "job_view") {
+            storage.trackJobView(jobId).catch(() => {});
+          } else if (evt.eventType === "apply_click") {
+            storage.trackApplyClick(jobId).catch(() => {});
+          }
+        }
       }
 
       res.json({ ok: true });
