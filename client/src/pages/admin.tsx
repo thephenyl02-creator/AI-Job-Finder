@@ -25,6 +25,10 @@ const ADMIN_HL_PATTERNS: { pattern: RegExp; cls: string }[] = [
   { pattern: /\b(?:JD|J\.D\.|Juris Doctor|Bar (?:Admission|License)|Licensed Attorney|LL\.?M\.?|CIPP|CIPM|PMP|CISSP|Certified)\b/gi, cls: 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300' },
   { pattern: /\b(?:Bachelor'?s?|Master'?s?|MBA|Ph\.?D\.?|Doctorate|B\.?S\.?|B\.?A\.?|M\.?S\.?|M\.?A\.?)\b(?:\s+(?:degree|in))?\b/gi, cls: 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300' },
   { pattern: /\b(?:Python|JavaScript|TypeScript|SQL|React|Node\.?js|AWS|Azure|Salesforce|Relativity|Everlaw|DISCO|NetDocuments|iManage|Clio|Luminance|Kira|LexisNexis|Westlaw|Docker|Jira|Tableau|Power BI|Excel|Agile)\b/gi, cls: 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300' },
+  { pattern: /\b(?:e-?discovery|ediscovery|litigation|compliance|regulatory|GDPR|CCPA|privacy|intellectual property|patent|trademark|copyright|M&A|due diligence|corporate governance|contract (?:management|review|drafting)|CLM|antitrust|securities|SOX|HIPAA|AML|KYC|data protection|information governance|legal hold|privilege review|document review)\b/gi, cls: 'bg-rose-100 dark:bg-rose-900/30 text-rose-800 dark:text-rose-300' },
+  { pattern: /\$\s*\d[\d,]*(?:\.\d{2})?(?:\s*[-–]\s*\$?\s*\d[\d,]*(?:\.\d{2})?)?\s*(?:per\s+(?:hour|year|annum|month)|\/(?:hr|yr|mo)|annually|(?:K|k)\b)?/g, cls: 'bg-teal-100 dark:bg-teal-900/30 text-teal-800 dark:text-teal-300' },
+  { pattern: /\b(?:equity|stock options?|RSU|bonus|401\(?k\)?|health (?:insurance|benefits)|PTO|paid time off|parental leave|remote work|work[- ]from[- ]home|flexible (?:hours|schedule|work))\b/gi, cls: 'bg-teal-100 dark:bg-teal-900/30 text-teal-800 dark:text-teal-300' },
+  { pattern: /\b(?:leadership|communication|collaboration|teamwork|problem[- ]solving|critical thinking|analytical|strategic (?:thinking|planning)|stakeholder management|cross[- ]functional|mentoring|negotiation|presentation|interpersonal|relationship[- ]building|project management|decision[- ]making)\b/gi, cls: 'bg-sky-100 dark:bg-sky-900/30 text-sky-800 dark:text-sky-300' },
 ];
 
 function adminHighlight(text: string): (string | JSX.Element)[] {
@@ -1753,12 +1757,15 @@ export default function AdminPage() {
                           </div>
                           {expandedJobId === job.id && (
                             <div className="pt-3 mt-3 border-t border-border/50">
-                              <div className="flex items-center gap-3 mb-2 text-[10px] text-muted-foreground">
+                              <div className="flex items-center gap-3 mb-2 text-[10px] text-muted-foreground flex-wrap">
                                 <span className="font-medium uppercase tracking-wider">Description Preview</span>
                                 <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-sm bg-amber-200 dark:bg-amber-800" />Exp</span>
                                 <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-sm bg-purple-200 dark:bg-purple-800" />Certs</span>
                                 <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-sm bg-blue-200 dark:bg-blue-800" />Edu</span>
                                 <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-sm bg-emerald-200 dark:bg-emerald-800" />Tools</span>
+                                <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-sm bg-rose-200 dark:bg-rose-800" />Legal</span>
+                                <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-sm bg-teal-200 dark:bg-teal-800" />Comp</span>
+                                <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-sm bg-sky-200 dark:bg-sky-800" />Skills</span>
                               </div>
                               <AdminJobDescription description={job.description} />
                             </div>
