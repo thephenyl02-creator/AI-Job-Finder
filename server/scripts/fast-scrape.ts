@@ -11,6 +11,9 @@ const GREENHOUSE_SOURCES = [
   { name: 'Rocket Lawyer', id: 'rocketlawyer', type: 'legaltech' },
   { name: 'Gibson Dunn', id: 'gibsondunn', type: 'lawfirm' },
   { name: 'Legal Services NYC', id: 'legalservicesnyc', type: 'legalaid' },
+  { name: 'Anthropic', id: 'anthropic', type: 'legaltech' },
+  { name: 'OneTrust', id: 'onetrust', type: 'legaltech' },
+  { name: 'Notion', id: 'notion', type: 'legaltech' },
 ];
 
 async function scrapeGreenhouse(name: string, id: string, orgType: string): Promise<InsertJob[]> {

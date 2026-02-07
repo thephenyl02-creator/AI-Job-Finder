@@ -44,6 +44,9 @@ const GREENHOUSE_SOURCES = [
   { name: 'Gibson Dunn', id: 'gibsondunn', type: 'lawfirm' },
   { name: 'Legal Services NYC', id: 'legalservicesnyc', type: 'legalaid' },
   { name: 'Axiom', id: 'axiom', type: 'legaltech' },
+  { name: 'Anthropic', id: 'anthropic', type: 'legaltech' },
+  { name: 'OneTrust', id: 'onetrust', type: 'legaltech' },
+  { name: 'Notion', id: 'notion', type: 'legaltech' },
 ];
 
 const LEVER_SOURCES = [
@@ -550,8 +553,23 @@ export async function runScheduledScrape(triggeredBy: string = 'scheduler'): Pro
       logInfo('ALERTS', 'No new jobs to match against alerts');
     }
     
-    // === PHASE 6: Link validation (sample) ===
-    logInfo('PHASE', '--- Phase 6: Link validation ---');
+    // === PHASE 6: Description enrichment (re-fetch short descriptions) ===
+    logInfo('PHASE', '--- Phase 6: Description enrichment ---');
+    let descriptionsEnriched = 0;
+    try {
+      descriptionsEnriched = await enrichShortDescriptions();
+      if (descriptionsEnriched > 0) {
+        logSuccess('ENRICH', `Enriched ${descriptionsEnriched} jobs with full descriptions`);
+      } else {
+        logInfo('ENRICH', 'All jobs have adequate descriptions');
+      }
+    } catch (err: any) {
+      logError('ENRICH', 'Description enrichment failed', { error: err.message });
+      errors.push(`Description enrichment: ${err.message}`);
+    }
+    
+    // === PHASE 7: Link validation (sample) ===
+    logInfo('PHASE', '--- Phase 7: Link validation ---');
     
     try {
       const allActiveJobs = await storage.getActiveJobs();
@@ -568,7 +586,7 @@ export async function runScheduledScrape(triggeredBy: string = 'scheduler'): Pro
     logError('SCHEDULER', 'FATAL: Autopilot scrape crashed', { error: fatalError.message });
     errors.push(`Fatal: ${fatalError.message}`);
   } finally {
-    // === PHASE 7: Record run results (always runs) ===
+    // === PHASE 8: Record run results (always runs) ===
     const durationMs = Date.now() - startTime;
     const duration = (durationMs / 1000).toFixed(1);
     
@@ -622,6 +640,87 @@ export async function runScheduledScrape(triggeredBy: string = 'scheduler'): Pro
     alertsTriggered,
     sources,
   };
+}
+
+const SHORT_DESCRIPTION_THRESHOLD = 500;
+
+export async function enrichShortDescriptions(): Promise<number> {
+  const allActive = await storage.getActiveJobs();
+  const shortJobs = allActive.filter(j => 
+    j.applyUrl && (j.description || '').length < SHORT_DESCRIPTION_THRESHOLD
+  );
+  
+  if (shortJobs.length === 0) return 0;
+  
+  logInfo('ENRICH', `Found ${shortJobs.length} jobs with short descriptions (<${SHORT_DESCRIPTION_THRESHOLD} chars)`);
+  
+  let enriched = 0;
+  
+  for (const job of shortJobs) {
+    try {
+      const url = job.applyUrl!;
+      
+      const ghMatch = url.match(/(?:boards|job-boards)\.greenhouse\.io\/([\w-]+)\/jobs\/(\d+)/);
+      if (ghMatch) {
+        const [, boardSlug, jobId] = ghMatch;
+        const apiUrl = `https://boards-api.greenhouse.io/v1/boards/${boardSlug}/jobs/${jobId}?content=true`;
+        const res = await axios.get(apiUrl, { 
+          headers: { 'User-Agent': 'Mozilla/5.0 (compatible; LegalTechCareersBot/1.0)' },
+          timeout: 10000 
+        });
+        const content = res.data?.content;
+        if (content) {
+          const fullDescription = stripHtml(content);
+          if (fullDescription.length > (job.description || '').length) {
+            const realTitle = res.data?.title || job.title;
+            const realLocation = res.data?.location?.name || job.location;
+            await storage.updateJob(job.id, { 
+              description: fullDescription,
+              title: realTitle,
+              location: realLocation,
+              source: job.source || 'greenhouse',
+              externalId: job.externalId || `gh_${boardSlug}_${jobId}`,
+            });
+            enriched++;
+            logInfo('ENRICH', `[${job.id}] ${job.company} - ${realTitle}: +${fullDescription.length - (job.description || '').length} chars from Greenhouse API`);
+          }
+        }
+        await new Promise(r => setTimeout(r, 200));
+        continue;
+      }
+      
+      const leverMatch = url.match(/jobs\.lever\.co\/([^/]+)\/([a-f0-9-]+)/i);
+      if (leverMatch) {
+        const [, companySlug, jobId] = leverMatch;
+        const apiUrl = `https://api.lever.co/v0/postings/${companySlug}/${jobId}`;
+        const res = await axios.get(apiUrl, {
+          headers: { 'User-Agent': 'Mozilla/5.0 (compatible; LegalTechCareersBot/1.0)' },
+          timeout: 10000
+        });
+        const descHtml = res.data?.description || '';
+        const fullDescription = descHtml ? stripHtml(descHtml) : '';
+        if (fullDescription.length > (job.description || '').length) {
+          const realTitle = res.data?.text || job.title;
+          await storage.updateJob(job.id, { 
+            description: fullDescription,
+            title: realTitle,
+            source: job.source || 'lever',
+            externalId: job.externalId || `lever_${jobId}`,
+          });
+          enriched++;
+          logInfo('ENRICH', `[${job.id}] ${job.company} - ${realTitle}: +${fullDescription.length - (job.description || '').length} chars from Lever API`);
+        }
+        await new Promise(r => setTimeout(r, 200));
+        continue;
+      }
+      
+      logInfo('ENRICH', `[${job.id}] ${job.company} - ${job.title}: No Greenhouse/Lever API pattern in URL: ${url.slice(0, 80)}`);
+    } catch (err: any) {
+      logWarn('ENRICH', `[${job.id}] ${job.company} - ${job.title}: Failed - ${err.message?.slice(0, 80)}`);
+    }
+  }
+  
+  return enriched;
 }
 
 let schedulerInterval: NodeJS.Timeout | null = null;

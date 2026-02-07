@@ -47,6 +47,7 @@ import {
   startContinuousValidation,
   stopContinuousValidation,
   getValidationStatus,
+  enrichShortDescriptions,
 } from "./lib/scheduled-scraper";
 import { getLogFiles, readLogFile, getRecentLogs, runStartupCleanup } from "./lib/logger";
 import { scrapeYCCompanies } from "./lib/yc-scraper";
@@ -2651,6 +2652,19 @@ Be specific and actionable. Focus on legal tech industry keywords and ATS best p
     } catch (error) {
       console.error("Error reading log file:", error);
       res.status(500).json({ error: "Failed to read log file" });
+    }
+  });
+
+  app.post("/api/admin/scraper/enrich-descriptions", isAuthenticated, async (req, res) => {
+    if (!(await isAdminCheck(req))) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    try {
+      const enriched = await enrichShortDescriptions();
+      res.json({ success: true, enriched, message: `Enriched ${enriched} jobs with full descriptions` });
+    } catch (error: any) {
+      console.error("Description enrichment error:", error);
+      res.status(500).json({ error: "Failed to enrich descriptions", details: error.message });
     }
   });
 
