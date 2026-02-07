@@ -65,6 +65,14 @@ A freemium SaaS job search platform specifically designed for legal professional
 - **Extraction-ready**: The codebase is fully portable - no Replit-specific dependencies required for production
 - **Key env vars**: `DATABASE_URL`, `OPENAI_API_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET`, `SESSION_SECRET`, `APP_URL`
 
+### Scraper Architecture
+- **Shared Utilities**: `server/lib/html-utils.ts` contains the single canonical `stripHtml()` and `isRelevantRole()` functions used by all scrapers.
+- **Smart Upsert**: `upsertJobByExternalId` preserves AI-enriched fields (roleCategory, keySkills, aiSummary, etc.) on re-scrape and rejects description updates that are empty or significantly shorter than existing content.
+- **Stale Job Detection**: After scheduled scrapes, jobs from scraped sources that no longer appear in API results are automatically deactivated.
+- **Lever Description Fix**: Lever scrapers use HTML description (with paragraphs/lists) instead of `descriptionPlain` (flat text) for better formatting.
+- **Freshness Tracking**: `lastScrapedAt` timestamp on jobs tracks when each job was last refreshed by a scraper.
+- **Client-Side Normalization**: `job-detail.tsx` contains `normalizeFlatText()` which fixes remaining flat-text descriptions at render time (ALL-CAPS heading detection, inline bullet splitting, sentence-boundary paragraphing).
+
 ## External Dependencies
 
 - **Database**: PostgreSQL (any provider - local, Neon, Supabase, AWS RDS, etc.)

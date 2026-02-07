@@ -1,8 +1,8 @@
 import { storage } from '../storage';
 import type { InsertJob } from '../../shared/schema';
 import axios from 'axios';
+import { stripHtml, isRelevantRole } from '../lib/html-utils';
 
-// Only include companies we know work well
 const WORKING_SOURCES = [
   { name: 'Everlaw', type: 'lever', url: 'https://api.lever.co/v0/postings/everlaw' },
   { name: 'NetDocuments', type: 'lever', url: 'https://api.lever.co/v0/postings/netdocuments' },
@@ -15,48 +15,11 @@ const WORKING_SOURCES = [
   { name: 'Factor', type: 'lever', url: 'https://api.lever.co/v0/postings/factorlegal' },
 ];
 
-function isLegalTechRole(title: string, description: string = ''): boolean {
-  const combined = `${title} ${description}`.toLowerCase();
-  const keywords = [
-    'engineer', 'developer', 'product manager', 'designer', 'data scientist',
-    'machine learning', 'ai ', 'artificial intelligence', 'nlp', 'software',
-    'technical', 'solutions', 'implementation', 'customer success', 'sales engineer',
-    'legal engineer', 'legal operations', 'innovation', 'technology', 'ediscovery',
-    'analytics', 'platform', 'api', 'full stack', 'frontend', 'backend', 'devops'
-  ];
-  const excludeTerms = ['attorney', 'paralegal', 'legal assistant', 'litigation associate'];
-  
-  if (excludeTerms.some(term => combined.includes(term))) return false;
-  return keywords.some(keyword => combined.includes(keyword));
-}
-
-function stripHtml(html: string): string {
-  let decoded = html
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&apos;/g, "'")
-    .replace(/&#x27;/g, "'")
-    .replace(/&#(\d+);/g, (_, num) => String.fromCharCode(parseInt(num)));
-  decoded = decoded.replace(/<br\s*\/?>/gi, '\n');
-  decoded = decoded.replace(/<\/p>/gi, '\n\n');
-  decoded = decoded.replace(/<\/li>/gi, '\n');
-  decoded = decoded.replace(/<li[^>]*>/gi, '- ');
-  decoded = decoded.replace(/<\/h[1-6]>/gi, '\n\n');
-  decoded = decoded.replace(/<[^>]*>/g, ' ');
-  decoded = decoded.replace(/[ \t]+/g, ' ');
-  decoded = decoded.replace(/\n /g, '\n');
-  decoded = decoded.replace(/\n{3,}/g, '\n\n');
-  return decoded.trim();
-}
-
 interface LeverJob {
   id: string;
   text: string;
   categories: { location?: string; team?: string; commitment?: string };
+  description?: string;
   descriptionPlain?: string;
   hostedUrl: string;
   createdAt: number;
@@ -68,7 +31,11 @@ async function scrapeLever(name: string, url: string): Promise<InsertJob[]> {
     const jobs: InsertJob[] = [];
     
     for (const job of res.data) {
-      if (!isLegalTechRole(job.text, job.descriptionPlain)) continue;
+      if (!isRelevantRole(job.text, job.descriptionPlain)) continue;
+      
+      const descHtml = job.description || '';
+      const descPlain = job.descriptionPlain || '';
+      const cleanDesc = descHtml ? stripHtml(descHtml) : descPlain;
       
       jobs.push({
         title: job.text,
@@ -76,7 +43,7 @@ async function scrapeLever(name: string, url: string): Promise<InsertJob[]> {
         companyLogo: `https://logo.clearbit.com/${name.toLowerCase().replace(/[^a-z]/g, '')}.com`,
         location: job.categories?.location || 'Remote',
         isRemote: (job.categories?.location || '').toLowerCase().includes('remote'),
-        description: stripHtml(job.descriptionPlain || ''),
+        description: cleanDesc,
         applyUrl: job.hostedUrl,
         externalId: `lever-${job.id}`,
         source: 'lever',

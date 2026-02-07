@@ -1,78 +1,17 @@
 import axios from 'axios';
 import { storage } from '../storage';
 import type { InsertJob } from '../../shared/schema';
+import { stripHtml, isRelevantRole } from '../lib/html-utils';
 
-// Companies confirmed to have working Greenhouse APIs
 const GREENHOUSE_SOURCES = [
-  // Legal Tech Companies
   { name: 'Everlaw', id: 'everlaw', type: 'legaltech' },
   { name: 'NetDocuments', id: 'netdocuments', type: 'legaltech' },
   { name: 'Mitratech', id: 'mitratech', type: 'legaltech' },
   { name: 'Brightflag', id: 'brightflag', type: 'legaltech' },
   { name: 'Rocket Lawyer', id: 'rocketlawyer', type: 'legaltech' },
-  
-  // Law Firms (include ALL jobs - any role at a law firm is relevant)
   { name: 'Gibson Dunn', id: 'gibsondunn', type: 'lawfirm' },
-  
-  // Legal Services Organizations  
   { name: 'Legal Services NYC', id: 'legalservicesnyc', type: 'legalaid' },
 ];
-
-function isLegalCareerRole(title: string, desc: string = ''): boolean {
-  const text = `${title} ${desc}`.toLowerCase();
-  
-  // Include both tech roles AND legal professional roles
-  // This is for people with JD, law degree, or legal experience
-  const legalProfessionalKeywords = [
-    'attorney', 'lawyer', 'counsel', 'paralegal', 'legal assistant',
-    'litigation', 'associate', 'legal operations', 'legal ops',
-    'contract', 'compliance', 'regulatory', 'corporate counsel',
-    'in-house', 'general counsel', 'legal analyst', 'legal specialist',
-    'legal advisor', 'legal consultant', 'jd', 'law clerk', 'legal intern'
-  ];
-  
-  const techRoleKeywords = [
-    'engineer', 'developer', 'product', 'designer', 'data', 'ml', 'ai ',
-    'machine learning', 'nlp', 'software', 'technical', 'solutions',
-    'implementation', 'customer success', 'sales', 'operations',
-    'innovation', 'technology', 'ediscovery', 'analytics', 'platform',
-    'devops', 'cloud', 'security', 'qa', 'quality', 'ux', 'ui', 'frontend',
-    'backend', 'full stack', 'fullstack', 'manager', 'director', 'architect',
-    'marketing', 'finance', 'hr', 'people', 'business', 'admin', 'support'
-  ];
-  
-  // Exclude purely administrative or unrelated roles
-  const exclude = ['janitor', 'maintenance', 'facilities', 'cafeteria'];
-  
-  if (exclude.some(e => text.includes(e))) return false;
-  
-  // Include if it matches legal professional keywords OR tech role keywords
-  return legalProfessionalKeywords.some(k => text.includes(k)) || 
-         techRoleKeywords.some(k => text.includes(k));
-}
-
-function stripHtml(html: string): string {
-  let decoded = html
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&apos;/g, "'")
-    .replace(/&#x27;/g, "'")
-    .replace(/&#(\d+);/g, (_, num) => String.fromCharCode(parseInt(num)));
-  decoded = decoded.replace(/<br\s*\/?>/gi, '\n');
-  decoded = decoded.replace(/<\/p>/gi, '\n\n');
-  decoded = decoded.replace(/<\/li>/gi, '\n');
-  decoded = decoded.replace(/<li[^>]*>/gi, '- ');
-  decoded = decoded.replace(/<\/h[1-6]>/gi, '\n\n');
-  decoded = decoded.replace(/<[^>]*>/g, ' ');
-  decoded = decoded.replace(/[ \t]+/g, ' ');
-  decoded = decoded.replace(/\n /g, '\n');
-  decoded = decoded.replace(/\n{3,}/g, '\n\n');
-  return decoded.trim();
-}
 
 async function scrapeGreenhouse(name: string, id: string, orgType: string): Promise<InsertJob[]> {
   try {
@@ -83,9 +22,7 @@ async function scrapeGreenhouse(name: string, id: string, orgType: string): Prom
     for (const job of res.data.jobs || []) {
       // For law firms and legal aid orgs, include ALL jobs (any position is relevant for lawyers)
       // For legal tech companies, use the keyword filter
-      const isRelevant = (orgType === 'lawfirm' || orgType === 'legalaid') 
-        ? true 
-        : isLegalCareerRole(job.title || '', job.content || '');
+      const isRelevant = isRelevantRole(job.title || '', job.content || '', orgType);
       
       if (!isRelevant) continue;
       

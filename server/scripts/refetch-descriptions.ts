@@ -2,6 +2,7 @@ import axios from 'axios';
 import { db } from '../db';
 import { jobs } from '../../shared/schema';
 import { eq, sql, and, lt } from 'drizzle-orm';
+import { stripHtml } from '../lib/html-utils';
 
 const GREENHOUSE_SOURCES = [
   { name: 'Everlaw', id: 'everlaw' },
@@ -24,30 +25,6 @@ const LEVER_SOURCES = [
   { name: 'QuisLex', id: 'quislex' },
   { name: 'Neota Logic', id: 'neotalogic' },
 ];
-
-function stripHtml(html: string): string {
-  let decoded = html
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&apos;/g, "'")
-    .replace(/&#x27;/g, "'")
-    .replace(/&#(\d+);/g, (_, num) => String.fromCharCode(parseInt(num)));
-  
-  decoded = decoded.replace(/<br\s*\/?>/gi, '\n');
-  decoded = decoded.replace(/<\/p>/gi, '\n\n');
-  decoded = decoded.replace(/<\/li>/gi, '\n');
-  decoded = decoded.replace(/<li[^>]*>/gi, '- ');
-  decoded = decoded.replace(/<\/h[1-6]>/gi, '\n\n');
-  decoded = decoded.replace(/<[^>]*>/g, ' ');
-  decoded = decoded.replace(/[ \t]+/g, ' ');
-  decoded = decoded.replace(/\n /g, '\n');
-  decoded = decoded.replace(/\n{3,}/g, '\n\n');
-  return decoded.trim();
-}
 
 async function main() {
   console.log('Re-fetching full job descriptions for ALL sources...\n');
@@ -113,9 +90,12 @@ async function main() {
       
       const contentMap = new Map<string, string>();
       for (const job of apiJobs) {
-        if (job.descriptionPlain) {
-          contentMap.set(`lever-${job.id}`, stripHtml(job.descriptionPlain));
-          contentMap.set(`lever_${company.id}_${job.id}`, stripHtml(job.descriptionPlain));
+        const descHtml = job.description || '';
+        const descPlain = job.descriptionPlain || '';
+        const cleanDesc = descHtml ? stripHtml(descHtml) : (descPlain ? stripHtml(descPlain) : '');
+        if (cleanDesc) {
+          contentMap.set(`lever-${job.id}`, cleanDesc);
+          contentMap.set(`lever_${company.id}_${job.id}`, cleanDesc);
         }
       }
       

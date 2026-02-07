@@ -34,6 +34,7 @@ export const jobs = pgTable("jobs", {
   matchKeywords: text("match_keywords").array(),
   viewCount: integer("view_count").default(0),
   applyClickCount: integer("apply_click_count").default(0),
+  lastScrapedAt: timestamp("last_scraped_at").default(sql`CURRENT_TIMESTAMP`),
 });
 
 export const jobCategories = pgTable("job_categories", {
@@ -50,6 +51,7 @@ export const insertJobSchema = createInsertSchema(jobs).omit({
   postedDate: true,
   viewCount: true,
   applyClickCount: true,
+  lastScrapedAt: true,
 });
 
 export type Job = typeof jobs.$inferSelect;

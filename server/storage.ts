@@ -14,6 +14,7 @@ export interface IStorage {
   upsertJobByExternalId(job: InsertJob): Promise<{ job: Job; isNew: boolean }>;
   getJobByExternalId(externalId: string): Promise<Job | undefined>;
   bulkUpsertJobs(jobsList: InsertJob[]): Promise<{ inserted: number; updated: number; newJobs: Job[] }>;
+  deactivateStaleJobs(scrapedExternalIds: Set<string>, sources: string[]): Promise<number>;
   trackJobView(jobId: number): Promise<void>;
   trackApplyClick(jobId: number): Promise<void>;
   // User Resume
@@ -181,14 +182,49 @@ class DatabaseStorage implements IStorage {
 
     const existing = await this.getJobByExternalId(job.externalId);
     if (existing) {
+      const aiFields = ['roleCategory', 'roleSubcategory', 'seniorityLevel', 'keySkills', 'aiSummary', 'matchKeywords'] as const;
+      const updateData: Record<string, any> = {
+        title: job.title,
+        company: job.company,
+        companyLogo: job.companyLogo,
+        location: job.location,
+        isRemote: job.isRemote,
+        locationType: job.locationType,
+        applyUrl: job.applyUrl,
+        source: job.source,
+        externalId: job.externalId,
+        isActive: true,
+        lastScrapedAt: new Date(),
+      };
+
+      if (job.salaryMin) updateData.salaryMin = job.salaryMin;
+      if (job.salaryMax) updateData.salaryMax = job.salaryMax;
+
+      const newDesc = job.description || '';
+      const existingDesc = existing.description || '';
+      if (newDesc.length >= existingDesc.length * 0.5 && newDesc.length >= 50) {
+        updateData.description = newDesc;
+      }
+
+      for (const field of aiFields) {
+        const newVal = job[field];
+        const existingVal = existing[field];
+        if (newVal && (!existingVal || (Array.isArray(existingVal) && existingVal.length === 0))) {
+          updateData[field] = newVal;
+        }
+      }
+
       const [updatedJob] = await db
         .update(jobs)
-        .set({ ...job, isActive: true })
+        .set(updateData)
         .where(eq(jobs.externalId, job.externalId))
         .returning();
       return { job: updatedJob, isNew: false };
     } else {
-      const [newJob] = await db.insert(jobs).values(job).returning();
+      const [newJob] = await db.insert(jobs).values({
+        ...job,
+        lastScrapedAt: new Date(),
+      } as any).returning();
       return { job: newJob, isNew: true };
     }
   }
@@ -209,6 +245,27 @@ class DatabaseStorage implements IStorage {
     }
 
     return { inserted, updated, newJobs };
+  }
+
+  async deactivateStaleJobs(scrapedExternalIds: Set<string>, sources: string[]): Promise<number> {
+    if (scrapedExternalIds.size === 0 || sources.length === 0) return 0;
+
+    const activeJobs = await db.select({ id: jobs.id, externalId: jobs.externalId, source: jobs.source })
+      .from(jobs)
+      .where(eq(jobs.isActive, true));
+
+    let deactivated = 0;
+    for (const job of activeJobs) {
+      if (!job.externalId || !job.source) continue;
+      if (!sources.includes(job.source)) continue;
+      if (!scrapedExternalIds.has(job.externalId)) {
+        await db.update(jobs)
+          .set({ isActive: false })
+          .where(eq(jobs.id, job.id));
+        deactivated++;
+      }
+    }
+    return deactivated;
   }
 
   async seedJobs(): Promise<void> {

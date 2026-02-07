@@ -2,6 +2,7 @@ import axios from 'axios';
 import { storage } from '../storage';
 import type { InsertJob, Job } from '../../shared/schema';
 import { logInfo, logWarn, logError, logSuccess, cleanupOldLogs } from './logger';
+import { stripHtml, isRelevantRole } from './html-utils';
 
 const SCRAPE_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 hours
 const LINK_CHECK_TIMEOUT = 10000; // 10 seconds for each request
@@ -47,53 +48,6 @@ const LEVER_SOURCES = [
   { name: 'Factor', id: 'factor' },
 ];
 
-function stripHtml(html: string): string {
-  let decoded = html
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&apos;/g, "'")
-    .replace(/&#x27;/g, "'")
-    .replace(/&#(\d+);/g, (_, num) => String.fromCharCode(parseInt(num)));
-  
-  decoded = decoded.replace(/<br\s*\/?>/gi, '\n');
-  decoded = decoded.replace(/<\/p>/gi, '\n\n');
-  decoded = decoded.replace(/<\/li>/gi, '\n');
-  decoded = decoded.replace(/<li[^>]*>/gi, '- ');
-  decoded = decoded.replace(/<\/h[1-6]>/gi, '\n\n');
-  decoded = decoded.replace(/<[^>]*>/g, ' ');
-  decoded = decoded.replace(/[ \t]+/g, ' ');
-  decoded = decoded.replace(/\n /g, '\n');
-  decoded = decoded.replace(/\n{3,}/g, '\n\n');
-  return decoded.trim();
-}
-
-function isLegalCareerRole(title: string, desc: string = ''): boolean {
-  const text = `${title} ${desc}`.toLowerCase();
-  
-  const legalKeywords = [
-    'attorney', 'lawyer', 'counsel', 'paralegal', 'legal assistant',
-    'litigation', 'associate', 'legal operations', 'legal ops',
-    'contract', 'compliance', 'regulatory', 'corporate counsel',
-    'in-house', 'general counsel', 'legal analyst', 'legal specialist',
-  ];
-  
-  const techKeywords = [
-    'engineer', 'developer', 'product', 'designer', 'data', 'ml', 'ai ',
-    'machine learning', 'nlp', 'software', 'technical', 'solutions',
-    'implementation', 'customer success', 'sales', 'operations',
-    'innovation', 'technology', 'ediscovery', 'analytics', 'platform',
-  ];
-  
-  const exclude = ['janitor', 'maintenance', 'facilities', 'cafeteria'];
-  if (exclude.some(e => text.includes(e))) return false;
-  
-  return legalKeywords.some(k => text.includes(k)) || techKeywords.some(k => text.includes(k));
-}
-
 async function scrapeGreenhouse(name: string, id: string, orgType: string): Promise<InsertJob[]> {
   const jobs: InsertJob[] = [];
   
@@ -102,9 +56,7 @@ async function scrapeGreenhouse(name: string, id: string, orgType: string): Prom
     const res = await axios.get(url, { timeout: 15000 });
     
     for (const job of res.data.jobs || []) {
-      const isRelevant = (orgType === 'lawfirm' || orgType === 'legalaid') 
-        ? true 
-        : isLegalCareerRole(job.title || '', job.content || '');
+      const isRelevant = isRelevantRole(job.title || '', job.content || '', orgType);
       
       if (!isRelevant) continue;
       
@@ -144,7 +96,11 @@ async function scrapeLever(name: string, id: string): Promise<InsertJob[]> {
     const res = await axios.get(url, { timeout: 15000 });
     
     for (const job of res.data || []) {
-      if (!isLegalCareerRole(job.text || '', job.descriptionPlain || '')) continue;
+      if (!isRelevantRole(job.text || '', job.descriptionPlain || '')) continue;
+      
+      const descHtml = job.description || '';
+      const descPlain = job.descriptionPlain || '';
+      const cleanDesc = descHtml ? stripHtml(descHtml) : descPlain;
       
       jobs.push({
         title: job.text || 'Untitled',
@@ -152,7 +108,7 @@ async function scrapeLever(name: string, id: string): Promise<InsertJob[]> {
         companyLogo: `https://logo.clearbit.com/${name.toLowerCase().replace(/[^a-z]/g, '')}.com`,
         location: job.categories?.location || 'Remote',
         isRemote: (job.categories?.location || '').toLowerCase().includes('remote'),
-        description: stripHtml(job.descriptionPlain || ''),
+        description: cleanDesc,
         applyUrl: job.hostedUrl || '',
         externalId: `lever_${id}_${job.id}`,
         source: 'lever',
@@ -383,21 +339,27 @@ export async function runScheduledScrape(): Promise<{
   
   const allJobs: InsertJob[] = [];
   const sources: { name: string; count: number }[] = [];
+  const successfulSources: string[] = [];
   
   logInfo('SCRAPE', `Scraping ${GREENHOUSE_SOURCES.length} Greenhouse sources...`);
   const greenhouseResults = await Promise.allSettled(
     GREENHOUSE_SOURCES.map(s => scrapeGreenhouse(s.name, s.id, s.type))
   );
   
+  let greenhouseSuccessCount = 0;
   for (let i = 0; i < greenhouseResults.length; i++) {
     const result = greenhouseResults[i];
     const source = GREENHOUSE_SOURCES[i];
     if (result.status === 'fulfilled') {
       allJobs.push(...result.value);
       sources.push({ name: source.name, count: result.value.length });
+      greenhouseSuccessCount++;
     } else {
       sources.push({ name: source.name, count: 0 });
     }
+  }
+  if (greenhouseSuccessCount >= GREENHOUSE_SOURCES.length * 0.5) {
+    successfulSources.push('greenhouse');
   }
   
   logInfo('SCRAPE', `Scraping ${LEVER_SOURCES.length} Lever sources...`);
@@ -405,15 +367,20 @@ export async function runScheduledScrape(): Promise<{
     LEVER_SOURCES.map(s => scrapeLever(s.name, s.id))
   );
   
+  let leverSuccessCount = 0;
   for (let i = 0; i < leverResults.length; i++) {
     const result = leverResults[i];
     const source = LEVER_SOURCES[i];
     if (result.status === 'fulfilled') {
       allJobs.push(...result.value);
       sources.push({ name: source.name, count: result.value.length });
+      leverSuccessCount++;
     } else {
       sources.push({ name: source.name, count: 0 });
     }
+  }
+  if (leverSuccessCount >= LEVER_SOURCES.length * 0.5) {
+    successfulSources.push('lever');
   }
   
   logInfo('SCRAPE', `Total jobs collected: ${allJobs.length}`);
@@ -428,6 +395,17 @@ export async function runScheduledScrape(): Promise<{
     logSuccess('DATABASE', `Jobs saved`, { inserted, updated });
   }
   
+  let staleDeactivated = 0;
+  if (successfulSources.length > 0) {
+    const scrapedExternalIds = new Set(allJobs.map(j => j.externalId).filter(Boolean) as string[]);
+    if (scrapedExternalIds.size > 0) {
+      staleDeactivated = await storage.deactivateStaleJobs(scrapedExternalIds, successfulSources);
+      if (staleDeactivated > 0) {
+        logInfo('STALE', `Deactivated ${staleDeactivated} stale jobs from sources: ${successfulSources.join(', ')}`);
+      }
+    }
+  }
+  
   const activeJobs = await storage.getActiveJobs();
   logInfo('VALIDATE', `Validating ${Math.min(50, activeJobs.length)} job links (sample)...`);
   const linkResults = await validateJobLinks(activeJobs);
@@ -439,6 +417,7 @@ export async function runScheduledScrape(): Promise<{
     duration: `${duration}s`,
     newJobs: inserted,
     updatedJobs: updated,
+    staleDeactivated,
     totalJobs: activeJobs.length,
     brokenLinks: linkResults.broken,
   });
