@@ -142,7 +142,7 @@ export default function Jobs() {
   const GUIDED_TRIAL_LIMIT = 7;
 
   const getGuidedTrialCount = useCallback(() => {
-    const count = sessionStorage.getItem("guidedSearchCount");
+    const count = localStorage.getItem("guidedSearchCount");
     return count ? parseInt(count, 10) : 0;
   }, []);
 
@@ -152,7 +152,7 @@ export default function Jobs() {
 
   const markGuidedTrialUsed = useCallback(() => {
     const current = getGuidedTrialCount();
-    sessionStorage.setItem("guidedSearchCount", String(current + 1));
+    localStorage.setItem("guidedSearchCount", String(current + 1));
   }, [getGuidedTrialCount]);
 
   const guidedTrialsRemaining = isPro ? Infinity : GUIDED_TRIAL_LIMIT - getGuidedTrialCount();

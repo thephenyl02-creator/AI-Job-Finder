@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from "react";
-import { useLocation, useParams } from "wouter";
+import { useLocation, useParams, Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { usePersona } from "@/hooks/use-persona";
 import { useQuery } from "@tanstack/react-query";
@@ -21,12 +21,14 @@ import {
   TrendingUp,
   MapPin,
   Target,
+  Crown,
 } from "lucide-react";
 
 interface ChatMessage {
   id: string;
   role: "user" | "assistant";
   content: string;
+  isLimitReached?: boolean;
 }
 
 function formatMarkdown(text: string) {
@@ -206,8 +208,9 @@ export function AssistantWidget() {
           id: `error-${Date.now()}`,
           role: "assistant",
           content: isLimitError
-            ? "You've reached your 3 free messages for today. Upgrade to Pro for unlimited conversations, deeper career insights, and personalized guidance."
+            ? "You've used your 3 free messages for today. Upgrade to Pro for unlimited conversations and deeper career guidance."
             : "Something went wrong. Please try again in a moment.",
+          isLimitReached: isLimitError,
         },
       ]);
     } finally {
@@ -309,10 +312,23 @@ export function AssistantWidget() {
                       className={`max-w-[85%] rounded-lg px-3 py-2 text-sm ${
                         msg.role === "user"
                           ? "bg-primary text-primary-foreground"
+                          : msg.isLimitReached
+                          ? "bg-muted/50 border border-border text-foreground"
                           : "bg-muted text-foreground"
                       }`}
                     >
-                      {msg.role === "assistant" ? (
+                      {msg.isLimitReached ? (
+                        <div className="space-y-2.5">
+                          <p className="text-sm text-muted-foreground">{msg.content}</p>
+                          <Link href="/pricing">
+                            <Button size="sm" className="w-full gap-1.5" data-testid="button-assistant-upgrade">
+                              <Crown className="h-3.5 w-3.5" />
+                              Upgrade to Pro
+                            </Button>
+                          </Link>
+                          <p className="text-[10px] text-muted-foreground text-center">Your free messages reset tomorrow</p>
+                        </div>
+                      ) : msg.role === "assistant" ? (
                         <div className="space-y-1">{formatMarkdown(msg.content)}</div>
                       ) : (
                         msg.content

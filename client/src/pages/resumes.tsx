@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { usePageTitle } from "@/hooks/use-page-title";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/hooks/use-auth";
+import { useSubscription } from "@/hooks/use-subscription";
 import { useActivityTracker } from "@/hooks/use-activity-tracker";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -39,6 +40,7 @@ import {
   CheckCircle,
   XCircle,
   ArrowRight,
+  Crown,
 } from "lucide-react";
 
 interface BatchMatchResult {
@@ -1034,6 +1036,7 @@ export default function Resumes() {
   usePageTitle("My Resumes");
   const [, setLocation] = useLocation();
   const { isAuthenticated } = useAuth();
+  const { isPro } = useSubscription();
   const { track } = useActivityTracker();
   const { toast } = useToast();
   const [showUpload, setShowUpload] = useState(false);
@@ -1146,9 +1149,9 @@ export default function Resumes() {
           <div className="lg:col-span-1 space-y-3">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-medium text-foreground">
-                Resumes ({userResumes.length}/5)
+                Resumes ({userResumes.length}/{isPro ? 5 : 1})
               </h2>
-              {userResumes.length < 5 && (
+              {userResumes.length < (isPro ? 5 : 1) ? (
                 <Button
                   size="sm"
                   variant="outline"
@@ -1158,7 +1161,14 @@ export default function Resumes() {
                   <Plus className="h-4 w-4 mr-1" />
                   Add
                 </Button>
-              )}
+              ) : !isPro && userResumes.length >= 1 ? (
+                <Link href="/pricing">
+                  <Badge variant="secondary" className="text-xs cursor-pointer" data-testid="badge-resume-upgrade">
+                    <Crown className="h-3 w-3 mr-1" />
+                    Pro: up to 5
+                  </Badge>
+                </Link>
+              ) : null}
             </div>
 
             {showUpload && (

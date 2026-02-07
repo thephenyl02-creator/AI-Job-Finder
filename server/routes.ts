@@ -1245,7 +1245,19 @@ Be specific and actionable. Focus on legal tech industry keywords and ATS best p
       const parsedData = await parseResumeWithAI(resumeText);
 
       const existing = await storage.getUserResumes(userId);
-      if (existing.length >= 5) {
+      const subData = await storage.getUserSubscription(userId);
+      const isProUser = subData?.subscriptionTier === "pro" && subData?.subscriptionStatus === "active";
+      const maxResumes = isProUser ? 5 : 1;
+      if (existing.length >= maxResumes) {
+        if (!isProUser) {
+          return res.status(403).json({
+            error: "Free accounts are limited to 1 resume. Upgrade to Pro to manage up to 5 resumes.",
+            upgradeUrl: "/pricing",
+            limitReached: true,
+            limit: 1,
+            current: existing.length,
+          });
+        }
         return res.status(400).json({ error: "Maximum of 5 resumes allowed. Please delete one first." });
       }
 

@@ -462,175 +462,163 @@ export default function DashboardPage() {
             </Card>
           </div>
 
-          {isPro ? (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-              <Card>
-                <CardHeader className="pb-3">
-                  <div className="flex items-center gap-2">
-                    <Target className="h-4 w-4 text-muted-foreground" />
-                    <CardTitle className="text-base">Top Categories</CardTitle>
-                  </div>
-                  <CardDescription className="text-xs">Based on jobs you've viewed</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {patterns.topCategories.length > 0 ? (
-                    <div className="space-y-2.5">
-                      {patterns.topCategories.map((cat, i) => {
-                        const maxCat = patterns.topCategories[0]?.count || 1;
-                        return (
-                          <div key={i}>
-                            <div className="flex items-center justify-between text-sm mb-1">
-                              <span className="text-foreground truncate mr-2">{cat.name}</span>
-                              <span className="text-muted-foreground text-xs shrink-0">{cat.count} views</span>
-                            </div>
-                            <div className="h-1.5 bg-muted/40 rounded-full overflow-hidden">
-                              <div
-                                className="h-full bg-primary/60 rounded-full transition-all"
-                                style={{ width: `${(cat.count / maxCat) * 100}%` }}
-                              />
-                            </div>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-2">
+                  <Target className="h-4 w-4 text-muted-foreground" />
+                  <CardTitle className="text-base">Top Categories</CardTitle>
+                </div>
+                <CardDescription className="text-xs">Based on jobs you've viewed</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {patterns.topCategories.length > 0 ? (
+                  <div className="space-y-2.5">
+                    {patterns.topCategories.map((cat, i) => {
+                      const maxCat = patterns.topCategories[0]?.count || 1;
+                      return (
+                        <div key={i}>
+                          <div className="flex items-center justify-between text-sm mb-1">
+                            <span className="text-foreground truncate mr-2">{cat.name}</span>
+                            <span className="text-muted-foreground text-xs shrink-0">{cat.count} views</span>
                           </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground text-center py-4">
-                      View some jobs to discover your interests
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-3">
-                  <div className="flex items-center gap-2">
-                    <Building2 className="h-4 w-4 text-muted-foreground" />
-                    <CardTitle className="text-base">Top Companies</CardTitle>
-                  </div>
-                  <CardDescription className="text-xs">Companies you've explored</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {patterns.topCompanies.length > 0 ? (
-                    <div className="space-y-2.5">
-                      {patterns.topCompanies.map((comp, i) => (
-                        <div key={i} className="flex items-center justify-between text-sm">
-                          <span className="text-foreground truncate mr-2">{comp.name}</span>
-                          <Badge variant="secondary" className="text-xs shrink-0">{comp.count}</Badge>
+                          <div className="h-1.5 bg-muted/40 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-primary/60 rounded-full transition-all"
+                              style={{ width: `${(cat.count / maxCat) * 100}%` }}
+                            />
+                          </div>
                         </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground text-center py-4">
-                      Explore jobs to see which companies interest you
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    View some jobs to discover your interests
+                  </p>
+                )}
+              </CardContent>
+            </Card>
 
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-2">
+                  <Building2 className="h-4 w-4 text-muted-foreground" />
+                  <CardTitle className="text-base">Top Companies</CardTitle>
+                </div>
+                <CardDescription className="text-xs">Companies you've explored</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {patterns.topCompanies.length > 0 ? (
+                  <div className="space-y-2.5">
+                    {patterns.topCompanies.map((comp, i) => (
+                      <div key={i} className="flex items-center justify-between text-sm">
+                        <span className="text-foreground truncate mr-2">{comp.name}</span>
+                        <Badge variant="secondary" className="text-xs shrink-0">{comp.count}</Badge>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    Explore jobs to see which companies interest you
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-2">
+                  <Search className="h-4 w-4 text-muted-foreground" />
+                  <CardTitle className="text-base">Recent Searches</CardTitle>
+                </div>
+                <CardDescription className="text-xs">What you've been looking for</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {patterns.recentSearches.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {patterns.recentSearches.map((term, i) => (
+                      <Link href={`/search?q=${encodeURIComponent(term)}`} key={i}>
+                        <Badge variant="outline" className="cursor-pointer" data-testid={`search-term-${i}`}>
+                          {term}
+                        </Badge>
+                      </Link>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    Try searching for roles that interest you
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {readiness.savedJobsCount > 0 && (
+            <div className="mb-6">
               <Card>
                 <CardHeader className="pb-3">
                   <div className="flex items-center gap-2">
-                    <Search className="h-4 w-4 text-muted-foreground" />
-                    <CardTitle className="text-base">Recent Searches</CardTitle>
+                    <Bookmark className="h-4 w-4 text-muted-foreground" />
+                    <CardTitle className="text-base">Saved Jobs</CardTitle>
                   </div>
-                  <CardDescription className="text-xs">What you've been looking for</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {patterns.recentSearches.length > 0 ? (
-                    <div className="flex flex-wrap gap-2">
-                      {patterns.recentSearches.map((term, i) => (
-                        <Link href={`/search?q=${encodeURIComponent(term)}`} key={i}>
-                          <Badge variant="outline" className="cursor-pointer" data-testid={`search-term-${i}`}>
-                            {term}
-                          </Badge>
-                        </Link>
-                      ))}
+                  <div className="flex items-center gap-6">
+                    <div>
+                      <p className="text-3xl font-bold text-foreground">{readiness.savedJobsCount}</p>
+                      <p className="text-xs text-muted-foreground">saved</p>
                     </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground text-center py-4">
-                      Try searching for roles that interest you
-                    </p>
-                  )}
+                    {readiness.expiringSoonCount > 0 && (
+                      <div className="text-amber-500">
+                        <p className="text-3xl font-bold">{readiness.expiringSoonCount}</p>
+                        <p className="text-xs">expiring soon</p>
+                      </div>
+                    )}
+                  </div>
+                  <Link href="/saved-jobs">
+                    <Button variant="outline" size="sm" className="mt-4 gap-1" data-testid="button-view-saved-jobs">
+                      View Saved Jobs
+                      <ArrowRight className="h-3 w-3" />
+                    </Button>
+                  </Link>
                 </CardContent>
               </Card>
             </div>
-          ) : (
-            <ProLockedOverlay label="Search Insights">
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-                <Card><CardHeader className="pb-3"><CardTitle className="text-base">Top Categories</CardTitle></CardHeader><CardContent><div className="h-24" /></CardContent></Card>
-                <Card><CardHeader className="pb-3"><CardTitle className="text-base">Top Companies</CardTitle></CardHeader><CardContent><div className="h-24" /></CardContent></Card>
-                <Card><CardHeader className="pb-3"><CardTitle className="text-base">Recent Searches</CardTitle></CardHeader><CardContent><div className="h-24" /></CardContent></Card>
-              </div>
-            </ProLockedOverlay>
           )}
 
           {isPro ? (
             <>
-              {(marketAlignment.length > 0 || readiness.savedJobsCount > 0) && (
-                <div className="grid md:grid-cols-2 gap-6 mb-6">
-                  {marketAlignment.length > 0 && (
-                    <Card>
-                      <CardHeader className="pb-3">
-                        <div className="flex items-center gap-2">
-                          <BarChart3 className="h-4 w-4 text-muted-foreground" />
-                          <CardTitle className="text-base">Market Alignment</CardTitle>
-                        </div>
-                        <CardDescription className="text-xs">
-                          Jobs available in your areas of interest ({totalActiveJobs} total active)
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-3">
-                          {marketAlignment.map((m, i) => (
-                            <div key={i}>
-                              <div className="flex items-center justify-between text-sm mb-1">
-                                <span className="text-foreground truncate mr-2">{m.category}</span>
-                                <span className="text-muted-foreground text-xs shrink-0">{m.availableJobs} jobs</span>
-                              </div>
-                              <div className="h-1.5 bg-muted/40 rounded-full overflow-hidden">
-                                <div
-                                  className="h-full bg-green-500/60 rounded-full transition-all"
-                                  style={{ width: `${Math.min(100, (m.availableJobs / totalActiveJobs) * 100 * 3)}%` }}
-                                />
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
-
-                  {readiness.savedJobsCount > 0 && (
-                    <Card>
-                      <CardHeader className="pb-3">
-                        <div className="flex items-center gap-2">
-                          <Bookmark className="h-4 w-4 text-muted-foreground" />
-                          <CardTitle className="text-base">Saved Jobs</CardTitle>
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="flex items-center gap-6">
-                          <div>
-                            <p className="text-3xl font-bold text-foreground">{readiness.savedJobsCount}</p>
-                            <p className="text-xs text-muted-foreground">saved</p>
+              {marketAlignment.length > 0 && (
+                <Card className="mb-6">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center gap-2">
+                      <BarChart3 className="h-4 w-4 text-muted-foreground" />
+                      <CardTitle className="text-base">Market Alignment</CardTitle>
+                    </div>
+                    <CardDescription className="text-xs">
+                      Jobs available in your areas of interest ({totalActiveJobs} total active)
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {marketAlignment.map((m, i) => (
+                        <div key={i}>
+                          <div className="flex items-center justify-between text-sm mb-1">
+                            <span className="text-foreground truncate mr-2">{m.category}</span>
+                            <span className="text-muted-foreground text-xs shrink-0">{m.availableJobs} jobs</span>
                           </div>
-                          {readiness.expiringSoonCount > 0 && (
-                            <div className="text-amber-500">
-                              <p className="text-3xl font-bold">{readiness.expiringSoonCount}</p>
-                              <p className="text-xs">expiring soon</p>
-                            </div>
-                          )}
+                          <div className="h-1.5 bg-muted/40 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-green-500/60 rounded-full transition-all"
+                              style={{ width: `${Math.min(100, (m.availableJobs / totalActiveJobs) * 100 * 3)}%` }}
+                            />
+                          </div>
                         </div>
-                        <Link href="/saved-jobs">
-                          <Button variant="outline" size="sm" className="mt-4 gap-1" data-testid="button-view-saved-jobs">
-                            View Saved Jobs
-                            <ArrowRight className="h-3 w-3" />
-                          </Button>
-                        </Link>
-                      </CardContent>
-                    </Card>
-                  )}
-                </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
               )}
 
               {persona && persona.summary && (

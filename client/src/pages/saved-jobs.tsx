@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/use-auth";
+import { useSubscription } from "@/hooks/use-subscription";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Job, SavedJob } from "@shared/schema";
 import {
@@ -13,6 +14,7 @@ import {
   BookmarkX,
   Briefcase,
   Clock,
+  Crown,
   DollarSign,
   ExternalLink,
   Loader2,
@@ -56,14 +58,19 @@ function formatSalary(min?: number | null, max?: number | null): string | null {
   return `Up to ${fmt(max!)}`;
 }
 
+const FREE_SAVE_LIMIT = 5;
+
 export default function SavedJobs() {
   usePageTitle("Saved Jobs");
   const { isAuthenticated } = useAuth();
+  const { isFree } = useSubscription();
 
   const { data: savedJobs = [], isLoading } = useQuery<SavedJobWithJob[]>({
     queryKey: ["/api/saved-jobs"],
     enabled: isAuthenticated,
   });
+
+  const remaining = Math.max(0, FREE_SAVE_LIMIT - savedJobs.length);
 
   const unsaveMutation = useMutation({
     mutationFn: async (jobId: number) => {
@@ -89,14 +96,29 @@ export default function SavedJobs() {
             </h1>
             <p className="text-sm text-muted-foreground mt-1">
               {savedJobs.length} {savedJobs.length === 1 ? "job" : "jobs"} saved
+              {isFree && !isLoading && (
+                <span className="ml-1" data-testid="text-saved-jobs-remaining">
+                  ({remaining} of {FREE_SAVE_LIMIT} saves remaining)
+                </span>
+              )}
             </p>
           </div>
-          <Button variant="outline" asChild>
-            <Link href="/jobs" data-testid="link-browse-jobs">
-              <Briefcase className="h-4 w-4 mr-2" />
-              Browse Jobs
-            </Link>
-          </Button>
+          <div className="flex items-center gap-2 flex-wrap">
+            {isFree && remaining === 0 && (
+              <Button size="sm" asChild data-testid="button-upgrade-saved-jobs">
+                <Link href="/pricing" className="gap-1.5">
+                  <Crown className="h-3.5 w-3.5" />
+                  Upgrade for Unlimited
+                </Link>
+              </Button>
+            )}
+            <Button variant="outline" asChild>
+              <Link href="/jobs" data-testid="link-browse-jobs">
+                <Briefcase className="h-4 w-4 mr-2" />
+                Browse Jobs
+              </Link>
+            </Button>
+          </div>
         </div>
 
         {(urgentJobs.length > 0 || warningJobs.length > 0) && (
