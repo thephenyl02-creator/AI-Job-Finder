@@ -2,7 +2,18 @@ import { storage } from '../storage';
 import type { InsertJob } from '../../shared/schema';
 import axios from 'axios';
 import { stripHtml, isRelevantRole } from '../lib/html-utils';
-import { LEVER_SOURCES, type OrgType } from '../lib/scraper-sources';
+
+const WORKING_SOURCES = [
+  { name: 'Everlaw', type: 'lever', url: 'https://api.lever.co/v0/postings/everlaw' },
+  { name: 'NetDocuments', type: 'lever', url: 'https://api.lever.co/v0/postings/netdocuments' },
+  { name: 'Mitratech', type: 'lever', url: 'https://api.lever.co/v0/postings/mitratech' },
+  { name: 'Brightflag', type: 'lever', url: 'https://api.lever.co/v0/postings/brightflag' },
+  { name: 'Axiom', type: 'lever', url: 'https://api.lever.co/v0/postings/axiom' },
+  { name: 'Integreon', type: 'lever', url: 'https://api.lever.co/v0/postings/integreon' },
+  { name: 'QuisLex', type: 'lever', url: 'https://api.lever.co/v0/postings/quislex' },
+  { name: 'Neota Logic', type: 'lever', url: 'https://api.lever.co/v0/postings/neotalogic' },
+  { name: 'Factor', type: 'lever', url: 'https://api.lever.co/v0/postings/factorlegal' },
+];
 
 interface LeverJob {
   id: string;
@@ -14,14 +25,13 @@ interface LeverJob {
   createdAt: number;
 }
 
-async function scrapeLever(name: string, id: string, orgType: OrgType): Promise<InsertJob[]> {
+async function scrapeLever(name: string, url: string): Promise<InsertJob[]> {
   try {
-    const url = `https://api.lever.co/v0/postings/${id}`;
     const res = await axios.get<LeverJob[]>(url, { timeout: 15000 });
     const jobs: InsertJob[] = [];
     
     for (const job of res.data) {
-      if (!isRelevantRole(job.text, job.descriptionPlain, orgType)) continue;
+      if (!isRelevantRole(job.text, job.descriptionPlain)) continue;
       
       const descHtml = job.description || '';
       const descPlain = job.descriptionPlain || '';
@@ -35,7 +45,7 @@ async function scrapeLever(name: string, id: string, orgType: OrgType): Promise<
         isRemote: (job.categories?.location || '').toLowerCase().includes('remote'),
         description: cleanDesc,
         applyUrl: job.hostedUrl,
-        externalId: `lever_${id}_${job.id}`,
+        externalId: `lever-${job.id}`,
         source: 'lever',
         roleCategory: 'Legal Tech Startup Roles',
       });
@@ -53,10 +63,10 @@ async function main() {
   console.log('Quick scraper starting...');
   const allJobs: InsertJob[] = [];
   
-  for (const source of LEVER_SOURCES) {
-    const jobs = await scrapeLever(source.name, source.id, source.type);
+  for (const source of WORKING_SOURCES) {
+    const jobs = await scrapeLever(source.name, source.url);
     allJobs.push(...jobs);
-    await new Promise(r => setTimeout(r, 300));
+    await new Promise(r => setTimeout(r, 300)); // Small delay between requests
   }
   
   console.log(`\nTotal jobs collected: ${allJobs.length}`);

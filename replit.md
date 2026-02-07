@@ -66,21 +66,14 @@ A freemium SaaS job search platform specifically designed for legal professional
 - **Key env vars**: `DATABASE_URL`, `OPENAI_API_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET`, `SESSION_SECRET`, `APP_URL`
 
 ### Scraper Architecture
-- **Centralized Source Config**: `server/lib/scraper-sources.ts` is the single source of truth for ALL scraper company configurations. Every scraper (scheduled, fast-scrape, quick-scrape) imports from here. Never duplicate company lists.
-- **Company Classification (OrgType)**: Two-tier system prevents irrelevant job pollution:
-  - `legaltech-core`: Pure legal tech companies (Everlaw, NetDocuments, Mitratech, etc.) — ALL roles included.
-  - `legaltech`: General companies with legal relevance (Anthropic, OneTrust, Notion) — only jobs with legal-relevant titles OR specific tech roles (engineers, product managers, etc.) are included.
-  - `lawfirm` / `legalaid`: All roles included.
-- **Relevance Filter**: `isRelevantRole()` in `html-utils.ts` gates every job before it reaches the database. It checks legal keywords in the **title only** (not description — descriptions contain boilerplate that causes false positives). For `legaltech` companies, it also allows specific tech roles (engineers, product managers, etc.). Short keywords like 'cto', 'sre', 'nlp' use word-boundary matching to avoid substring false positives (e.g., "director" matching "cto").
-- **Defense-in-Depth Guardrail**: Phase 3.5 of the autopilot pipeline re-checks ALL active jobs against the current relevance filter after every scrape, deactivating any that no longer pass. This catches drift if the filter is tightened.
 - **Shared Utilities**: `server/lib/html-utils.ts` contains the single canonical `stripHtml()` and `isRelevantRole()` functions used by all scrapers.
-- **Smart Upsert**: `upsertJobByExternalId` preserves AI-enriched fields (roleCategory, keySkills, aiSummary, etc.) on re-scrape, re-activates stale jobs that reappear on job boards, and rejects description updates that are empty or significantly shorter than existing content.
+- **Smart Upsert**: `upsertJobByExternalId` preserves AI-enriched fields (roleCategory, keySkills, aiSummary, etc.) on re-scrape and rejects description updates that are empty or significantly shorter than existing content.
 - **Stale Job Detection**: After scheduled scrapes, jobs from scraped sources that no longer appear in API results are automatically deactivated.
 - **Lever Description Fix**: Lever scrapers use HTML description (with paragraphs/lists) instead of `descriptionPlain` (flat text) for better formatting.
 - **Freshness Tracking**: `lastScrapedAt` timestamp on jobs tracks when each job was last refreshed by a scraper.
 - **Description Cleaning**: `fixMissingSentenceSpaces()` in `html-utils.ts` fixes jammed sentences (e.g., "work.Our" → "work. Our") at the storage layer, so all paths through `createJob`/`updateJob`/`upsertJobByExternalId` are covered. Client-side `normalizeFlatText()` in `job-detail.tsx` serves as an additional safety net.
 - **Client-Side Normalization**: `job-detail.tsx` contains `normalizeFlatText()` which fixes remaining flat-text descriptions at render time (ALL-CAPS heading detection, inline bullet splitting, sentence-boundary paragraphing).
-- **Autopilot Pipeline**: The scheduled scraper (`runScheduledScrape`) runs an 8-phase pipeline: (1) Scrape sources with retry, (2) Smart upsert to DB, (3) Stale job detection, (3.5) Relevance guardrail re-check, (4) AI categorization of uncategorized jobs, (5) Alert matching for new jobs, (6) Description enrichment, (7) Link validation, (8) Run recording to `scrape_runs` table.
+- **Autopilot Pipeline**: The scheduled scraper (`runScheduledScrape`) runs a 7-phase pipeline: (1) Scrape sources with retry, (2) Smart upsert to DB, (3) Stale job detection, (4) AI categorization of uncategorized jobs, (5) Alert matching for new jobs, (6) Link validation, (7) Run recording to `scrape_runs` table.
 - **Scrape Run Tracking**: `scrape_runs` table records every run with timestamps, duration, counts (found/inserted/updated/categorized/alerts), source details, errors, and trigger source (scheduler/manual).
 - **Admin Dashboard**: `/admin/scraper` page shows real-time scraper status, run history, health metrics, source breakdown, cumulative stats, and manual controls (start/stop/run-now).
 

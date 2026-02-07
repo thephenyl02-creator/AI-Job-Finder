@@ -44,42 +44,32 @@ export function stripHtml(html: string): string {
 }
 
 export function isRelevantRole(title: string, desc: string = '', orgType?: string): boolean {
-  const titleLower = title.toLowerCase().trim();
+  const text = `${title} ${desc}`.toLowerCase();
 
   if (orgType === 'lawfirm' || orgType === 'legalaid') return true;
 
-  if (orgType === 'legaltech-core') return true;
-
-  const exclude = ['janitor', 'maintenance', 'facilities', 'cafeteria', 'cook', 'custodian'];
-  if (exclude.some(e => titleLower.includes(e))) return false;
-
-  const legalTitleKeywords = [
-    'attorney', 'lawyer', 'counsel', 'paralegal', 'legal',
-    'litigation', 'compliance', 'regulatory', 'patent',
-    'contract manager', 'contract analyst', 'contracts manager',
-    'law clerk', 'ediscovery', 'e-discovery',
-    'trust & safety', 'trust and safety',
-    'privacy', 'policy',
+  const legalKeywords = [
+    'attorney', 'lawyer', 'counsel', 'paralegal', 'legal assistant',
+    'litigation', 'associate', 'legal operations', 'legal ops',
+    'contract', 'compliance', 'regulatory', 'corporate counsel',
+    'in-house', 'general counsel', 'legal analyst', 'legal specialist',
+    'legal advisor', 'legal consultant', 'jd', 'law clerk', 'legal intern',
   ];
 
-  if (legalTitleKeywords.some(k => titleLower.includes(k))) return true;
+  const techKeywords = [
+    'engineer', 'developer', 'product', 'designer', 'data', 'ml', 'ai ',
+    'machine learning', 'nlp', 'software', 'technical', 'solutions',
+    'implementation', 'customer success', 'sales', 'operations',
+    'innovation', 'technology', 'ediscovery', 'analytics', 'platform',
+    'devops', 'cloud', 'security', 'qa', 'quality', 'ux', 'ui', 'frontend',
+    'backend', 'full stack', 'fullstack', 'manager', 'director', 'architect',
+    'marketing', 'finance', 'hr', 'people', 'business', 'admin', 'support',
+    'api',
+  ];
 
-  if (orgType === 'legaltech') {
-    const relevantTechRoles = [
-      'engineer', 'developer', 'product manager', 'product designer',
-      'data scientist', 'data analyst', 'data engineer',
-      'machine learning', 'ml engineer', 'ai researcher',
-      'software', 'solutions engineer', 'solutions architect',
-      'customer success', 'sales engineer',
-      'technical account', 'devops', 'platform engineer',
-      'qa engineer', 'quality engineer', 'ux researcher', 'ux designer',
-      'frontend', 'backend', 'full stack', 'fullstack',
-      'vp engineering', 'head of engineering',
-    ];
-    const wordBoundaryRoles = ['cto', 'sre', 'nlp'];
-    return relevantTechRoles.some(k => titleLower.includes(k))
-      || wordBoundaryRoles.some(k => new RegExp(`\\b${k}\\b`).test(titleLower));
-  }
+  const exclude = ['janitor', 'maintenance', 'facilities', 'cafeteria'];
+  if (exclude.some(e => text.includes(e))) return false;
 
-  return false;
+  return legalKeywords.some(k => text.includes(k)) ||
+         techKeywords.some(k => text.includes(k));
 }

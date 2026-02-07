@@ -5,12 +5,12 @@ import { logInfo, logWarn, logError, logSuccess, cleanupOldLogs } from './logger
 import { stripHtml, isRelevantRole } from './html-utils';
 import { categorizeJob } from './job-categorizer';
 import { matchNewJobsAgainstAlerts } from './alert-matcher';
-import { GREENHOUSE_SOURCES, LEVER_SOURCES, type OrgType } from './scraper-sources';
 
 const SCRAPE_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 hours
 const LINK_CHECK_TIMEOUT = 10000; // 10 seconds for each request
 const VALIDATION_DELAY_MS = 10000; // 10 seconds between validations
 
+// Validation state for background processing
 interface ValidationState {
   isRunning: boolean;
   currentIndex: number;
@@ -34,6 +34,24 @@ const validationState: ValidationState = {
   lastCheckedAt: null,
   abortController: null,
 };
+
+const GREENHOUSE_SOURCES = [
+  { name: 'Everlaw', id: 'everlaw', type: 'legaltech' },
+  { name: 'NetDocuments', id: 'netdocuments', type: 'legaltech' },
+  { name: 'Mitratech', id: 'mitratech', type: 'legaltech' },
+  { name: 'Brightflag', id: 'brightflag', type: 'legaltech' },
+  { name: 'Rocket Lawyer', id: 'rocketlawyer', type: 'legaltech' },
+  { name: 'Gibson Dunn', id: 'gibsondunn', type: 'lawfirm' },
+  { name: 'Legal Services NYC', id: 'legalservicesnyc', type: 'legalaid' },
+  { name: 'Axiom', id: 'axiom', type: 'legaltech' },
+  { name: 'Anthropic', id: 'anthropic', type: 'legaltech' },
+  { name: 'OneTrust', id: 'onetrust', type: 'legaltech' },
+  { name: 'Notion', id: 'notion', type: 'legaltech' },
+];
+
+const LEVER_SOURCES = [
+  { name: 'Factor', id: 'factor' },
+];
 
 async function scrapeGreenhouse(name: string, id: string, orgType: string): Promise<InsertJob[]> {
   const jobs: InsertJob[] = [];
@@ -75,7 +93,7 @@ async function scrapeGreenhouse(name: string, id: string, orgType: string): Prom
   return jobs;
 }
 
-async function scrapeLever(name: string, id: string, orgType?: OrgType): Promise<InsertJob[]> {
+async function scrapeLever(name: string, id: string): Promise<InsertJob[]> {
   const jobs: InsertJob[] = [];
   
   try {
@@ -83,7 +101,7 @@ async function scrapeLever(name: string, id: string, orgType?: OrgType): Promise
     const res = await axios.get(url, { timeout: 15000 });
     
     for (const job of res.data || []) {
-      if (!isRelevantRole(job.text || '', job.descriptionPlain || '', orgType)) continue;
+      if (!isRelevantRole(job.text || '', job.descriptionPlain || '')) continue;
       
       const descHtml = job.description || '';
       const descPlain = job.descriptionPlain || '';
@@ -404,7 +422,7 @@ export async function runScheduledScrape(triggeredBy: string = 'scheduler'): Pro
     
     logInfo('SCRAPE', `Scraping ${LEVER_SOURCES.length} Lever sources...`);
     const leverResults = await Promise.allSettled(
-      LEVER_SOURCES.map(s => scrapeLever(s.name, s.id, s.type))
+      LEVER_SOURCES.map(s => scrapeLever(s.name, s.id))
     );
     
     let leverSuccessCount = 0;
@@ -425,7 +443,7 @@ export async function runScheduledScrape(triggeredBy: string = 'scheduler'): Pro
     if (failedLeverSources.length > 0) {
       logWarn('RETRY', `Retrying ${failedLeverSources.length} failed Lever sources...`);
       const retryResults = await Promise.allSettled(
-        failedLeverSources.map(s => scrapeLever(s.name, s.id, s.type))
+        failedLeverSources.map(s => scrapeLever(s.name, s.id))
       );
       for (let i = 0; i < retryResults.length; i++) {
         const result = retryResults[i];
@@ -473,35 +491,6 @@ export async function runScheduledScrape(triggeredBy: string = 'scheduler'): Pro
       }
     }
     
-    // === PHASE 3.5: Post-scrape relevance guardrail ===
-    logInfo('PHASE', '--- Phase 3.5: Relevance guardrail ---');
-    let guardrailDeactivated = 0;
-    try {
-      const companyOrgTypes = new Map<string, OrgType>();
-      for (const s of [...GREENHOUSE_SOURCES, ...LEVER_SOURCES]) {
-        companyOrgTypes.set(s.name, s.type);
-      }
-
-      const activeJobs = await storage.getActiveJobs();
-      for (const job of activeJobs) {
-        const orgType = companyOrgTypes.get(job.company);
-        if (!orgType) continue;
-        if (!isRelevantRole(job.title, job.description || '', orgType)) {
-          await storage.updateJob(job.id, { isActive: false });
-          guardrailDeactivated++;
-        }
-      }
-
-      if (guardrailDeactivated > 0) {
-        logWarn('GUARDRAIL', `Deactivated ${guardrailDeactivated} jobs that no longer pass relevance filter`);
-      } else {
-        logInfo('GUARDRAIL', 'All active jobs pass relevance filter');
-      }
-    } catch (err: any) {
-      logError('GUARDRAIL', 'Relevance guardrail failed', { error: err.message });
-      errors.push(`Relevance guardrail: ${err.message}`);
-    }
-
     // === PHASE 4: AI Categorization of uncategorized jobs ===
     logInfo('PHASE', '--- Phase 4: AI Categorization ---');
     
@@ -736,35 +725,6 @@ export async function enrichShortDescriptions(): Promise<number> {
 
 let schedulerInterval: NodeJS.Timeout | null = null;
 
-async function runStartupGuardrail(): Promise<void> {
-  logInfo('GUARDRAIL', 'Running startup relevance cleanup...');
-  try {
-    const companyOrgTypes = new Map<string, OrgType>();
-    for (const s of [...GREENHOUSE_SOURCES, ...LEVER_SOURCES]) {
-      companyOrgTypes.set(s.name, s.type);
-    }
-
-    const activeJobs = await storage.getActiveJobs();
-    let deactivated = 0;
-    for (const job of activeJobs) {
-      const orgType = companyOrgTypes.get(job.company);
-      if (!orgType) continue;
-      if (!isRelevantRole(job.title, job.description || '', orgType)) {
-        await storage.updateJob(job.id, { isActive: false });
-        deactivated++;
-      }
-    }
-
-    if (deactivated > 0) {
-      logWarn('GUARDRAIL', `Startup cleanup: deactivated ${deactivated} irrelevant jobs`);
-    } else {
-      logInfo('GUARDRAIL', 'Startup cleanup: all jobs pass relevance filter');
-    }
-  } catch (err: any) {
-    logError('GUARDRAIL', 'Startup cleanup failed', { error: err.message });
-  }
-}
-
 export function startScheduler(): void {
   if (schedulerInterval) {
     logWarn('SCHEDULER', 'Scheduler already running');
@@ -772,18 +732,8 @@ export function startScheduler(): void {
   }
   
   logInfo('SCHEDULER', `Scheduler started - will run every 24 hours`);
-
-  setTimeout(async () => {
-    await runStartupGuardrail();
-
-    logInfo('SCHEDULER', 'Running initial scrape on startup...');
-    try {
-      await runScheduledScrape('startup');
-    } catch (error: any) {
-      logError('SCHEDULER', 'Initial startup scrape failed', { error: error.message });
-    }
-  }, 60_000);
-
+  logInfo('SCHEDULER', `Next run at: ${new Date(Date.now() + SCRAPE_INTERVAL_MS).toISOString()}`);
+  
   schedulerInterval = setInterval(async () => {
     try {
       await runScheduledScrape();

@@ -4717,9 +4717,8 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
   });
 
   runStartupCleanup();
-  // Auto-scraping disabled — jobs are curated manually via admin controls
-  // startScheduler();
-  // startEventScheduler();
+  startScheduler();
+  startEventScheduler();
 
   return httpServer;
 }
