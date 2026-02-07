@@ -51,7 +51,6 @@ import {
   Eye,
   EyeOff,
   Crown,
-  Sparkles,
 } from "lucide-react";
 
 function extractContactEmails(text: string | null | undefined): string[] {
@@ -976,23 +975,6 @@ function DescriptionToolbar({ sections, openSections, setOpenSections, activeCat
   );
 }
 
-function ProHighlightBanner() {
-  return (
-    <div className="mt-4 p-3 rounded-md border border-border/50 bg-muted/30 flex items-center gap-3 flex-wrap" data-testid="pro-highlight-banner">
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Sparkles className="h-4 w-4 text-amber-500" />
-        <span>Unlock full analysis: certifications, tools, legal domains, salary, and more</span>
-      </div>
-      <Link href="/pricing">
-        <Button size="sm" variant="outline" className="gap-1.5" data-testid="button-upgrade-highlights">
-          <Crown className="h-3 w-3" />
-          Upgrade to Pro
-        </Button>
-      </Link>
-    </div>
-  );
-}
-
 function DescriptionContent({ text, testId, compact, isPro }: { text?: string | null; testId: string; compact?: boolean; isPro?: boolean }) {
   if (!text) return null;
 
@@ -1090,7 +1072,6 @@ function DescriptionContent({ text, testId, compact, isPro }: { text?: string | 
             return <p key={i} className="text-foreground/90">{renderHighlightedContent(block.content, activeCategories)}</p>;
           })}
         </div>
-        {!isPro && <ProHighlightBanner />}
       </div>
     );
   }
@@ -1123,7 +1104,6 @@ function DescriptionContent({ text, testId, compact, isPro }: { text?: string | 
           />
         ))}
       </div>
-      {!isPro && <ProHighlightBanner />}
     </div>
   );
 }
@@ -1586,9 +1566,11 @@ export default function JobDetail() {
 
             <Card>
               <CardContent className="pt-5 pb-5">
-                <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-                  <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Full Description</h2>
-                  <div className="flex flex-wrap items-center gap-2.5 text-[10px] text-muted-foreground">
+                <div className="mb-4">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Job Description</h2>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2.5 text-[10px] text-muted-foreground mt-2">
                     {isPro ? (
                       (Object.entries(HIGHLIGHT_DOT_COLORS) as [HighlightCategory, string][]).map(([cat, dotColor]) => (
                         <span key={cat} className="flex items-center gap-1">
