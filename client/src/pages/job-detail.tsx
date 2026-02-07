@@ -317,9 +317,12 @@ function ensureCompleteSentence(text: string): string {
 function stripBoilerplate(text: string): string {
   let cleaned = text;
 
+  cleaned = cleaned.replace(/^[A-Z][\w\s&.'()-]{2,60} is committed to providing an excellent candidate experience[^]*?(?:so our team members can review\.?\s*\n*)/i, '');
   cleaned = cleaned.replace(/^[A-Z][\w\s&.'()-]{2,60} is committed to providing an excellent candidate experience[^\n]*\.\s*\n*/i, '');
 
   cleaned = cleaned.replace(/^Summary:\s*/i, '');
+
+  cleaned = cleaned.replace(/^At\s+[\w\s&.'()-]{2,40},\s+we are a team of (?:innovators|technocrats)[^]*?(?:having fun!?\s*\n*)/i, '');
 
   cleaned = cleaned.replace(/^ABOUT\s+(?:US|THE COMPANY|THE JOB|FIRSTBASE|NOTABENE)\s*/i, '');
   cleaned = cleaned.replace(/^About\s+(?:the company|us|the job|Axiom|Rocket Lawyer|the role)\s*:?\s*/i, '');
@@ -503,9 +506,14 @@ function cleanDescription(text: string): string {
   if (cleaned.includes('&lt;') || cleaned.includes('&gt;') || cleaned.includes('&amp;') || /<[a-z][^>]*>/i.test(cleaned)) {
     cleaned = stripHtmlToText(cleaned);
   }
+  cleaned = cleaned.replace(/\u00A0/g, ' ');
+  cleaned = cleaned.replace(/ {2,}/g, ' ');
+  cleaned = cleaned.replace(/\n{4,}/g, '\n\n\n');
+  cleaned = cleaned.replace(/^[ \t]+/gm, '');
   cleaned = fixMissingSentenceSpaces(cleaned);
   cleaned = stripBoilerplate(cleaned);
   cleaned = normalizeFlatText(cleaned);
+  cleaned = cleaned.trim();
   return cleaned;
 }
 
@@ -1135,7 +1143,7 @@ export default function JobDetail() {
 
         {/* === COMPENSATION + LEVEL SIDE-BY-SIDE CARDS === */}
         {(salary || job.seniorityLevel) && (
-          <div className="grid grid-cols-2 gap-3 mb-5" data-testid="section-quick-facts">
+          <div className={`grid gap-3 mb-5 ${salary && job.seniorityLevel ? 'grid-cols-2' : 'grid-cols-1'}`} data-testid="section-quick-facts">
             {salary && (
               <Card data-testid="card-compensation">
                 <CardContent className="p-4">

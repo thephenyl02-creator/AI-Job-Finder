@@ -138,14 +138,28 @@ class DatabaseStorage implements IStorage {
     return job;
   }
 
+  private sanitizeJobFields(job: InsertJob | Partial<InsertJob>): typeof job {
+    const result = { ...job };
+    if (result.title) result.title = result.title.trim();
+    if (result.company) result.company = result.company.trim();
+    if (result.location) result.location = result.location.trim();
+    if (result.description) {
+      result.description = fixMissingSentenceSpaces(result.description.trim().replace(/ {2,}/g, ' '));
+    }
+    if (result.requirements) {
+      result.requirements = result.requirements.trim().replace(/ {2,}/g, ' ');
+    }
+    return result;
+  }
+
   async createJob(job: InsertJob): Promise<Job> {
-    const cleaned = job.description ? { ...job, description: fixMissingSentenceSpaces(job.description) } : job;
-    const [newJob] = await db.insert(jobs).values(cleaned).returning();
+    const cleaned = this.sanitizeJobFields(job);
+    const [newJob] = await db.insert(jobs).values(cleaned as InsertJob).returning();
     return newJob;
   }
 
   async updateJob(id: number, job: Partial<InsertJob>): Promise<Job | undefined> {
-    const cleaned = job.description ? { ...job, description: fixMissingSentenceSpaces(job.description) } : job;
+    const cleaned = this.sanitizeJobFields(job);
     const [updatedJob] = await db
       .update(jobs)
       .set(cleaned)
@@ -195,10 +209,10 @@ class DatabaseStorage implements IStorage {
     if (existing) {
       const aiFields = ['roleCategory', 'roleSubcategory', 'seniorityLevel', 'keySkills', 'aiSummary', 'matchKeywords', 'aiResponsibilities', 'aiQualifications', 'aiNiceToHaves'] as const;
       const updateData: Record<string, any> = {
-        title: job.title,
-        company: job.company,
+        title: (job.title || '').trim(),
+        company: (job.company || '').trim(),
         companyLogo: job.companyLogo,
-        location: job.location,
+        location: (job.location || '').trim(),
         isRemote: job.isRemote,
         locationType: job.locationType,
         applyUrl: job.applyUrl,
@@ -211,7 +225,7 @@ class DatabaseStorage implements IStorage {
       if (job.salaryMin) updateData.salaryMin = job.salaryMin;
       if (job.salaryMax) updateData.salaryMax = job.salaryMax;
 
-      const newDesc = job.description ? fixMissingSentenceSpaces(job.description) : '';
+      const newDesc = job.description ? fixMissingSentenceSpaces(job.description.trim().replace(/ {2,}/g, ' ')) : '';
       const existingDesc = existing.description || '';
       if (newDesc.length >= existingDesc.length * 0.5 && newDesc.length >= 50) {
         updateData.description = newDesc;
