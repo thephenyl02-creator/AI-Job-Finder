@@ -54,7 +54,7 @@ function extractContactEmails(text: string | null | undefined): string[] {
     if (email.includes('example.com')) return false;
     return true;
   });
-  return [...new Set(filtered)];
+  return Array.from(new Set(filtered));
 }
 
 const BULLET_PATTERN = /^(?:[-•*]\s|(?:\d+)[.)]\s)/;
@@ -438,11 +438,33 @@ function splitInlineBulletsInLines(text: string): string {
   });
 }
 
+function fixMissingSentenceSpaces(text: string): string {
+  const abbreviations = /^(?:Mr|Ms|Mrs|Dr|Jr|Sr|St|vs|etc|ie|eg|al|Prof|Gen|Gov|Rev|Hon|Inc|Ltd|Co|Corp|LLC|Vol|No|Fig|Eq|Dept|Est|Assn|Intl)$/i;
+  let result = '';
+  let lastIndex = 0;
+  const re = /(\w)([.!?])([A-Z][a-z])/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    const matchPos = m.index;
+    const lookback = text.slice(Math.max(0, matchPos - 12), matchPos + 1);
+    const lastWord = lookback.match(/([A-Za-z]+)$/)?.[1] || '';
+    if (lastWord.length === 1 || abbreviations.test(lastWord)) {
+      continue;
+    }
+    result += text.slice(lastIndex, matchPos) + m[1] + m[2] + ' ' + m[3];
+    lastIndex = matchPos + m[0].length;
+  }
+  result += text.slice(lastIndex);
+  result = result.replace(/([.!?])(\()([A-Z])/g, '$1 $2$3');
+  return result;
+}
+
 function cleanDescription(text: string): string {
   let cleaned = text;
   if (cleaned.includes('&lt;') || cleaned.includes('&gt;') || cleaned.includes('&amp;') || /<[a-z][^>]*>/i.test(cleaned)) {
     cleaned = stripHtmlToText(cleaned);
   }
+  cleaned = fixMissingSentenceSpaces(cleaned);
   let prev = '';
   let iterations = 0;
   while (prev !== cleaned && iterations < 5) {
@@ -732,10 +754,10 @@ function renderBoldText(text: string, pk: number) {
 }
 
 const JOB_QUESTION_CHIPS = [
-  "What does this role actually involve day-to-day?",
-  "Would this be a good fit for a lawyer?",
-  "Explain the requirements in simple terms",
-  "What skills do I need for this?",
+  "Break down what this role does day-to-day",
+  "How does my legal background apply here?",
+  "What skills should I highlight in my application?",
+  "Explain the technical requirements in plain language",
 ];
 
 function JobChat({ jobId }: { jobId: string }) {
@@ -783,11 +805,14 @@ function JobChat({ jobId }: { jobId: string }) {
   return (
     <Card>
       <CardContent className="pt-5 pb-4">
-        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-          Ask About This Job
-        </h2>
+        <div className="flex items-center gap-2 mb-1">
+          <MessageCircle className="h-4 w-4 text-muted-foreground" />
+          <h2 className="text-sm font-semibold text-foreground" data-testid="heading-job-chat">
+            Questions about this role?
+          </h2>
+        </div>
         <p className="text-xs text-muted-foreground mb-3">
-          Have a question about this role? Ask below and get a plain-language answer.
+          Get plain-language answers tailored to your legal background.
         </p>
 
         <div ref={scrollRef} className="max-h-64 overflow-y-auto space-y-2 mb-3">
@@ -847,7 +872,7 @@ function JobChat({ jobId }: { jobId: string }) {
                 sendMessage();
               }
             }}
-            placeholder="Ask a question about this job..."
+            placeholder="Type your question..."
             rows={1}
             className="flex-1 resize-none bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none min-h-[32px] max-h-[64px] py-1.5 border-b border-border focus:border-foreground transition-colors"
             style={{ height: "32px" }}
