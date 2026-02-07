@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { jobs, users, userPreferences, jobCategories, jobSubmissions, jobAlerts, notifications, resumes, builtResumes, userActivities, userPersonas, savedJobs, jobApplications, type Job, type InsertJob, type User, type UserPreferences, type InsertUserPreferences, type ResumeExtractedData, type JobCategory, type JobSubmission, type InsertJobSubmission, type JobAlert, type InsertJobAlert, type Notification, type InsertNotification, type Resume, type InsertResume, type BuiltResume, type InsertBuiltResume, type UserActivity, type InsertUserActivity, type UserPersona, type InsertUserPersona, type SavedJob, type InsertSavedJob, type JobApplication, type InsertJobApplication, type JobApplicationWithJob, JOB_TAXONOMY } from "@shared/schema";
+import { jobs, users, userPreferences, jobCategories, jobSubmissions, jobAlerts, notifications, resumes, builtResumes, userActivities, userPersonas, savedJobs, jobApplications, events, type Job, type InsertJob, type User, type UserPreferences, type InsertUserPreferences, type ResumeExtractedData, type JobCategory, type JobSubmission, type InsertJobSubmission, type JobAlert, type InsertJobAlert, type Notification, type InsertNotification, type Resume, type InsertResume, type BuiltResume, type InsertBuiltResume, type UserActivity, type InsertUserActivity, type UserPersona, type InsertUserPersona, type SavedJob, type InsertSavedJob, type JobApplication, type InsertJobApplication, type JobApplicationWithJob, type Event, type InsertEvent, JOB_TAXONOMY } from "@shared/schema";
 import { eq, desc, and, sql, inArray, lt, gte, count } from "drizzle-orm";
 
 export interface IStorage {
@@ -76,6 +76,16 @@ export interface IStorage {
   getBuiltResumeById(id: number, userId: string): Promise<BuiltResume | undefined>;
   updateBuiltResume(id: number, userId: string, data: Partial<InsertBuiltResume>): Promise<BuiltResume | undefined>;
   deleteBuiltResume(id: number, userId: string): Promise<void>;
+  // Events
+  getEvents(filters?: { eventType?: string; attendanceType?: string; isFree?: boolean; topic?: string; upcoming?: boolean }): Promise<Event[]>;
+  getEvent(id: number): Promise<Event | undefined>;
+  createEvent(event: InsertEvent): Promise<Event>;
+  updateEvent(id: number, data: Partial<InsertEvent>): Promise<Event | undefined>;
+  deleteEvent(id: number): Promise<void>;
+  getFeaturedEvents(limit?: number): Promise<Event[]>;
+  trackEventView(eventId: number): Promise<void>;
+  trackRegistrationClick(eventId: number): Promise<void>;
+  seedEvents(): Promise<void>;
   // Admin Analytics
   getAnalyticsKpis(): Promise<any>;
   getAnalyticsEngagement(days?: number): Promise<any>;
@@ -1711,6 +1721,308 @@ class DatabaseStorage implements IStorage {
     }
 
     return results;
+  }
+
+  async getEvents(filters?: { eventType?: string; attendanceType?: string; isFree?: boolean; topic?: string; upcoming?: boolean }): Promise<Event[]> {
+    const conditions: any[] = [eq(events.isActive, true)];
+
+    if (filters?.eventType) {
+      conditions.push(eq(events.eventType, filters.eventType));
+    }
+    if (filters?.attendanceType) {
+      conditions.push(eq(events.attendanceType, filters.attendanceType));
+    }
+    if (filters?.isFree !== undefined) {
+      conditions.push(eq(events.isFree, filters.isFree));
+    }
+    if (filters?.upcoming) {
+      conditions.push(gte(events.startDate, new Date()));
+    }
+    if (filters?.topic) {
+      conditions.push(sql`${filters.topic} = ANY(${events.topics})`);
+    }
+
+    return db
+      .select()
+      .from(events)
+      .where(and(...conditions))
+      .orderBy(events.startDate);
+  }
+
+  async getEvent(id: number): Promise<Event | undefined> {
+    const [event] = await db.select().from(events).where(eq(events.id, id));
+    return event;
+  }
+
+  async createEvent(event: InsertEvent): Promise<Event> {
+    const [created] = await db.insert(events).values(event).returning();
+    return created;
+  }
+
+  async updateEvent(id: number, data: Partial<InsertEvent>): Promise<Event | undefined> {
+    const [updated] = await db.update(events).set(data).where(eq(events.id, id)).returning();
+    return updated;
+  }
+
+  async deleteEvent(id: number): Promise<void> {
+    await db.delete(events).where(eq(events.id, id));
+  }
+
+  async getFeaturedEvents(limit: number = 6): Promise<Event[]> {
+    return db
+      .select()
+      .from(events)
+      .where(and(
+        eq(events.isActive, true),
+        gte(events.startDate, new Date()),
+      ))
+      .orderBy(events.isFeatured, events.startDate)
+      .limit(limit);
+  }
+
+  async trackEventView(eventId: number): Promise<void> {
+    await db
+      .update(events)
+      .set({ viewCount: sql`${events.viewCount} + 1` })
+      .where(eq(events.id, eventId));
+  }
+
+  async trackRegistrationClick(eventId: number): Promise<void> {
+    await db
+      .update(events)
+      .set({ registrationClickCount: sql`${events.registrationClickCount} + 1` })
+      .where(eq(events.id, eventId));
+  }
+
+  async seedEvents(): Promise<void> {
+    const existingEvents = await db.select({ id: events.id }).from(events).limit(1);
+    if (existingEvents.length > 0) {
+      console.log("Events already seeded, skipping...");
+      return;
+    }
+
+    const now = new Date();
+    const seedData: InsertEvent[] = [
+      {
+        title: "ILTACON 2026 - International Legal Technology Association Conference",
+        organizer: "ILTA",
+        eventType: "conference",
+        startDate: new Date(now.getFullYear(), 7, 10),
+        endDate: new Date(now.getFullYear(), 7, 13),
+        location: "Nashville, TN",
+        attendanceType: "hybrid",
+        description: "The premier peer-to-peer educational conference for legal technology professionals. ILTACON brings together thousands of legal professionals, technologists, and solution providers for four days of networking, learning, and innovation in legal technology.",
+        registrationUrl: "https://www.iltacon.org",
+        cost: "$1,895 - $2,495",
+        isFree: false,
+        topics: ["Legal Technology", "AI in Law", "Knowledge Management", "Cybersecurity", "Cloud Computing"],
+        speakers: [{ name: "Various Industry Leaders", title: "Multiple Sessions", organization: "ILTA" }],
+        cleCredits: "Up to 15 CLE credits",
+        isFeatured: true,
+        isActive: true,
+      },
+      {
+        title: "Legalweek 2026",
+        organizer: "ALM",
+        eventType: "conference",
+        startDate: new Date(now.getFullYear(), 2, 9),
+        endDate: new Date(now.getFullYear(), 2, 12),
+        location: "New York, NY",
+        attendanceType: "in-person",
+        description: "Legalweek is the largest and most important legal technology event, connecting the legal ecosystem through thought leadership, networking, and business development. Featuring LegalTech, The CIO Forum, and LawFirm Leaders.",
+        registrationUrl: "https://www.legalweek.com",
+        cost: "$2,099 - $3,299",
+        isFree: false,
+        topics: ["eDiscovery", "Legal Operations", "AI & Machine Learning", "Contract Management", "Practice Management"],
+        speakers: [{ name: "Industry Executives", title: "Keynotes & Panels", organization: "Various" }],
+        cleCredits: "CLE credits available",
+        isFeatured: true,
+        isActive: true,
+      },
+      {
+        title: "CLOC Global Institute 2026",
+        organizer: "CLOC",
+        eventType: "conference",
+        startDate: new Date(now.getFullYear(), 4, 5),
+        endDate: new Date(now.getFullYear(), 4, 8),
+        location: "Las Vegas, NV",
+        attendanceType: "in-person",
+        description: "The Corporate Legal Operations Consortium's annual event bringing together legal operations professionals to share best practices, drive innovation, and build community. Focuses on operational excellence, technology adoption, and strategic leadership.",
+        registrationUrl: "https://cloc.org/institutes",
+        cost: "$1,500 - $2,200",
+        isFree: false,
+        topics: ["Legal Operations", "Technology Strategy", "Vendor Management", "Change Management", "Data Analytics"],
+        speakers: [{ name: "Legal Operations Leaders", title: "Industry Experts", organization: "CLOC" }],
+        cleCredits: "Select sessions eligible",
+        isFeatured: true,
+        isActive: true,
+      },
+      {
+        title: "AI & the Future of Legal Practice - ABA Webinar Series",
+        organizer: "American Bar Association",
+        eventType: "webinar",
+        startDate: new Date(now.getFullYear(), now.getMonth() + 1, 15),
+        endDate: new Date(now.getFullYear(), now.getMonth() + 1, 15),
+        location: "Online",
+        attendanceType: "virtual",
+        description: "A monthly webinar series exploring how artificial intelligence is transforming legal practice. Each session features practicing attorneys and technologists discussing real-world applications, ethical considerations, and practical implementation strategies.",
+        registrationUrl: "https://www.americanbar.org/groups/departments_offices/legal_technology_resources/",
+        cost: "Free for ABA members",
+        isFree: false,
+        topics: ["AI Ethics", "Legal AI Tools", "Practice Automation", "Regulatory Compliance"],
+        speakers: [{ name: "ABA Tech Panel", title: "Monthly Rotating Speakers", organization: "ABA" }],
+        cleCredits: "1.5 CLE credits per session",
+        isFeatured: false,
+        isActive: true,
+      },
+      {
+        title: "Stanford CodeX FutureLaw Conference",
+        organizer: "Stanford CodeX Center",
+        eventType: "conference",
+        startDate: new Date(now.getFullYear(), 3, 22),
+        endDate: new Date(now.getFullYear(), 3, 23),
+        location: "Stanford, CA",
+        attendanceType: "hybrid",
+        description: "FutureLaw brings together the brightest minds in computational law, legal technology, and innovation. Hosted by Stanford's CodeX center, this conference showcases cutting-edge research and startups reshaping the legal industry.",
+        registrationUrl: "https://law.stanford.edu/codex-the-stanford-center-for-legal-informatics/",
+        cost: "$500 - $750",
+        isFree: false,
+        topics: ["Computational Law", "Legal Startups", "Access to Justice", "Blockchain & Law", "Legal AI Research"],
+        speakers: [{ name: "Roland Vogl", title: "Executive Director", organization: "Stanford CodeX" }],
+        cleCredits: "CLE credits pending approval",
+        isFeatured: true,
+        isActive: true,
+      },
+      {
+        title: "Legal Hackers Global Summit",
+        organizer: "Legal Hackers",
+        eventType: "hackathon",
+        startDate: new Date(now.getFullYear(), 5, 14),
+        endDate: new Date(now.getFullYear(), 5, 16),
+        location: "Washington, DC",
+        attendanceType: "hybrid",
+        description: "A gathering of lawyers, technologists, and creative thinkers solving legal challenges through technology and design. Includes workshops, hackathon competitions, and networking with the global Legal Hackers community.",
+        registrationUrl: "https://legalhackers.org",
+        cost: "$150 - $300",
+        isFree: false,
+        topics: ["Access to Justice", "Legal Design", "Open Source Law", "Civic Tech", "Legal Innovation"],
+        speakers: [{ name: "Phil Weiss", title: "Co-Founder", organization: "Legal Hackers" }],
+        cleCredits: "Select sessions eligible",
+        isFeatured: false,
+        isActive: true,
+      },
+      {
+        title: "Practical Guide to Contract Lifecycle Management",
+        organizer: "Practising Law Institute",
+        eventType: "cle",
+        startDate: new Date(now.getFullYear(), now.getMonth() + 2, 8),
+        endDate: new Date(now.getFullYear(), now.getMonth() + 2, 8),
+        location: "Online",
+        attendanceType: "virtual",
+        description: "An intensive CLE program covering the full contract lifecycle, from drafting and negotiation through AI-assisted review and analytics. Learn to leverage CLM platforms, set up automated workflows, and measure contract performance.",
+        registrationUrl: "https://www.pli.edu",
+        cost: "$350",
+        isFree: false,
+        topics: ["Contract Management", "Legal Automation", "CLM Platforms", "Contract Analytics"],
+        speakers: [{ name: "PLI Faculty", title: "CLM Experts", organization: "PLI" }],
+        cleCredits: "6.5 CLE credits (NY, CA approved)",
+        isFeatured: false,
+        isActive: true,
+      },
+      {
+        title: "Legal Innovation & Tech Fest",
+        organizer: "Liquid Legal Institute",
+        eventType: "conference",
+        startDate: new Date(now.getFullYear(), 8, 18),
+        endDate: new Date(now.getFullYear(), 8, 19),
+        location: "Frankfurt, Germany",
+        attendanceType: "hybrid",
+        description: "Europe's leading legal technology festival, bringing together corporate legal departments, law firms, and legal tech startups. Features hands-on workshops, demo sessions, and strategic panels on digital transformation in legal.",
+        registrationUrl: "https://www.liquid-legal-institute.com",
+        cost: "EUR 800 - EUR 1,200",
+        isFree: false,
+        topics: ["Digital Transformation", "Legal Tech Startups", "Corporate Legal", "EU Regulation", "Legal Design"],
+        speakers: [{ name: "European Legal Tech Leaders", title: "Various", organization: "LLI" }],
+        cleCredits: null,
+        isFeatured: true,
+        isActive: true,
+      },
+      {
+        title: "Introduction to Legal Prompt Engineering",
+        organizer: "Georgetown Law CLE",
+        eventType: "workshop",
+        startDate: new Date(now.getFullYear(), now.getMonth() + 1, 22),
+        endDate: new Date(now.getFullYear(), now.getMonth() + 1, 22),
+        location: "Online",
+        attendanceType: "virtual",
+        description: "A hands-on workshop teaching lawyers how to effectively use generative AI tools in legal practice. Covers prompt engineering techniques, ethical guardrails, output verification, and integrating AI into existing workflows.",
+        registrationUrl: "https://www.law.georgetown.edu/continuing-legal-education/",
+        cost: "$175",
+        isFree: false,
+        topics: ["Prompt Engineering", "Generative AI", "Legal Ethics", "AI Tools for Lawyers"],
+        speakers: [{ name: "Georgetown Faculty", title: "AI & Law Experts", organization: "Georgetown Law" }],
+        cleCredits: "3 CLE credits",
+        isFeatured: false,
+        isActive: true,
+      },
+      {
+        title: "Legal Tech Careers Networking Mixer",
+        organizer: "Legal Tech Careers",
+        eventType: "networking",
+        startDate: new Date(now.getFullYear(), now.getMonth() + 1, 5),
+        endDate: new Date(now.getFullYear(), now.getMonth() + 1, 5),
+        location: "Online",
+        attendanceType: "virtual",
+        description: "A casual virtual networking event for legal professionals exploring careers in legal technology. Connect with hiring managers, career changers who've made the transition, and mentors in the legal tech space. Includes breakout rooms by interest area.",
+        registrationUrl: "#",
+        cost: "Free",
+        isFree: true,
+        topics: ["Career Transition", "Networking", "Legal Tech Careers", "Mentorship"],
+        speakers: [{ name: "Legal Tech Professionals", title: "Panel & Networking", organization: "Various" }],
+        cleCredits: null,
+        isFeatured: false,
+        isActive: true,
+      },
+      {
+        title: "eDiscovery & Information Governance Symposium",
+        organizer: "The Sedona Conference",
+        eventType: "seminar",
+        startDate: new Date(now.getFullYear(), 9, 7),
+        endDate: new Date(now.getFullYear(), 9, 9),
+        location: "Scottsdale, AZ",
+        attendanceType: "in-person",
+        description: "An advanced seminar bringing together judges, lawyers, and technologists to address cutting-edge issues in electronic discovery and information governance. Features dialogue-based sessions and working group presentations.",
+        registrationUrl: "https://thesedonaconference.org",
+        cost: "$1,200 - $1,800",
+        isFree: false,
+        topics: ["eDiscovery", "Information Governance", "Data Privacy", "ESI Protocol", "Cross-border Discovery"],
+        speakers: [{ name: "Sedona Faculty", title: "Judges & Practitioners", organization: "The Sedona Conference" }],
+        cleCredits: "Up to 12 CLE credits",
+        isFeatured: false,
+        isActive: true,
+      },
+      {
+        title: "Legal Tech Open Source Contributor Day",
+        organizer: "Free Law Project",
+        eventType: "hackathon",
+        startDate: new Date(now.getFullYear(), now.getMonth() + 2, 20),
+        endDate: new Date(now.getFullYear(), now.getMonth() + 2, 20),
+        location: "Online",
+        attendanceType: "virtual",
+        description: "A day-long event where developers and legal professionals collaborate on open-source legal tech projects. Perfect for lawyers looking to build coding skills or developers wanting to apply their skills to access-to-justice challenges.",
+        registrationUrl: "https://free.law",
+        cost: "Free",
+        isFree: true,
+        topics: ["Open Source", "Access to Justice", "Court Data", "Legal APIs", "Community Building"],
+        speakers: [{ name: "Mike Lissner", title: "Executive Director", organization: "Free Law Project" }],
+        cleCredits: null,
+        isFeatured: false,
+        isActive: true,
+      },
+    ];
+
+    await db.insert(events).values(seedData);
+    console.log(`Seeded ${seedData.length} events`);
   }
 }
 

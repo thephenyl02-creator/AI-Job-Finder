@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   LogOut, Settings, Compass, BarChart3, Bell, FileText, Crown, Search,
-  Wrench, Bookmark, LayoutDashboard, MoreHorizontal, Menu
+  Wrench, Bookmark, LayoutDashboard, MoreHorizontal, Menu, Calendar
 } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { Link, useLocation } from "wouter";
@@ -70,6 +70,7 @@ export function Header() {
 
   const isActive = (path: string) => location === path;
   const isJobsActive = isActive("/jobs") || isActive("/") || location.startsWith("/jobs/");
+  const isEventsActive = isActive("/events") || location.startsWith("/events/");
 
   return (
     <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border/40">
@@ -96,7 +97,7 @@ export function Header() {
                     variant="ghost"
                     size="sm"
                     className={`relative ${
-                      isActive("/dashboard") || isActive("/alerts")
+                      isActive("/dashboard") || isActive("/alerts") || isEventsActive
                         ? "text-foreground"
                         : "text-muted-foreground"
                     }`}
@@ -104,7 +105,7 @@ export function Header() {
                   >
                     <MoreHorizontal className="h-3.5 w-3.5 mr-1.5" />
                     More
-                    {(isActive("/dashboard") || isActive("/alerts")) && (
+                    {(isActive("/dashboard") || isActive("/alerts") || isEventsActive) && (
                       <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-primary rounded-full" />
                     )}
                   </Button>
@@ -126,6 +127,13 @@ export function Header() {
                     <Link href="/resume-builder" className="cursor-pointer" data-testid="link-resume-builder">
                       <Wrench className="mr-2 h-4 w-4" />
                       <span>Resume Builder</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link href="/events" className="cursor-pointer" data-testid="link-events">
+                      <Calendar className="mr-2 h-4 w-4" />
+                      <span>Events</span>
                     </Link>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -198,6 +206,10 @@ export function Header() {
                         <MobileNavItem href="/career-advisor" icon={Compass} label="Career Advisor" active={isActive("/career-advisor")} testId="link-career-advisor-mobile" />
                         <MobileNavItem href="/insights" icon={BarChart3} label="Market Insights" active={isActive("/insights")} testId="link-insights-mobile" />
                         <MobileNavItem href="/alerts" icon={Bell} label="Job Alerts" active={isActive("/alerts")} testId="link-alerts-mobile" />
+                      </MobileNavSection>
+
+                      <MobileNavSection label="Discover">
+                        <MobileNavItem href="/events" icon={Calendar} label="Events" active={isEventsActive} testId="link-events-mobile" />
                       </MobileNavSection>
 
                       <MobileNavSection label="Account">
@@ -290,6 +302,12 @@ export function Header() {
             </>
           ) : (
             <>
+              <Link href="/events">
+                <Button variant="ghost" size="sm" className={`hidden sm:inline-flex gap-1.5 ${isEventsActive ? "text-foreground" : "text-muted-foreground"}`} data-testid="link-events-public">
+                  <Calendar className="h-3.5 w-3.5" />
+                  Events
+                </Button>
+              </Link>
               <ThemeToggle />
               <Link href="/auth">
                 <Button data-testid="button-login">Sign In</Button>

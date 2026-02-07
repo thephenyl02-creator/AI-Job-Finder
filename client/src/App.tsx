@@ -26,6 +26,8 @@ import Pricing from "@/pages/pricing";
 import Terms from "@/pages/terms";
 import Privacy from "@/pages/privacy";
 import Dashboard from "@/pages/dashboard";
+import Events from "@/pages/events";
+import EventDetail from "@/pages/event-detail";
 import { AssistantWidget } from "@/components/assistant-widget";
 import { ExpiringJobsReminder } from "@/components/expiring-jobs-reminder";
 import { OnboardingDialog } from "@/components/onboarding-dialog";
@@ -66,6 +68,8 @@ function AppRouter() {
       <Route path="/resume-builder">{isAuthenticated ? <ResumeBuilder /> : <Landing />}</Route>
       <Route path="/saved-jobs">{isAuthenticated ? <SavedJobs /> : <Landing />}</Route>
       <Route path="/dashboard">{isAuthenticated ? <Dashboard /> : <Landing />}</Route>
+      <Route path="/events" component={Events} />
+      <Route path="/events/:id" component={EventDetail} />
       <Route path="/auth" component={Auth} />
       <Route path="/pricing" component={Pricing} />
       <Route path="/terms" component={Terms} />

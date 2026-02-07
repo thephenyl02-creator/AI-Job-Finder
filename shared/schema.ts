@@ -417,6 +417,55 @@ export const insertBuiltResumeSchema = createInsertSchema(builtResumes).omit({
 export type BuiltResume = typeof builtResumes.$inferSelect;
 export type InsertBuiltResume = z.infer<typeof insertBuiltResumeSchema>;
 
+export const EVENT_TYPES = ["conference", "seminar", "webinar", "workshop", "cle", "networking", "hackathon", "panel"] as const;
+export type EventType = typeof EVENT_TYPES[number];
+
+export const ATTENDANCE_TYPES = ["in-person", "virtual", "hybrid"] as const;
+export type AttendanceType = typeof ATTENDANCE_TYPES[number];
+
+export const events = pgTable("events", {
+  id: serial("id").primaryKey(),
+  title: varchar("title", { length: 500 }).notNull(),
+  organizer: varchar("organizer", { length: 255 }).notNull(),
+  organizerLogo: varchar("organizer_logo", { length: 500 }),
+  eventType: varchar("event_type", { length: 50 }).notNull(),
+  startDate: timestamp("start_date").notNull(),
+  endDate: timestamp("end_date"),
+  location: varchar("location", { length: 255 }),
+  attendanceType: varchar("attendance_type", { length: 50 }).notNull().default("in-person"),
+  virtualUrl: varchar("virtual_url", { length: 500 }),
+  description: text("description").notNull(),
+  registrationUrl: varchar("registration_url", { length: 500 }).notNull(),
+  cost: varchar("cost", { length: 100 }),
+  isFree: boolean("is_free").default(false),
+  topics: text("topics").array(),
+  speakers: jsonb("speakers"),
+  cleCredits: varchar("cle_credits", { length: 100 }),
+  isActive: boolean("is_active").default(true),
+  isFeatured: boolean("is_featured").default(false),
+  externalId: varchar("external_id", { length: 255 }),
+  source: varchar("source", { length: 50 }),
+  viewCount: integer("view_count").default(0),
+  registrationClickCount: integer("registration_click_count").default(0),
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const insertEventSchema = createInsertSchema(events).omit({
+  id: true,
+  viewCount: true,
+  registrationClickCount: true,
+  createdAt: true,
+});
+
+export type Event = typeof events.$inferSelect;
+export type InsertEvent = z.infer<typeof insertEventSchema>;
+
+export interface EventSpeaker {
+  name: string;
+  title?: string;
+  organization?: string;
+}
+
 export const APPLICATION_STATUSES = ["saved", "applied", "interviewing", "offer", "rejected"] as const;
 export type ApplicationStatus = typeof APPLICATION_STATUSES[number];
 

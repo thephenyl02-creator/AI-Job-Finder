@@ -114,6 +114,7 @@ export async function registerRoutes(
 
   await storage.seedJobs();
   await storage.seedJobCategories();
+  await storage.seedEvents();
 
   // Background re-categorization of jobs with invalid/old category names
   (async () => {
@@ -294,6 +295,118 @@ export async function registerRoutes(
       res.status(500).json({ error: "Failed to track click" });
     }
   });
+
+  // ============ Events Routes ============
+
+  app.get("/api/events", async (req, res) => {
+    try {
+      const filters: any = {};
+      if (req.query.eventType) filters.eventType = String(req.query.eventType);
+      if (req.query.attendanceType) filters.attendanceType = String(req.query.attendanceType);
+      if (req.query.isFree === "true") filters.isFree = true;
+      if (req.query.topic) filters.topic = String(req.query.topic);
+      if (req.query.upcoming === "true") filters.upcoming = true;
+
+      const eventsList = await storage.getEvents(filters);
+      res.json(eventsList);
+    } catch (error) {
+      console.error("Error fetching events:", error);
+      res.status(500).json({ error: "Failed to fetch events" });
+    }
+  });
+
+  app.get("/api/events/featured", async (req, res) => {
+    try {
+      const limit = req.query.limit ? parseInt(String(req.query.limit)) : 6;
+      const featuredEvents = await storage.getFeaturedEvents(limit);
+      res.json(featuredEvents);
+    } catch (error) {
+      console.error("Error fetching featured events:", error);
+      res.status(500).json({ error: "Failed to fetch featured events" });
+    }
+  });
+
+  app.get("/api/events/stats", async (req, res) => {
+    try {
+      const allEvents = await storage.getEvents();
+      const upcoming = allEvents.filter(e => new Date(e.startDate) >= new Date());
+      const types = new Set(allEvents.map(e => e.eventType));
+      const organizers = new Set(allEvents.map(e => e.organizer));
+      res.json({
+        totalEvents: allEvents.length,
+        upcomingEvents: upcoming.length,
+        eventTypes: types.size,
+        organizers: organizers.size,
+      });
+    } catch (error) {
+      console.error("Error fetching event stats:", error);
+      res.status(500).json({ error: "Failed to fetch event stats" });
+    }
+  });
+
+  app.get("/api/events/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id as string);
+      const event = await storage.getEvent(id);
+      if (!event) return res.status(404).json({ error: "Event not found" });
+      res.json(event);
+    } catch (error) {
+      console.error("Error fetching event:", error);
+      res.status(500).json({ error: "Failed to fetch event" });
+    }
+  });
+
+  app.post("/api/events/:id/register-click", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id as string);
+      await storage.trackRegistrationClick(id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error tracking registration click:", error);
+      res.status(500).json({ error: "Failed to track click" });
+    }
+  });
+
+  app.post("/api/admin/events", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      if (!(await storage.isUserAdmin(user?.id))) return res.status(403).json({ error: "Admin access required" });
+      const event = await storage.createEvent(req.body);
+      res.status(201).json(event);
+    } catch (error) {
+      console.error("Error creating event:", error);
+      res.status(500).json({ error: "Failed to create event" });
+    }
+  });
+
+  app.patch("/api/admin/events/:id", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      if (!(await storage.isUserAdmin(user?.id))) return res.status(403).json({ error: "Admin access required" });
+      const id = parseInt(req.params.id as string);
+      const updated = await storage.updateEvent(id, req.body);
+      if (!updated) return res.status(404).json({ error: "Event not found" });
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating event:", error);
+      res.status(500).json({ error: "Failed to update event" });
+    }
+  });
+
+  app.delete("/api/admin/events/:id", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      if (!(await storage.isUserAdmin(user?.id))) return res.status(403).json({ error: "Admin access required" });
+      const id = parseInt(req.params.id as string);
+      await storage.deleteEvent(id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting event:", error);
+      res.status(500).json({ error: "Failed to delete event" });
+    }
+  });
+
+  // ============ End Events Routes ============
 
   app.get("/api/search/suggestions", isAuthenticated, async (req, res) => {
     try {

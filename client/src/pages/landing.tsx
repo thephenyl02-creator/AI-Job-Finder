@@ -22,6 +22,9 @@ import {
   MapPin,
   Building2,
   Crown,
+  Calendar,
+  Globe,
+  Video,
 } from "lucide-react";
 import {
   ScrollReveal,
@@ -82,6 +85,11 @@ export default function Landing() {
     refetchInterval: 30000,
   });
 
+  const { data: featuredEvents } = useQuery<any[]>({
+    queryKey: ["/api/events/featured"],
+    refetchInterval: 60000,
+  });
+
   return (
     <div className="min-h-screen bg-background overflow-hidden">
       <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border/40">
@@ -95,6 +103,11 @@ export default function Landing() {
             </div>
           </Link>
           <div className="flex items-center gap-1 sm:gap-3">
+            <Link href="/events">
+              <Button variant="ghost" size="sm" className="text-muted-foreground min-h-[44px] hidden sm:inline-flex" data-testid="link-landing-events">
+                Events
+              </Button>
+            </Link>
             <Link href="/pricing">
               <Button variant="ghost" size="sm" className="text-muted-foreground min-h-[44px]" data-testid="link-landing-pricing">
                 Pricing
@@ -610,6 +623,107 @@ export default function Landing() {
             </ScrollReveal>
           </div>
         </section>
+
+        {featuredEvents && featuredEvents.length > 0 && (
+          <section className="border-t border-border/40" data-testid="events-section">
+            <div className="max-w-5xl mx-auto px-4 sm:px-6 py-20 sm:py-28">
+              <ScrollReveal>
+                <p className="text-sm font-medium text-muted-foreground tracking-wide uppercase mb-4">
+                  Keep learning
+                </p>
+                <h2 className="text-3xl sm:text-4xl font-serif font-medium text-foreground mb-4 tracking-tight">
+                  Conferences, seminars & workshops
+                </h2>
+                <p className="text-lg text-muted-foreground max-w-2xl mb-12">
+                  Stay connected to the legal tech community. Attend industry events, earn CLE credits, and build your network with the people shaping the future of law.
+                </p>
+              </ScrollReveal>
+
+              <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" staggerDelay={0.1}>
+                {featuredEvents.slice(0, 6).map((event: any) => {
+                  const startDate = new Date(event.startDate);
+                  const endDate = event.endDate ? new Date(event.endDate) : null;
+                  const sameDay = endDate && startDate.toDateString() === endDate.toDateString();
+
+                  const formatDate = () => {
+                    const month = startDate.toLocaleDateString("en-US", { month: "short" });
+                    const day = startDate.getDate();
+                    if (!endDate || sameDay) return `${month} ${day}, ${startDate.getFullYear()}`;
+                    if (startDate.getMonth() === endDate.getMonth()) {
+                      return `${month} ${day}-${endDate.getDate()}, ${startDate.getFullYear()}`;
+                    }
+                    return `${month} ${day} - ${endDate.toLocaleDateString("en-US", { month: "short" })} ${endDate.getDate()}, ${startDate.getFullYear()}`;
+                  };
+
+                  const typeLabel = event.eventType.charAt(0).toUpperCase() + event.eventType.slice(1);
+
+                  return (
+                    <StaggerItem key={event.id}>
+                      <Link href={`/events/${event.id}`}>
+                        <Card className="bg-background border-border/60 hover-elevate h-full cursor-pointer" data-testid={`event-card-${event.id}`}>
+                          <CardContent className="p-5">
+                            <div className="flex items-center gap-2 mb-3 flex-wrap">
+                              <Badge variant="secondary" className="text-[10px] no-default-hover-elevate no-default-active-elevate">
+                                {typeLabel === "Cle" ? "CLE" : typeLabel}
+                              </Badge>
+                              {event.attendanceType === "virtual" && (
+                                <Badge variant="outline" className="text-[10px] no-default-hover-elevate no-default-active-elevate">
+                                  <Video className="h-2.5 w-2.5 mr-0.5" />
+                                  Virtual
+                                </Badge>
+                              )}
+                              {event.attendanceType === "hybrid" && (
+                                <Badge variant="outline" className="text-[10px] no-default-hover-elevate no-default-active-elevate">
+                                  <Globe className="h-2.5 w-2.5 mr-0.5" />
+                                  Hybrid
+                                </Badge>
+                              )}
+                              {event.cleCredits && (
+                                <Badge variant="outline" className="text-[10px] no-default-hover-elevate no-default-active-elevate">
+                                  <GraduationCap className="h-2.5 w-2.5 mr-0.5" />
+                                  CLE
+                                </Badge>
+                              )}
+                            </div>
+                            <h3 className="font-semibold text-foreground text-sm mb-1.5 line-clamp-2 leading-snug">
+                              {event.title}
+                            </h3>
+                            <p className="text-xs text-muted-foreground mb-2">
+                              {event.organizer}
+                            </p>
+                            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                              <span className="flex items-center gap-1">
+                                <Calendar className="h-3 w-3" />
+                                {formatDate()}
+                              </span>
+                              {event.location && (
+                                <span className="flex items-center gap-1">
+                                  <MapPin className="h-3 w-3" />
+                                  {event.attendanceType === "virtual" ? "Online" : event.location.split(",")[0]}
+                                </span>
+                              )}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </Link>
+                    </StaggerItem>
+                  );
+                })}
+              </StaggerContainer>
+
+              <ScrollReveal delay={0.3}>
+                <div className="text-center mt-8">
+                  <Button variant="outline" asChild data-testid="button-browse-events">
+                    <Link href="/events">
+                      Browse All Events
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Link>
+                  </Button>
+                </div>
+              </ScrollReveal>
+            </div>
+          </section>
+        )}
 
         <section className="border-t border-border/40">
           <div className="max-w-5xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
