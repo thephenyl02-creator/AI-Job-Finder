@@ -27,7 +27,6 @@ import {
   FileText,
   Bookmark,
   Mail,
-  Upload,
 } from "lucide-react";
 
 function extractContactEmails(text: string | null | undefined): string[] {
@@ -649,17 +648,6 @@ export default function JobDetail() {
     enabled: isAuthenticated && !!jobId,
   });
 
-  const { data: resumeData } = useQuery<{ hasResume: boolean }>({
-    queryKey: ["/api/resume/check"],
-    queryFn: async () => {
-      const res = await fetch("/api/resume", { credentials: "include" });
-      if (!res.ok) return { hasResume: false };
-      const data = await res.json();
-      return { hasResume: !!data?.resumeFilename };
-    },
-    enabled: isAuthenticated,
-  });
-
   const handleApplyClick = async () => {
     if (!job) return;
     trackNow({ eventType: "apply_click", entityType: "job", entityId: String(job.id) });
@@ -832,30 +820,6 @@ export default function JobDetail() {
           </div>
         </ScrollReveal>
 
-        <Card className="bg-muted/30 border-border/50 mb-6" data-testid="card-resume-match">
-          <CardContent className="p-4 sm:p-5">
-            <div className="flex items-center justify-between gap-4 flex-wrap">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="w-10 h-10 rounded-md bg-background border border-border/60 flex items-center justify-center shrink-0">
-                  <Upload className="h-4 w-4 text-muted-foreground" />
-                </div>
-                <div className="min-w-0">
-                  <h3 className="font-semibold text-foreground text-sm" data-testid="text-resume-match-title">See how well you match this role</h3>
-                  <p className="text-xs text-muted-foreground" data-testid="text-resume-match-description">Upload your resume to get a personalized match score and gap analysis.</p>
-                </div>
-              </div>
-              <Button
-                variant="outline"
-                onClick={() => setLocation(`/resumes?jobId=${job.id}`)}
-                data-testid="button-upload-resume-match"
-              >
-                <Upload className="h-4 w-4 mr-2" />
-                Upload Resume
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
             {job.aiSummary && (
@@ -970,25 +934,6 @@ export default function JobDetail() {
           </div>
         </div>
 
-        {!resumeData?.hasResume && (
-          <Card className="mt-6">
-            <CardContent className="py-5 flex flex-col sm:flex-row items-center gap-4">
-              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                <Upload className="h-5 w-5 text-primary" />
-              </div>
-              <div className="flex-1 text-center sm:text-left">
-                <p className="font-medium text-foreground text-sm" data-testid="text-resume-prompt-title">See how well you match this role</p>
-                <p className="text-xs text-muted-foreground mt-0.5">Upload your resume to get a personalized match score and gap analysis.</p>
-              </div>
-              <Button asChild data-testid="button-upload-resume-prompt">
-                <Link href="/resumes">
-                  <Upload className="h-4 w-4 mr-2" />
-                  Upload Resume
-                </Link>
-              </Button>
-            </CardContent>
-          </Card>
-        )}
 
         {similarJobs.length > 0 && (
           <div className="mt-8" data-testid="section-similar-jobs">
