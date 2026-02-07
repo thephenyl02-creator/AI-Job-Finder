@@ -974,18 +974,18 @@ function DescriptionToolbar({ sections, openSections, setOpenSections, activeCat
   );
 }
 
-function DescriptionContent({ text, testId, compact, isPro, hasAiSummary }: { text?: string | null; testId: string; compact?: boolean; isPro?: boolean; hasAiSummary?: boolean }) {
+function DescriptionContent({ text, testId, compact, isPro, skipSections }: { text?: string | null; testId: string; compact?: boolean; isPro?: boolean; skipSections?: string[] }) {
   if (!text) return null;
 
   const cleanedText = useMemo(() => cleanDescription(text), [text]);
   const blocks = useMemo(() => parseTextIntoBlocks(cleanedText), [cleanedText]);
   const rawSections = useMemo(() => groupBlocksIntoSections(blocks), [blocks]);
   const sections = useMemo(() => {
-    if (hasAiSummary && rawSections.length > 1 && rawSections[0].heading === 'Overview') {
-      return rawSections.slice(1);
+    if (skipSections && skipSections.length > 0 && rawSections.length > 1) {
+      return rawSections.filter(s => !skipSections.includes(s.heading));
     }
     return rawSections;
-  }, [rawSections, hasAiSummary]);
+  }, [rawSections, skipSections]);
   const keyReqs = useMemo(() => isPro ? extractKeyRequirements(text) : null, [text, isPro]);
   const highlightCounts = useMemo(() => isPro ? countHighlightsByCategory(text) : {} as Record<HighlightCategory, number>, [text, isPro]);
   const readingTime = useMemo(() => isPro ? estimateReadingTime(cleanedText) : 0, [cleanedText, isPro]);
@@ -1111,39 +1111,76 @@ function DescriptionContent({ text, testId, compact, isPro, hasAiSummary }: { te
   );
 }
 
-function cleanSummary(text: string): string {
-  let cleaned = text.trim();
-  cleaned = cleaned.replace(/^(?:As (?:an?|the) [\w\s,/()-]+? at [\w\s&.'()-]+?,\s*(?:you(?:'ll| will)\s*)?)/i, '');
-  if (cleaned.length < 20) return text.trim();
-  if (cleaned.length > 0 && cleaned[0] !== cleaned[0].toUpperCase()) {
-    cleaned = cleaned[0].toUpperCase() + cleaned.slice(1);
+function extractSnapshot(description: string): { overview: string; responsibilities: string[]; extractedHeadings: string[] } {
+  const cleaned = cleanDescription(description);
+  const blocks = parseTextIntoBlocks(cleaned);
+  const sections = groupBlocksIntoSections(blocks);
+
+  let overview = '';
+  const responsibilities: string[] = [];
+  const extractedHeadings: string[] = [];
+
+  const overviewSection = sections.find(s => s.heading === 'Overview' || s.heading === 'About the Company');
+  if (overviewSection) {
+    const paragraphs = overviewSection.blocks.filter(b => b.type === 'paragraph');
+    const bullets = overviewSection.blocks.filter(b => b.type === 'bullet');
+    if (paragraphs.length > 0) {
+      overview = paragraphs[0].content;
+    } else if (bullets.length > 0) {
+      overview = bullets[0].content;
+    }
   }
-  return cleaned;
+
+  const RESP_HEADINGS = ['Responsibilities', 'Your Impact', 'Key Duties'];
+  const respSection = sections.find(s => RESP_HEADINGS.includes(s.heading) || /responsibilit|what you(?:'ll| will) do|your role|in this role|day.to.day|your impact|key duties/i.test(s.heading));
+  if (respSection) {
+    extractedHeadings.push(respSection.heading);
+    const bullets = respSection.blocks.filter(b => b.type === 'bullet');
+    const paras = respSection.blocks.filter(b => b.type === 'paragraph');
+    if (bullets.length > 0) {
+      for (const b of bullets.slice(0, 6)) {
+        responsibilities.push(b.content);
+      }
+    } else if (paras.length > 0) {
+      for (const p of paras.slice(0, 4)) {
+        const sentences = p.content.split(/(?<=[.!?])\s+(?=[A-Z])/).filter(s => s.trim().length > 10);
+        for (const s of sentences.slice(0, 3)) {
+          responsibilities.push(s);
+          if (responsibilities.length >= 6) break;
+        }
+        if (responsibilities.length >= 6) break;
+      }
+    }
+  }
+
+  if (overview) extractedHeadings.push('Overview');
+
+  return { overview, responsibilities, extractedHeadings };
 }
 
-function SummaryContent({ text, testId }: { text: string; testId: string }) {
-  const cleaned = cleanSummary(text);
-  const sentences = cleaned.split(/(?<=[.!?])\s+/).filter(s => s.trim().length > 0);
-
-  if (sentences.length <= 2) {
-    return (
-      <p className="text-foreground leading-relaxed" data-testid={testId}>
-        {cleaned}
-      </p>
-    );
-  }
+function JobSnapshot({ overview, responsibilities, testId }: { overview: string; responsibilities: string[]; testId: string }) {
+  if (!overview && responsibilities.length === 0) return null;
 
   return (
-    <div className="space-y-2 text-foreground leading-relaxed" data-testid={testId}>
-      <p>{sentences[0]}</p>
-      <div className="space-y-1.5">
-        {sentences.slice(1).map((s, i) => (
-          <div key={i} className="flex gap-2 pl-1">
-            <span className="text-muted-foreground shrink-0 mt-1.5 w-1.5 h-1.5 rounded-full bg-muted-foreground/40" />
-            <span>{s}</span>
+    <div className="space-y-4" data-testid={testId}>
+      {overview && (
+        <p className="text-foreground leading-relaxed" data-testid="text-snapshot-overview">
+          {overview}
+        </p>
+      )}
+      {responsibilities.length > 0 && (
+        <div>
+          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2.5">What You'll Do</h3>
+          <div className="space-y-2">
+            {responsibilities.map((item, i) => (
+              <div key={i} className="flex gap-2.5 pl-0.5" data-testid={`text-snapshot-resp-${i}`}>
+                <span className="shrink-0 mt-2 w-1.5 h-1.5 rounded-full bg-primary/40" />
+                <span className="text-foreground/90 leading-relaxed">{item}</span>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1384,6 +1421,11 @@ export default function JobDetail() {
     enabled: isAuthenticated && !!jobId,
   });
 
+  const snapshotData = useMemo(() => {
+    if (!job?.description) return { overview: '', responsibilities: [], extractedHeadings: [] };
+    return extractSnapshot(job.description);
+  }, [job?.description]);
+
   const handleApplyClick = async () => {
     if (!job) return;
     trackNow({ eventType: "apply_click", entityType: "job", entityId: String(job.id) });
@@ -1558,11 +1600,11 @@ export default function JobDetail() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
-            {job.aiSummary && (
+            {(snapshotData.overview || snapshotData.responsibilities.length > 0) && (
               <Card>
                 <CardContent className="pt-5 pb-5">
-                  <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Overview</h2>
-                  <SummaryContent text={job.aiSummary} testId="text-job-summary" />
+                  <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">At a Glance</h2>
+                  <JobSnapshot overview={snapshotData.overview} responsibilities={snapshotData.responsibilities} testId="snapshot-job" />
                 </CardContent>
               </Card>
             )}
@@ -1570,7 +1612,7 @@ export default function JobDetail() {
             <Card>
               <CardContent className="pt-5 pb-5">
                 <div className="mb-4">
-                  <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Job Description</h2>
+                  <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Full Details</h2>
                   {isPro && (
                     <div className="flex flex-wrap items-center gap-2.5 text-[10px] text-muted-foreground mt-2">
                       {(Object.entries(HIGHLIGHT_DOT_COLORS) as [HighlightCategory, string][]).map(([cat, dotColor]) => (
@@ -1582,7 +1624,7 @@ export default function JobDetail() {
                     </div>
                   )}
                 </div>
-                <DescriptionContent text={job.description} testId="text-job-description" isPro={isPro} hasAiSummary={!!job.aiSummary} />
+                <DescriptionContent text={job.description} testId="text-job-description" isPro={isPro} skipSections={snapshotData.extractedHeadings} />
               </CardContent>
             </Card>
 
