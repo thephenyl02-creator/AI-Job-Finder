@@ -77,23 +77,25 @@ function isLikelyHeading(text: string): boolean {
 
 const SECTION_HEADING_PATTERNS = [
   /(?:About (?:the |your |this )?(?:role|position|opportunity|company|team|us|job))/i,
-  /(?:About [A-Z][A-Za-z\s&.'()-]+?)(?=\s(?:We|Our|The|Founded|is a|is the|was|has been))/,
-  /(?:What you(?:'ll| will) (?:do|need|bring|be doing|work on))/i,
-  /(?:What we(?:'re| are) (?:looking for|seeking|offering))/i,
+  /(?:About [A-Z][A-Za-z\s&.'()\u2019-]+?)(?=\s(?:We|Our|The|Founded|is a|is the|was|has been))/,
+  /(?:What you['\u2019](?:ll| will) (?:do|need|bring|be doing|work on))/i,
+  /(?:What we['\u2019](?:re| are) (?:looking for|seeking|offering))/i,
   /(?:What we offer)/i,
   /(?:How you will [\w\s]+)/i,
-  /(?:Why (?:join us|work (?:here|with us|at)))/i,
+  /(?:Why (?:join us|work (?:here|with us|at)|[\w\s&.'()-]+))/i,
   /(?:(?:Key |Core )?(?:Responsibilities|Qualifications|Requirements|Skills|Competencies|Duties))/i,
   /(?:(?:Required|Preferred|Minimum|Desired|Basic|Nice.to.have) (?:Qualifications|Skills|Experience|Requirements))/i,
   /(?:(?:Benefits|Perks|Compensation|Salary|Pay)(?: (?:and|&) (?:Benefits|Perks|Compensation))?)/i,
   /(?:(?:Job |Position |Role )?(?:Summary|Overview|Description|Highlights))/i,
-  /(?:Who (?:you are|we are|you'll work with))/i,
+  /(?:Who (?:you are|we are|you['\u2019]ll work with))/i,
   /(?:(?:Your |Day.to.day |Daily )?(?:Impact|Responsibilities|Tasks))/i,
   /(?:(?:Equal |EEO |EOE )(?:Opportunity|Employment)[\w\s]*)/i,
   /(?:(?:Our |The )?(?:Mission|Vision|Culture|Values|Team))/i,
   /(?:(?:Education|Experience|Background)(?: (?:Requirements|Required))?)/i,
   /(?:In this role(?:,? you))/i,
   /(?:(?:Apply|How to apply|Application process|To apply))/i,
+  /(?:Nice to have)/i,
+  /(?:More than that,? we (?:offer|believe|provide))/i,
 ];
 
 function splitFlatTextIntoSections(text: string): string[] {
@@ -103,7 +105,11 @@ function splitFlatTextIntoSections(text: string): string[] {
     const global = new RegExp(pattern.source, pattern.flags.includes('i') ? 'gi' : 'g');
     let m;
     while ((m = global.exec(text)) !== null) {
-      if (m.index === 0 || /[.!?]\s*$/.test(text.slice(Math.max(0, m.index - 3), m.index)) || m.index < 3) {
+      const before = text.slice(Math.max(0, m.index - 3), m.index);
+      const isAfterPunctuation = /[.!?]\s*$/.test(before);
+      const isAfterNewline = /\n\s*$/.test(before);
+      const isAllCaps = m[0] === m[0].toUpperCase() && /[A-Z]/.test(m[0]);
+      if (m.index === 0 || isAfterPunctuation || isAfterNewline || m.index < 3 || isAllCaps) {
         markers.push({ index: m.index, match: m[0] });
       }
     }
@@ -330,43 +336,105 @@ function stripBoilerplate(text: string): string {
   return cleaned.trim();
 }
 
-function splitInlineBullets(text: string): string {
+function normalizeFlatText(text: string): string {
+  const newlineCount = (text.match(/\n/g) || []).length;
+  if (newlineCount > 5) return splitInlineBulletsInLines(text);
+
+  let result = text;
+
+  result = result.replace(/\s+([A-Z][A-Z\s\u2019'&\-:]{3,60}?)(?=\s+(?:[A-Z][a-z]|[-\u2013\u2022*]|You['\u2019]|We['\u2019]|Our |The |This |While ))/g, (full, heading, offset) => {
+    const words = heading.trim().split(/\s+/);
+    const allCaps = words.every((w: string) => w === w.toUpperCase() && /[A-Z]/.test(w));
+    if (allCaps && words.length >= 2) {
+      return '\n\n' + heading.trim() + '\n';
+    }
+    return full;
+  });
+
+  result = result.replace(/([.!?:])(\s+)- /g, '$1\n- ');
+
+  result = result.replace(/ - (?=[A-Z][a-z])/g, '\n- ');
+
+  const inlineHeadings = /\s+((?:What you (?:will be doing|bring|[''\u2019]ll do|need)|What we (?:offer|[''\u2019]re looking for)|Who you are|Nice to have|How you will|Your (?:impact|responsibilities)|The (?:role|opportunity|impact)):?\s*)/gi;
+  result = result.replace(inlineHeadings, '\n\n$1\n');
+
+  const lines = result.split('\n');
+  const output: string[] = [];
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) { output.push(''); continue; }
+
+    if (trimmed.length < 200) { output.push(trimmed); continue; }
+
+    const split = splitLongFlatLine(trimmed);
+    output.push(split);
+  }
+
+  result = output.join('\n');
+  result = result.replace(/\n{3,}/g, '\n\n');
+
+  return result.trim();
+}
+
+function splitLongFlatLine(line: string): string {
+  const sep = /\s+[-\u2013]\s+/g;
+  const matches: Array<{ index: number; len: number }> = [];
+  let m: RegExpExecArray | null;
+  while ((m = sep.exec(line)) !== null) {
+    matches.push({ index: m.index, len: m[0].length });
+  }
+
+  if (matches.length >= 2) {
+    const segments: string[] = [];
+    let lastEnd = 0;
+    for (const mt of matches) {
+      const chunk = line.slice(lastEnd, mt.index).trim();
+      if (chunk) segments.push(chunk);
+      lastEnd = mt.index + mt.len;
+    }
+    const tail = line.slice(lastEnd).trim();
+    if (tail) segments.push(tail);
+
+    const bulletLike = segments.filter(s => s.length > 15);
+    if (bulletLike.length >= 3) {
+      const parts: string[] = [];
+      const firstIsLabel = segments[0].length < 60 && /[:.]$/.test(segments[0].trim());
+      const startIdx = firstIsLabel ? 1 : 0;
+      if (firstIsLabel) parts.push(segments[0]);
+      for (let i = startIdx; i < segments.length; i++) {
+        parts.push('- ' + segments[i]);
+      }
+      return parts.join('\n');
+    }
+  }
+
+  const sentenceSplits: string[] = [];
+  const sentences = line.split(/(?<=[.!?])\s+(?=[A-Z])/);
+  let buffer = '';
+  for (const s of sentences) {
+    if (buffer && buffer.length > 120) {
+      sentenceSplits.push(buffer);
+      buffer = s;
+    } else {
+      buffer = buffer ? buffer + ' ' + s : s;
+    }
+  }
+  if (buffer) sentenceSplits.push(buffer);
+
+  if (sentenceSplits.length > 1) {
+    return sentenceSplits.join('\n\n');
+  }
+
+  return line;
+}
+
+function splitInlineBulletsInLines(text: string): string {
   return text.replace(/^(.*?)$/gm, (line) => {
     const trimmed = line.trim();
     if (!trimmed || trimmed.length < 80) return line;
     if (/^[-\u2013\u2022*]\s/.test(trimmed) && trimmed.length < 200) return line;
-
-    const sep = /\s+[-\u2013]\s+/g;
-    const matches: Array<{ index: number; len: number }> = [];
-    let m: RegExpExecArray | null;
-    while ((m = sep.exec(trimmed)) !== null) {
-      matches.push({ index: m.index, len: m[0].length });
-    }
-    if (matches.length < 2) return line;
-
-    const segments: string[] = [];
-    let lastEnd = 0;
-    for (const mt of matches) {
-      const chunk = trimmed.slice(lastEnd, mt.index).trim();
-      if (chunk) segments.push(chunk);
-      lastEnd = mt.index + mt.len;
-    }
-    const tail = trimmed.slice(lastEnd).trim();
-    if (tail) segments.push(tail);
-
-    const bulletLike = segments.filter(s => s.length > 15);
-    if (bulletLike.length < 3) return line;
-
-    const firstBulletIdx = segments[0].length < 15 ? 1 : 0;
-    const lines: string[] = [];
-
-    if (firstBulletIdx === 1 && segments[0]) {
-      lines.push(segments[0]);
-    }
-    for (let i = firstBulletIdx; i < segments.length; i++) {
-      lines.push('- ' + segments[i]);
-    }
-    return lines.join('\n');
+    return splitLongFlatLine(trimmed);
   });
 }
 
@@ -382,7 +450,7 @@ function cleanDescription(text: string): string {
     cleaned = stripBoilerplate(cleaned);
     iterations++;
   }
-  cleaned = splitInlineBullets(cleaned);
+  cleaned = normalizeFlatText(cleaned);
   return cleaned;
 }
 
