@@ -1,3 +1,24 @@
+export function fixMissingSentenceSpaces(text: string): string {
+  const abbreviations = /^(?:Mr|Ms|Mrs|Dr|Jr|Sr|St|vs|etc|ie|eg|al|Prof|Gen|Gov|Rev|Hon|Inc|Ltd|Co|Corp|LLC|Vol|No|Fig|Eq|Dept|Est|Assn|Intl)$/i;
+  let result = '';
+  let lastIndex = 0;
+  const re = /(\w)([.!?])([A-Z][a-z])/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    const matchPos = m.index;
+    const lookback = text.slice(Math.max(0, matchPos - 12), matchPos + 1);
+    const lastWord = lookback.match(/([A-Za-z]+)$/)?.[1] || '';
+    if (lastWord.length === 1 || abbreviations.test(lastWord)) {
+      continue;
+    }
+    result += text.slice(lastIndex, matchPos) + m[1] + m[2] + ' ' + m[3];
+    lastIndex = matchPos + m[0].length;
+  }
+  result += text.slice(lastIndex);
+  result = result.replace(/([.!?])(\()([A-Z])/g, '$1 $2$3');
+  return result;
+}
+
 export function stripHtml(html: string): string {
   let decoded = html
     .replace(/&nbsp;/g, ' ')
@@ -19,6 +40,7 @@ export function stripHtml(html: string): string {
   decoded = decoded.replace(/[ \t]+/g, ' ');
   decoded = decoded.replace(/\n /g, '\n');
   decoded = decoded.replace(/\n{3,}/g, '\n\n');
+  decoded = fixMissingSentenceSpaces(decoded);
   return decoded.trim();
 }
 
