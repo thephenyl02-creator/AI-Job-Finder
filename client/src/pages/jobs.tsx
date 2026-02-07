@@ -622,40 +622,6 @@ export default function Jobs() {
                   </Button>
                 ))}
 
-                <span className="text-muted-foreground/30 mx-0.5 hidden sm:inline">|</span>
-
-                {isUploadingResume && (
-                  <span className="text-xs text-muted-foreground flex items-center gap-1.5" data-testid="text-resume-uploading">
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                    Analyzing resume...
-                  </span>
-                )}
-
-                {resumeData?.hasResume && !isUploadingResume && (
-                  <span className="flex items-center gap-1.5 text-xs text-muted-foreground" data-testid="text-resume-active">
-                    <CheckCircle2 className="h-3 w-3 text-green-600" />
-                    Personalized
-                    <Button variant="ghost" size="sm" onClick={() => resumeFileInputRef.current?.click()} className="text-xs h-auto py-0.5 px-1.5" data-testid="button-update-resume">
-                      Update
-                    </Button>
-                    <button onClick={handleRemoveResume} className="text-muted-foreground/50 hover:text-muted-foreground" data-testid="button-remove-resume">
-                      <X className="h-3 w-3" />
-                    </button>
-                  </span>
-                )}
-
-                {!resumeData?.hasResume && !isUploadingResume && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-1.5 text-xs"
-                    onClick={() => resumeFileInputRef.current?.click()}
-                    data-testid="button-upload-resume"
-                  >
-                    <Upload className="h-3.5 w-3.5" />
-                    Upload resume for better matches
-                  </Button>
-                )}
               </div>
             )}
             {smartQuery.trim() && guidedStep === "idle" && !isSearching && !searchResults && (
