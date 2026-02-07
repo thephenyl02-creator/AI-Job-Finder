@@ -7,7 +7,6 @@ import { Footer } from "@/components/footer";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { ScrollReveal } from "@/components/animations";
 import { useAuth } from "@/hooks/use-auth";
 import { useSubscription } from "@/hooks/use-subscription";
@@ -30,8 +29,6 @@ import {
   FileText,
   Bookmark,
   Mail,
-  ChevronDown,
-  ChevronUp,
   Award,
   GraduationCap,
   Clock,
@@ -40,17 +37,9 @@ import {
   Gift,
   Star,
   Zap,
-  Search,
-  X,
-  ChevronsUpDown,
-  BookOpen,
   Scale,
-  Shield,
   Handshake,
   Hash,
-  Eye,
-  EyeOff,
-  Crown,
 } from "lucide-react";
 
 function extractContactEmails(text: string | null | undefined): string[] {
@@ -391,15 +380,6 @@ const HIGHLIGHT_CATEGORIES: Record<HighlightCategory, { label: string; color: st
   softskill: { label: 'Soft Skills', color: 'bg-sky-100 dark:bg-sky-900/30 text-sky-800 dark:text-sky-300', icon: Handshake },
 };
 
-const HIGHLIGHT_DOT_COLORS: Record<HighlightCategory, string> = {
-  experience: 'bg-amber-300 dark:bg-amber-700',
-  certification: 'bg-purple-300 dark:bg-purple-700',
-  education: 'bg-blue-300 dark:bg-blue-700',
-  tool: 'bg-emerald-300 dark:bg-emerald-700',
-  legal: 'bg-rose-300 dark:bg-rose-700',
-  compensation: 'bg-teal-300 dark:bg-teal-700',
-  softskill: 'bg-sky-300 dark:bg-sky-700',
-};
 
 const HIGHLIGHT_PATTERNS: { pattern: RegExp; type: HighlightCategory }[] = [
   { pattern: /\b(\d+)\+?\s*(?:[-–]?\s*\d+\s*)?(?:years?|yrs?)\b(?:\s+(?:of\s+)?(?:experience|exp))?/gi, type: 'experience' },
@@ -465,22 +445,6 @@ function renderHighlightedContent(content: string, activeCategories: Set<Highlig
   return [emailified];
 }
 
-function countHighlightsByCategory(text: string): Map<HighlightCategory, number> {
-  const counts = new Map<HighlightCategory, number>();
-  for (const { pattern, type } of HIGHLIGHT_PATTERNS) {
-    const re = new RegExp(pattern.source, pattern.flags);
-    const matches = text.match(re);
-    if (matches) {
-      counts.set(type, (counts.get(type) || 0) + matches.length);
-    }
-  }
-  return counts;
-}
-
-function estimateReadingTime(text: string): number {
-  const words = text.split(/\s+/).length;
-  return Math.max(1, Math.ceil(words / 230));
-}
 
 interface DescriptionSection {
   heading: string;
@@ -544,435 +508,6 @@ function groupBlocksIntoSections(blocks: Block[]): DescriptionSection[] {
   return sections;
 }
 
-interface KeyRequirements {
-  experience: string[];
-  certifications: string[];
-  tools: string[];
-  legalDomains: string[];
-  compensation: string[];
-  mustHave: string[];
-  niceToHave: string[];
-}
-
-function extractKeyRequirements(text: string): KeyRequirements {
-  const experience: string[] = [];
-  const certifications: string[] = [];
-  const tools: string[] = [];
-  const legalDomains: string[] = [];
-  const compensation: string[] = [];
-  const mustHave: string[] = [];
-  const niceToHave: string[] = [];
-  const seen = new Set<string>();
-
-  const expMatches = text.matchAll(/\b(\d+)\+?\s*(?:[-–]?\s*\d+\s*)?(?:years?|yrs?)\b(?:\s+(?:of\s+)?(?:[\w\s]+?)(?=\.|,|\n|$))?/gi);
-  for (const m of expMatches) {
-    const val = m[0].trim().replace(/[.,]$/, '');
-    if (val.length < 60 && !seen.has(val.toLowerCase())) {
-      experience.push(val);
-      seen.add(val.toLowerCase());
-    }
-    if (experience.length >= 3) break;
-  }
-
-  const certMatches = text.matchAll(/\b(JD|J\.D\.|Juris Doctor|Bar (?:Admission|License)|Licensed Attorney|LL\.?M\.?|LL\.?B\.?|CIPP|CIPM|CIPT|PMP|CISSP|Certified[\w\s]{3,30}?(?=\.|,|\n|$))\b/gi);
-  for (const m of certMatches) {
-    const val = m[0].trim().replace(/[.,]$/, '');
-    if (!seen.has(val.toLowerCase())) {
-      certifications.push(val);
-      seen.add(val.toLowerCase());
-    }
-    if (certifications.length >= 4) break;
-  }
-
-  const toolMatches = text.matchAll(/\b(Python|JavaScript|TypeScript|SQL|React|Node\.?js|AWS|Azure|Salesforce|Relativity|Everlaw|Reveal|DISCO|NetDocuments|iManage|Clio|Luminance|Kira|Diligent|LexisNexis|Westlaw|Tableau|Power BI|Docker|Kubernetes|GraphQL|Jira|Figma)\b/gi);
-  for (const m of toolMatches) {
-    const val = m[0].trim();
-    if (!seen.has(val.toLowerCase())) {
-      tools.push(val);
-      seen.add(val.toLowerCase());
-    }
-    if (tools.length >= 6) break;
-  }
-
-  const legalMatches = text.matchAll(/\b(e-?discovery|ediscovery|litigation|compliance|regulatory|GDPR|CCPA|privacy|intellectual property|patent|trademark|copyright|M&A|due diligence|corporate governance|contract (?:management|review|drafting)|CLM|antitrust|securities|SOX|HIPAA|AML|KYC|data protection|cyber\s*security|information governance|records management|legal hold|privilege review|document review)\b/gi);
-  for (const m of legalMatches) {
-    const val = m[0].trim();
-    if (!seen.has(val.toLowerCase())) {
-      legalDomains.push(val);
-      seen.add(val.toLowerCase());
-    }
-    if (legalDomains.length >= 5) break;
-  }
-
-  const salaryMatch = text.match(/\$\s*\d[\d,]*(?:\.\d{2})?(?:\s*[-–]\s*\$?\s*\d[\d,]*(?:\.\d{2})?)?\s*(?:per\s+(?:hour|year|annum|month)|\/(?:hr|yr|mo)|annually|K\b)?/);
-  if (salaryMatch) {
-    compensation.push(salaryMatch[0].trim());
-  }
-
-  const lines = text.split('\n');
-  let inRequired = false;
-  let inPreferred = false;
-  for (const line of lines) {
-    const t = line.trim();
-    if (/(?:required|must.have|minimum|qualifications|requirements)/i.test(t) && t.length < 80) {
-      inRequired = true;
-      inPreferred = false;
-      continue;
-    }
-    if (/(?:preferred|nice.to.have|plus|bonus|desired|ideal)/i.test(t) && t.length < 80) {
-      inPreferred = true;
-      inRequired = false;
-      continue;
-    }
-    if (/(?:benefits|perks|compensation|about (?:us|the)|what we offer)/i.test(t) && t.length < 80) {
-      inRequired = false;
-      inPreferred = false;
-      continue;
-    }
-    const bulletContent = t.replace(/^[-•*]\s+|^\d+[.)]\s+/, '');
-    if (bulletContent && bulletContent.length > 10 && bulletContent.length < 200 && /^[-•*]\s|^\d+[.)]\s/.test(t)) {
-      if (inRequired && mustHave.length < 5) mustHave.push(bulletContent);
-      if (inPreferred && niceToHave.length < 4) niceToHave.push(bulletContent);
-    }
-  }
-
-  return { experience, certifications, tools, legalDomains, compensation, mustHave, niceToHave };
-}
-
-function CollapsibleSection({ section, isOpen, onToggle, activeCategories, searchQuery }: {
-  section: DescriptionSection;
-  isOpen: boolean;
-  onToggle: () => void;
-  activeCategories: Set<HighlightCategory>;
-  searchQuery: string;
-}) {
-  const Icon = section.icon;
-  const sectionId = section.heading.toLowerCase().replace(/\s+/g, '-');
-
-  const highlightSearch = useCallback((content: (string | JSX.Element)[]): (string | JSX.Element)[] => {
-    if (!searchQuery) return content;
-    const escapedQuery = searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const applySearch = (node: string | JSX.Element, pi: number): (string | JSX.Element)[] => {
-      if (typeof node === 'string') {
-        const regex = new RegExp(`(${escapedQuery})`, 'gi');
-        const segments = node.split(regex);
-        if (segments.length === 1) return [node];
-        return segments.map((seg, si) => {
-          const testRe = new RegExp(`(${escapedQuery})`, 'gi');
-          return testRe.test(seg)
-            ? <mark key={`search-${pi}-${si}`} className="bg-yellow-300 dark:bg-yellow-600 text-foreground px-0.5 rounded font-semibold ring-2 ring-yellow-400/50 dark:ring-yellow-500/50">{seg}</mark>
-            : seg;
-        });
-      }
-      if (node && typeof node === 'object' && 'props' in node && node.props?.children) {
-        const children = typeof node.props.children === 'string'
-          ? applySearch(node.props.children, pi)
-          : Array.isArray(node.props.children)
-            ? node.props.children.flatMap((c: string | JSX.Element, ci: number) => applySearch(c, pi * 100 + ci))
-            : [node.props.children];
-        const { children: _, ...restProps } = node.props;
-        return [{ ...node, props: { ...restProps, children } } as JSX.Element];
-      }
-      return [node];
-    };
-    return content.flatMap((part, pi) => applySearch(part, pi));
-  }, [searchQuery]);
-
-  const renderBlock = useCallback((block: Block, i: number) => {
-    const highlighted = renderHighlightedContent(block.content, activeCategories);
-    const withSearch = highlightSearch(Array.isArray(highlighted) ? highlighted : [highlighted]);
-    if (block.type === 'bullet') {
-      return (
-        <div key={i} className="flex gap-2.5 pl-2 py-0.5">
-          <span className="shrink-0 mt-2 w-1.5 h-1.5 rounded-full bg-foreground/30" />
-          <span className="text-foreground/85 leading-relaxed">{withSearch}</span>
-        </div>
-      );
-    }
-    return (
-      <p key={i} className="text-foreground/85 leading-relaxed pl-2">
-        {withSearch}
-      </p>
-    );
-  }, [activeCategories, highlightSearch]);
-
-  return (
-    <div className="border-b border-border/50 last:border-b-0" id={`section-${sectionId}`} data-testid={`section-${sectionId}`}>
-      <button
-        onClick={onToggle}
-        className="flex items-center justify-between w-full py-3 px-1 text-left group"
-        data-testid={`button-toggle-${sectionId}`}
-      >
-        <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-md bg-muted flex items-center justify-center shrink-0">
-            <Icon className="h-3.5 w-3.5 text-muted-foreground" />
-          </div>
-          <span className="font-medium text-sm text-foreground">{section.heading}</span>
-        </div>
-        {isOpen ? (
-          <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" />
-        ) : (
-          <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
-        )}
-      </button>
-      {isOpen && (
-        <div className="pb-5 px-1 space-y-2.5 text-sm leading-relaxed">
-          {section.blocks.map(renderBlock)}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function KeyRequirementsBar({ keyReqs }: { keyReqs: KeyRequirements }) {
-  const hasBasic = keyReqs.experience.length > 0 || keyReqs.certifications.length > 0 || keyReqs.tools.length > 0 || keyReqs.legalDomains.length > 0;
-  const hasDetailed = keyReqs.mustHave.length > 0 || keyReqs.niceToHave.length > 0 || keyReqs.compensation.length > 0;
-  if (!hasBasic && !hasDetailed) return null;
-
-  return (
-    <div className="space-y-3 pb-4 mb-2 border-b border-border/50" data-testid="key-requirements-bar">
-      {hasBasic && (
-        <div className="flex flex-wrap gap-2">
-          {keyReqs.experience.map((e, i) => (
-            <Badge key={`exp-${i}`} variant="secondary" className="bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800 text-xs">
-              <Clock className="h-3 w-3 mr-1" />{e}
-            </Badge>
-          ))}
-          {keyReqs.certifications.map((c, i) => (
-            <Badge key={`cert-${i}`} variant="secondary" className="bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 border-purple-200 dark:border-purple-800 text-xs">
-              <Award className="h-3 w-3 mr-1" />{c}
-            </Badge>
-          ))}
-          {keyReqs.legalDomains.map((d, i) => (
-            <Badge key={`legal-${i}`} variant="secondary" className="bg-rose-100 dark:bg-rose-900/30 text-rose-800 dark:text-rose-300 border-rose-200 dark:border-rose-800 text-xs">
-              <Scale className="h-3 w-3 mr-1" />{d}
-            </Badge>
-          ))}
-          {keyReqs.tools.map((t, i) => (
-            <Badge key={`tool-${i}`} variant="secondary" className="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800 text-xs">
-              <Hash className="h-3 w-3 mr-1" />{t}
-            </Badge>
-          ))}
-          {keyReqs.compensation.map((c, i) => (
-            <Badge key={`comp-${i}`} variant="secondary" className="bg-teal-100 dark:bg-teal-900/30 text-teal-800 dark:text-teal-300 border-teal-200 dark:border-teal-800 text-xs">
-              <DollarSign className="h-3 w-3 mr-1" />{c}
-            </Badge>
-          ))}
-        </div>
-      )}
-      {(keyReqs.mustHave.length > 0 || keyReqs.niceToHave.length > 0) && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {keyReqs.mustHave.length > 0 && (
-            <div>
-              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 flex items-center gap-1">
-                <Shield className="h-3 w-3" /> Must-Have
-              </p>
-              <div className="space-y-1">
-                {keyReqs.mustHave.map((item, i) => (
-                  <div key={i} className="flex gap-2 text-xs text-foreground/90">
-                    <CheckCircle2 className="h-3.5 w-3.5 mt-0.5 shrink-0 text-green-500 dark:text-green-400" />
-                    <span>{item}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-          {keyReqs.niceToHave.length > 0 && (
-            <div>
-              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 flex items-center gap-1">
-                <Star className="h-3 w-3" /> Nice-to-Have
-              </p>
-              <div className="space-y-1">
-                {keyReqs.niceToHave.map((item, i) => (
-                  <div key={i} className="flex gap-2 text-xs text-muted-foreground">
-                    <Star className="h-3.5 w-3.5 mt-0.5 shrink-0 text-amber-400" />
-                    <span>{item}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function DescriptionToolbar({ sections, openSections, setOpenSections, activeCategories, setActiveCategories, searchQuery, setSearchQuery, highlightCounts, readingTime }: {
-  sections: DescriptionSection[];
-  openSections: Set<number>;
-  setOpenSections: (s: Set<number>) => void;
-  activeCategories: Set<HighlightCategory>;
-  setActiveCategories: (s: Set<HighlightCategory>) => void;
-  searchQuery: string;
-  setSearchQuery: (s: string) => void;
-  highlightCounts: Map<HighlightCategory, number>;
-  readingTime: number;
-}) {
-  const [showSearch, setShowSearch] = useState(false);
-  const [showFilters, setShowFilters] = useState(false);
-  const searchInputRef = useRef<HTMLInputElement>(null);
-  const allOpen = sections.length > 0 && openSections.size === sections.length;
-
-  useEffect(() => {
-    if (showSearch && searchInputRef.current) {
-      searchInputRef.current.focus();
-    }
-  }, [showSearch]);
-
-  const toggleCategory = (cat: HighlightCategory) => {
-    const next = new Set(activeCategories);
-    if (next.has(cat)) {
-      next.delete(cat);
-    } else {
-      next.add(cat);
-    }
-    setActiveCategories(next);
-  };
-
-  const allCategories = Object.keys(HIGHLIGHT_CATEGORIES) as HighlightCategory[];
-  const allActive = allCategories.every(c => activeCategories.has(c));
-
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between gap-2 flex-wrap">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-xs text-muted-foreground flex items-center gap-1">
-            <BookOpen className="h-3 w-3" />
-            {readingTime} min read
-          </span>
-          {sections.length > 1 && (
-            <>
-              <span className="text-border">|</span>
-              <div className="flex items-center gap-1 flex-wrap">
-                {sections.map((s, i) => {
-                  const SIcon = s.icon;
-                  return (
-                    <button
-                      key={i}
-                      onClick={() => {
-                        const el = document.getElementById(`section-${s.heading.toLowerCase().replace(/\s+/g, '-')}`);
-                        if (el) {
-                          if (!openSections.has(i)) {
-                            const next = new Set(openSections);
-                            next.add(i);
-                            setOpenSections(next);
-                          }
-                          setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
-                        }
-                      }}
-                      className="text-[10px] text-muted-foreground hover:text-foreground transition-colors flex items-center gap-0.5 px-1.5 py-0.5 rounded-md hover:bg-muted"
-                      data-testid={`button-jump-${s.heading.toLowerCase().replace(/\s+/g, '-')}`}
-                    >
-                      <SIcon className="h-2.5 w-2.5" />
-                      <span className="hidden sm:inline">{s.heading}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </>
-          )}
-        </div>
-
-        <div className="flex items-center gap-1">
-          {sections.length > 1 && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => {
-                if (allOpen) {
-                  setOpenSections(new Set([0]));
-                } else {
-                  setOpenSections(new Set(sections.map((_, i) => i)));
-                }
-              }}
-              className="h-7 w-7"
-              data-testid="button-toggle-all-sections"
-            >
-              <ChevronsUpDown className="h-3.5 w-3.5" />
-            </Button>
-          )}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setShowFilters(!showFilters)}
-            className={`h-7 w-7 ${showFilters ? 'bg-muted' : ''}`}
-            data-testid="button-toggle-filters"
-          >
-            {allActive ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => {
-              if (showSearch) {
-                setSearchQuery('');
-                setShowSearch(false);
-              } else {
-                setShowSearch(true);
-              }
-            }}
-            className={`h-7 w-7 ${showSearch ? 'bg-muted' : ''}`}
-            data-testid="button-toggle-search"
-          >
-            <Search className="h-3.5 w-3.5" />
-          </Button>
-        </div>
-      </div>
-
-      {showSearch && (
-        <div className="flex items-center gap-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-            <Input
-              ref={searchInputRef}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search in description..."
-              className="h-8 pl-8 pr-8 text-xs"
-              data-testid="input-search-description"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="absolute right-2 top-1/2 -translate-y-1/2"
-              >
-                <X className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" />
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-
-      {showFilters && (
-        <div className="flex flex-wrap gap-1.5" data-testid="highlight-filters">
-          {allCategories.map(cat => {
-            const info = HIGHLIGHT_CATEGORIES[cat];
-            const count = highlightCounts.get(cat) || 0;
-            const isActive = activeCategories.has(cat);
-            const CatIcon = info.icon;
-            return (
-              <button
-                key={cat}
-                onClick={() => toggleCategory(cat)}
-                className={`flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium transition-all border ${
-                  isActive
-                    ? `${info.color} border-current/20`
-                    : 'bg-muted/50 text-muted-foreground border-transparent opacity-50'
-                }`}
-                data-testid={`button-filter-${cat}`}
-              >
-                <CatIcon className="h-3 w-3" />
-                {info.label}
-                {count > 0 && <span className="ml-0.5 opacity-70">{count}</span>}
-              </button>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
 
 function DescriptionContent({ text, testId, compact, isPro, skipSections }: { text?: string | null; testId: string; compact?: boolean; isPro?: boolean; skipSections?: string[] }) {
   if (!text) return null;
@@ -986,127 +521,70 @@ function DescriptionContent({ text, testId, compact, isPro, skipSections }: { te
     }
     return rawSections;
   }, [rawSections, skipSections]);
-  const keyReqs = useMemo(() => isPro ? extractKeyRequirements(text) : null, [text, isPro]);
-  const highlightCounts = useMemo(() => isPro ? countHighlightsByCategory(text) : {} as Record<HighlightCategory, number>, [text, isPro]);
-  const readingTime = useMemo(() => isPro ? estimateReadingTime(cleanedText) : 0, [cleanedText, isPro]);
 
-  const freeCategories = useMemo(() => new Set<HighlightCategory>(['experience']), []);
-  const allCategories = useMemo(() => new Set(Object.keys(HIGHLIGHT_CATEGORIES) as HighlightCategory[]), []);
-  const [activeCategories, setActiveCategories] = useState<Set<HighlightCategory>>(isPro ? allCategories : freeCategories);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [openSections, setOpenSections] = useState<Set<number>>(() => {
-    return new Set(sections.map((_, i) => i));
-  });
+  const activeCategories = useMemo(() => {
+    if (isPro) return new Set(Object.keys(HIGHLIGHT_CATEGORIES) as HighlightCategory[]);
+    return new Set<HighlightCategory>(['experience']);
+  }, [isPro]);
 
-  const toggleSection = useCallback((index: number) => {
-    setOpenSections(prev => {
-      const next = new Set(prev);
-      if (next.has(index)) {
-        next.delete(index);
-      } else {
-        next.add(index);
-      }
-      return next;
-    });
-  }, []);
+  const renderBlock = useCallback((block: Block, i: number) => {
+    const highlighted = renderHighlightedContent(block.content, activeCategories);
+    if (block.type === 'bullet') {
+      return (
+        <li key={i} className="flex gap-2.5 text-[0.9rem] text-foreground/85 leading-relaxed" data-testid={`bullet-${i}`}>
+          <span className="shrink-0 mt-[0.55rem] w-1.5 h-1.5 rounded-full bg-foreground/25" />
+          <span>{highlighted}</span>
+        </li>
+      );
+    }
+    return (
+      <p key={i} className="text-[0.9rem] text-foreground/85 leading-relaxed" data-testid={`para-${i}`}>
+        {highlighted}
+      </p>
+    );
+  }, [activeCategories]);
 
   if (compact) {
     return (
-      <div className="max-w-none text-foreground leading-relaxed space-y-2" data-testid={testId}>
-        {blocks.slice(0, 15).map((block, i) => {
+      <div className="space-y-2" data-testid={testId}>
+        {blocks.slice(0, 12).map((block, i) => {
           if (block.type === 'heading') {
-            return (
-              <p key={i} className="font-medium text-foreground text-sm pt-2 first:pt-0">
-                {renderHighlightedContent(block.content, activeCategories)}
-              </p>
-            );
+            return <p key={i} className="font-medium text-foreground text-sm pt-2 first:pt-0">{block.content}</p>;
           }
           if (block.type === 'bullet') {
             return (
-              <div key={i} className="flex gap-2 pl-1 py-0.5 text-sm">
-                <span className="text-muted-foreground/60 shrink-0 mt-1.5 w-1.5 h-1.5 rounded-full bg-foreground/25" />
-                <span className="text-foreground/90">{renderHighlightedContent(block.content, activeCategories)}</span>
+              <div key={i} className="flex gap-2 pl-1 text-sm">
+                <span className="shrink-0 mt-[0.45rem] w-1.5 h-1.5 rounded-full bg-foreground/25" />
+                <span className="text-foreground/90">{block.content}</span>
               </div>
             );
           }
-          return <p key={i} className="text-sm text-foreground/90">{renderHighlightedContent(block.content, activeCategories)}</p>;
+          return <p key={i} className="text-sm text-foreground/90">{block.content}</p>;
         })}
-        {blocks.length > 15 && (
-          <p className="text-xs text-muted-foreground italic">...and {blocks.length - 15} more items</p>
-        )}
       </div>
     );
   }
 
   if (sections.length <= 1) {
     return (
-      <div className="max-w-none text-foreground leading-relaxed" data-testid={testId}>
-        {isPro && keyReqs && <KeyRequirementsBar keyReqs={keyReqs} />}
-        {isPro && (
-          <DescriptionToolbar
-            sections={sections}
-            openSections={openSections}
-            setOpenSections={setOpenSections}
-            activeCategories={activeCategories}
-            setActiveCategories={setActiveCategories}
-            searchQuery={searchQuery}
-            setSearchQuery={setSearchQuery}
-            highlightCounts={highlightCounts}
-            readingTime={readingTime}
-          />
-        )}
-        <div className="space-y-3 mt-3">
-          {blocks.map((block, i) => {
-            if (block.type === 'heading') {
-              return (
-                <p key={i} className="font-semibold text-foreground pt-4 first:pt-0 text-[0.94rem]">
-                  {renderHighlightedContent(block.content, activeCategories)}
-                </p>
-              );
-            }
-            if (block.type === 'bullet') {
-              return (
-                <div key={i} className="flex gap-2.5 pl-2 py-0.5">
-                  <span className="shrink-0 mt-2 w-1.5 h-1.5 rounded-full bg-foreground/30" />
-                  <span className="text-foreground/85 leading-relaxed">{renderHighlightedContent(block.content, activeCategories)}</span>
-                </div>
-              );
-            }
-            return <p key={i} className="text-foreground/85 leading-relaxed">{renderHighlightedContent(block.content, activeCategories)}</p>;
-          })}
-        </div>
+      <div className="space-y-3" data-testid={testId}>
+        {blocks.map(renderBlock)}
       </div>
     );
   }
 
   return (
-    <div className="max-w-none" data-testid={testId}>
-      {isPro && keyReqs && <KeyRequirementsBar keyReqs={keyReqs} />}
-      {isPro && (
-        <DescriptionToolbar
-          sections={sections}
-          openSections={openSections}
-          setOpenSections={setOpenSections}
-          activeCategories={activeCategories}
-          setActiveCategories={setActiveCategories}
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          highlightCounts={highlightCounts}
-          readingTime={readingTime}
-        />
-      )}
-      <div className="mt-2">
-        {sections.map((section, i) => (
-          <CollapsibleSection
-            key={`${section.heading}-${i}`}
-            section={section}
-            isOpen={openSections.has(i)}
-            onToggle={() => toggleSection(i)}
-            activeCategories={activeCategories}
-            searchQuery={isPro ? searchQuery : ''}
-          />
-        ))}
-      </div>
+    <div className="space-y-6" data-testid={testId}>
+      {sections.map((section, si) => (
+        <div key={`${section.heading}-${si}`} data-testid={`section-${section.heading.toLowerCase().replace(/\s+/g, '-')}`}>
+          <h3 className="text-sm font-semibold text-foreground mb-3 pb-1.5 border-b border-border/40">
+            {section.heading}
+          </h3>
+          <div className="space-y-2">
+            {section.blocks.map((block, i) => renderBlock(block, si * 100 + i))}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -1611,19 +1089,6 @@ export default function JobDetail() {
 
             <Card>
               <CardContent className="pt-5 pb-5">
-                <div className="mb-4">
-                  <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Full Details</h2>
-                  {isPro && (
-                    <div className="flex flex-wrap items-center gap-2.5 text-[10px] text-muted-foreground mt-2">
-                      {(Object.entries(HIGHLIGHT_DOT_COLORS) as [HighlightCategory, string][]).map(([cat, dotColor]) => (
-                        <span key={cat} className="flex items-center gap-1">
-                          <span className={`w-2 h-2 rounded-sm ${dotColor}`} />
-                          {HIGHLIGHT_CATEGORIES[cat].label}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
                 <DescriptionContent text={job.description} testId="text-job-description" isPro={isPro} skipSections={snapshotData.extractedHeadings} />
               </CardContent>
             </Card>
