@@ -7,7 +7,6 @@ import { Footer } from "@/components/footer";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { ScrollReveal } from "@/components/animations";
 import { useAuth } from "@/hooks/use-auth";
 import { useSubscription } from "@/hooks/use-subscription";
 import { useActivityTracker } from "@/hooks/use-activity-tracker";
@@ -23,7 +22,6 @@ import {
   Briefcase,
   DollarSign,
   Loader2,
-  CheckCircle2,
   MessageCircle,
   Send,
   FileText,
@@ -43,7 +41,6 @@ import {
   ChevronDown,
   ChevronUp,
   TrendingUp,
-  Globe,
 } from "lucide-react";
 
 function extractContactEmails(text: string | null | undefined): string[] {
@@ -976,7 +973,7 @@ export default function JobDetail() {
   });
 
 
-  const [showFullDescription, setShowFullDescription] = useState(false);
+  const [showFullDescription, setShowFullDescription] = useState(true);
 
   const formatSalary = (min?: number | null, max?: number | null) => {
     if (!min && !max) return null;
@@ -996,28 +993,6 @@ export default function JobDetail() {
     [job?.description, job?.requirements]
   );
 
-  const experienceLabel = useMemo(() => {
-    if (job?.experienceMin && job?.experienceMax) return `${job.experienceMin}–${job.experienceMax} years`;
-    if (job?.experienceMin) return `${job.experienceMin}+ years`;
-    if (job?.experienceMax) return `Up to ${job.experienceMax} years`;
-    return null;
-  }, [job?.experienceMin, job?.experienceMax]);
-
-  const locationTypeLabel = useMemo(() => {
-    if (!job?.locationType) return null;
-    if (job.locationType === 'remote') return 'Remote';
-    if (job.locationType === 'hybrid') return 'Hybrid';
-    return 'On-site';
-  }, [job?.locationType]);
-
-  const quickFacts = useMemo(() => {
-    const facts: { icon: typeof DollarSign; label: string; value: string; color: string }[] = [];
-    if (salary) facts.push({ icon: DollarSign, label: 'Compensation', value: salary, color: 'text-green-600 dark:text-green-400' });
-    if (experienceLabel) facts.push({ icon: Briefcase, label: 'Experience', value: experienceLabel, color: 'text-blue-600 dark:text-blue-400' });
-    if (locationTypeLabel) facts.push({ icon: Globe, label: 'Work Style', value: locationTypeLabel, color: 'text-purple-600 dark:text-purple-400' });
-    if (job?.seniorityLevel) facts.push({ icon: TrendingUp, label: 'Level', value: job.seniorityLevel, color: 'text-amber-600 dark:text-amber-400' });
-    return facts;
-  }, [salary, experienceLabel, locationTypeLabel, job?.seniorityLevel]);
 
   const handleApplyClick = async () => {
     if (!job) return;
@@ -1071,228 +1046,183 @@ export default function JobDetail() {
           variant="ghost"
           size="sm"
           onClick={() => setLocation("/jobs")}
-          className="mb-6"
+          className="mb-5 text-muted-foreground"
           data-testid="button-back-jobs"
         >
-          <ArrowLeft className="h-4 w-4 mr-2" />
+          <ArrowLeft className="h-4 w-4 mr-1.5" />
           Back to Jobs
         </Button>
 
-        <ScrollReveal>
-          <div className="mb-8">
-            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-4 mb-3">
-                  {job.companyLogo && (
-                    <img
-                      src={job.companyLogo}
-                      alt={`${job.company} logo`}
-                      className="w-12 h-12 rounded-lg object-contain bg-muted p-1.5"
-                      onError={(e) => (e.currentTarget.style.display = "none")}
-                    />
-                  )}
-                  <div>
-                    <h1
-                      className="text-2xl sm:text-3xl font-serif font-medium text-foreground tracking-tight"
-                      data-testid="text-job-detail-title"
-                    >
-                      {job.title}
-                    </h1>
-                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5">
-                      <span className="flex items-center gap-1.5 text-muted-foreground text-sm">
-                        <Building2 className="h-3.5 w-3.5" />
-                        <span className="font-medium" data-testid="text-job-detail-company">{job.company}</span>
-                      </span>
-                      {job.location && (
-                        <span className="flex items-center gap-1.5 text-muted-foreground text-sm">
-                          <MapPin className="h-3.5 w-3.5" />
-                          <span data-testid="text-job-detail-location">{job.location}</span>
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap gap-2 mt-3">
-                  {job.roleCategory && (
-                    <Badge variant="outline" data-testid="badge-category">
-                      {job.roleCategory}
-                    </Badge>
-                  )}
-                  {job.roleSubcategory && (
-                    <Badge variant="outline" data-testid="badge-subcategory">
-                      {job.roleSubcategory}
-                    </Badge>
-                  )}
-                  {job.locationType && (
-                    <Badge variant="secondary" className={
-                      job.locationType === 'remote'
-                        ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800'
-                        : job.locationType === 'hybrid'
-                        ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800'
-                        : 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 border-orange-200 dark:border-orange-800'
-                    } data-testid="badge-location-type">
-                      {locationTypeLabel}
-                    </Badge>
-                  )}
-                  {job.roleType && (
-                    <Badge variant="outline">{job.roleType}</Badge>
-                  )}
-                </div>
-              </div>
-
-              <div className="shrink-0 flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => saveJobMutation.mutate()}
-                  disabled={saveJobMutation.isPending}
-                  data-testid="button-save-job-detail"
-                  className={jobIsSaved ? "text-primary" : "text-muted-foreground"}
-                >
-                  <Bookmark className={`h-5 w-5 ${jobIsSaved ? "fill-current" : ""}`} />
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setLocation(`/resume-builder?jobId=${job.id}`)}
-                  data-testid="button-optimize-resume"
-                >
-                  <FileText className="h-4 w-4 mr-2" />
-                  Optimize Resume
-                </Button>
-              </div>
-            </div>
+        <div className="flex items-start justify-between gap-4 mb-6">
+          <h1
+            className="text-2xl sm:text-3xl font-serif font-medium text-foreground tracking-tight"
+            data-testid="text-job-detail-title"
+          >
+            {job.title}
+          </h1>
+          <div className="shrink-0 flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => saveJobMutation.mutate()}
+              disabled={saveJobMutation.isPending}
+              data-testid="button-save-job-detail"
+              className={jobIsSaved ? "text-primary" : "text-muted-foreground"}
+            >
+              <Bookmark className={`h-5 w-5 ${jobIsSaved ? "fill-current" : ""}`} />
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setLocation(`/resume-builder?jobId=${job.id}`)}
+              data-testid="button-optimize-resume"
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              Optimize Resume
+            </Button>
           </div>
-        </ScrollReveal>
+        </div>
 
-        <div className="space-y-6">
+        <div className="flex flex-wrap items-center gap-x-1 text-muted-foreground text-sm mb-3">
+          <span className="flex items-center gap-1.5">
+            <Building2 className="h-3.5 w-3.5" />
+            <span className="font-medium" data-testid="text-job-detail-company">{job.company}</span>
+          </span>
+          {job.location && (
+            <>
+              <span className="mx-1.5">·</span>
+              <span className="flex items-center gap-1.5">
+                <MapPin className="h-3.5 w-3.5" />
+                <span data-testid="text-job-detail-location">{job.location}</span>
+              </span>
+            </>
+          )}
+        </div>
+
+        <div className="flex flex-wrap gap-2 mb-8">
+          {job.roleCategory && (
+            <Badge variant="secondary" data-testid="badge-category">
+              {job.roleCategory}
+            </Badge>
+          )}
+          {job.roleSubcategory && (
+            <Badge variant="secondary" data-testid="badge-subcategory">
+              {job.roleSubcategory}
+            </Badge>
+          )}
+        </div>
+
+        <div className="space-y-5">
 
           {job.aiSummary && (
-            <Card>
-              <CardContent className="pt-6 pb-6 px-6">
-                <p className="text-[0.95rem] text-foreground leading-relaxed" data-testid="text-ai-summary">
-                  {job.aiSummary}
-                </p>
-              </CardContent>
-            </Card>
+            <div className="border border-border/60 rounded-md p-5" data-testid="section-ai-summary">
+              <p className="text-[0.9rem] text-foreground/85 leading-relaxed" data-testid="text-ai-summary">
+                {job.aiSummary}
+              </p>
+            </div>
           )}
 
-          {quickFacts.length > 0 && (
-            <div className={`grid gap-3 ${quickFacts.length === 1 ? 'grid-cols-1' : quickFacts.length === 2 ? 'grid-cols-2' : quickFacts.length === 3 ? 'grid-cols-3' : 'grid-cols-2 sm:grid-cols-4'}`} data-testid="section-quick-facts">
-              {quickFacts.map((fact, i) => (
-                <Card key={i}>
+          {(salary || job.seniorityLevel) && (
+            <div className="grid grid-cols-2 gap-3" data-testid="section-quick-facts">
+              {salary && (
+                <Card>
+                  <CardContent className="p-4">
+                    <p className="text-xs text-muted-foreground mb-1">Compensation</p>
+                    <p className="text-sm font-semibold text-foreground" data-testid="text-fact-compensation">{salary}</p>
+                  </CardContent>
+                </Card>
+              )}
+              {job.seniorityLevel && (
+                <Card>
                   <CardContent className="p-4 flex items-center gap-3">
-                    <div className={`shrink-0 ${fact.color}`}>
-                      <fact.icon className="h-5 w-5" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-xs text-muted-foreground">{fact.label}</p>
-                      <p className="text-sm font-semibold text-foreground truncate" data-testid={`text-fact-${fact.label.toLowerCase().replace(/\s+/g, '-')}`}>{fact.value}</p>
+                    <TrendingUp className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <div>
+                      <p className="text-sm font-semibold text-foreground" data-testid="text-fact-level">{job.seniorityLevel}</p>
                     </div>
                   </CardContent>
                 </Card>
-              ))}
+              )}
             </div>
           )}
 
           {job.keySkills && job.keySkills.length > 0 && (
-            <Card>
-              <CardContent className="pt-5 pb-5 px-6">
-                <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Skills & Expertise Required</h2>
-                <div className="flex flex-wrap gap-2">
-                  {job.keySkills.map((skill, i) => (
-                    <Badge key={i} variant="secondary" data-testid={`badge-skill-${i}`}>
-                      <CheckCircle2 className="h-3 w-3 mr-1.5" />
-                      {skill}
-                    </Badge>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {job.requirements && (
-            <Card>
-              <CardContent className="pt-5 pb-5 px-6">
-                <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Requirements</h2>
-                <DescriptionContent text={job.requirements} testId="text-job-requirements" isPro={isPro} />
-              </CardContent>
-            </Card>
-          )}
-
-          {contactEmails.length > 0 && (
-            <Card>
-              <CardContent className="pt-5 pb-5 px-6">
-                <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Contact</h2>
-                <div className="flex flex-wrap gap-3">
-                  {contactEmails.map((email) => (
-                    <a
-                      key={email}
-                      href={`mailto:${email}`}
-                      className="flex items-center gap-1.5 text-sm text-foreground hover:underline"
-                      data-testid={`link-contact-email-${email.replace(/[@.]/g, '-')}`}
-                    >
-                      <Mail className="h-3.5 w-3.5 text-muted-foreground" />
-                      {email}
-                    </a>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+            <div data-testid="section-skills">
+              <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Skills & Expertise Required</h2>
+              <div className="flex flex-wrap gap-2">
+                {job.keySkills.map((skill, i) => (
+                  <Badge key={i} variant="outline" data-testid={`badge-skill-${i}`}>
+                    {skill}
+                  </Badge>
+                ))}
+              </div>
+            </div>
           )}
 
           {job.description && (
-            <Card>
-              <CardContent className="pt-5 pb-5 px-6">
-                {(job.description || '').length > 500 ? (
-                  <>
-                    <button
-                      onClick={() => setShowFullDescription(!showFullDescription)}
-                      className="flex items-center justify-between w-full text-left group"
-                      data-testid="button-toggle-full-description"
-                    >
-                      <div>
-                        <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Full Job Description</h2>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          {showFullDescription ? 'Collapse to see the brief' : 'Expand to read the complete posting'}
-                        </p>
-                      </div>
-                      {showFullDescription ? (
-                        <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" />
-                      ) : (
-                        <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
-                      )}
-                    </button>
-                    {showFullDescription && (
-                      <div className="mt-4 pt-4 border-t border-border/40">
-                        <DescriptionContent text={job.description} testId="text-job-description" isPro={isPro} />
-                      </div>
-                    )}
-                  </>
+            <div data-testid="section-full-description">
+              <button
+                onClick={() => setShowFullDescription(!showFullDescription)}
+                className="flex items-center justify-between w-full text-left mb-3"
+                data-testid="button-toggle-full-description"
+              >
+                <div>
+                  <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Full Job Description</h2>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {showFullDescription ? 'Collapse to see the brief' : 'Expand to read the complete posting'}
+                  </p>
+                </div>
+                {showFullDescription ? (
+                  <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" />
                 ) : (
-                  <>
-                    <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Job Description</h2>
-                    <DescriptionContent text={job.description} testId="text-job-description" isPro={isPro} />
-                  </>
+                  <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
                 )}
-              </CardContent>
-            </Card>
+              </button>
+              {showFullDescription && (
+                <div className="border-t border-border/40 pt-4">
+                  <DescriptionContent text={job.description} testId="text-job-description" isPro={isPro} />
+                </div>
+              )}
+            </div>
           )}
 
-          <div className="flex flex-col sm:flex-row items-center gap-3 py-2">
-            <Button
-              size="lg"
-              onClick={handleApplyClick}
-              className="w-full sm:w-auto"
-              data-testid="button-apply-detail"
-            >
-              <ExternalLink className="h-4 w-4 mr-2" />
-              Read Full JD & Apply
-            </Button>
-            <p className="text-xs text-muted-foreground">
-              You'll be taken to the company's careers page to read the complete posting and submit your application.
-            </p>
-          </div>
+          {job.requirements && (
+            <div data-testid="section-requirements">
+              <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Requirements</h2>
+              <DescriptionContent text={job.requirements} testId="text-job-requirements" isPro={isPro} />
+            </div>
+          )}
+
+          {contactEmails.length > 0 && (
+            <div className="flex flex-wrap gap-3" data-testid="section-contact-emails">
+              {contactEmails.map((email) => (
+                <a
+                  key={email}
+                  href={`mailto:${email}`}
+                  className="flex items-center gap-1.5 text-sm text-foreground hover:underline"
+                  data-testid={`link-contact-email-${email.replace(/[@.]/g, '-')}`}
+                >
+                  <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+                  {email}
+                </a>
+              ))}
+            </div>
+          )}
+
+          <Card data-testid="section-apply-cta">
+            <CardContent className="p-4 flex flex-col sm:flex-row items-center gap-3">
+              <Button
+                size="lg"
+                onClick={handleApplyClick}
+                className="w-full sm:w-auto"
+                data-testid="button-apply-detail"
+              >
+                <ExternalLink className="h-4 w-4 mr-2" />
+                Read Full JD & Apply
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                You'll be taken to the company's careers page to read the complete posting and submit your application.
+              </p>
+            </CardContent>
+          </Card>
 
           <JobChat jobId={jobId || ""} />
 
