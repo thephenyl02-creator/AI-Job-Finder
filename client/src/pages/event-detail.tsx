@@ -1,6 +1,8 @@
+import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { usePageTitle } from "@/hooks/use-page-title";
 import { useParams } from "wouter";
+import { useActivityTracker } from "@/hooks/use-activity-tracker";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { ScrollReveal } from "@/components/animations";
@@ -114,6 +116,7 @@ function EventDetailSkeleton() {
 export default function EventDetail() {
   const { id } = useParams<{ id: string }>();
   const { toast } = useToast();
+  const { track } = useActivityTracker();
 
   const { data: event, isLoading, error } = useQuery<Event>({
     queryKey: ["/api/events", id],
@@ -121,6 +124,13 @@ export default function EventDetail() {
   });
 
   usePageTitle(event?.title ? event.title : "Event Details");
+
+  useEffect(() => {
+    if (id) {
+      track({ eventType: "page_view", pagePath: `/events/${id}` });
+      track({ eventType: "event_view", entityType: "event", entityId: id, pagePath: `/events/${id}` });
+    }
+  }, [id]);
 
   const handleRegisterClick = async () => {
     if (!event) return;

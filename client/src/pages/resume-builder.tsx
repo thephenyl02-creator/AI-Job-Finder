@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { usePageTitle } from "@/hooks/use-page-title";
+import { useActivityTracker } from "@/hooks/use-activity-tracker";
 import { useLocation } from "wouter";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
@@ -1646,7 +1647,10 @@ export default function ResumeBuilder() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const { isPro, isLoading: subLoading } = useSubscription();
   const { toast } = useToast();
+  const { track } = useActivityTracker();
   const [, navigate] = useLocation();
+
+  useEffect(() => { track({ eventType: "page_view", pagePath: "/resume-builder" }); }, []);
 
   const [editingId, setEditingId] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);

@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { usePageTitle } from "@/hooks/use-page-title";
+import { useActivityTracker } from "@/hooks/use-activity-tracker";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { ScrollReveal } from "@/components/animations";
@@ -107,6 +108,9 @@ function EventCardSkeleton() {
 
 export default function Events() {
   usePageTitle("Events");
+  const { track } = useActivityTracker();
+
+  useEffect(() => { track({ eventType: "page_view", pagePath: "/events" }); }, []);
 
   const [eventType, setEventType] = useState<string>("all");
   const [attendanceType, setAttendanceType] = useState<string>("all");

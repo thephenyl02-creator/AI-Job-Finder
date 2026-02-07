@@ -172,7 +172,7 @@ export default function AdminAnalyticsPage() {
   const { data: engagement, isLoading: loadingEngagement } = useQuery<EngagementData>({
     queryKey: ["/api/admin/analytics/engagement", engagementDays],
     queryFn: async () => {
-      const res = await fetch(`/api/admin/analytics/engagement?days=${engagementDays}`);
+      const res = await fetch(`/api/admin/analytics/engagement?days=${engagementDays}`, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch");
       return res.json();
     },

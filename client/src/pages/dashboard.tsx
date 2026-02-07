@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { usePageTitle } from "@/hooks/use-page-title";
+import { useActivityTracker } from "@/hooks/use-activity-tracker";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -221,7 +222,10 @@ function DashboardSkeleton() {
 
 export default function DashboardPage() {
   usePageTitle("My Dashboard");
+  const { track } = useActivityTracker();
   const [timeRange, setTimeRange] = useState("30");
+
+  useEffect(() => { track({ eventType: "page_view", pagePath: "/dashboard" }); }, []);
 
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
 
