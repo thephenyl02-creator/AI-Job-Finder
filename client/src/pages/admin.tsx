@@ -703,7 +703,13 @@ export default function AdminPage() {
                 Scrape legal tech jobs from career websites
               </p>
             </div>
-            <div className="ml-auto">
+            <div className="ml-auto flex items-center gap-2">
+              <Link href="/admin/scraper">
+                <Button variant="outline" data-testid="link-scraper-dashboard">
+                  <Activity className="h-4 w-4 mr-2" />
+                  Scraper Autopilot
+                </Button>
+              </Link>
               <Link href="/admin/analytics">
                 <Button variant="outline" data-testid="link-analytics">
                   <BarChart3 className="h-4 w-4 mr-2" />

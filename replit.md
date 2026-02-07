@@ -72,6 +72,9 @@ A freemium SaaS job search platform specifically designed for legal professional
 - **Lever Description Fix**: Lever scrapers use HTML description (with paragraphs/lists) instead of `descriptionPlain` (flat text) for better formatting.
 - **Freshness Tracking**: `lastScrapedAt` timestamp on jobs tracks when each job was last refreshed by a scraper.
 - **Client-Side Normalization**: `job-detail.tsx` contains `normalizeFlatText()` which fixes remaining flat-text descriptions at render time (ALL-CAPS heading detection, inline bullet splitting, sentence-boundary paragraphing).
+- **Autopilot Pipeline**: The scheduled scraper (`runScheduledScrape`) runs a 7-phase pipeline: (1) Scrape sources with retry, (2) Smart upsert to DB, (3) Stale job detection, (4) AI categorization of uncategorized jobs, (5) Alert matching for new jobs, (6) Link validation, (7) Run recording to `scrape_runs` table.
+- **Scrape Run Tracking**: `scrape_runs` table records every run with timestamps, duration, counts (found/inserted/updated/categorized/alerts), source details, errors, and trigger source (scheduler/manual).
+- **Admin Dashboard**: `/admin/scraper` page shows real-time scraper status, run history, health metrics, source breakdown, cumulative stats, and manual controls (start/stop/run-now).
 
 ## External Dependencies
 

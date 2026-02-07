@@ -22,6 +22,7 @@ import Resumes from "@/pages/resumes";
 import ResumeBuilder from "@/pages/resume-builder";
 import SavedJobs from "@/pages/saved-jobs";
 import AdminAnalytics from "@/pages/admin-analytics";
+import AdminScraper from "@/pages/admin-scraper";
 import Pricing from "@/pages/pricing";
 import Terms from "@/pages/terms";
 import Privacy from "@/pages/privacy";
@@ -61,6 +62,7 @@ function AppRouter() {
       <Route path="/jobs/:id">{isAuthenticated ? <JobDetail /> : <Landing />}</Route>
       <Route path="/admin">{isAuthenticated ? <Admin /> : <Landing />}</Route>
       <Route path="/admin/analytics">{isAuthenticated ? <AdminAnalytics /> : <Landing />}</Route>
+      <Route path="/admin/scraper">{isAuthenticated ? <AdminScraper /> : <Landing />}</Route>
       <Route path="/career-advisor">{isAuthenticated ? <CareerAdvisor /> : <Landing />}</Route>
       <Route path="/insights">{isAuthenticated ? <Insights /> : <Landing />}</Route>
       <Route path="/alerts">{isAuthenticated ? <Alerts /> : <Landing />}</Route>

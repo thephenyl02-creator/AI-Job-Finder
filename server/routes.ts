@@ -1656,8 +1656,8 @@ Be specific and actionable. Focus on legal tech industry keywords and ATS best p
         try {
           let existing = await storage.getJobByExternalId(result.job.externalId!);
           if (!existing && result.job.applyUrl) {
-            const { jobs: allJobs } = await storage.getJobs({ limit: 5000 });
-            existing = allJobs.find((j: any) => j.applyUrl === result.job!.applyUrl) || null;
+            const allJobs = await storage.getJobs();
+            existing = allJobs.find((j: any) => j.applyUrl === result.job!.applyUrl) || undefined;
           }
           if (existing) {
             await storage.updateJob(existing.id, result.job);
@@ -2611,6 +2611,21 @@ Be specific and actionable. Focus on legal tech industry keywords and ATS best p
     }
   });
 
+  // Get scrape run history
+  app.get("/api/admin/scraper/runs", isAuthenticated, async (req, res) => {
+    if (!(await isAdminCheck(req))) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    try {
+      const limit = parseInt(req.query.limit as string) || 50;
+      const runs = await storage.getScrapeRuns(limit);
+      res.json(runs);
+    } catch (error) {
+      console.error("Error getting scrape runs:", error);
+      res.status(500).json({ error: "Failed to get scrape runs" });
+    }
+  });
+
   // Start/stop scheduler
   app.post("/api/admin/scheduler/:action", isAuthenticated, async (req, res) => {
     if (!(await isAdminCheck(req))) {
@@ -2627,7 +2642,7 @@ Be specific and actionable. Focus on legal tech industry keywords and ATS best p
       res.json({ success: true, message: 'Scheduler stopped', running: false });
     } else if (action === 'run-now') {
       res.json({ success: true, message: 'Scrape started in background' });
-      runScheduledScrape().catch(err => console.error('Background scrape failed:', err));
+      runScheduledScrape('manual').catch(err => console.error('Background scrape failed:', err));
     } else {
       res.status(400).json({ error: 'Invalid action. Use start, stop, or run-now' });
     }
@@ -3560,7 +3575,7 @@ ${platformContext}`;
       const reply = completion.choices[0]?.message?.content || "I'm sorry, I couldn't generate a response. Please try again.";
 
       if (userId) {
-        storage.createActivity({
+        storage.logActivity({
           userId,
           eventType: 'assistant_chat',
           entityType: 'chat',

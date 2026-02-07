@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { jobs, users, userPreferences, jobCategories, jobSubmissions, jobAlerts, notifications, resumes, builtResumes, userActivities, userPersonas, savedJobs, jobApplications, events, type Job, type InsertJob, type User, type UserPreferences, type InsertUserPreferences, type ResumeExtractedData, type JobCategory, type JobSubmission, type InsertJobSubmission, type JobAlert, type InsertJobAlert, type Notification, type InsertNotification, type Resume, type InsertResume, type BuiltResume, type InsertBuiltResume, type UserActivity, type InsertUserActivity, type UserPersona, type InsertUserPersona, type SavedJob, type InsertSavedJob, type JobApplication, type InsertJobApplication, type JobApplicationWithJob, type Event, type InsertEvent, JOB_TAXONOMY } from "@shared/schema";
+import { jobs, users, userPreferences, jobCategories, jobSubmissions, jobAlerts, notifications, resumes, builtResumes, userActivities, userPersonas, savedJobs, jobApplications, events, scrapeRuns, type Job, type InsertJob, type User, type UserPreferences, type InsertUserPreferences, type ResumeExtractedData, type JobCategory, type JobSubmission, type InsertJobSubmission, type JobAlert, type InsertJobAlert, type Notification, type InsertNotification, type Resume, type InsertResume, type BuiltResume, type InsertBuiltResume, type UserActivity, type InsertUserActivity, type UserPersona, type InsertUserPersona, type SavedJob, type InsertSavedJob, type JobApplication, type InsertJobApplication, type JobApplicationWithJob, type Event, type InsertEvent, type ScrapeRun, type InsertScrapeRun, JOB_TAXONOMY } from "@shared/schema";
 import { eq, desc, and, sql, inArray, lt, gte, count } from "drizzle-orm";
 
 export interface IStorage {
@@ -117,6 +117,11 @@ export interface IStorage {
   getSavedJobCount(userId: string): Promise<number>;
   getDailyAssistantChatCount(userId: string): Promise<number>;
   deactivatePastEvents(): Promise<number>;
+  // Scrape Runs
+  createScrapeRun(run: InsertScrapeRun): Promise<ScrapeRun>;
+  updateScrapeRun(id: number, data: Partial<InsertScrapeRun>): Promise<ScrapeRun | undefined>;
+  getScrapeRuns(limit?: number): Promise<ScrapeRun[]>;
+  getLatestScrapeRun(): Promise<ScrapeRun | undefined>;
 }
 
 class DatabaseStorage implements IStorage {
@@ -2112,6 +2117,28 @@ class DatabaseStorage implements IStorage {
         lt(events.endDate, now)
       ));
     return result.rowCount || 0;
+  }
+
+  async createScrapeRun(run: InsertScrapeRun): Promise<ScrapeRun> {
+    const [created] = await db.insert(scrapeRuns).values(run).returning();
+    return created;
+  }
+
+  async updateScrapeRun(id: number, data: Partial<InsertScrapeRun>): Promise<ScrapeRun | undefined> {
+    const [updated] = await db.update(scrapeRuns)
+      .set(data)
+      .where(eq(scrapeRuns.id, id))
+      .returning();
+    return updated;
+  }
+
+  async getScrapeRuns(limit: number = 50): Promise<ScrapeRun[]> {
+    return db.select().from(scrapeRuns).orderBy(desc(scrapeRuns.startedAt)).limit(limit);
+  }
+
+  async getLatestScrapeRun(): Promise<ScrapeRun | undefined> {
+    const [run] = await db.select().from(scrapeRuns).orderBy(desc(scrapeRuns.startedAt)).limit(1);
+    return run;
   }
 }
 

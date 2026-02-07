@@ -46,6 +46,29 @@ export const jobCategories = pgTable("job_categories", {
   sortOrder: integer("sort_order").default(0),
 });
 
+export const scrapeRuns = pgTable("scrape_runs", {
+  id: serial("id").primaryKey(),
+  startedAt: timestamp("started_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+  completedAt: timestamp("completed_at"),
+  durationMs: integer("duration_ms"),
+  status: varchar("status", { length: 20 }).notNull().default("running"),
+  totalFound: integer("total_found").default(0),
+  inserted: integer("inserted").default(0),
+  updated: integer("updated").default(0),
+  staleDeactivated: integer("stale_deactivated").default(0),
+  categorized: integer("categorized").default(0),
+  alertsTriggered: integer("alerts_triggered").default(0),
+  brokenLinks: integer("broken_links").default(0),
+  sourcesSucceeded: integer("sources_succeeded").default(0),
+  sourcesFailed: integer("sources_failed").default(0),
+  sourceDetails: jsonb("source_details"),
+  errors: text("errors").array(),
+  triggeredBy: varchar("triggered_by", { length: 20 }).default("scheduler"),
+});
+
+export type ScrapeRun = typeof scrapeRuns.$inferSelect;
+export type InsertScrapeRun = typeof scrapeRuns.$inferInsert;
+
 export const insertJobSchema = createInsertSchema(jobs).omit({
   id: true,
   postedDate: true,
