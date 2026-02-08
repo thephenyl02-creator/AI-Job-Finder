@@ -88,8 +88,6 @@ export function Header() {
             <div className="hidden lg:flex items-center gap-0.5">
               <NavLink href="/jobs" icon={Search} label="Find Jobs" isActive={isJobsActive} testId="link-jobs" />
               <NavLink href="/resumes" icon={FileText} label="Resumes" isActive={isResumesActive} testId="link-resumes" />
-              <NavLink href="/events" icon={Calendar} label="Events" isActive={isEventsActive} testId="link-events" />
-              <NavLink href="/insights" icon={BarChart3} label="Insights" isActive={isActive("/insights")} testId="link-insights" />
               <NavLink href="/alerts" icon={Bell} label="Alerts" isActive={isActive("/alerts")} testId="link-alerts" />
             </div>
           )}
@@ -234,6 +232,18 @@ export function Header() {
                       <Link href="/dashboard" className="cursor-pointer" data-testid="link-dashboard">
                         <LayoutDashboard className="mr-2 h-4 w-4" />
                         <span>Dashboard</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/events" className="cursor-pointer" data-testid="link-events">
+                        <Calendar className="mr-2 h-4 w-4" />
+                        <span>Events</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/insights" className="cursor-pointer" data-testid="link-insights">
+                        <BarChart3 className="mr-2 h-4 w-4" />
+                        <span>Market Insights</span>
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
