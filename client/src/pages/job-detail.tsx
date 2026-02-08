@@ -920,20 +920,47 @@ export default function JobDetail() {
             )}
           </div>
 
-          {job.legalRelevanceScore && job.legalRelevanceScore >= 8 && (
-            <div className="flex flex-wrap gap-1.5 mt-3" data-testid="section-legal-fit">
-              <Badge
-                variant="secondary"
-                className={`gap-1 ${
-                  job.legalRelevanceScore >= 9
-                    ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800"
-                    : "bg-sky-100 dark:bg-sky-900/30 text-sky-700 dark:text-sky-400 border-sky-200 dark:border-sky-800"
-                }`}
-                data-testid="badge-legal-fit"
-              >
-                <Scale className="h-3 w-3" />
-                {job.legalRelevanceScore >= 9 ? "JD Preferred" : "Legal Background Valued"}
-              </Badge>
+          {(job.roleCategory || (job.legalRelevanceScore && job.legalRelevanceScore >= 8)) && (
+            <div className="flex flex-wrap gap-1.5 mt-3" data-testid="section-job-badges">
+              {job.roleCategory && (
+                <Badge
+                  variant="outline"
+                  className="gap-1"
+                  data-testid="badge-role-category"
+                >
+                  <Briefcase className="h-3 w-3" />
+                  {job.roleCategory}
+                </Badge>
+              )}
+              {job.legalRelevanceScore && job.legalRelevanceScore >= 8 && (
+                <Badge
+                  variant="secondary"
+                  className={`gap-1 ${
+                    job.legalRelevanceScore >= 9
+                      ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800"
+                      : "bg-sky-100 dark:bg-sky-900/30 text-sky-700 dark:text-sky-400 border-sky-200 dark:border-sky-800"
+                  }`}
+                  data-testid="badge-legal-fit"
+                >
+                  <Scale className="h-3 w-3" />
+                  {job.legalRelevanceScore >= 9 ? "JD Preferred" : "Legal Background Valued"}
+                </Badge>
+              )}
+            </div>
+          )}
+
+          {job.keySkills && job.keySkills.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mt-2" data-testid="section-key-skills">
+              {job.keySkills.map((skill, i) => (
+                <Badge
+                  key={i}
+                  variant="secondary"
+                  className="text-xs"
+                  data-testid={`badge-skill-${i}`}
+                >
+                  {skill}
+                </Badge>
+              ))}
             </div>
           )}
 
@@ -1017,7 +1044,7 @@ export default function JobDetail() {
                     </span>
                   </div>
                   <p className="text-[0.925rem] text-foreground/80 leading-[1.75]" data-testid="text-ai-summary">
-                    {fixMissingSentenceSpaces(job.aiSummary)}
+                    {cleanStructuredText(job.aiSummary)}
                   </p>
                 </div>
               </div>

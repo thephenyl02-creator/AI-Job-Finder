@@ -8,6 +8,7 @@ import { useActivityTracker } from "@/hooks/use-activity-tracker";
 import { apiRequest } from "@/lib/queryClient";
 import type { Job, JobWithScore } from "@shared/schema";
 import { JOB_TAXONOMY } from "@shared/schema";
+import { cleanStructuredText } from "@/lib/structured-description";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -1397,7 +1398,7 @@ function CategorySection({
                                 </div>
                                 {job.aiSummary && (
                                   <p className="text-xs sm:text-sm text-muted-foreground mt-2 line-clamp-2">
-                                    {job.aiSummary}
+                                    {cleanStructuredText(job.aiSummary)}
                                   </p>
                                 )}
                               </div>
