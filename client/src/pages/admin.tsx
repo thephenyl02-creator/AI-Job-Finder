@@ -17,6 +17,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { Job, StructuredDescription } from "@shared/schema";
 import { JOB_TAXONOMY } from "@shared/schema";
+import { cleanStructuredText, parseStructuredDescription } from "@/lib/structured-description";
 
 const SENIORITY_OPTIONS = ["Intern", "Fellowship", "Entry", "Mid", "Senior", "Lead", "Director", "VP"];
 
@@ -120,30 +121,28 @@ function AdminStructuredPreview({ data, aiSummary }: { data: StructuredDescripti
             <Sparkles className="h-3 w-3 text-muted-foreground shrink-0" />
             <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">At a Glance</span>
           </div>
-          <p className="text-xs text-foreground/80 leading-relaxed">{fixAdminSentenceSpaces(decodeAdminHtmlEntities(aiSummary))}</p>
+          <p className="text-xs text-foreground/80 leading-relaxed">{cleanStructuredText(aiSummary)}</p>
         </div>
       )}
       {sections.map(({ key, title, items, text }) => {
         const hasText = text && text.trim();
         const hasItems = items && items.length > 0;
-        if (!hasText && !hasItems) return null;
         return (
           <div key={key}>
             <p className="font-semibold text-foreground text-[10px] uppercase tracking-wider mb-1">{title}</p>
             {hasText ? (
-              <p className="text-xs text-foreground/80 leading-relaxed pl-2">{fixAdminSentenceSpaces(decodeAdminHtmlEntities(text!))}</p>
-            ) : (
+              <p className="text-xs text-foreground/80 leading-relaxed pl-2">{cleanStructuredText(text!)}</p>
+            ) : hasItems ? (
               <ul className="space-y-0.5 pl-2">
-                {items!.slice(0, 10).map((item, i) => (
+                {items!.map((item, i) => (
                   <li key={i} className="flex gap-1.5 text-xs text-foreground/80 leading-relaxed">
                     <span className="shrink-0 mt-1.5 w-1 h-1 rounded-full bg-foreground/25" />
-                    <span>{adminHighlight(fixAdminSentenceSpaces(decodeAdminHtmlEntities(item)))}</span>
+                    <span>{adminHighlight(cleanStructuredText(item))}</span>
                   </li>
                 ))}
-                {items!.length > 10 && (
-                  <p className="text-[10px] text-muted-foreground italic pl-2">+{items!.length - 10} more</p>
-                )}
               </ul>
+            ) : (
+              <p className="text-[10px] text-muted-foreground italic pl-2">Not specified</p>
             )}
           </div>
         );
@@ -2037,20 +2036,25 @@ export default function AdminPage() {
                           </div>
                           {expandedJobId === job.id && (
                             <div className="pt-3 mt-3 border-t border-border/50">
-                              {job.structuredDescription && typeof job.structuredDescription === 'object' ? (
-                                <>
-                                  <div className="flex items-center gap-2 mb-2 text-[10px] text-muted-foreground">
-                                    <span className="font-medium uppercase tracking-wider">User View Preview</span>
-                                    <Badge variant="outline" className="text-[9px] gap-0.5">
-                                      <Sparkles className="h-2.5 w-2.5" />
-                                      Structured
-                                    </Badge>
-                                  </div>
-                                  <div className="max-h-[350px] overflow-y-auto pr-2">
-                                    <AdminStructuredPreview data={job.structuredDescription as StructuredDescription} aiSummary={job.aiSummary} />
-                                  </div>
-                                </>
-                              ) : (
+                              {(() => {
+                                const parsed = parseStructuredDescription(job.structuredDescription);
+                                if (parsed) {
+                                  return (
+                                    <>
+                                      <div className="flex items-center gap-2 mb-2 text-[10px] text-muted-foreground">
+                                        <span className="font-medium uppercase tracking-wider">User View Preview</span>
+                                        <Badge variant="outline" className="text-[9px] gap-0.5">
+                                          <Sparkles className="h-2.5 w-2.5" />
+                                          Structured
+                                        </Badge>
+                                      </div>
+                                      <div className="max-h-[350px] overflow-y-auto pr-2">
+                                        <AdminStructuredPreview data={parsed} aiSummary={job.aiSummary} />
+                                      </div>
+                                    </>
+                                  );
+                                }
+                                return (
                                 <>
                                   <div className="flex items-center gap-3 mb-2 text-[10px] text-muted-foreground flex-wrap">
                                     <span className="font-medium uppercase tracking-wider">Description Preview</span>
@@ -2068,12 +2072,13 @@ export default function AdminPage() {
                                         <Sparkles className="h-3 w-3 text-muted-foreground shrink-0" />
                                         <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">At a Glance</span>
                                       </div>
-                                      <p className="text-xs text-foreground/80 leading-relaxed">{fixAdminSentenceSpaces(decodeAdminHtmlEntities(job.aiSummary))}</p>
+                                      <p className="text-xs text-foreground/80 leading-relaxed">{cleanStructuredText(job.aiSummary)}</p>
                                     </div>
                                   )}
                                   <AdminJobDescription description={job.description} />
                                 </>
-                              )}
+                                );
+                              })()}
                             </div>
                           )}
                         </div>

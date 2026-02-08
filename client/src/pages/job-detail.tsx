@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Job, Resume, StructuredDescription } from "@shared/schema";
 import type { ResumeExtractedData } from "@shared/models/auth";
+import { decodeHtmlEntities, fixMissingSentenceSpaces, cleanStructuredText, parseStructuredDescription } from "@/lib/structured-description";
 import { Link } from "wouter";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -127,20 +128,6 @@ function parseTextIntoBlocks(text: string): Block[] {
   return blocks;
 }
 
-function decodeHtmlEntities(text: string): string {
-  return text
-    .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&')
-    .replace(/&nbsp;/g, ' ').replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'").replace(/&#x27;/g, "'")
-    .replace(/&mdash;/g, '\u2014').replace(/&ndash;/g, '\u2013')
-    .replace(/&ldquo;/g, '\u201C').replace(/&rdquo;/g, '\u201D')
-    .replace(/&lsquo;/g, '\u2018').replace(/&rsquo;/g, '\u2019')
-    .replace(/&bull;/g, '\u2022').replace(/&hellip;/g, '\u2026')
-    .replace(/&trade;/g, '\u2122').replace(/&copy;/g, '\u00A9').replace(/&reg;/g, '\u00AE')
-    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(parseInt(n, 10)))
-    .replace(/&#x([0-9a-fA-F]+);/g, (_, h) => String.fromCharCode(parseInt(h, 16)));
-}
-
 function fixDashPrefixParagraphs(text: string): string {
   const lines = text.split('\n');
   const dashLines = lines.filter(l => /^- /.test(l.trim()));
@@ -175,27 +162,6 @@ function stripCompanyBoilerplate(text: string): string {
   const remaining = paragraphs.slice(roleIdx).join('\n\n').trim();
   if (remaining.length < 200) return text;
   return remaining.replace(/^(?:About (?:the |this )?role|The (?:Role|Opportunity|Challenge|Position|Team))\s*:?\s*\n*/i, '');
-}
-
-function fixMissingSentenceSpaces(text: string): string {
-  const abbreviations = /^(?:Mr|Ms|Mrs|Dr|Jr|Sr|St|vs|etc|ie|eg|al|Prof|Gen|Gov|Rev|Hon|Inc|Ltd|Co|Corp|LLC|Vol|No|Fig|Eq|Dept|Est|Assn|Intl)$/i;
-  let result = '';
-  let lastIndex = 0;
-  const re = /(\w)([.!?])([A-Z][a-z])/g;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(text)) !== null) {
-    const matchPos = m.index;
-    const lookback = text.slice(Math.max(0, matchPos - 12), matchPos + 1);
-    const lastWord = lookback.match(/([A-Za-z]+)$/)?.[1] || '';
-    if (lastWord.length === 1 || abbreviations.test(lastWord)) {
-      continue;
-    }
-    result += text.slice(lastIndex, matchPos) + m[1] + m[2] + ' ' + m[3];
-    lastIndex = matchPos + m[0].length;
-  }
-  result += text.slice(lastIndex);
-  result = result.replace(/([.!?])(\()([A-Z])/g, '$1 $2$3');
-  return result;
 }
 
 function cleanDescription(text: string): string {
@@ -381,26 +347,6 @@ function groupBlocksIntoSections(blocks: Block[]): DescriptionSection[] {
   return sections;
 }
 
-
-function cleanStructuredText(text: string): string {
-  let cleaned = decodeHtmlEntities(text);
-  cleaned = fixMissingSentenceSpaces(cleaned);
-  return cleaned;
-}
-
-function parseStructuredDescription(raw: unknown): StructuredDescription | null {
-  if (!raw) return null;
-  let data = raw;
-  if (typeof data === 'string') {
-    try { data = JSON.parse(data); } catch { return null; }
-  }
-  if (typeof data !== 'object' || data === null) return null;
-  const obj = data as Record<string, unknown>;
-  if (!obj.aboutCompany && !obj.responsibilities && !obj.minimumQualifications && !obj.preferredQualifications && !obj.skillsRequired) {
-    return null;
-  }
-  return obj as unknown as StructuredDescription;
-}
 
 function StructuredDescriptionView({ data }: { data: StructuredDescription }) {
   const sections = [
