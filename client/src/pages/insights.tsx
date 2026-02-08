@@ -510,7 +510,7 @@ export default function Insights() {
                     <Link href="/pricing">
                       <Button size="sm" className="gap-1.5" data-testid="button-insights-upgrade">
                         <Crown className="h-3.5 w-3.5" />
-                        Upgrade to Pro
+                        Upgrade to Pro — $5/mo
                       </Button>
                     </Link>
                   </div>

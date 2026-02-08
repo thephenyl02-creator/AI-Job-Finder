@@ -385,11 +385,11 @@ export default function Alerts() {
                 <Link href="/pricing">
                   <Button className="gap-2" data-testid="button-alerts-upgrade">
                     <Crown className="h-4 w-4" />
-                    Upgrade to Pro
+                    Upgrade to Pro — $5/mo
                     <ArrowRight className="h-4 w-4" />
                   </Button>
                 </Link>
-                <p className="text-xs text-muted-foreground mt-2">Starting at $5/month</p>
+                <p className="text-xs text-muted-foreground mt-2">Cancel anytime. Save 50% with yearly billing.</p>
               </div>
             </CardContent>
           </Card>

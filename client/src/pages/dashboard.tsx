@@ -189,7 +189,7 @@ function ProLockedOverlay({ children, label }: { children: React.ReactNode; labe
           <p className="text-sm font-medium text-foreground">{label || "Pro Feature"}</p>
           <p className="text-xs text-muted-foreground max-w-[200px]">Upgrade to Pro for full dashboard analytics</p>
           <Link href="/pricing">
-            <Button size="sm" data-testid="button-upgrade-dashboard">Upgrade</Button>
+            <Button size="sm" className="gap-1.5" data-testid="button-upgrade-dashboard">Upgrade — $5/mo</Button>
           </Link>
         </div>
       </div>

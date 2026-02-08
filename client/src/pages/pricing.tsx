@@ -27,6 +27,10 @@ import {
   Sparkles,
   ChevronDown,
   ChevronUp,
+  Building2,
+  Briefcase,
+  Shield,
+  CalendarDays,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LogoMark } from "@/components/logo";
@@ -133,6 +137,16 @@ export default function Pricing() {
     staleTime: 1000 * 60 * 10,
   });
 
+  const { data: stats } = useQuery<{
+    totalJobs: number;
+    totalCompanies: number;
+    totalCategories: number;
+    upcomingEvents: number;
+  }>({
+    queryKey: ["/api/stats"],
+    staleTime: 1000 * 60 * 5,
+  });
+
   const checkoutMutation = useMutation({
     mutationFn: async (priceId: string) => {
       const res = await fetch("/api/stripe/create-checkout-session", {
@@ -234,7 +248,7 @@ export default function Pricing() {
           </div>
         )}
 
-        <div className="text-center mb-10">
+        <div className="text-center mb-8">
           <h1 className="text-3xl sm:text-4xl font-serif font-medium text-foreground mb-3 tracking-tight" data-testid="text-pricing-title">
             Less than a coffee. More than a job board.
           </h1>
@@ -242,6 +256,25 @@ export default function Pricing() {
             Browse for free, forever. Upgrade to Pro when you're ready for tools that actually help you land the right role.
           </p>
         </div>
+
+        {stats && (
+          <div className="flex items-center justify-center gap-6 sm:gap-10 mb-8 flex-wrap" data-testid="section-social-proof">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Briefcase className="h-4 w-4 shrink-0" />
+              <span><span className="font-semibold text-foreground">{stats.totalJobs}+</span> active roles</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Building2 className="h-4 w-4 shrink-0" />
+              <span><span className="font-semibold text-foreground">{stats.totalCompanies}</span> legal tech companies</span>
+            </div>
+            {stats.upcomingEvents > 0 && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <CalendarDays className="h-4 w-4 shrink-0" />
+                <span><span className="font-semibold text-foreground">{stats.upcomingEvents}</span> upcoming events</span>
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="flex items-center justify-center gap-1 mb-10 bg-muted rounded-md p-1 w-fit mx-auto" data-testid="billing-toggle">
           <button
@@ -403,6 +436,21 @@ export default function Pricing() {
               </ul>
             </CardContent>
           </Card>
+        </div>
+
+        <div className="flex items-center justify-center gap-6 sm:gap-10 mt-8 flex-wrap" data-testid="section-trust-signals">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Shield className="h-3.5 w-3.5 shrink-0" />
+            <span>Cancel anytime, no questions asked</span>
+          </div>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Zap className="h-3.5 w-3.5 shrink-0" />
+            <span>Instant access after upgrade</span>
+          </div>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Crown className="h-3.5 w-3.5 shrink-0" />
+            <span>Save 50% with yearly billing</span>
+          </div>
         </div>
 
         <div className="mt-20 max-w-2xl mx-auto">

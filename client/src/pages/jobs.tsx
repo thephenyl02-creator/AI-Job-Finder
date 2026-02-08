@@ -208,8 +208,8 @@ export default function Jobs() {
       if (isLimitError) {
         setGuidedStep("idle");
         toast({
-          title: "Guided search limit reached",
-          description: "Upgrade to Pro for unlimited guided searches. Trying regular search instead.",
+          title: "You've used all 7 free guided searches",
+          description: "Guided search helps you find better-fit roles. Upgrade to Pro for unlimited access — just $5/mo.",
         });
       } else {
         toast({ title: "Let's try a quick search instead", variant: "default" });
@@ -612,10 +612,12 @@ export default function Jobs() {
                   Quick search (skip questions)
                 </Button>
                 {!canUseGuidedSearch && (
-                  <span className="text-xs text-muted-foreground flex items-center gap-1">
-                    <Crown className="h-3 w-3" />
-                    Guided refinement is a Pro feature
-                  </span>
+                  <Link href="/pricing">
+                    <Badge variant="secondary" className="gap-1 text-xs cursor-pointer" data-testid="badge-guided-search-pro">
+                      <Crown className="h-3 w-3" />
+                      Unlock guided search — $5/mo
+                    </Badge>
+                  </Link>
                 )}
               </div>
             )}
@@ -734,9 +736,9 @@ export default function Jobs() {
               {!isPro && (
                 <p className="text-xs text-muted-foreground text-center">
                   {guidedTrialsRemaining > 0
-                    ? `${guidedTrialsRemaining} free guided ${guidedTrialsRemaining === 1 ? "search" : "searches"} remaining.`
-                    : "You've used all your free guided searches."}
-                  <Link href="/pricing" className="text-primary ml-1">Upgrade for unlimited</Link>
+                    ? `${guidedTrialsRemaining} of 7 free guided ${guidedTrialsRemaining === 1 ? "search" : "searches"} remaining.`
+                    : "You've used all 7 free guided searches."}
+                  <Link href="/pricing" className="text-primary ml-1 font-medium">Upgrade for unlimited — $5/mo</Link>
                 </p>
               )}
             </motion.div>
@@ -1613,10 +1615,12 @@ function BrowseCompareView({ jobs, onClose, onClear }: { jobs: Job[]; onClose: (
             </Button>
           )}
           {!isPro && isAuthenticated && (
-            <Badge variant="secondary" className="text-[10px] gap-1">
-              <Crown className="h-3 w-3" />
-              Pro: Deep Analysis
-            </Badge>
+            <Link href="/pricing">
+              <Badge variant="secondary" className="text-[10px] gap-1 cursor-pointer" data-testid="badge-deep-analysis-pro">
+                <Crown className="h-3 w-3" />
+                Unlock Deep Analysis — $5/mo
+              </Badge>
+            </Link>
           )}
           <Button variant="ghost" size="sm" onClick={onClear} className="gap-1.5 text-muted-foreground" data-testid="button-clear-all-compare">
             Clear

@@ -3,7 +3,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Crown, ArrowRight, Loader2, Check } from "lucide-react";
+import { Crown, ArrowRight, Loader2, Check, Shield } from "lucide-react";
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 
@@ -15,7 +15,9 @@ interface UpgradePromptProps {
 const PRO_HIGHLIGHTS = [
   "Resume matching & fit scores",
   "Deep job comparison & analysis",
-  "Market insights & salary data",
+  "ATS resume review",
+  "Full events calendar",
+  "Market insights & analytics",
   "Job alerts & notifications",
   "Up to 5 resumes",
 ];
@@ -70,7 +72,7 @@ export function UpgradePrompt({ feature, description }: UpgradePromptProps) {
 
           <div className="border border-border/60 rounded-md p-4 mb-6 bg-muted/30">
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
-              Pro includes
+              Everything you get with Pro
             </p>
             <ul className="space-y-2">
               {PRO_HIGHLIGHTS.map((item) => (
@@ -92,8 +94,10 @@ export function UpgradePrompt({ feature, description }: UpgradePromptProps) {
               >
                 {checkoutMutation.isPending ? (
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                ) : null}
-                Upgrade to Pro - $5/mo
+                ) : (
+                  <Crown className="h-4 w-4 mr-2" />
+                )}
+                Upgrade to Pro — $5/mo
                 <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
             ) : (
@@ -113,9 +117,15 @@ export function UpgradePrompt({ feature, description }: UpgradePromptProps) {
             </div>
           </div>
 
-          <p className="text-xs text-muted-foreground text-center mt-4">
-            Cancel anytime. Save 50% with yearly billing.
-          </p>
+          <div className="flex items-center justify-center gap-4 mt-5 flex-wrap">
+            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Shield className="h-3 w-3" />
+              Cancel anytime
+            </span>
+            <span className="text-xs text-muted-foreground">
+              Save 50% with yearly billing
+            </span>
+          </div>
         </CardContent>
       </Card>
     </div>

@@ -294,10 +294,11 @@ export default function Events() {
                       <Link href="/pricing">
                         <Button className="gap-2" data-testid="button-events-upgrade">
                           <Crown className="h-4 w-4" />
-                          Upgrade to Pro
+                          Upgrade to Pro — $5/mo
                           <ArrowRight className="h-4 w-4" />
                         </Button>
                       </Link>
+                      <p className="text-xs text-muted-foreground mt-2">Cancel anytime</p>
                     </div>
                   </CardContent>
                 </Card>

@@ -45,6 +45,8 @@ import {
   CalendarDays,
   CheckCircle2,
   Upload,
+  Crown,
+  Lock,
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 
@@ -699,6 +701,7 @@ export default function JobDetail() {
   const trackedJobRef = useRef<string | null>(null);
   const applyButtonRef = useRef<HTMLDivElement>(null);
   const [showStickyBar, setShowStickyBar] = useState(false);
+  const [showApplyNudge, setShowApplyNudge] = useState(false);
 
   const { data: job, isLoading } = useQuery<Job>({
     queryKey: [`/api/jobs/${jobId}`],
@@ -836,6 +839,9 @@ export default function JobDetail() {
       console.error("Failed to track apply click", e);
     }
     window.open(job.applyUrl, "_blank");
+    if (!isPro) {
+      setShowApplyNudge(true);
+    }
   };
 
   if (authLoading || isLoading) {
@@ -964,6 +970,50 @@ export default function JobDetail() {
               {jobIsSaved ? "Saved" : "Save"}
             </Button>
           </div>
+
+          <AnimatePresence>
+            {showApplyNudge && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.3 }}
+                className="mt-3"
+                data-testid="section-apply-nudge"
+              >
+                <div className="rounded-md border border-primary/20 bg-primary/5 p-3">
+                  <div className="flex items-start gap-3">
+                    <div className="p-1.5 rounded-md bg-primary/10 shrink-0">
+                      <Target className="h-3.5 w-3.5 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground">Stand out from other applicants</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Pro members can match their resume to this role and get personalized tips to improve their chances.
+                      </p>
+                      <div className="flex items-center gap-2 mt-2 flex-wrap">
+                        <Link href="/pricing">
+                          <Button size="sm" className="gap-1.5 text-xs" data-testid="button-apply-nudge-upgrade">
+                            <Crown className="h-3 w-3" />
+                            Upgrade to Pro — $5/mo
+                          </Button>
+                        </Link>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-xs text-muted-foreground"
+                          onClick={() => setShowApplyNudge(false)}
+                          data-testid="button-apply-nudge-dismiss"
+                        >
+                          Dismiss
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* === UNIFIED JOB DETAILS CARD === */}
@@ -1042,6 +1092,42 @@ export default function JobDetail() {
                       </div>
                     </div>
                   ))}
+                </div>
+              </div>
+            )}
+
+            {!resumeFit && !isPro && userResumes.length > 0 && job?.keySkills && job.keySkills.length > 0 && (
+              <div data-testid="section-resume-match-teaser" className="mb-6">
+                <div className="rounded-md border border-border/40 p-4 relative overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background/90 pointer-events-none z-10" />
+                  <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Resume Fit</h3>
+                  <div className="rounded-md border border-border/30 p-3 opacity-60">
+                    <div className="flex items-center justify-between gap-3 mb-2">
+                      <div className="flex items-center gap-2">
+                        <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span className="text-sm font-medium text-muted-foreground">Your Resume</span>
+                      </div>
+                      <span className="text-sm font-semibold text-muted-foreground">??% match</span>
+                    </div>
+                    <div className="h-1.5 bg-muted/40 rounded-full overflow-hidden">
+                      <div className="h-full bg-muted-foreground/20 rounded-full w-3/5" />
+                    </div>
+                  </div>
+                  <div className="relative z-20 text-center mt-3">
+                    <div className="flex items-center justify-center gap-1.5 mb-1.5">
+                      <Lock className="h-3.5 w-3.5 text-primary" />
+                      <span className="text-sm font-medium text-foreground">See how you match this role</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mb-2">
+                      Pro members get match scores, gap analysis, and personalized recommendations.
+                    </p>
+                    <Link href="/pricing">
+                      <Button size="sm" className="gap-1.5 text-xs" data-testid="button-resume-match-upgrade">
+                        <Crown className="h-3 w-3" />
+                        Unlock with Pro
+                      </Button>
+                    </Link>
+                  </div>
                 </div>
               </div>
             )}
