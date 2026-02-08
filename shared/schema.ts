@@ -43,6 +43,7 @@ export const jobs = pgTable("jobs", {
   editedAt: timestamp("edited_at"),
   legalRelevanceScore: integer("legal_relevance_score"),
   reviewStatus: varchar("review_status", { length: 20 }),
+  descriptionFormatted: boolean("description_formatted").default(false),
 });
 
 export const jobCategories = pgTable("job_categories", {

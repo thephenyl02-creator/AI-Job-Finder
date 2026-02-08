@@ -5,6 +5,8 @@ import { logInfo, logWarn, logError, logSuccess, cleanupOldLogs } from './logger
 import { stripHtml, isRelevantRole } from './html-utils';
 import { categorizeJob } from './job-categorizer';
 import { matchNewJobsAgainstAlerts } from './alert-matcher';
+import { formatFlatDescription } from './description-formatter';
+import { isDescriptionFlat } from './description-cleaner';
 
 const SCRAPE_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 hours
 const LINK_CHECK_TIMEOUT = 10000; // 10 seconds for each request
@@ -550,6 +552,56 @@ export async function runScheduledScrape(triggeredBy: string = 'scheduler'): Pro
       errors.push(`Categorization phase: ${err.message}`);
     }
     
+    // === PHASE 4.5: AI Description Formatting for flat-text jobs ===
+    logInfo('PHASE', '--- Phase 4.5: Description Formatting ---');
+
+    try {
+      const allActiveJobs = await storage.getActiveJobs();
+      const needsFormatting = allActiveJobs.filter(j =>
+        j.description &&
+        !j.descriptionFormatted &&
+        isDescriptionFlat(j.description)
+      );
+
+      if (needsFormatting.length > 0) {
+        logInfo('FORMAT', `Formatting ${needsFormatting.length} flat-text descriptions with AI...`);
+        let formattedCount = 0;
+        const formatBatchSize = 3;
+        for (let i = 0; i < needsFormatting.length; i += formatBatchSize) {
+          const batch = needsFormatting.slice(i, i + formatBatchSize);
+          await Promise.all(
+            batch.map(async (job) => {
+              try {
+                const formatted = await formatFlatDescription(job.description);
+                if (formatted !== job.description) {
+                  await storage.updateJob(job.id, {
+                    description: formatted,
+                    descriptionFormatted: true,
+                  } as any);
+                  formattedCount++;
+                } else {
+                  await storage.updateJob(job.id, {
+                    descriptionFormatted: true,
+                  } as any);
+                }
+              } catch (err: any) {
+                errors.push(`Format job ${job.id}: ${err.message}`);
+              }
+            })
+          );
+          if (i + formatBatchSize < needsFormatting.length) {
+            await new Promise((r) => setTimeout(r, 500));
+          }
+        }
+        logSuccess('FORMAT', `Formatted ${formattedCount}/${needsFormatting.length} flat-text descriptions`);
+      } else {
+        logInfo('FORMAT', 'All descriptions already formatted');
+      }
+    } catch (err: any) {
+      logError('FORMAT', 'Description formatting phase failed', { error: err.message });
+      errors.push(`Formatting phase: ${err.message}`);
+    }
+
     // === PHASE 5: Alert matching for new jobs ===
     logInfo('PHASE', '--- Phase 5: Job alert matching ---');
     

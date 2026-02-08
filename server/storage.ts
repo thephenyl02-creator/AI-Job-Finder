@@ -1,7 +1,7 @@
 import { db } from "./db";
 import { jobs, users, userPreferences, jobCategories, jobSubmissions, jobAlerts, notifications, resumes, builtResumes, userActivities, userPersonas, savedJobs, jobApplications, events, scrapeRuns, type Job, type InsertJob, type User, type UserPreferences, type InsertUserPreferences, type ResumeExtractedData, type JobCategory, type JobSubmission, type InsertJobSubmission, type JobAlert, type InsertJobAlert, type Notification, type InsertNotification, type Resume, type InsertResume, type BuiltResume, type InsertBuiltResume, type UserActivity, type InsertUserActivity, type UserPersona, type InsertUserPersona, type SavedJob, type InsertSavedJob, type JobApplication, type InsertJobApplication, type JobApplicationWithJob, type Event, type InsertEvent, type ScrapeRun, type InsertScrapeRun, JOB_TAXONOMY } from "@shared/schema";
 import { eq, desc, and, sql, inArray, lt, gte, count } from "drizzle-orm";
-import { fixMissingSentenceSpaces } from "./lib/html-utils";
+import { cleanJobDescription } from "./lib/description-cleaner";
 
 export interface IStorage {
   // Jobs
@@ -144,10 +144,11 @@ class DatabaseStorage implements IStorage {
     if (result.company) result.company = result.company.trim();
     if (result.location) result.location = result.location.trim();
     if (result.description) {
-      result.description = fixMissingSentenceSpaces(result.description.trim().replace(/ {2,}/g, ' '));
+      result.description = cleanJobDescription(result.description);
+      result.descriptionFormatted = true;
     }
     if (result.requirements) {
-      result.requirements = result.requirements.trim().replace(/ {2,}/g, ' ');
+      result.requirements = cleanJobDescription(result.requirements);
     }
     return result;
   }
@@ -225,10 +226,11 @@ class DatabaseStorage implements IStorage {
       if (job.salaryMin) updateData.salaryMin = job.salaryMin;
       if (job.salaryMax) updateData.salaryMax = job.salaryMax;
 
-      const newDesc = job.description ? fixMissingSentenceSpaces(job.description.trim().replace(/ {2,}/g, ' ')) : '';
+      const newDesc = job.description ? cleanJobDescription(job.description) : '';
       const existingDesc = existing.description || '';
       if (newDesc.length >= existingDesc.length * 0.5 && newDesc.length >= 50) {
         updateData.description = newDesc;
+        updateData.descriptionFormatted = true;
       }
 
       for (const field of aiFields) {
@@ -263,7 +265,7 @@ class DatabaseStorage implements IStorage {
           };
           if (job.salaryMin && !titleCompanyDupe.salaryMin) updateData.salaryMin = job.salaryMin;
           if (job.salaryMax && !titleCompanyDupe.salaryMax) updateData.salaryMax = job.salaryMax;
-          const newDesc = job.description ? fixMissingSentenceSpaces(job.description) : '';
+          const newDesc = job.description ? cleanJobDescription(job.description) : '';
           const existingDesc = titleCompanyDupe.description || '';
           if (newDesc.length > existingDesc.length) {
             updateData.description = newDesc;

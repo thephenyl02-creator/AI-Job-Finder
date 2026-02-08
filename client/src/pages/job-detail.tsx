@@ -76,121 +76,32 @@ function isLikelyHeading(text: string): boolean {
   return false;
 }
 
-const SECTION_HEADING_PATTERNS = [
-  /(?:About (?:the |your |this )?(?:role|position|opportunity|company|team|us|job))/i,
-  /(?:About [A-Z][A-Za-z\s&.'()\u2019-]+?)(?=\s(?:We|Our|The|Founded|is a|is the|was|has been))/,
-  /(?:What you['\u2019](?:ll| will) (?:do|need|bring|be doing|work on))/i,
-  /(?:What we['\u2019](?:re| are) (?:looking for|seeking|offering))/i,
-  /(?:What we offer)/i,
-  /(?:How you will [\w\s]+)/i,
-  /(?:Why (?:join us|work (?:here|with us|at)|[\w\s&.'()-]+))/i,
-  /(?:(?:Key |Core )?(?:Responsibilities|Qualifications|Requirements|Skills|Competencies|Duties))/i,
-  /(?:(?:Required|Preferred|Minimum|Desired|Basic|Nice.to.have) (?:Qualifications|Skills|Experience|Requirements))/i,
-  /(?:(?:Benefits|Perks|Compensation|Salary|Pay)(?: (?:and|&) (?:Benefits|Perks|Compensation))?)/i,
-  /(?:(?:Job |Position |Role )?(?:Summary|Overview|Description|Highlights))/i,
-  /(?:Who (?:you are|we are|you['\u2019]ll work with))/i,
-  /(?:(?:Your |Day.to.day |Daily )?(?:Impact|Responsibilities|Tasks))/i,
-  /(?:(?:Equal |EEO |EOE )(?:Opportunity|Employment)[\w\s]*)/i,
-  /(?:(?:Our |The )?(?:Mission|Vision|Culture|Values|Team))/i,
-  /(?:(?:Education|Experience|Background)(?: (?:Requirements|Required))?)/i,
-  /(?:In this role(?:,? you))/i,
-  /(?:(?:Apply|How to apply|Application process|To apply))/i,
-  /(?:Nice to have)/i,
-  /(?:More than that,? we (?:offer|believe|provide))/i,
-];
-
-function splitFlatTextIntoSections(text: string): string[] {
-  if (text.length < 400) return [text];
-
-  const markers: { index: number; match: string }[] = [];
-
-  for (const pattern of SECTION_HEADING_PATTERNS) {
-    const global = new RegExp(pattern.source, pattern.flags.includes('i') ? 'gi' : 'g');
-    let m;
-    while ((m = global.exec(text)) !== null) {
-      const before = text.slice(Math.max(0, m.index - 3), m.index);
-      const isAfterPunctuation = /[.!?]\s*$/.test(before);
-      const isAfterNewline = /\n\s*$/.test(before);
-      const isAllCaps = m[0] === m[0].toUpperCase() && /[A-Z]/.test(m[0]);
-      if (m.index === 0 || isAfterPunctuation || isAfterNewline || m.index < 3 || isAllCaps) {
-        markers.push({ index: m.index, match: m[0] });
-      }
-    }
-  }
-
-  markers.sort((a, b) => a.index - b.index);
-
-  const unique: typeof markers = [];
-  for (const mk of markers) {
-    if (unique.length === 0 || mk.index - unique[unique.length - 1].index > 5) {
-      unique.push(mk);
-    }
-  }
-
-  if (unique.length === 0) return [text];
-
-  const chunks: string[] = [];
-  if (unique[0].index > 0) {
-    chunks.push(text.slice(0, unique[0].index).trim());
-  }
-  for (let i = 0; i < unique.length; i++) {
-    const start = unique[i].index;
-    const end = i + 1 < unique.length ? unique[i + 1].index : text.length;
-    const chunk = text.slice(start, end).trim();
-    if (chunk) chunks.push(chunk);
-  }
-  return chunks;
-}
-
-function extractHeadingFromSection(section: string): { heading: string; body: string } | null {
-  for (const pattern of SECTION_HEADING_PATTERNS) {
-    const m = section.match(pattern);
-    if (m && section.startsWith(m[0])) {
-      let heading = m[0].trim();
-      let body = section.slice(heading.length).trim();
-      if (heading.endsWith(':')) heading = heading.slice(0, -1).trim();
-      const colonEnd = body.match(/^:?\s*/);
-      if (colonEnd) body = body.slice(colonEnd[0].length);
-      return { heading, body };
-    }
-  }
-  return null;
-}
-
-function splitSentences(text: string): string[] {
-  const sentences: string[] = [];
-  const raw = text.split(/(?<=[.!?])\s+(?=[A-Z])/);
-  let buffer = '';
-  for (const s of raw) {
-    const trimmed = s.trim();
-    if (!trimmed) continue;
-    if (buffer) {
-      if (buffer.length < 40 && !buffer.match(/[.!?]$/)) {
-        buffer += ' ' + trimmed;
-        continue;
-      }
-      sentences.push(buffer);
-      buffer = '';
-    }
-    buffer = trimmed;
-  }
-  if (buffer) sentences.push(buffer);
-  return sentences;
-}
-
 type Block = { type: 'paragraph' | 'heading' | 'bullet'; content: string };
+
+function splitFlatParagraph(text: string): Block[] {
+  if (text.length < 400) return [{ type: 'paragraph', content: text }];
+  const sentences = text.split(/(?<=[.!?])\s+(?=[A-Z])/);
+  if (sentences.length <= 3) return [{ type: 'paragraph', content: text }];
+  const paragraphs: string[] = [];
+  let buf = '';
+  for (const s of sentences) {
+    if (buf && buf.length > 150) {
+      paragraphs.push(buf);
+      buf = s;
+    } else {
+      buf = buf ? buf + ' ' + s : s;
+    }
+  }
+  if (buf) paragraphs.push(buf);
+  return paragraphs.map(p => ({ type: 'paragraph' as const, content: p }));
+}
 
 function parseTextIntoBlocks(text: string): Block[] {
   const newlineCount = (text.match(/\n/g) || []).length;
-  const hasNewlines = newlineCount > 3;
-
-  if (hasNewlines) {
-    return parseNewlinedText(text);
+  if (newlineCount < 3 && text.length > 400) {
+    return splitFlatParagraph(text);
   }
-  return parseFlatText(text);
-}
 
-function parseNewlinedText(text: string): Block[] {
   const lines = text.split('\n');
   const blocks: Block[] = [];
   let currentParagraph = '';
@@ -224,47 +135,6 @@ function parseNewlinedText(text: string): Block[] {
   return blocks;
 }
 
-function parseFlatText(text: string): Block[] {
-  if (text.length < 400) {
-    const sentences = splitSentences(text);
-    if (sentences.length <= 4) {
-      return [{ type: 'paragraph', content: text }];
-    }
-    return sentences.map(s => ({ type: 'paragraph' as const, content: s }));
-  }
-
-  const sections = splitFlatTextIntoSections(text);
-  const blocks: Block[] = [];
-
-  for (const section of sections) {
-    const extracted = extractHeadingFromSection(section);
-    if (extracted) {
-      blocks.push({ type: 'heading', content: extracted.heading });
-      if (extracted.body) {
-        const sentences = splitSentences(extracted.body);
-        if (sentences.length > 3) {
-          for (const s of sentences) {
-            blocks.push({ type: 'bullet', content: s });
-          }
-        } else {
-          blocks.push({ type: 'paragraph', content: extracted.body });
-        }
-      }
-    } else {
-      const sentences = splitSentences(section);
-      if (sentences.length > 5) {
-        blocks.push({ type: 'paragraph', content: sentences.slice(0, 2).join(' ') });
-        for (let i = 2; i < sentences.length; i++) {
-          blocks.push({ type: 'bullet', content: sentences[i] });
-        }
-      } else {
-        blocks.push({ type: 'paragraph', content: section });
-      }
-    }
-  }
-  return blocks;
-}
-
 function decodeHtmlEntities(text: string): string {
   return text
     .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&')
@@ -279,243 +149,21 @@ function decodeHtmlEntities(text: string): string {
     .replace(/&#x([0-9a-fA-F]+);/g, (_, h) => String.fromCharCode(parseInt(h, 16)));
 }
 
-function stripHtmlToText(html: string): string {
-  let text = decodeHtmlEntities(html);
-  text = text.replace(/<br\s*\/?>/gi, '\n');
-  text = text.replace(/<\/(?:p|div|h[1-6]|li|tr|section|article)>/gi, '\n');
-  text = text.replace(/<(?:p|div|h[1-6]|ul|ol|table|tbody|thead|section|article)(?:\s[^>]*)?>/gi, '\n');
-  text = text.replace(/<li(?:\s[^>]*)?>/gi, '- ');
-  text = text.replace(/<[^>]+>/g, '');
-  text = text.replace(/&[a-z]+;/gi, ' ');
-  text = text.replace(/\n{3,}/g, '\n\n');
-  return text.trim();
-}
-
-function ensureCompleteSentence(text: string): string {
-  const trimmed = text.trim();
-  if (!trimmed) return trimmed;
-  if (/[.!?:)\]"'\u201D\u2019]$/.test(trimmed)) return trimmed;
-  const lastSentenceEnd = Math.max(
-    trimmed.lastIndexOf('. '),
-    trimmed.lastIndexOf('.\n'),
-    trimmed.lastIndexOf('? '),
-    trimmed.lastIndexOf('?\n'),
-    trimmed.lastIndexOf('! '),
-    trimmed.lastIndexOf('!\n'),
-  );
-  if (lastSentenceEnd > trimmed.length * 0.7) {
-    return trimmed.slice(0, lastSentenceEnd + 1).trim();
-  }
-  if (/\.\s*$/.test(trimmed) || /[.!?]$/.test(trimmed)) return trimmed;
-  const veryLastPeriod = trimmed.lastIndexOf('.');
-  if (veryLastPeriod > trimmed.length * 0.5) {
-    return trimmed.slice(0, veryLastPeriod + 1).trim();
-  }
-  return trimmed;
-}
-
-function stripBoilerplate(text: string): string {
-  let cleaned = text;
-
-  cleaned = cleaned.replace(/^[A-Z][\w\s&.'()-]{2,60} is committed to providing an excellent candidate experience[^]*?(?:so our team members can review\.?\s*\n*)/i, '');
-  cleaned = cleaned.replace(/^[A-Z][\w\s&.'()-]{2,60} is committed to providing an excellent candidate experience[^\n]*\.\s*\n*/i, '');
-
-  cleaned = cleaned.replace(/^Summary:\s*/i, '');
-
-  cleaned = cleaned.replace(/^At\s+[\w\s&.'()-]{2,40},\s+we are a team of (?:innovators|technocrats)[^]*?(?:having fun!?\s*\n*)/i, '');
-
-  cleaned = cleaned.replace(/^ABOUT\s+(?:US|THE COMPANY|THE JOB|FIRSTBASE|NOTABENE)\s*/i, '');
-  cleaned = cleaned.replace(/^About\s+(?:the company|us|the job|Axiom|Rocket Lawyer|the role)\s*:?\s*/i, '');
-  cleaned = cleaned.replace(/^About\s+[\w\s&.'()-]{2,30}\s+(?:We\s)/i, 'We ');
-  cleaned = cleaned.replace(/^(?:Intro description|Job Description|Role Description|Position Description)\s*:?\s*/i, '');
-
-  const companyIntroWithSeparator = /^(?:[\w\s&.'()-]{2,50})\s+(?:is|are)\s+(?:a|an|the|on a|where|building)\s+[^]*?\n\n/;
-  const introSepMatch = cleaned.match(companyIntroWithSeparator);
-  if (introSepMatch && introSepMatch[0].length < cleaned.length * 0.25) {
-    const afterIntro = cleaned.slice(introSepMatch[0].length).trim();
-    if (afterIntro.length > 200) {
-      cleaned = afterIntro;
-    }
-  }
-
-  cleaned = cleaned.replace(/^(?:The Opportunity|The Role|Overview|Position Summary|Job Summary|Role Summary|Position Overview)\s*:?\s*\n*/i, '');
-
-  const trailingPatterns = [
-    /\n{2,}\s*(?:Equal\s+(?:Opportunity|Employment)|EEO Statement|EOE Statement)[^\n]*(?:\n[^\n]*){0,15}$/i,
-    /\n{2,}\s*(?:OUR COMMITMENT TO (?:ACCESSIBILITY|EQUITY|DIVERSITY|INCLUSION))[^\n]*(?:\n[^\n]*){0,15}$/i,
-    /\n{2,}\s*(?:Disclaimer|Legal Notice):?\s*(?:This job (?:posting|description|ad))[^\n]*(?:\n[^\n]*){0,5}$/i,
-    /\n{2,}\s*(?:Pursue Truth While Finding Yours|Find Your Truth)[^\n]*(?:\n[^\n]*){0,15}$/i,
-    /\n{2,}\s*(?:By applying for this role, you acknowledge)[^\n]*(?:\n[^\n]*){0,3}$/i,
-    /\n{2,}\s*(?:Your privacy is important to us)[^\n]*(?:\n[^\n]*){0,3}$/i,
-    /\n{2,}\s*(?:To learn more, visit:?\s*everify\.com)[^\n]*(?:\n[^\n]*){0,3}$/i,
-    /\n{2,}\s*(?:Benefits|Perks|What We Offer|Why (?:Join|Work (?:at|with|here)))\s*:?\s*\n(?:[-•*]\s[^\n]*\n?){3,}$/i,
-    /\n{2,}\s*(?:We are (?:an equal|committed)|[\w\s]+ is (?:an equal|committed to))[^\n]*(?:\n[^\n]*){0,10}$/i,
-    /\n{2,}\s*(?:Accommodation|Reasonable (?:Accommodation|Adjustments?))[^\n]*(?:\n[^\n]*){0,5}$/i,
-    /\n{2,}\s*(?:Notice to (?:Recruiters|Agency|Staffing))[^\n]*(?:\n[^\n]*){0,5}$/i,
-    /\n{2,}\s*(?:E-Verify|We participate in E-Verify)[^\n]*(?:\n[^\n]*){0,5}$/i,
-    /\n{2,}\s*(?:Pay Transparency|Salary Transparency|Compensation Disclosure)[^\n]*(?:\n[^\n]*){0,5}$/i,
-    /\n{2,}\s*(?:About (?:the |this )?Company)\s*:?\s*\n.*$/is,
-  ];
-  for (const p of trailingPatterns) {
-    cleaned = cleaned.replace(p, '');
-  }
-
-  cleaned = cleaned.replace(/\n*-\s*#LI-\w+\s*/g, '');
-  cleaned = cleaned.replace(/#LI-(?:Remote|Hybrid|Onsite|DNI|\w+)\s*/g, '');
-
-  cleaned = cleaned.replace(/\n*-?\s*Find out more about our Benefits and Perks\s*\n*/gi, '\n');
-
-  const midSectionBoilerplate = [
-    /\n{2,}(?:BENEFITS|PERKS|WHAT WE OFFER)\s*:?\s*\n(?:[-•*]\s[^\n]*\n?){3,}\n*/gi,
-    /\n{2,}(?:Why (?:join|work at|work with) [\w\s&.'()-]+)\s*:?\s*\n(?:[-•*]\s[^\n]*\n?){3,}\n*/gi,
-  ];
-  for (const p of midSectionBoilerplate) {
-    cleaned = cleaned.replace(p, '\n\n');
-  }
-
-  cleaned = ensureCompleteSentence(cleaned);
-
-  return cleaned.trim();
-}
-
-function normalizeFlatText(text: string): string {
-  const newlineCount = (text.match(/\n/g) || []).length;
-  if (newlineCount > 5) return splitInlineBulletsInLines(text);
-
-  let result = text;
-
-  result = result.replace(/\s+([A-Z][A-Z\s\u2019'&\-:]{3,60}?)(?=\s+(?:[A-Z][a-z]|[-\u2013\u2022*]|You['\u2019]|We['\u2019]|Our |The |This |While ))/g, (full, heading, offset) => {
-    const words = heading.trim().split(/\s+/);
-    const allCaps = words.every((w: string) => w === w.toUpperCase() && /[A-Z]/.test(w));
-    if (allCaps && words.length >= 2) {
-      return '\n\n' + heading.trim() + '\n';
-    }
-    return full;
-  });
-
-  result = result.replace(/([.!?:])(\s+)- /g, '$1\n- ');
-
-  result = result.replace(/ - (?=[A-Z][a-z])/g, '\n- ');
-
-  const inlineHeadings = /\s+((?:What you (?:will be doing|bring|[''\u2019]ll do|need)|What we (?:offer|[''\u2019]re looking for)|Who you are|Nice to have|How you will|Your (?:impact|responsibilities)|The (?:role|opportunity|impact)):?\s*)/gi;
-  result = result.replace(inlineHeadings, '\n\n$1\n');
-
-  const lines = result.split('\n');
-  const output: string[] = [];
-
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (!trimmed) { output.push(''); continue; }
-
-    if (trimmed.length < 200) { output.push(trimmed); continue; }
-
-    const split = splitLongFlatLine(trimmed);
-    output.push(split);
-  }
-
-  result = output.join('\n');
-  result = result.replace(/\n{3,}/g, '\n\n');
-
-  return result.trim();
-}
-
-function splitLongFlatLine(line: string): string {
-  const sep = /\s+[-\u2013]\s+/g;
-  const matches: Array<{ index: number; len: number }> = [];
-  let m: RegExpExecArray | null;
-  while ((m = sep.exec(line)) !== null) {
-    matches.push({ index: m.index, len: m[0].length });
-  }
-
-  if (matches.length >= 2) {
-    const segments: string[] = [];
-    let lastEnd = 0;
-    for (const mt of matches) {
-      const chunk = line.slice(lastEnd, mt.index).trim();
-      if (chunk) segments.push(chunk);
-      lastEnd = mt.index + mt.len;
-    }
-    const tail = line.slice(lastEnd).trim();
-    if (tail) segments.push(tail);
-
-    const bulletLike = segments.filter(s => s.length > 15);
-    if (bulletLike.length >= 3) {
-      const parts: string[] = [];
-      const firstIsLabel = segments[0].length < 60 && /[:.]$/.test(segments[0].trim());
-      const startIdx = firstIsLabel ? 1 : 0;
-      if (firstIsLabel) parts.push(segments[0]);
-      for (let i = startIdx; i < segments.length; i++) {
-        parts.push('- ' + segments[i]);
-      }
-      return parts.join('\n');
-    }
-  }
-
-  const sentenceSplits: string[] = [];
-  const sentences = line.split(/(?<=[.!?])\s+(?=[A-Z])/);
-  let buffer = '';
-  for (const s of sentences) {
-    if (buffer && buffer.length > 120) {
-      sentenceSplits.push(buffer);
-      buffer = s;
-    } else {
-      buffer = buffer ? buffer + ' ' + s : s;
-    }
-  }
-  if (buffer) sentenceSplits.push(buffer);
-
-  if (sentenceSplits.length > 1) {
-    return sentenceSplits.join('\n\n');
-  }
-
-  return line;
-}
-
-function splitInlineBulletsInLines(text: string): string {
-  return text.replace(/^(.*?)$/gm, (line) => {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.length < 80) return line;
-    if (/^[-\u2013\u2022*]\s/.test(trimmed) && trimmed.length < 200) return line;
-    return splitLongFlatLine(trimmed);
-  });
-}
-
-function fixMissingSentenceSpaces(text: string): string {
-  const abbreviations = /^(?:Mr|Ms|Mrs|Dr|Jr|Sr|St|vs|etc|ie|eg|al|Prof|Gen|Gov|Rev|Hon|Inc|Ltd|Co|Corp|LLC|Vol|No|Fig|Eq|Dept|Est|Assn|Intl)$/i;
-  let result = '';
-  let lastIndex = 0;
-  const re = /(\w)([.!?])([A-Z][a-z])/g;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(text)) !== null) {
-    const matchPos = m.index;
-    const lookback = text.slice(Math.max(0, matchPos - 12), matchPos + 1);
-    const lastWord = lookback.match(/([A-Za-z]+)$/)?.[1] || '';
-    if (lastWord.length === 1 || abbreviations.test(lastWord)) {
-      continue;
-    }
-    result += text.slice(lastIndex, matchPos) + m[1] + m[2] + ' ' + m[3];
-    lastIndex = matchPos + m[0].length;
-  }
-  result += text.slice(lastIndex);
-  result = result.replace(/([.!?])(\()([A-Z])/g, '$1 $2$3');
-  return result;
-}
-
 function cleanDescription(text: string): string {
-  let cleaned = text;
-  cleaned = decodeHtmlEntities(cleaned);
+  let cleaned = decodeHtmlEntities(text);
   if (/<[a-z][^>]*>/i.test(cleaned)) {
-    cleaned = stripHtmlToText(cleaned);
+    cleaned = cleaned.replace(/<br\s*\/?>/gi, '\n');
+    cleaned = cleaned.replace(/<\/(?:p|div|h[1-6]|li|tr|section|article)>/gi, '\n');
+    cleaned = cleaned.replace(/<(?:p|div|h[1-6]|ul|ol|table|tbody|thead|section|article)(?:\s[^>]*)?>/gi, '\n');
+    cleaned = cleaned.replace(/<li(?:\s[^>]*)?>/gi, '- ');
+    cleaned = cleaned.replace(/<[^>]+>/g, '');
+    cleaned = cleaned.replace(/&[a-z]+;/gi, ' ');
   }
   cleaned = cleaned.replace(/\u00A0/g, ' ');
   cleaned = cleaned.replace(/ {2,}/g, ' ');
-  cleaned = cleaned.replace(/\n{4,}/g, '\n\n\n');
+  cleaned = cleaned.replace(/\n{3,}/g, '\n\n');
   cleaned = cleaned.replace(/^[ \t]+/gm, '');
-  cleaned = fixMissingSentenceSpaces(cleaned);
-  cleaned = stripBoilerplate(cleaned);
-  cleaned = normalizeFlatText(cleaned);
-  cleaned = cleaned.trim();
-  return cleaned;
+  return cleaned.trim();
 }
 
 function linkifyEmails(content: string) {
