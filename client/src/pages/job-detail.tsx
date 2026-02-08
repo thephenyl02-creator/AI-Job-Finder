@@ -394,7 +394,6 @@ function StructuredDescriptionView({ data }: { data: StructuredDescription }) {
     { key: "responsibilities", title: "Responsibilities", items: data.responsibilities, text: null, icon: Briefcase },
     { key: "minimumQualifications", title: "Minimum Qualifications", items: data.minimumQualifications, text: null, icon: CheckCircle2 },
     { key: "preferredQualifications", title: "Preferred Qualifications", items: data.preferredQualifications, text: null, icon: Star },
-    { key: "skillsRequired", title: "Skills Required", items: data.skillsRequired, text: null, icon: Hash },
   ];
 
   return (
@@ -1076,8 +1075,23 @@ export default function JobDetail() {
               </div>
             )}
 
+            {job.structuredDescription && typeof job.structuredDescription === 'object' ? (
+              <div data-testid="section-full-description">
+                <StructuredDescriptionView data={job.structuredDescription as StructuredDescription} />
+              </div>
+            ) : job.description ? (
+              <div data-testid="section-full-description">
+                <DescriptionContent text={job.description} testId="text-job-description" isPro={isPro} />
+                {job.requirements && (
+                  <div className="mt-8 pt-6 border-t border-border/40">
+                    <DescriptionContent text={job.requirements} testId="text-job-requirements" isPro={isPro} />
+                  </div>
+                )}
+              </div>
+            ) : null}
+
             {resumeFit && resumeFit.length > 0 && (
-              <div data-testid="section-resume-fit" className="mb-6">
+              <div data-testid="section-resume-fit" className="mt-6 pt-6 border-t border-border/40">
                 <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Resume Fit</h3>
                 <div className="space-y-2.5">
                   {resumeFit.map((rf) => (
@@ -1125,7 +1139,7 @@ export default function JobDetail() {
             )}
 
             {!resumeFit && !isPro && userResumes.length > 0 && job?.keySkills && job.keySkills.length > 0 && (
-              <div data-testid="section-resume-match-teaser" className="mb-6">
+              <div data-testid="section-resume-match-teaser" className="mt-6 pt-6 border-t border-border/40">
                 <div className="rounded-md border border-border/40 p-4 relative overflow-hidden">
                   <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background/90 pointer-events-none z-10" />
                   <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Resume Fit</h3>
@@ -1161,7 +1175,7 @@ export default function JobDetail() {
             )}
 
             {!resumeFit && userResumes.length === 0 && job?.keySkills && job.keySkills.length > 0 && (
-              <div data-testid="section-resume-cta" className="mb-6">
+              <div data-testid="section-resume-cta" className="mt-6 pt-6 border-t border-border/40">
                 <div className="rounded-md border border-dashed border-border/50 p-4 text-center">
                   <Upload className="h-5 w-5 text-muted-foreground mx-auto mb-2" />
                   <p className="text-sm text-muted-foreground">Upload a resume to see how well you match this role</p>
@@ -1172,21 +1186,6 @@ export default function JobDetail() {
                 </div>
               </div>
             )}
-
-            {job.structuredDescription && typeof job.structuredDescription === 'object' ? (
-              <div data-testid="section-full-description">
-                <StructuredDescriptionView data={job.structuredDescription as StructuredDescription} />
-              </div>
-            ) : job.description ? (
-              <div data-testid="section-full-description">
-                <DescriptionContent text={job.description} testId="text-job-description" isPro={isPro} />
-                {job.requirements && (
-                  <div className="mt-8 pt-6 border-t border-border/40">
-                    <DescriptionContent text={job.requirements} testId="text-job-requirements" isPro={isPro} />
-                  </div>
-                )}
-              </div>
-            ) : null}
 
             <div className="border-t border-border/40 mt-7 pt-5">
               <Button

@@ -54,13 +54,106 @@ function adminHighlight(text: string): (string | JSX.Element)[] {
   return parts;
 }
 
+function decodeAdminHtmlEntities(text: string): string {
+  return text
+    .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&')
+    .replace(/&nbsp;/g, ' ').replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'").replace(/&#x27;/g, "'")
+    .replace(/&mdash;/g, '\u2014').replace(/&ndash;/g, '\u2013')
+    .replace(/&ldquo;/g, '\u201C').replace(/&rdquo;/g, '\u201D')
+    .replace(/&lsquo;/g, '\u2018').replace(/&rsquo;/g, '\u2019')
+    .replace(/&bull;/g, '\u2022').replace(/&hellip;/g, '\u2026')
+    .replace(/&trade;/g, '\u2122').replace(/&copy;/g, '\u00A9').replace(/&reg;/g, '\u00AE')
+    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(parseInt(n, 10)))
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, h) => String.fromCharCode(parseInt(h, 16)));
+}
+
+function fixAdminSentenceSpaces(text: string): string {
+  const abbreviations = /^(?:Mr|Ms|Mrs|Dr|Jr|Sr|St|vs|etc|ie|eg|al|Prof|Gen|Gov|Rev|Hon|Inc|Ltd|Co|Corp|LLC|Vol|No|Fig|Eq|Dept|Est|Assn|Intl)$/i;
+  let result = '';
+  let lastIndex = 0;
+  const re = /(\w)([.!?])([A-Z][a-z])/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    const matchPos = m.index;
+    const lookback = text.slice(Math.max(0, matchPos - 12), matchPos + 1);
+    const lastWord = lookback.match(/([A-Za-z]+)$/)?.[1] || '';
+    if (lastWord.length === 1 || abbreviations.test(lastWord)) continue;
+    result += text.slice(lastIndex, matchPos) + m[1] + m[2] + ' ' + m[3];
+    lastIndex = matchPos + m[0].length;
+  }
+  result += text.slice(lastIndex);
+  return result;
+}
+
+function cleanAdminText(text: string): string {
+  let cleaned = decodeAdminHtmlEntities(text);
+  if (/<[a-z][^>]*>/i.test(cleaned)) {
+    cleaned = cleaned.replace(/<br\s*\/?>/gi, '\n');
+    cleaned = cleaned.replace(/<\/(?:p|div|h[1-6]|li|tr|section|article)>/gi, '\n');
+    cleaned = cleaned.replace(/<(?:p|div|h[1-6]|ul|ol|table|tbody|thead|section|article)(?:\s[^>]*)?>/gi, '\n');
+    cleaned = cleaned.replace(/<li(?:\s[^>]*)?>/gi, '- ');
+    cleaned = cleaned.replace(/<[^>]+>/g, '');
+  }
+  cleaned = cleaned.replace(/\u00A0/g, ' ');
+  cleaned = cleaned.replace(/ {2,}/g, ' ');
+  cleaned = cleaned.replace(/\n{3,}/g, '\n\n');
+  cleaned = cleaned.replace(/^[ \t]+/gm, '');
+  cleaned = fixAdminSentenceSpaces(cleaned);
+  return cleaned.trim();
+}
+
+function AdminStructuredPreview({ data, aiSummary }: { data: StructuredDescription; aiSummary?: string | null }) {
+  const sections = [
+    { key: "aboutCompany", title: "About the Company", items: null, text: data.aboutCompany },
+    { key: "responsibilities", title: "Responsibilities", items: data.responsibilities, text: null },
+    { key: "minimumQualifications", title: "Minimum Qualifications", items: data.minimumQualifications, text: null },
+    { key: "preferredQualifications", title: "Preferred Qualifications", items: data.preferredQualifications, text: null },
+  ];
+
+  return (
+    <div className="space-y-3" data-testid="admin-structured-preview">
+      {aiSummary && (
+        <div className="rounded-md bg-muted/50 border border-border/30 p-2.5 mb-2">
+          <div className="flex items-center gap-1.5 mb-1">
+            <Sparkles className="h-3 w-3 text-muted-foreground shrink-0" />
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">At a Glance</span>
+          </div>
+          <p className="text-xs text-foreground/80 leading-relaxed">{fixAdminSentenceSpaces(decodeAdminHtmlEntities(aiSummary))}</p>
+        </div>
+      )}
+      {sections.map(({ key, title, items, text }) => {
+        const hasText = text && text.trim();
+        const hasItems = items && items.length > 0;
+        if (!hasText && !hasItems) return null;
+        return (
+          <div key={key}>
+            <p className="font-semibold text-foreground text-[10px] uppercase tracking-wider mb-1">{title}</p>
+            {hasText ? (
+              <p className="text-xs text-foreground/80 leading-relaxed pl-2">{fixAdminSentenceSpaces(decodeAdminHtmlEntities(text!))}</p>
+            ) : (
+              <ul className="space-y-0.5 pl-2">
+                {items!.slice(0, 10).map((item, i) => (
+                  <li key={i} className="flex gap-1.5 text-xs text-foreground/80 leading-relaxed">
+                    <span className="shrink-0 mt-1.5 w-1 h-1 rounded-full bg-foreground/25" />
+                    <span>{adminHighlight(fixAdminSentenceSpaces(decodeAdminHtmlEntities(item)))}</span>
+                  </li>
+                ))}
+                {items!.length > 10 && (
+                  <p className="text-[10px] text-muted-foreground italic pl-2">+{items!.length - 10} more</p>
+                )}
+              </ul>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function AdminJobDescription({ description }: { description?: string | null }) {
   if (!description) return <p className="text-xs text-muted-foreground italic">No description</p>;
-  let text = description;
-  if (text.includes('&lt;') || text.includes('&gt;') || text.includes('&amp;') || /<[a-z][^>]*>/i.test(text)) {
-    text = text.replace(/<br\s*\/?>/gi, '\n').replace(/<\/(?:p|div|h[1-6]|li)>/gi, '\n').replace(/<li(?:\s[^>]*)?>/gi, '- ').replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&nbsp;/g, ' ').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&[a-z]+;/gi, ' ');
-  }
-  text = text.replace(/\n{3,}/g, '\n\n');
+  const text = cleanAdminText(description);
 
   const lines = text.split('\n').filter(l => l.trim());
   const headingRe = /^(?:About|What|Who|Responsibilities|Qualifications|Requirements|Skills|Benefits|Perks|Compensation|Getting|In this|How you|Why|Our|The|Your|Key|Core|Preferred|Required|Nice|Education|Experience|Pluses?)\b/i;
@@ -70,14 +163,14 @@ function AdminJobDescription({ description }: { description?: string | null }) {
       {lines.slice(0, 40).map((line, i) => {
         const trimmed = line.trim();
         if (!trimmed) return null;
-        const isBullet = /^[-•*]\s/.test(trimmed) || /^\d+[.)]\s/.test(trimmed);
+        const isBullet = /^[-\u2022*]\s/.test(trimmed) || /^\d+[.)]\s/.test(trimmed);
         const isHead = headingRe.test(trimmed) && trimmed.length < 80;
 
         if (isHead) {
           return <p key={i} className="font-semibold text-foreground pt-2 first:pt-0 text-xs">{adminHighlight(trimmed)}</p>;
         }
         if (isBullet) {
-          const content = trimmed.replace(/^[-•*]\s+|^\d+[.)]\s+/, '');
+          const content = trimmed.replace(/^[-\u2022*]\s+|^\d+[.)]\s+/, '');
           return (
             <div key={i} className="flex gap-1.5 pl-2 py-0.5">
               <span className="text-muted-foreground/60 shrink-0 mt-1 w-1 h-1 rounded-full bg-foreground/25" />
@@ -1943,17 +2036,43 @@ export default function AdminPage() {
                           </div>
                           {expandedJobId === job.id && (
                             <div className="pt-3 mt-3 border-t border-border/50">
-                              <div className="flex items-center gap-3 mb-2 text-[10px] text-muted-foreground flex-wrap">
-                                <span className="font-medium uppercase tracking-wider">Description Preview</span>
-                                <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-sm bg-amber-200 dark:bg-amber-800" />Exp</span>
-                                <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-sm bg-purple-200 dark:bg-purple-800" />Certs</span>
-                                <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-sm bg-blue-200 dark:bg-blue-800" />Edu</span>
-                                <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-sm bg-emerald-200 dark:bg-emerald-800" />Tools</span>
-                                <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-sm bg-rose-200 dark:bg-rose-800" />Legal</span>
-                                <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-sm bg-teal-200 dark:bg-teal-800" />Comp</span>
-                                <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-sm bg-sky-200 dark:bg-sky-800" />Skills</span>
-                              </div>
-                              <AdminJobDescription description={job.description} />
+                              {job.structuredDescription && typeof job.structuredDescription === 'object' ? (
+                                <>
+                                  <div className="flex items-center gap-2 mb-2 text-[10px] text-muted-foreground">
+                                    <span className="font-medium uppercase tracking-wider">User View Preview</span>
+                                    <Badge variant="outline" className="text-[9px] gap-0.5">
+                                      <Sparkles className="h-2.5 w-2.5" />
+                                      Structured
+                                    </Badge>
+                                  </div>
+                                  <div className="max-h-[350px] overflow-y-auto pr-2">
+                                    <AdminStructuredPreview data={job.structuredDescription as StructuredDescription} aiSummary={job.aiSummary} />
+                                  </div>
+                                </>
+                              ) : (
+                                <>
+                                  <div className="flex items-center gap-3 mb-2 text-[10px] text-muted-foreground flex-wrap">
+                                    <span className="font-medium uppercase tracking-wider">Description Preview</span>
+                                    <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-sm bg-amber-200 dark:bg-amber-800" />Exp</span>
+                                    <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-sm bg-purple-200 dark:bg-purple-800" />Certs</span>
+                                    <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-sm bg-blue-200 dark:bg-blue-800" />Edu</span>
+                                    <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-sm bg-emerald-200 dark:bg-emerald-800" />Tools</span>
+                                    <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-sm bg-rose-200 dark:bg-rose-800" />Legal</span>
+                                    <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-sm bg-teal-200 dark:bg-teal-800" />Comp</span>
+                                    <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-sm bg-sky-200 dark:bg-sky-800" />Skills</span>
+                                  </div>
+                                  {job.aiSummary && (
+                                    <div className="rounded-md bg-muted/50 border border-border/30 p-2.5 mb-2">
+                                      <div className="flex items-center gap-1.5 mb-1">
+                                        <Sparkles className="h-3 w-3 text-muted-foreground shrink-0" />
+                                        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">At a Glance</span>
+                                      </div>
+                                      <p className="text-xs text-foreground/80 leading-relaxed">{fixAdminSentenceSpaces(decodeAdminHtmlEntities(job.aiSummary))}</p>
+                                    </div>
+                                  )}
+                                  <AdminJobDescription description={job.description} />
+                                </>
+                              )}
                             </div>
                           )}
                         </div>
