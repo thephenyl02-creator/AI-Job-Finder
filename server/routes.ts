@@ -187,6 +187,12 @@ export async function registerRoutes(
       const uniqueCompanies = new Set(jobs.map(j => j.company)).size;
       const uniqueCategories = new Set(jobs.map(j => j.roleCategory).filter(Boolean)).size;
       const entryLevelJobs = jobs.filter(j => ["Entry", "Junior", "Associate", "Intern", "Fellowship"].includes(j.seniorityLevel || "")).length;
+      const categoryCounts: Record<string, number> = {};
+      for (const job of jobs) {
+        if (job.roleCategory) {
+          categoryCounts[job.roleCategory] = (categoryCounts[job.roleCategory] || 0) + 1;
+        }
+      }
       const allEvents = await storage.getEvents();
       const upcomingEvents = allEvents.filter(e => new Date(e.startDate) >= new Date()).length;
       res.json({
@@ -196,6 +202,7 @@ export async function registerRoutes(
         entryLevelJobs,
         totalEvents: allEvents.length,
         upcomingEvents,
+        categoryCounts,
       });
     } catch (error) {
       console.error("Error fetching stats:", error);

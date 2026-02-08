@@ -2,7 +2,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { MapPin, DollarSign, Clock, ExternalLink, Sparkles, Building2, Briefcase, Brain, Scale, Zap, Bookmark, Wifi, Home, Laptop } from "lucide-react";
+import { MapPin, DollarSign, Clock, ExternalLink, Sparkles, Building2, Briefcase, Brain, Scale, Zap, Bookmark, Wifi, Home, Laptop, GraduationCap } from "lucide-react";
 import type { JobWithScore } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useMutation } from "@tanstack/react-query";
@@ -76,6 +76,14 @@ export function JobCard({ job, showMatchScore = false, hasResume = false, isSave
     return Briefcase;
   };
 
+  const getLegalFitLabel = (score?: number | null) => {
+    if (!score) return null;
+    if (score >= 9) return { label: "JD Preferred", className: "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800" };
+    if (score >= 8) return { label: "Legal Background Valued", className: "bg-sky-100 dark:bg-sky-900/30 text-sky-700 dark:text-sky-400 border-sky-200 dark:border-sky-800" };
+    if (score >= 7) return { label: "Domain Knowledge Helpful", className: "bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-400 border-violet-200 dark:border-violet-800" };
+    return null;
+  };
+
   const getSeniorityColor = (level?: string | null) => {
     if (level === "Entry") return "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400";
     if (level === "Mid") return "bg-slate-100 dark:bg-slate-900/30 text-slate-700 dark:text-slate-400";
@@ -85,6 +93,7 @@ export function JobCard({ job, showMatchScore = false, hasResume = false, isSave
   };
 
   const CategoryIcon = getCategoryIcon(job.roleCategory);
+  const legalFit = getLegalFitLabel(job.legalRelevanceScore);
 
   const salary = formatSalary(job.salaryMin, job.salaryMax);
   const experience = formatExperience(job.experienceMin, job.experienceMax);
@@ -164,6 +173,12 @@ export function JobCard({ job, showMatchScore = false, hasResume = false, isSave
           </div>
 
           <div className="flex flex-wrap gap-2">
+            {legalFit && (
+              <Badge variant="secondary" className={`gap-1 ${legalFit.className}`} data-testid={`badge-legal-fit-${job.id}`}>
+                <Scale className="h-3 w-3" />
+                {legalFit.label}
+              </Badge>
+            )}
             {job.roleCategory && (
               <Badge variant="secondary" className="gap-1.5 bg-primary/10 text-primary border-primary/20">
                 <CategoryIcon className="h-3 w-3" />

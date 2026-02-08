@@ -25,6 +25,11 @@ import {
   Calendar,
   Globe,
   Video,
+  Scale,
+  Shield,
+  FileCheck,
+  Brain,
+  Briefcase,
 } from "lucide-react";
 import {
   ScrollReveal,
@@ -42,6 +47,7 @@ interface Stats {
   entryLevelJobs: number;
   totalEvents: number;
   upcomingEvents: number;
+  categoryCounts?: Record<string, number>;
 }
 
 interface FeaturedJob {
@@ -581,7 +587,129 @@ export default function Landing() {
           </div>
         </section>
 
-        <section className="border-t border-border/40 bg-muted/30">
+        <section className="border-t border-border/40 bg-muted/30" data-testid="career-paths-section">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-20 sm:py-28">
+            <ScrollReveal>
+              <p className="text-sm font-medium text-muted-foreground tracking-wide uppercase mb-4">
+                Where lawyers go in legal tech
+              </p>
+              <h2 className="text-3xl sm:text-4xl font-serif font-medium text-foreground mb-4 tracking-tight">
+                From practice to product
+              </h2>
+              <p className="text-lg text-muted-foreground max-w-2xl mb-12">
+                Your legal training opens doors that most tech candidates can't walk through. Here are the career paths where former lawyers thrive.
+              </p>
+            </ScrollReveal>
+
+            <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" staggerDelay={0.1}>
+              {[
+                {
+                  icon: Briefcase,
+                  title: "Legal Operations",
+                  from: "Practice management, case coordination",
+                  to: "Legal Ops Manager, Solutions Architect, Billing Lead",
+                  description: "You've managed cases and client workflows. Legal tech companies need people who understand how law firms actually work to build and implement tools that streamline those processes.",
+                  category: "Legal Operations",
+                  testId: "career-path-ops",
+                },
+                {
+                  icon: Compass,
+                  title: "Legal Product & Innovation",
+                  from: "Practicing attorney, in-house counsel",
+                  to: "Product Counsel, Legal Engineer, Product Manager",
+                  description: "You know what lawyers need because you've been one. Product roles at legal tech companies value domain expertise over engineering skills. You define what gets built.",
+                  category: "Legal Product & Innovation",
+                  testId: "career-path-product",
+                },
+                {
+                  icon: Shield,
+                  title: "Compliance & RegTech",
+                  from: "Regulatory practice, privacy law",
+                  to: "Privacy Counsel, GRC Analyst, Compliance Manager",
+                  description: "Privacy regulations, data governance, and AI compliance are booming. Your understanding of regulatory frameworks is exactly what these companies are hiring for.",
+                  category: "Compliance & RegTech",
+                  testId: "career-path-compliance",
+                },
+                {
+                  icon: FileCheck,
+                  title: "Contract Technology",
+                  from: "Transactional practice, contract review",
+                  to: "Contract Analyst, ISDA Negotiator, Contracts Manager",
+                  description: "You've reviewed thousands of contracts. Now help build the tools that make contract analysis faster and smarter for every legal team.",
+                  category: "Contract Technology",
+                  testId: "career-path-contracts",
+                },
+                {
+                  icon: Brain,
+                  title: "Legal AI & Machine Learning",
+                  from: "Any legal background",
+                  to: "AI Product Counsel, Legal AI Engineer, Safety Counsel",
+                  description: "AI companies need lawyers who can evaluate model outputs, define safety policies, and bridge the gap between what AI can do and what the law requires.",
+                  category: "Legal AI & Machine Learning",
+                  testId: "career-path-ai",
+                },
+                {
+                  icon: Scale,
+                  title: "Legal Consulting & Strategy",
+                  from: "BigLaw, boutique practice",
+                  to: "Legal Strategy Director, Partner Development, Advisory",
+                  description: "Your deep understanding of legal markets and client needs makes you the ideal person to advise companies on how legal tech fits into their practice.",
+                  category: "Legal Consulting & Strategy",
+                  testId: "career-path-consulting",
+                },
+              ].map((path) => {
+                const count = stats?.categoryCounts?.[path.category] || 0;
+                return (
+                  <StaggerItem key={path.title}>
+                    <Card className="bg-background border-border/60 h-full" data-testid={path.testId}>
+                      <CardContent className="p-5">
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="w-9 h-9 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
+                            <path.icon className="h-4 w-4 text-primary" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h3 className="text-sm font-semibold text-foreground">{path.title}</h3>
+                          </div>
+                          {count > 0 && (
+                            <Badge variant="secondary" className="text-[10px] shrink-0 no-default-hover-elevate no-default-active-elevate">
+                              {count} roles
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground leading-relaxed mb-3">
+                          {path.description}
+                        </p>
+                        <div className="space-y-1.5">
+                          <div className="flex items-start gap-2">
+                            <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide shrink-0 mt-0.5 w-10">From</span>
+                            <span className="text-xs text-muted-foreground">{path.from}</span>
+                          </div>
+                          <div className="flex items-start gap-2">
+                            <span className="text-[10px] font-medium text-foreground/70 uppercase tracking-wide shrink-0 mt-0.5 w-10">To</span>
+                            <span className="text-xs text-foreground/80 font-medium">{path.to}</span>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </StaggerItem>
+                );
+              })}
+            </StaggerContainer>
+
+            <ScrollReveal delay={0.4}>
+              <div className="text-center mt-8">
+                <Button variant="outline" asChild data-testid="button-browse-all-paths">
+                  <a href="/auth">
+                    Explore All Roles
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </a>
+                </Button>
+              </div>
+            </ScrollReveal>
+          </div>
+        </section>
+
+        <section className="border-t border-border/40">
           <div className="max-w-5xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
             <ScrollReveal>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center">

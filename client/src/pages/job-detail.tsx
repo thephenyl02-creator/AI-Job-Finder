@@ -1096,9 +1096,25 @@ export default function JobDetail() {
                   </>
                 )}
               </div>
-              {/* Category badges */}
-              {(job.roleCategory || job.roleSubcategory) && (
+              {/* Category badges and legal fit */}
+              {(job.roleCategory || job.roleSubcategory || job.legalRelevanceScore) && (
                 <div className="flex flex-wrap gap-1.5 mt-3" data-testid="section-category-badges">
+                  {job.legalRelevanceScore && job.legalRelevanceScore >= 7 && (
+                    <Badge
+                      variant="secondary"
+                      className={`gap-1 ${
+                        job.legalRelevanceScore >= 9
+                          ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800"
+                          : job.legalRelevanceScore >= 8
+                          ? "bg-sky-100 dark:bg-sky-900/30 text-sky-700 dark:text-sky-400 border-sky-200 dark:border-sky-800"
+                          : "bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-400 border-violet-200 dark:border-violet-800"
+                      }`}
+                      data-testid="badge-legal-fit"
+                    >
+                      <Scale className="h-3 w-3" />
+                      {job.legalRelevanceScore >= 9 ? "JD Preferred" : job.legalRelevanceScore >= 8 ? "Legal Background Valued" : "Domain Knowledge Helpful"}
+                    </Badge>
+                  )}
                   {job.roleCategory && (
                     <Badge variant="outline" data-testid="badge-role-category">{job.roleCategory}</Badge>
                   )}
