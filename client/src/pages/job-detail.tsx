@@ -177,6 +177,27 @@ function stripCompanyBoilerplate(text: string): string {
   return remaining.replace(/^(?:About (?:the |this )?role|The (?:Role|Opportunity|Challenge|Position|Team))\s*:?\s*\n*/i, '');
 }
 
+function fixMissingSentenceSpaces(text: string): string {
+  const abbreviations = /^(?:Mr|Ms|Mrs|Dr|Jr|Sr|St|vs|etc|ie|eg|al|Prof|Gen|Gov|Rev|Hon|Inc|Ltd|Co|Corp|LLC|Vol|No|Fig|Eq|Dept|Est|Assn|Intl)$/i;
+  let result = '';
+  let lastIndex = 0;
+  const re = /(\w)([.!?])([A-Z][a-z])/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    const matchPos = m.index;
+    const lookback = text.slice(Math.max(0, matchPos - 12), matchPos + 1);
+    const lastWord = lookback.match(/([A-Za-z]+)$/)?.[1] || '';
+    if (lastWord.length === 1 || abbreviations.test(lastWord)) {
+      continue;
+    }
+    result += text.slice(lastIndex, matchPos) + m[1] + m[2] + ' ' + m[3];
+    lastIndex = matchPos + m[0].length;
+  }
+  result += text.slice(lastIndex);
+  result = result.replace(/([.!?])(\()([A-Z])/g, '$1 $2$3');
+  return result;
+}
+
 function cleanDescription(text: string): string {
   let cleaned = decodeHtmlEntities(text);
   if (/<[a-z][^>]*>/i.test(cleaned)) {
@@ -192,6 +213,7 @@ function cleanDescription(text: string): string {
   cleaned = cleaned.replace(/\n{3,}/g, '\n\n');
   cleaned = cleaned.replace(/^[ \t]+/gm, '');
   cleaned = fixDashPrefixParagraphs(cleaned);
+  cleaned = fixMissingSentenceSpaces(cleaned);
   cleaned = stripCompanyBoilerplate(cleaned);
   return cleaned.trim();
 }
@@ -360,6 +382,12 @@ function groupBlocksIntoSections(blocks: Block[]): DescriptionSection[] {
 }
 
 
+function cleanStructuredText(text: string): string {
+  let cleaned = decodeHtmlEntities(text);
+  cleaned = fixMissingSentenceSpaces(cleaned);
+  return cleaned;
+}
+
 function StructuredDescriptionView({ data }: { data: StructuredDescription }) {
   const sections = [
     { key: "aboutCompany", title: "About the Company", items: null, text: data.aboutCompany, icon: Building2 },
@@ -381,13 +409,13 @@ function StructuredDescriptionView({ data }: { data: StructuredDescription }) {
               <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider">{title}</h3>
             </div>
             {hasText ? (
-              <p className="text-sm text-muted-foreground leading-relaxed pl-6">{text}</p>
+              <p className="text-sm text-muted-foreground leading-relaxed pl-6">{cleanStructuredText(text!)}</p>
             ) : hasItems ? (
               <ul className="space-y-1.5 pl-6">
                 {items!.map((item, i) => (
                   <li key={i} className="text-sm text-muted-foreground leading-relaxed flex items-start gap-2">
                     <span className="text-muted-foreground/40 mt-1.5 shrink-0 w-1 h-1 rounded-full bg-muted-foreground/40" />
-                    <span>{item}</span>
+                    <span>{cleanStructuredText(item)}</span>
                   </li>
                 ))}
               </ul>
@@ -1029,7 +1057,7 @@ export default function JobDetail() {
                     </span>
                   </div>
                   <p className="text-[0.925rem] text-foreground/80 leading-[1.75]" data-testid="text-ai-summary">
-                    {job.aiSummary}
+                    {fixMissingSentenceSpaces(job.aiSummary)}
                   </p>
                 </div>
               </div>
