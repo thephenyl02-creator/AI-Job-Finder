@@ -2236,7 +2236,7 @@ Be specific and actionable. Focus on legal tech industry keywords and ATS best p
       const allowedFields = [
         "title", "company", "location", "isRemote", "locationType", "salaryMin", "salaryMax",
         "roleType", "description", "requirements", "applyUrl", "isActive",
-        "roleCategory", "roleSubcategory", "seniorityLevel", "keySkills",
+        "roleCategory", "roleSubcategory", "seniorityLevel", "keySkills", "aiSummary",
       ];
       const updates: Record<string, any> = {};
       for (const field of allowedFields) {
@@ -2248,6 +2248,11 @@ Be specific and actionable. Focus on legal tech industry keywords and ATS best p
       if (Object.keys(updates).length === 0) {
         return res.status(400).json({ error: "No valid fields to update" });
       }
+
+      const user = req.user as any;
+      updates.manuallyEdited = true;
+      updates.editedBy = user?.id || null;
+      updates.editedAt = new Date();
 
       const updated = await storage.updateJob(id, updates);
       if (!updated) {

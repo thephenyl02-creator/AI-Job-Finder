@@ -357,6 +357,7 @@ export default function AdminPage() {
       location: job.location,
       applyUrl: job.applyUrl,
       description: job.description,
+      aiSummary: job.aiSummary,
       salaryMin: job.salaryMin,
       salaryMax: job.salaryMax,
       isActive: job.isActive,
@@ -1736,15 +1737,50 @@ export default function AdminPage() {
                             </div>
                           </div>
                           <div className="flex flex-wrap gap-2">
+                            {job.manuallyEdited && (
+                              <Badge variant="outline" className="text-xs bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800" data-testid={`badge-edited-${job.id}`}>
+                                <Pencil className="h-2.5 w-2.5 mr-1" />Curated
+                              </Badge>
+                            )}
                             {job.source && (
                               <Badge variant="outline" className="text-xs" data-testid={`badge-source-${job.id}`}>{job.source}</Badge>
                             )}
-                            {job.roleCategory && (
-                              <Badge variant="secondary" className="text-xs" data-testid={`badge-category-${job.id}`}>{job.roleCategory}</Badge>
-                            )}
-                            {job.seniorityLevel && (
-                              <Badge variant="secondary" className="text-xs" data-testid={`badge-seniority-${job.id}`}>{job.seniorityLevel}</Badge>
-                            )}
+                            <Select
+                              value={job.roleCategory || "_none"}
+                              onValueChange={(v) => {
+                                const newCategory = v === "_none" ? null : v;
+                                updateJobMutation.mutate({ id: job.id, updates: { roleCategory: newCategory } });
+                              }}
+                            >
+                              <SelectTrigger className="h-auto py-0.5 px-2 text-xs border-dashed w-auto min-w-0 gap-1" data-testid={`select-inline-category-${job.id}`}>
+                                <Tag className="h-3 w-3 shrink-0" />
+                                <span className="truncate">{job.roleCategory || "No category"}</span>
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="_none">No category</SelectItem>
+                                {TAXONOMY_CATEGORIES.map((cat) => (
+                                  <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <Select
+                              value={job.seniorityLevel || "_none"}
+                              onValueChange={(v) => {
+                                const newLevel = v === "_none" ? null : v;
+                                updateJobMutation.mutate({ id: job.id, updates: { seniorityLevel: newLevel } });
+                              }}
+                            >
+                              <SelectTrigger className="h-auto py-0.5 px-2 text-xs border-dashed w-auto min-w-0 gap-1" data-testid={`select-inline-seniority-${job.id}`}>
+                                <GraduationCap className="h-3 w-3 shrink-0" />
+                                <span className="truncate">{job.seniorityLevel || "No level"}</span>
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="_none">No level</SelectItem>
+                                {SENIORITY_OPTIONS.map((level) => (
+                                  <SelectItem key={level} value={level}>{level}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                             {job.keySkills && job.keySkills.length > 0 && job.keySkills.slice(0, 3).map((skill, si) => (
                               <Badge key={si} variant="outline" className="text-xs bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800">
                                 {skill}
@@ -1966,6 +2002,17 @@ export default function AdminPage() {
                     }))}
                     placeholder="e.g. Python, NLP, Contract Review"
                     data-testid="input-edit-skills"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-aiSummary">AI Summary</Label>
+                  <Textarea
+                    id="edit-aiSummary"
+                    value={editForm.aiSummary || ""}
+                    onChange={(e) => setEditForm((f) => ({ ...f, aiSummary: e.target.value }))}
+                    rows={3}
+                    placeholder="Brief overview of this role..."
+                    data-testid="input-edit-aiSummary"
                   />
                 </div>
                 <div className="space-y-2">
