@@ -109,6 +109,7 @@ function AdminStructuredPreview({ data, aiSummary }: { data: StructuredDescripti
     { key: "responsibilities", title: "Responsibilities", items: data.responsibilities, text: null },
     { key: "minimumQualifications", title: "Minimum Qualifications", items: data.minimumQualifications, text: null },
     { key: "preferredQualifications", title: "Preferred Qualifications", items: data.preferredQualifications, text: null },
+    { key: "skillsRequired", title: "Skills Required", items: data.skillsRequired, text: null },
   ];
 
   return (

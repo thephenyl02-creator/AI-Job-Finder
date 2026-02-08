@@ -37,6 +37,16 @@ import { LAW_FIRMS_AND_COMPANIES } from "./lib/law-firms-list";
 import { categorizeJob } from "./lib/job-categorizer";
 import { extractStructuredDescription } from "./lib/description-extractor";
 import { matchNewJobsAgainstAlerts } from "./lib/alert-matcher";
+
+async function extractStructuredDescriptionBackground(jobId: number, description: string, company: string, title: string) {
+  try {
+    const structured = await extractStructuredDescription(description, company, title);
+    await storage.updateJob(jobId, { structuredDescription: structured } as any);
+    console.log(`[Auto-Extract] Structured description extracted for job ${jobId}: ${title}`);
+  } catch (err: any) {
+    console.error(`[Auto-Extract] Failed for job ${jobId}:`, err.message);
+  }
+}
 import { parseJobFile, parseMultipleJobsFromText } from "./lib/job-file-parser";
 import { JOB_TAXONOMY } from "@shared/schema";
 import {
@@ -1853,6 +1863,9 @@ Be specific and actionable. Focus on legal tech industry keywords and ATS best p
             const saved = await storage.createJob(result.job);
             inserted++;
             savedJobs.push({ ...saved, status: 'created' });
+            if (!saved.structuredDescription && saved.description) {
+              extractStructuredDescriptionBackground(saved.id, saved.description, saved.company, saved.title).catch(() => {});
+            }
           }
         } catch (e: any) {
           console.error(`[Bulk Scraper] Error saving job from ${result.url}:`, e.message);
@@ -2154,6 +2167,11 @@ Be specific and actionable. Focus on legal tech industry keywords and ATS best p
 
       if (newJobs.length > 0) {
         matchNewJobsAgainstAlerts(newJobs).catch(err => console.error("Alert matching error:", err));
+        for (const j of newJobs) {
+          if (!j.structuredDescription && j.description) {
+            extractStructuredDescriptionBackground(j.id, j.description, j.company, j.title).catch(() => {});
+          }
+        }
       }
 
       res.json({
@@ -2242,6 +2260,11 @@ Be specific and actionable. Focus on legal tech industry keywords and ATS best p
           const { inserted, updated, newJobs } = await storage.bulkUpsertJobs([insertData]);
           if (newJobs.length > 0) {
             matchNewJobsAgainstAlerts(newJobs).catch(err => console.error("Alert matching error:", err));
+            for (const j of newJobs) {
+              if (!j.structuredDescription && j.description) {
+                extractStructuredDescriptionBackground(j.id, j.description, j.company, j.title).catch(() => {});
+              }
+            }
           }
 
           results.push({
@@ -2408,6 +2431,10 @@ Be specific and actionable. Focus on legal tech industry keywords and ATS best p
       const updated = await storage.updateJob(id, updates);
       if (!updated) {
         return res.status(404).json({ error: "Job not found" });
+      }
+
+      if (updates.description && !updates.structuredDescription) {
+        extractStructuredDescriptionBackground(id, updated.description, updated.company, updated.title).catch(() => {});
       }
 
       res.json({ success: true, job: updated });

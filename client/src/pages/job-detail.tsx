@@ -394,6 +394,7 @@ function StructuredDescriptionView({ data }: { data: StructuredDescription }) {
     { key: "responsibilities", title: "Responsibilities", items: data.responsibilities, text: null, icon: Briefcase },
     { key: "minimumQualifications", title: "Minimum Qualifications", items: data.minimumQualifications, text: null, icon: CheckCircle2 },
     { key: "preferredQualifications", title: "Preferred Qualifications", items: data.preferredQualifications, text: null, icon: Star },
+    { key: "skillsRequired", title: "Skills Required", items: data.skillsRequired, text: null, icon: Hash },
   ];
 
   return (
@@ -1062,33 +1063,17 @@ export default function JobDetail() {
               </div>
             )}
 
-            {job.keySkills && job.keySkills.length > 0 && (
-              <div data-testid="section-skills" className="mb-6">
-                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Key Skills</h3>
-                <div className="flex flex-wrap gap-1.5">
-                  {job.keySkills.map((skill, i) => (
-                    <Badge key={i} variant="outline" data-testid={`badge-skill-${i}`}>
-                      {skill}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            )}
-
             {job.structuredDescription && typeof job.structuredDescription === 'object' ? (
               <div data-testid="section-full-description">
                 <StructuredDescriptionView data={job.structuredDescription as StructuredDescription} />
               </div>
-            ) : job.description ? (
-              <div data-testid="section-full-description">
-                <DescriptionContent text={job.description} testId="text-job-description" isPro={isPro} />
-                {job.requirements && (
-                  <div className="mt-8 pt-6 border-t border-border/40">
-                    <DescriptionContent text={job.requirements} testId="text-job-requirements" isPro={isPro} />
-                  </div>
-                )}
+            ) : (
+              <div data-testid="section-full-description" className="text-center py-8">
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground mx-auto mb-3" />
+                <p className="text-sm text-muted-foreground">Job details are being processed...</p>
+                <p className="text-xs text-muted-foreground/60 mt-1">This typically takes a few moments. Refresh the page shortly.</p>
               </div>
-            ) : null}
+            )}
 
             {resumeFit && resumeFit.length > 0 && (
               <div data-testid="section-resume-fit" className="mt-6 pt-6 border-t border-border/40">
