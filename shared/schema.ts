@@ -44,6 +44,7 @@ export const jobs = pgTable("jobs", {
   legalRelevanceScore: integer("legal_relevance_score"),
   reviewStatus: varchar("review_status", { length: 20 }),
   descriptionFormatted: boolean("description_formatted").default(false),
+  structuredDescription: jsonb("structured_description"),
 });
 
 export const jobCategories = pgTable("job_categories", {
@@ -583,4 +584,12 @@ export interface ResumeSections {
     issuer: string;
     date: string;
   }>;
+}
+
+export interface StructuredDescription {
+  aboutCompany: string;
+  responsibilities: string[];
+  minimumQualifications: string[];
+  preferredQualifications: string[];
+  skillsRequired: string[];
 }
