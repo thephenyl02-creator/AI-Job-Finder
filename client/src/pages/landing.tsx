@@ -94,7 +94,7 @@ export default function Landing() {
           </Link>
           <div className="flex items-center gap-1 sm:gap-3">
             <Link href="/events">
-              <Button variant="ghost" size="sm" className="text-muted-foreground min-h-[44px] hidden sm:inline-flex" data-testid="link-landing-events">
+              <Button variant="ghost" size="sm" className="text-muted-foreground min-h-[44px]" data-testid="link-landing-events">
                 Events
               </Button>
             </Link>
@@ -498,22 +498,22 @@ export default function Landing() {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-8 mb-8">
             <div>
               <p className="text-sm font-medium text-foreground mb-3">Product</p>
-              <ul className="space-y-2">
+              <ul className="space-y-1">
                 <li>
-                  <Button variant="ghost" size="sm" asChild className="text-muted-foreground h-auto p-0 text-sm font-normal">
+                  <Button variant="ghost" size="sm" asChild className="text-muted-foreground justify-start px-0 text-sm font-normal min-h-[36px]">
                     <a href="/auth" data-testid="footer-link-browse">Browse Jobs</a>
                   </Button>
                 </li>
                 <li>
                   <Link href="/pricing">
-                    <Button variant="ghost" size="sm" className="text-muted-foreground h-auto p-0 text-sm font-normal" data-testid="footer-link-pricing">
+                    <Button variant="ghost" size="sm" className="text-muted-foreground justify-start px-0 text-sm font-normal min-h-[36px]" data-testid="footer-link-pricing">
                       Pricing
                     </Button>
                   </Link>
                 </li>
                 <li>
                   <Link href="/post-job">
-                    <Button variant="ghost" size="sm" className="text-muted-foreground h-auto p-0 text-sm font-normal" data-testid="footer-link-post-job">
+                    <Button variant="ghost" size="sm" className="text-muted-foreground justify-start px-0 text-sm font-normal min-h-[36px]" data-testid="footer-link-post-job">
                       Post a Job
                     </Button>
                   </Link>
@@ -531,24 +531,24 @@ export default function Landing() {
             </div>
             <div>
               <p className="text-sm font-medium text-foreground mb-3">Resources</p>
-              <ul className="space-y-2">
+              <ul className="space-y-1">
                 <li>
                   <Link href="/about">
-                    <Button variant="ghost" size="sm" className="text-muted-foreground h-auto p-0 text-sm font-normal" data-testid="footer-link-about">
+                    <Button variant="ghost" size="sm" className="text-muted-foreground justify-start px-0 text-sm font-normal min-h-[36px]" data-testid="footer-link-about">
                       About
                     </Button>
                   </Link>
                 </li>
                 <li>
                   <Link href="/terms">
-                    <Button variant="ghost" size="sm" className="text-muted-foreground h-auto p-0 text-sm font-normal" data-testid="footer-link-terms">
+                    <Button variant="ghost" size="sm" className="text-muted-foreground justify-start px-0 text-sm font-normal min-h-[36px]" data-testid="footer-link-terms">
                       Terms of Service
                     </Button>
                   </Link>
                 </li>
                 <li>
                   <Link href="/privacy">
-                    <Button variant="ghost" size="sm" className="text-muted-foreground h-auto p-0 text-sm font-normal" data-testid="footer-link-privacy">
+                    <Button variant="ghost" size="sm" className="text-muted-foreground justify-start px-0 text-sm font-normal min-h-[36px]" data-testid="footer-link-privacy">
                       Privacy Policy
                     </Button>
                   </Link>
@@ -557,9 +557,9 @@ export default function Landing() {
             </div>
             <div>
               <p className="text-sm font-medium text-foreground mb-3">Account</p>
-              <ul className="space-y-2">
+              <ul className="space-y-1">
                 <li>
-                  <Button variant="ghost" size="sm" asChild className="text-muted-foreground h-auto p-0 text-sm font-normal">
+                  <Button variant="ghost" size="sm" asChild className="text-muted-foreground justify-start px-0 text-sm font-normal min-h-[36px]">
                     <a href="/auth" data-testid="footer-link-signin">Sign In</a>
                   </Button>
                 </li>

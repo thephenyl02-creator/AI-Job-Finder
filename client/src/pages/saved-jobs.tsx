@@ -195,12 +195,12 @@ export default function SavedJobs() {
                       </Avatar>
 
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0">
+                        <div className="flex flex-col sm:flex-row sm:items-start gap-1.5 sm:gap-2">
+                          <div className="min-w-0 flex-1">
                             <p className="text-xs text-muted-foreground mb-0.5">{sj.job.company}</p>
                             <Link href={`/jobs/${sj.job.id}`}>
                               <h3
-                                className="text-base font-semibold text-foreground hover:text-primary transition-colors truncate cursor-pointer"
+                                className="text-base font-semibold text-foreground hover:text-primary transition-colors line-clamp-2 cursor-pointer leading-snug"
                                 data-testid={`text-saved-job-title-${sj.job.id}`}
                               >
                                 {sj.job.title}
