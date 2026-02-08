@@ -27,7 +27,6 @@ import {
   Send,
   FileText,
   Bookmark,
-  Mail,
   Award,
   GraduationCap,
   Clock,
@@ -44,21 +43,6 @@ import {
   Globe,
   CalendarDays,
 } from "lucide-react";
-
-function extractContactEmails(text: string | null | undefined): string[] {
-  if (!text) return [];
-  const emailRegex = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g;
-  const matches = text.match(emailRegex) || [];
-  const noReplyPatterns = /^(no-?reply|donotreply|unsubscribe|notifications?|mailer|bounce|auto|system|info@greenhouse|privacy@|legal@|compliance@)/i;
-  const imagePatterns = /\.(png|jpg|jpeg|gif|svg|webp|ico)$/i;
-  const filtered = matches.filter(email => {
-    if (noReplyPatterns.test(email)) return false;
-    if (imagePatterns.test(email)) return false;
-    if (email.includes('example.com')) return false;
-    return true;
-  });
-  return Array.from(new Set(filtered));
-}
 
 const BULLET_PATTERN = /^(?:[-•*]\s|(?:\d+)[.)]\s)/;
 
@@ -728,12 +712,6 @@ export default function JobDetail() {
   const postedLabel = getPostedDateLabel(job?.postedDate);
   const locationTypeLabel = job ? getLocationTypeLabel(job) : null;
 
-  const contactEmails = useMemo(() =>
-    extractContactEmails((job?.description || '') + ' ' + (job?.requirements || '')),
-    [job?.description, job?.requirements]
-  );
-
-
   const handleApplyClick = async () => {
     if (!job) return;
     trackNow({
@@ -805,7 +783,6 @@ export default function JobDetail() {
             {job.title}
           </h1>
 
-          {/* Metadata row */}
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm text-muted-foreground mt-3">
             <span className="flex items-center gap-1.5">
               <Building2 className="h-3.5 w-3.5 shrink-0" />
@@ -843,36 +820,26 @@ export default function JobDetail() {
             )}
           </div>
 
-          {/* Category badges and legal fit */}
-          {(job.roleCategory || job.roleSubcategory || job.legalRelevanceScore) && (
-            <div className="flex flex-wrap gap-1.5 mt-3" data-testid="section-category-badges">
-              {job.legalRelevanceScore && job.legalRelevanceScore >= 7 && (
-                <Badge
-                  variant="secondary"
-                  className={`gap-1 ${
-                    job.legalRelevanceScore >= 9
-                      ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800"
-                      : job.legalRelevanceScore >= 8
-                      ? "bg-sky-100 dark:bg-sky-900/30 text-sky-700 dark:text-sky-400 border-sky-200 dark:border-sky-800"
-                      : "bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-400 border-violet-200 dark:border-violet-800"
-                  }`}
-                  data-testid="badge-legal-fit"
-                >
-                  <Scale className="h-3 w-3" />
-                  {job.legalRelevanceScore >= 9 ? "JD Preferred" : job.legalRelevanceScore >= 8 ? "Legal Background Valued" : "Domain Knowledge Helpful"}
-                </Badge>
-              )}
-              {job.roleCategory && (
-                <Badge variant="outline" data-testid="badge-role-category">{job.roleCategory}</Badge>
-              )}
-              {job.roleSubcategory && job.roleSubcategory !== job.roleCategory && (
-                <Badge variant="outline" data-testid="badge-role-subcategory">{job.roleSubcategory}</Badge>
-              )}
+          {job.legalRelevanceScore && job.legalRelevanceScore >= 7 && (
+            <div className="flex flex-wrap gap-1.5 mt-3" data-testid="section-legal-fit">
+              <Badge
+                variant="secondary"
+                className={`gap-1 ${
+                  job.legalRelevanceScore >= 9
+                    ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800"
+                    : job.legalRelevanceScore >= 8
+                    ? "bg-sky-100 dark:bg-sky-900/30 text-sky-700 dark:text-sky-400 border-sky-200 dark:border-sky-800"
+                    : "bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-400 border-violet-200 dark:border-violet-800"
+                }`}
+                data-testid="badge-legal-fit"
+              >
+                <Scale className="h-3 w-3" />
+                {job.legalRelevanceScore >= 9 ? "JD Preferred" : job.legalRelevanceScore >= 8 ? "Legal Background Valued" : "Domain Knowledge Helpful"}
+              </Badge>
             </div>
           )}
 
-          {/* Action buttons - responsive layout */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 mt-4">
+          <div className="flex items-center gap-2 mt-4">
             <Button
               onClick={handleApplyClick}
               className="gap-2"
@@ -881,135 +848,87 @@ export default function JobDetail() {
               <ExternalLink className="h-4 w-4" />
               Apply Now
             </Button>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => saveJobMutation.mutate()}
-                disabled={saveJobMutation.isPending}
-                data-testid="button-save-job-detail"
-                className={`gap-1.5 flex-1 sm:flex-none ${jobIsSaved ? "text-primary" : ""}`}
-              >
-                <Bookmark className={`h-4 w-4 ${jobIsSaved ? "fill-current" : ""}`} />
-                {jobIsSaved ? "Saved" : "Save"}
-              </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => saveJobMutation.mutate()}
+              disabled={saveJobMutation.isPending}
+              data-testid="button-save-job-detail"
+              className={`gap-1.5 ${jobIsSaved ? "text-primary" : ""}`}
+            >
+              <Bookmark className={`h-4 w-4 ${jobIsSaved ? "fill-current" : ""}`} />
+              {jobIsSaved ? "Saved" : "Save"}
+            </Button>
+          </div>
+        </div>
+
+        {/* === UNIFIED JOB DETAILS CARD === */}
+        <Card className="mb-6" data-testid="section-job-details">
+          <CardContent className="p-5 sm:p-6">
+            {job.aiSummary && (
+              <div data-testid="section-ai-summary">
+                <div className="flex items-center gap-2.5 mb-3">
+                  <div className="w-7 h-7 rounded-md bg-muted flex items-center justify-center shrink-0">
+                    <Sparkles className="h-3.5 w-3.5 text-muted-foreground" />
+                  </div>
+                  <h2 className="text-base font-semibold text-foreground" data-testid="heading-ai-summary">
+                    Quick Summary
+                  </h2>
+                </div>
+                <p className="text-[0.925rem] text-foreground/80 leading-[1.75] pl-[2.375rem]" data-testid="text-ai-summary">
+                  {job.aiSummary}
+                </p>
+                <div className="border-b border-border/40 my-6" />
+              </div>
+            )}
+
+            {job.keySkills && job.keySkills.length > 0 && (
+              <div data-testid="section-skills">
+                <div className="flex items-center gap-2.5 mb-3">
+                  <div className="w-7 h-7 rounded-md bg-muted flex items-center justify-center shrink-0">
+                    <Hash className="h-3.5 w-3.5 text-muted-foreground" />
+                  </div>
+                  <h2 className="text-base font-semibold text-foreground">Key Skills</h2>
+                </div>
+                <div className="flex flex-wrap gap-1.5 pl-[2.375rem]">
+                  {job.keySkills.map((skill, i) => (
+                    <Badge key={i} variant="outline" data-testid={`badge-skill-${i}`}>
+                      {skill}
+                    </Badge>
+                  ))}
+                </div>
+                <div className="border-b border-border/40 my-6" />
+              </div>
+            )}
+
+            {job.description && (
+              <div data-testid="section-full-description">
+                <DescriptionContent text={job.description} testId="text-job-description" isPro={isPro} />
+
+                {job.requirements && (
+                  <div className="mt-8 pt-6 border-t border-border/40">
+                    <DescriptionContent text={job.requirements} testId="text-job-requirements" isPro={isPro} />
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="border-b border-border/40 my-6" />
+
+            <div className="flex items-center gap-3 pt-1">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setLocation(`/resume-builder?jobId=${job.id}`)}
                 data-testid="button-optimize-resume"
-                className="gap-1.5 flex-1 sm:flex-none"
+                className="gap-1.5"
               >
                 <FileText className="h-4 w-4" />
-                Optimize Resume
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        {/* === AI SUMMARY CARD === */}
-        {job.aiSummary && (
-          <Card className="mb-5" data-testid="section-ai-summary">
-            <CardContent className="p-5">
-              <div className="flex items-center gap-2.5 mb-3">
-                <div className="w-7 h-7 rounded-md bg-muted flex items-center justify-center shrink-0">
-                  <Sparkles className="h-3.5 w-3.5 text-muted-foreground" />
-                </div>
-                <h2 className="text-base font-semibold text-foreground" data-testid="heading-ai-summary">
-                  Quick Summary
-                </h2>
-              </div>
-              <p className="text-[0.925rem] text-foreground/80 leading-[1.75] pl-[2.375rem]" data-testid="text-ai-summary">
-                {job.aiSummary}
-              </p>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* === SKILLS CARD === */}
-        {job.keySkills && job.keySkills.length > 0 && (
-          <Card className="mb-5" data-testid="section-skills">
-            <CardContent className="p-5">
-              <div className="flex items-center gap-2.5 mb-3">
-                <div className="w-7 h-7 rounded-md bg-muted flex items-center justify-center shrink-0">
-                  <Hash className="h-3.5 w-3.5 text-muted-foreground" />
-                </div>
-                <h2 className="text-base font-semibold text-foreground">Skills & Expertise</h2>
-              </div>
-              <div className="flex flex-wrap gap-1.5 pl-[2.375rem]">
-                {job.keySkills.map((skill, i) => (
-                  <Badge key={i} variant="outline" data-testid={`badge-skill-${i}`}>
-                    {skill}
-                  </Badge>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* === FULL JOB DESCRIPTION === */}
-        {job.description && (
-          <Card className="mb-5" data-testid="section-full-description">
-            <CardContent className="p-5">
-              <div className="flex items-center gap-2.5 mb-5">
-                <div className="w-7 h-7 rounded-md bg-muted flex items-center justify-center shrink-0">
-                  <FileText className="h-3.5 w-3.5 text-muted-foreground" />
-                </div>
-                <h2 className="text-base font-semibold text-foreground">Job Description</h2>
-              </div>
-
-              <DescriptionContent text={job.description} testId="text-job-description" isPro={isPro} />
-
-              {job.requirements && (
-                <div className="mt-8 pt-6 border-t border-border/40">
-                  <DescriptionContent text={job.requirements} testId="text-job-requirements" isPro={isPro} />
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* === BOTTOM CTA === */}
-        <Card className="mb-8 border-primary/20 bg-primary/5 dark:bg-primary/10" data-testid="section-apply-cta">
-          <CardContent className="p-5">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-              <div className="flex-1 min-w-0">
-                <h3 className="text-base font-semibold text-foreground mb-1">
-                  Ready to apply?
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  You'll be taken to {job.company}'s careers page to submit your application.
-                </p>
-              </div>
-              <Button
-                size="lg"
-                onClick={handleApplyClick}
-                className="gap-2 w-full sm:w-auto shrink-0"
-                data-testid="button-apply-bottom"
-              >
-                <ExternalLink className="h-4 w-4" />
-                Apply Now
+                Tailor Your Resume for This Role
               </Button>
             </div>
           </CardContent>
         </Card>
-
-        {/* === CONTACT === */}
-        {contactEmails.length > 0 && (
-          <div className="flex flex-wrap gap-3 mb-8" data-testid="section-contact-emails">
-            {contactEmails.map((email) => (
-              <a
-                key={email}
-                href={`mailto:${email}`}
-                className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-                data-testid={`link-contact-email-${email.replace(/[@.]/g, '-')}`}
-              >
-                <Mail className="h-3.5 w-3.5" />
-                {email}
-              </a>
-            ))}
-          </div>
-        )}
 
         {/* === QUESTIONS === */}
         <div className="mb-8">

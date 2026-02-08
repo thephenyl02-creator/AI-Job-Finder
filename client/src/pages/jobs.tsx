@@ -13,13 +13,11 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
 import { motion, AnimatePresence } from "framer-motion";
 import { ScrollReveal } from "@/components/animations";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
 import {
-  ExternalLink,
   Search,
   ArrowLeft,
   ArrowRight,
@@ -53,6 +51,7 @@ import {
   Upload,
   CheckCircle2,
   User,
+  Clock,
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import type { ResumeExtractedData } from "@shared/schema";
@@ -127,8 +126,8 @@ export default function Jobs() {
   const [searchResults, setSearchResults] = useState<JobWithScore[] | null>(null);
   const [searchQuery, setSearchQuery] = useState<string | null>(null);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+  const [hasAutoExpanded, setHasAutoExpanded] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
-  const [selectedJobIds, setSelectedJobIds] = useState<Set<number>>(new Set());
   const [locationSearch, setLocationSearch] = useState("");
 
   const [smartQuery, setSmartQuery] = useState("");
@@ -278,43 +277,6 @@ export default function Jobs() {
     }
   }, [searchString]);
 
-  const toggleJobSelection = (jobId: number) => {
-    setSelectedJobIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(jobId)) {
-        next.delete(jobId);
-      } else if (next.size < 3) {
-        next.add(jobId);
-      }
-      return next;
-    });
-  };
-
-  const clearSelection = () => {
-    setSelectedJobIds(new Set());
-  };
-
-  const getSelectedJobs = () => {
-    const allDisplayJobs = searchResults || allJobs;
-    return allDisplayJobs.filter((job) => selectedJobIds.has(job.id));
-  };
-
-  const handleCompareSelected = () => {
-    const selectedJobs = getSelectedJobs();
-    if (selectedJobs.length < 2) return;
-    
-    // Store selected jobs in sessionStorage for Career Advisor to pick up
-    const jobsForComparison = selectedJobs.map((job) => ({
-      id: String(job.id),
-      title: job.title,
-      description: job.description,
-      company: job.company,
-      location: job.location || undefined,
-      portalJobId: job.id,
-    }));
-    sessionStorage.setItem("compareJobs", JSON.stringify(jobsForComparison));
-    setLocation("/career-advisor");
-  };
 
   useEffect(() => {
     const stored = sessionStorage.getItem("searchResults");
@@ -410,14 +372,19 @@ export default function Jobs() {
     .sort((a, b) => b[1].count - a[1].count)
     .map(([key, val]) => ({ key, display: val.display, count: val.count }));
 
-  const handleApplyClick = async (job: Job | JobWithScore) => {
-    try {
-      await apiRequest("POST", `/api/jobs/${job.id}/apply-click`);
-    } catch (e) {
-      console.error("Failed to track apply click", e);
+  useEffect(() => {
+    if (!hasAutoExpanded && allJobs.length > 0 && expandedCategories.size === 0 && !searchResults) {
+      const counts = Object.entries(JOB_TAXONOMY).map(([cat]) => ({
+        cat,
+        count: allJobs.filter(j => j.roleCategory === cat).length,
+      }));
+      const largest = counts.sort((a, b) => b.count - a.count)[0];
+      if (largest && largest.count > 0) {
+        setExpandedCategories(new Set([largest.cat]));
+      }
+      setHasAutoExpanded(true);
     }
-    window.open(job.applyUrl, "_blank");
-  };
+  }, [allJobs, hasAutoExpanded, searchResults]);
 
   const toggleCategory = (category: string) => {
     setExpandedCategories(prev => {
@@ -1097,12 +1064,8 @@ export default function Jobs() {
                 taxonomy={JOB_TAXONOMY[selectedCategory as keyof typeof JOB_TAXONOMY]}
                 expanded={true}
                 onToggle={() => {}}
-                onApply={handleApplyClick}
-                hasResume={resumeData?.hasResume ?? false}
                 searchResults={searchResults}
                 getCategoryIcon={getCategoryIcon}
-                selectedJobIds={selectedJobIds}
-                onToggleSelection={toggleJobSelection}
                 onJobClick={(id) => setLocation(`/jobs/${id}`)}
               />
             ) : (
@@ -1117,12 +1080,8 @@ export default function Jobs() {
                       taxonomy={taxonomy}
                       expanded={expandedCategories.has(category)}
                       onToggle={() => toggleCategory(category)}
-                      onApply={handleApplyClick}
-                      hasResume={resumeData?.hasResume ?? false}
                       searchResults={searchResults}
                       getCategoryIcon={getCategoryIcon}
-                      selectedJobIds={selectedJobIds}
-                      onToggleSelection={toggleJobSelection}
                       onJobClick={(id) => setLocation(`/jobs/${id}`)}
                     />
                   );
@@ -1134,12 +1093,8 @@ export default function Jobs() {
                     taxonomy={{ icon: "Sparkles", shortName: "Other", description: "Uncategorized jobs", subcategories: [] }}
                     expanded={expandedCategories.has("Other")}
                     onToggle={() => toggleCategory("Other")}
-                    onApply={handleApplyClick}
-                    hasResume={resumeData?.hasResume ?? false}
                     searchResults={searchResults}
                     getCategoryIcon={getCategoryIcon}
-                    selectedJobIds={selectedJobIds}
-                    onToggleSelection={toggleJobSelection}
                     onJobClick={(id) => setLocation(`/jobs/${id}`)}
                   />
                 )}
@@ -1148,57 +1103,6 @@ export default function Jobs() {
           </div>
         )}
 
-        <AnimatePresence>
-          {selectedJobIds.size > 0 && (
-            <motion.div
-              className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] sm:w-auto max-w-lg"
-              initial={{ y: 80, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: 80, opacity: 0 }}
-              transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              data-testid="compare-action-bar"
-            >
-              <Card className="shadow-lg border-primary/20">
-                <CardContent className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 py-3 px-4 sm:px-5">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <Target className="h-5 w-5 text-primary shrink-0" />
-                    <span className="font-medium text-sm sm:text-base">
-                      {selectedJobIds.size} job{selectedJobIds.size > 1 ? "s" : ""} selected
-                    </span>
-                    {selectedJobIds.size < 2 && (
-                      <span className="text-xs sm:text-sm text-muted-foreground">(select at least 2)</span>
-                    )}
-                    {selectedJobIds.size >= 3 && (
-                      <span className="text-xs sm:text-sm text-muted-foreground">(max 3)</span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 w-full sm:w-auto">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={clearSelection}
-                      className="min-h-[44px] flex-1 sm:flex-none"
-                      data-testid="button-clear-selection"
-                    >
-                      <X className="h-4 w-4 mr-1" />
-                      Clear
-                    </Button>
-                    <Button
-                      size="sm"
-                      onClick={handleCompareSelected}
-                      disabled={selectedJobIds.size < 2}
-                      className="min-h-[44px] flex-1 sm:flex-none"
-                      data-testid="button-compare-selected"
-                    >
-                      <Target className="h-4 w-4 mr-1" />
-                      Compare
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          )}
-        </AnimatePresence>
       </main>
       <Footer />
     </div>
@@ -1211,12 +1115,8 @@ function CategorySection({
   taxonomy,
   expanded,
   onToggle,
-  onApply,
-  hasResume,
   searchResults,
   getCategoryIcon,
-  selectedJobIds,
-  onToggleSelection,
   onJobClick,
 }: {
   category: string;
@@ -1224,12 +1124,8 @@ function CategorySection({
   taxonomy: { icon: string; shortName: string; description: string; subcategories: readonly string[] };
   expanded: boolean;
   onToggle: () => void;
-  onApply: (job: Job | JobWithScore) => void;
-  hasResume: boolean;
   searchResults: JobWithScore[] | null;
   getCategoryIcon: (icon: string) => typeof Brain;
-  selectedJobIds: Set<number>;
-  onToggleSelection: (jobId: number) => void;
   onJobClick: (jobId: number) => void;
 }) {
   const Icon = getCategoryIcon(taxonomy.icon);
@@ -1303,91 +1199,71 @@ function CategorySection({
                       <div className="grid gap-2">
                         {subJobs.map((job) => {
                           const salaryDisplay = formatSalaryRange(job.salaryMin, job.salaryMax);
+                          const locType = job.locationType || (job.isRemote ? "remote" : null);
+                          const postedAgo = job.postedDate ? (() => {
+                            const days = Math.floor((Date.now() - new Date(job.postedDate).getTime()) / 86400000);
+                            if (days === 0) return "Today";
+                            if (days === 1) return "1d ago";
+                            if (days < 7) return `${days}d ago`;
+                            if (days < 30) return `${Math.floor(days / 7)}w ago`;
+                            return `${Math.floor(days / 30)}mo ago`;
+                          })() : null;
                           return (
                             <div
                               key={job.id}
-                              className={`p-3 rounded-lg border bg-card hover:bg-muted/30 transition-colors cursor-pointer ${selectedJobIds.has(job.id) ? "ring-2 ring-primary bg-primary/5" : ""}`}
+                              className="p-3 rounded-lg border bg-card hover-elevate transition-colors cursor-pointer"
                               data-testid={`card-job-${job.id}`}
-                              onClick={(e) => {
-                                if ((e.target as HTMLElement).closest('button, [role="checkbox"], a')) return;
-                                onJobClick(job.id);
-                              }}
+                              onClick={() => onJobClick(job.id)}
                             >
-                              <div className="flex items-start gap-2 sm:gap-3">
-                                <div onClick={(e) => e.stopPropagation()} className="pt-0.5">
-                                  <Checkbox
-                                    checked={selectedJobIds.has(job.id)}
-                                    onCheckedChange={() => onToggleSelection(job.id)}
-                                    disabled={!selectedJobIds.has(job.id) && selectedJobIds.size >= 3}
-                                    className="min-h-[20px] min-w-[20px]"
-                                    data-testid={`checkbox-job-${job.id}`}
-                                  />
-                                </div>
-                                <div className="min-w-0 flex-1">
-                                  <div className="flex items-start justify-between gap-2">
-                                    <h4 className="font-medium text-foreground text-sm sm:text-base" data-testid={`text-job-title-${job.id}`}>
-                                      {job.title}
-                                    </h4>
-                                    <Button
-                                      size="sm"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        onApply(job);
-                                      }}
-                                      className="min-h-[44px] shrink-0 hidden sm:flex"
-                                      data-testid={`button-apply-${job.id}`}
-                                    >
-                                      <ExternalLink className="h-3 w-3 mr-1" />
-                                      Apply
-                                    </Button>
-                                  </div>
-                                  <div className="flex flex-wrap items-center gap-x-2 sm:gap-x-3 gap-y-1 mt-1 text-xs sm:text-sm text-muted-foreground">
-                                    <span className="flex items-center gap-1">
-                                      <Building2 className="h-3 w-3 shrink-0" />
-                                      <span data-testid={`text-job-company-${job.id}`}>{job.company}</span>
-                                    </span>
-                                    <span className="flex items-center gap-1">
-                                      <MapPin className="h-3 w-3 shrink-0" />
-                                      <span data-testid={`text-job-location-${job.id}`}>{job.location || "Not specified"}</span>
-                                    </span>
-                                    {salaryDisplay && (
-                                      <span className="flex items-center gap-1 text-green-600 dark:text-green-400">
-                                        <DollarSign className="h-3 w-3 shrink-0" />
-                                        <span data-testid={`text-salary-${job.id}`}>{salaryDisplay}</span>
-                                      </span>
-                                    )}
-                                    {job.seniorityLevel && (
-                                      <Badge variant="outline" className="text-xs">
-                                        {job.seniorityLevel}
-                                      </Badge>
-                                    )}
-                                    {searchResults && "matchScore" in job && (job as JobWithScore).matchScore && (
-                                      <Badge 
-                                        variant={(job as JobWithScore).matchScore! >= 80 ? "default" : "secondary"}
-                                        data-testid={`badge-match-${job.id}`}
-                                      >
-                                        {(job as JobWithScore).matchScore}% match
-                                      </Badge>
-                                    )}
-                                  </div>
-                                  {job.aiSummary && (
-                                    <p className="text-xs sm:text-sm text-muted-foreground mt-2 line-clamp-2">
-                                      {job.aiSummary}
-                                    </p>
+                              <div className="min-w-0">
+                                <h4 className="font-medium text-foreground text-sm sm:text-base" data-testid={`text-job-title-${job.id}`}>
+                                  {job.title}
+                                </h4>
+                                <div className="flex flex-wrap items-center gap-x-2 sm:gap-x-3 gap-y-1 mt-1 text-xs sm:text-sm text-muted-foreground">
+                                  <span className="flex items-center gap-1">
+                                    <Building2 className="h-3 w-3 shrink-0" />
+                                    <span data-testid={`text-job-company-${job.id}`}>{job.company}</span>
+                                  </span>
+                                  <span className="flex items-center gap-1">
+                                    <MapPin className="h-3 w-3 shrink-0" />
+                                    <span data-testid={`text-job-location-${job.id}`}>{job.location || "Not specified"}</span>
+                                  </span>
+                                  {locType && (
+                                    <Badge variant="outline" className="text-xs" data-testid={`badge-loc-type-${job.id}`}>
+                                      {locType === "remote" ? "Remote" : locType === "hybrid" ? "Hybrid" : "On-site"}
+                                    </Badge>
                                   )}
-                                  <Button
-                                    size="sm"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      onApply(job);
-                                    }}
-                                    className="min-h-[44px] mt-2 sm:hidden w-full"
-                                    data-testid={`button-apply-mobile-${job.id}`}
-                                  >
-                                    <ExternalLink className="h-3 w-3 mr-1" />
-                                    Apply
-                                  </Button>
+                                  {salaryDisplay && (
+                                    <span className="flex items-center gap-1 text-green-600 dark:text-green-400">
+                                      <DollarSign className="h-3 w-3 shrink-0" />
+                                      <span data-testid={`text-salary-${job.id}`}>{salaryDisplay}</span>
+                                    </span>
+                                  )}
+                                  {job.seniorityLevel && (
+                                    <Badge variant="outline" className="text-xs">
+                                      {job.seniorityLevel}
+                                    </Badge>
+                                  )}
+                                  {postedAgo && (
+                                    <span className="flex items-center gap-1">
+                                      <Clock className="h-3 w-3 shrink-0" />
+                                      <span data-testid={`text-posted-${job.id}`}>{postedAgo}</span>
+                                    </span>
+                                  )}
+                                  {searchResults && "matchScore" in job && (job as JobWithScore).matchScore && (
+                                    <Badge 
+                                      variant={(job as JobWithScore).matchScore! >= 80 ? "default" : "secondary"}
+                                      data-testid={`badge-match-${job.id}`}
+                                    >
+                                      {(job as JobWithScore).matchScore}% match
+                                    </Badge>
+                                  )}
                                 </div>
+                                {job.aiSummary && (
+                                  <p className="text-xs sm:text-sm text-muted-foreground mt-2 line-clamp-2">
+                                    {job.aiSummary}
+                                  </p>
+                                )}
                               </div>
                             </div>
                           );
