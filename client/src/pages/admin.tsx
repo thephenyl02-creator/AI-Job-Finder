@@ -15,7 +15,7 @@ import { Link } from "wouter";
 import { ArrowLeft, RefreshCw, Building2, Globe, Loader2, CheckCircle, XCircle, Sparkles, Activity, FileText, Play, Square, LinkIcon, Clock, ShieldX, ShieldCheck, Plus, Upload, Pencil, Trash2, RotateCw, ToggleLeft, ToggleRight, Search, Filter, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Save, X as XIcon, BarChart3, ClipboardPaste, Zap, MapPin, DollarSign, Briefcase, GraduationCap, Tag, Eye } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import type { Job } from "@shared/schema";
+import type { Job, StructuredDescription } from "@shared/schema";
 import { JOB_TAXONOMY } from "@shared/schema";
 
 const SENIORITY_OPTIONS = ["Intern", "Fellowship", "Entry", "Mid", "Senior", "Lead", "Director", "VP"];
@@ -196,6 +196,7 @@ export default function AdminPage() {
   const [editingJob, setEditingJob] = useState<Job | null>(null);
   const [editForm, setEditForm] = useState<Partial<Job>>({});
   const [expandedJobId, setExpandedJobId] = useState<number | null>(null);
+  const [showStructuredEdit, setShowStructuredEdit] = useState(false);
   const [isScanningRelevance, setIsScanningRelevance] = useState(false);
 
   const { data: companies, isLoading: loadingCompanies } = useQuery<Company[]>({
@@ -385,6 +386,7 @@ export default function AdminPage() {
 
   const openEditDialog = (job: Job) => {
     setEditingJob(job);
+    setShowStructuredEdit(false);
     setEditForm({
       title: job.title,
       company: job.company,
@@ -401,7 +403,33 @@ export default function AdminPage() {
       roleSubcategory: job.roleSubcategory,
       seniorityLevel: job.seniorityLevel,
       keySkills: job.keySkills,
+      structuredDescription: job.structuredDescription as StructuredDescription | null,
     });
+  };
+
+  const updateStructuredField = (field: keyof StructuredDescription, value: string) => {
+    setEditForm((f) => {
+      const current = (f.structuredDescription as StructuredDescription) || {
+        aboutCompany: "",
+        responsibilities: [],
+        minimumQualifications: [],
+        preferredQualifications: [],
+        skillsRequired: [],
+      };
+      if (field === "aboutCompany") {
+        return { ...f, structuredDescription: { ...current, aboutCompany: value } };
+      }
+      const lines = value.split("\n").filter((l) => l.trim());
+      return { ...f, structuredDescription: { ...current, [field]: lines } };
+    });
+  };
+
+  const getStructuredFieldValue = (field: keyof StructuredDescription): string => {
+    const sd = editForm.structuredDescription as StructuredDescription | null;
+    if (!sd) return "";
+    if (field === "aboutCompany") return sd.aboutCompany || "";
+    const arr = sd[field];
+    return Array.isArray(arr) ? arr.join("\n") : "";
   };
 
   const getSubcategoriesForCategory = (category: string | null | undefined): readonly string[] => {
@@ -2134,6 +2162,82 @@ export default function AdminPage() {
                     rows={6}
                     data-testid="input-edit-description"
                   />
+                </div>
+                <div className="space-y-3 border rounded-md p-3">
+                  <button
+                    type="button"
+                    className="flex items-center gap-2 w-full text-left text-sm font-semibold"
+                    onClick={() => setShowStructuredEdit(!showStructuredEdit)}
+                    data-testid="button-toggle-structured-edit"
+                  >
+                    {showStructuredEdit ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                    Structured Sections
+                    {(editForm.structuredDescription as StructuredDescription | null) && (
+                      <Badge variant="secondary" className="text-[10px]">Populated</Badge>
+                    )}
+                  </button>
+                  {showStructuredEdit && (
+                    <div className="space-y-3 pt-1">
+                      <p className="text-xs text-muted-foreground">
+                        Edit each section. For list fields, put one item per line.
+                      </p>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="edit-sd-about" className="text-xs">About the Company</Label>
+                        <Textarea
+                          id="edit-sd-about"
+                          value={getStructuredFieldValue("aboutCompany")}
+                          onChange={(e) => updateStructuredField("aboutCompany", e.target.value)}
+                          rows={3}
+                          placeholder="Brief company overview..."
+                          data-testid="input-edit-sd-about"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="edit-sd-responsibilities" className="text-xs">Responsibilities (one per line)</Label>
+                        <Textarea
+                          id="edit-sd-responsibilities"
+                          value={getStructuredFieldValue("responsibilities")}
+                          onChange={(e) => updateStructuredField("responsibilities", e.target.value)}
+                          rows={4}
+                          placeholder="Lead product strategy&#10;Collaborate with engineering..."
+                          data-testid="input-edit-sd-responsibilities"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="edit-sd-minquals" className="text-xs">Minimum Qualifications (one per line)</Label>
+                        <Textarea
+                          id="edit-sd-minquals"
+                          value={getStructuredFieldValue("minimumQualifications")}
+                          onChange={(e) => updateStructuredField("minimumQualifications", e.target.value)}
+                          rows={3}
+                          placeholder="JD or equivalent&#10;3+ years experience..."
+                          data-testid="input-edit-sd-minquals"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="edit-sd-prefquals" className="text-xs">Preferred Qualifications (one per line)</Label>
+                        <Textarea
+                          id="edit-sd-prefquals"
+                          value={getStructuredFieldValue("preferredQualifications")}
+                          onChange={(e) => updateStructuredField("preferredQualifications", e.target.value)}
+                          rows={3}
+                          placeholder="Experience with legal tech&#10;Background in compliance..."
+                          data-testid="input-edit-sd-prefquals"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="edit-sd-skills" className="text-xs">Skills Required (one per line)</Label>
+                        <Textarea
+                          id="edit-sd-skills"
+                          value={getStructuredFieldValue("skillsRequired")}
+                          onChange={(e) => updateStructuredField("skillsRequired", e.target.value)}
+                          rows={3}
+                          placeholder="Contract review&#10;Python&#10;Project management..."
+                          data-testid="input-edit-sd-skills"
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
                   <Label htmlFor="edit-active">Active</Label>

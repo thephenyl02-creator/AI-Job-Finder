@@ -77,6 +77,19 @@ A freemium SaaS job search platform specifically designed for legal professional
 - **Scrape Run Tracking**: `scrape_runs` table records every run with timestamps, duration, counts (found/inserted/updated/categorized/alerts), source details, errors, and trigger source (scheduler/manual).
 - **Admin Dashboard**: `/admin/scraper` page shows real-time scraper status, run history, health metrics, source breakdown, cumulative stats, and manual controls (start/stop/run-now).
 
+### Structured Job Descriptions
+- **AI Extraction**: `server/lib/description-extractor.ts` uses GPT-4o-mini to parse raw job descriptions into 5 uniform sections: About the Company, Responsibilities, Minimum Qualifications, Preferred Qualifications, Skills Required.
+- **Data Storage**: `structuredDescription` JSONB column on jobs table (type `StructuredDescription` in schema).
+- **Pipeline Integration**: Extraction runs automatically during AI categorization (`/api/admin/recategorize`). Backfill endpoint at `/api/admin/jobs/backfill-structured`.
+- **Rendering**: `StructuredDescriptionView` component in `job-detail.tsx` displays 5 sections with icons and proper formatting (paragraph for About, bullet lists for others). Falls back to raw description if unavailable.
+- **Admin Editing**: Admin edit dialog includes a collapsible "Structured Sections" panel where admins can edit each section individually (one item per line for list fields).
+
+### Unified Job Comparison
+- **Single Flow**: Job comparison is consolidated into the browse page (`/jobs`). Users select jobs with checkboxes, then open a side-by-side comparison table.
+- **Quick Compare**: Available to all users - side-by-side table showing company, location, salary, level, legal fit, and key skills.
+- **Deep Analysis (Pro)**: Pro users can click "Deep Analysis" to get AI-powered career analysis including overall strategy, best fit now/long-term/biggest shift recommendations, transition difficulty, pros/cons, transferable skills, and resume fit scoring.
+- **Career Advisor**: The standalone `/career-advisor` page has been removed. Its API endpoint (`/api/career-advisor/compare`) is reused by the unified comparison flow.
+
 ### Events Autopilot
 - **Event Discovery Pipeline**: `server/lib/event-scraper.ts` uses OpenAI to discover real legal tech events from 5 global regions: North America, Europe, Asia-Pacific, Global Virtual, and Middle East/Africa/Latin America.
 - **Scheduling**: Runs automatically every 7 days on startup (30s delay for initial run). Uses `startEventScheduler()` from `event-scraper.ts`.

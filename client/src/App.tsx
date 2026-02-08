@@ -15,7 +15,6 @@ import JobDetail from "@/pages/job-detail";
 import Admin from "@/pages/admin";
 import About from "@/pages/about";
 import PostJob from "@/pages/post-job";
-import CareerAdvisor from "@/pages/career-advisor";
 import Insights from "@/pages/insights";
 import Alerts from "@/pages/alerts";
 import Resumes from "@/pages/resumes";
@@ -62,7 +61,7 @@ function AppRouter() {
       <Route path="/admin">{isAuthenticated ? <Admin /> : <Landing />}</Route>
       <Route path="/admin/analytics">{isAuthenticated ? <AdminAnalytics /> : <Landing />}</Route>
       <Route path="/admin/scraper">{isAuthenticated ? <AdminScraper /> : <Landing />}</Route>
-      <Route path="/career-advisor">{isAuthenticated ? <CareerAdvisor /> : <Landing />}</Route>
+      <Route path="/career-advisor">{isAuthenticated ? <Redirect to="/jobs" /> : <Landing />}</Route>
       <Route path="/insights">{isAuthenticated ? <Insights /> : <Landing />}</Route>
       <Route path="/alerts">{isAuthenticated ? <Alerts /> : <Landing />}</Route>
       <Route path="/resumes">{isAuthenticated ? <Resumes /> : <Landing />}</Route>

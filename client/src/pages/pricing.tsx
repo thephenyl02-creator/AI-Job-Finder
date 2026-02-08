@@ -51,7 +51,7 @@ const FREE_FEATURES = [
   { text: "Submit job postings", included: true },
   { text: "Upload 1 resume", included: true },
   { text: "Resume matching & tweaks", included: false },
-  { text: "Career Advisor comparisons", included: false },
+  { text: "Deep job comparison & analysis", included: false },
   { text: "Market insights & analytics", included: false },
   { text: "Job alerts & notifications", included: false },
   { text: "Multi-resume management", included: false },
@@ -61,7 +61,7 @@ const FREE_FEATURES = [
 const PRO_FEATURES = [
   { text: "Everything in Free", included: true },
   { text: "Resume matching & tweaks", included: true },
-  { text: "Career Advisor comparisons", included: true },
+  { text: "Deep job comparison & analysis", included: true },
   { text: "Market insights & analytics", included: true },
   { text: "Job alerts & notifications", included: true },
   { text: "Up to 5 resumes", included: true },
@@ -76,7 +76,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "What does Pro add that's worth paying for?",
-    a: "Pro unlocks resume matching (see a fit score for every job), Career Advisor (compare offers side by side), job alerts (get notified when matching roles appear), and market insights (salary data, hiring trends). These tools save hours of manual research every week.",
+    a: "Pro unlocks resume matching (see a fit score for every job), deep job comparison with career analysis (compare offers side by side), job alerts (get notified when matching roles appear), and market insights (salary data, hiring trends). These tools save hours of manual research every week.",
   },
   {
     q: "Can I cancel anytime?",

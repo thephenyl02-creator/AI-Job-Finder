@@ -374,7 +374,7 @@ export default function Landing() {
                 {
                   icon: Compass,
                   title: "Compare before you leap",
-                  description: "Considering multiple offers? Our Career Advisor lays them side by side, showing how each role leverages your legal background differently.",
+                  description: "Considering multiple offers? Compare jobs side by side and get deep career analysis showing how each role leverages your legal background differently.",
                   testId: "text-feature-advisor",
                 },
               ].map((feature) => (
@@ -524,7 +524,7 @@ export default function Landing() {
               <p className="text-sm font-medium text-foreground mb-3">Pro Features</p>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li>Resume Matching</li>
-                <li>Career Advisor</li>
+                <li>Deep Job Comparison</li>
                 <li>Market Insights</li>
                 <li>Job Alerts</li>
               </ul>

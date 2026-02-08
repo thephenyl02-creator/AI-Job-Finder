@@ -1413,7 +1413,67 @@ function CategorySection({
   );
 }
 
+interface ComparisonAIResult {
+  jobs: Array<{
+    jobTitle: string;
+    overallFitSummary?: string;
+    pros?: string[];
+    cons?: string[];
+    transferableSkills?: string[];
+    skillsToDevelop?: string[];
+    legalTechGrowthPotential?: {
+      shortTerm: string;
+      mediumTerm: string;
+      longTerm: string;
+      aiOpportunities: string;
+    };
+    mainResponsibilities: string[];
+    requiredSkills: string[];
+    workType: { structured: number; ambiguous: number; description: string };
+    transitionDifficulty: { level: string; explanation: string };
+    whoSucceeds: string[];
+    fitAnalysis?: {
+      overallFit: number;
+      strengths: string[];
+      gaps: string[];
+      resumePositioning: string[];
+      interviewRisks: string[];
+    };
+  }>;
+  recommendation: {
+    bestFitNow: { jobTitle: string; reason: string };
+    bestLongTerm: { jobTitle: string; reason: string };
+    biggestShift: { jobTitle: string; reason: string };
+  };
+  overallStrategy: string;
+}
+
 function BrowseCompareView({ jobs, onClose, onClear }: { jobs: Job[]; onClose: () => void; onClear: () => void }) {
+  const { isPro } = useSubscription();
+  const { isAuthenticated } = useAuth();
+  const { toast } = useToast();
+  const [aiResult, setAiResult] = useState<ComparisonAIResult | null>(null);
+
+  const aiAnalysisMutation = useMutation({
+    mutationFn: async () => {
+      const payload = {
+        jobs: jobs.map((j) => ({
+          title: j.title,
+          description: j.description || j.aiSummary || j.title,
+        })),
+        includeResume: true,
+      };
+      const res = await apiRequest("POST", "/api/career-advisor/compare", payload);
+      return res.json() as Promise<ComparisonAIResult>;
+    },
+    onSuccess: (data) => {
+      setAiResult(data);
+    },
+    onError: (error: Error) => {
+      toast({ title: "Analysis failed", description: error.message, variant: "destructive" });
+    },
+  });
+
   const formatSalary = (min?: number | null, max?: number | null): string | null => {
     if (!min && !max) return null;
     const fmt = (n: number) => {
@@ -1436,6 +1496,16 @@ function BrowseCompareView({ jobs, onClose, onClear }: { jobs: Job[]; onClose: (
     if (!score || score < 8) return null;
     if (score >= 9) return "JD Preferred";
     return "Legal Background Valued";
+  };
+
+  const getDifficultyColor = (level: string) => {
+    switch (level) {
+      case "Easy": return "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400";
+      case "Moderate": return "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400";
+      case "Challenging": return "bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400";
+      case "Difficult": return "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400";
+      default: return "bg-muted text-muted-foreground";
+    }
   };
 
   const rows: { label: string; render: (job: Job) => React.ReactNode }[] = [
@@ -1526,6 +1596,28 @@ function BrowseCompareView({ jobs, onClose, onClear }: { jobs: Job[]; onClose: (
           Compare {jobs.length} Jobs
         </h2>
         <div className="flex items-center gap-2">
+          {isPro && !aiResult && (
+            <Button
+              size="sm"
+              onClick={() => aiAnalysisMutation.mutate()}
+              disabled={aiAnalysisMutation.isPending}
+              className="gap-1.5"
+              data-testid="button-ai-compare"
+            >
+              {aiAnalysisMutation.isPending ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Brain className="h-3.5 w-3.5" />
+              )}
+              {aiAnalysisMutation.isPending ? "Analyzing..." : "Deep Analysis"}
+            </Button>
+          )}
+          {!isPro && isAuthenticated && (
+            <Badge variant="secondary" className="text-[10px] gap-1">
+              <Crown className="h-3 w-3" />
+              Pro: Deep Analysis
+            </Badge>
+          )}
           <Button variant="ghost" size="sm" onClick={onClear} className="gap-1.5 text-muted-foreground" data-testid="button-clear-all-compare">
             Clear
           </Button>
@@ -1585,6 +1677,180 @@ function BrowseCompareView({ jobs, onClose, onClear }: { jobs: Job[]; onClose: (
           </div>
         </CardContent>
       </Card>
+
+      {aiAnalysisMutation.isPending && (
+        <Card>
+          <CardContent className="py-8 flex flex-col items-center gap-3">
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            <p className="text-sm text-muted-foreground">Running deep career analysis...</p>
+            <p className="text-xs text-muted-foreground/60">This may take 15-30 seconds</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {aiResult && (
+        <div className="space-y-4" data-testid="section-ai-analysis">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <h3 className="text-base font-serif font-medium text-foreground flex items-center gap-2">
+              <Brain className="h-4 w-4 text-primary" />
+              Career Analysis
+            </h3>
+            <Button variant="ghost" size="sm" onClick={() => setAiResult(null)} className="text-muted-foreground text-xs" data-testid="button-dismiss-ai">
+              Dismiss
+            </Button>
+          </div>
+
+          {aiResult.overallStrategy && (
+            <Card>
+              <CardContent className="py-4 px-5">
+                <p className="text-sm text-foreground/90 leading-relaxed">{aiResult.overallStrategy}</p>
+              </CardContent>
+            </Card>
+          )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {[
+              { label: "Best Fit Now", data: aiResult.recommendation.bestFitNow, icon: Target },
+              { label: "Best Long-Term", data: aiResult.recommendation.bestLongTerm, icon: TrendingUp },
+              { label: "Biggest Shift", data: aiResult.recommendation.biggestShift, icon: Scale },
+            ].map(({ label, data, icon: Icon }) => (
+              <Card key={label}>
+                <CardContent className="py-3 px-4 space-y-1">
+                  <div className="flex items-center gap-1.5">
+                    <Icon className="h-3.5 w-3.5 text-primary" />
+                    <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{label}</span>
+                  </div>
+                  <p className="text-sm font-medium text-foreground">{data.jobTitle}</p>
+                  <p className="text-xs text-foreground/70 leading-relaxed">{data.reason}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          <Card>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="border-b border-border">
+                      <th className="p-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider w-24 sm:w-32 align-top" />
+                      {aiResult.jobs.map((aj, i) => (
+                        <th key={i} className="p-3 align-top min-w-[200px]">
+                          <span className="text-sm font-semibold text-foreground">{aj.jobTitle}</span>
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {aiResult.jobs[0]?.overallFitSummary && (
+                      <tr className="border-b border-border/50">
+                        <td className="p-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider align-top whitespace-nowrap">Summary</td>
+                        {aiResult.jobs.map((aj, i) => (
+                          <td key={i} className="p-3 align-top">
+                            <p className="text-xs text-foreground/80 leading-relaxed">{aj.overallFitSummary}</p>
+                          </td>
+                        ))}
+                      </tr>
+                    )}
+                    <tr className="border-b border-border/50">
+                      <td className="p-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider align-top whitespace-nowrap">Difficulty</td>
+                      {aiResult.jobs.map((aj, i) => (
+                        <td key={i} className="p-3 align-top space-y-1">
+                          <Badge variant="secondary" className={`text-[10px] ${getDifficultyColor(aj.transitionDifficulty.level)}`}>
+                            {aj.transitionDifficulty.level}
+                          </Badge>
+                          <p className="text-xs text-foreground/70">{aj.transitionDifficulty.explanation}</p>
+                        </td>
+                      ))}
+                    </tr>
+                    {aiResult.jobs[0]?.pros && (
+                      <tr className="border-b border-border/50">
+                        <td className="p-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider align-top whitespace-nowrap">Pros</td>
+                        {aiResult.jobs.map((aj, i) => (
+                          <td key={i} className="p-3 align-top">
+                            <ul className="space-y-0.5">
+                              {aj.pros?.map((p, pi) => (
+                                <li key={pi} className="text-xs text-foreground/80 flex gap-1.5">
+                                  <CheckCircle2 className="h-3 w-3 text-green-500 shrink-0 mt-0.5" />
+                                  {p}
+                                </li>
+                              ))}
+                            </ul>
+                          </td>
+                        ))}
+                      </tr>
+                    )}
+                    {aiResult.jobs[0]?.cons && (
+                      <tr className="border-b border-border/50">
+                        <td className="p-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider align-top whitespace-nowrap">Cons</td>
+                        {aiResult.jobs.map((aj, i) => (
+                          <td key={i} className="p-3 align-top">
+                            <ul className="space-y-0.5">
+                              {aj.cons?.map((c, ci) => (
+                                <li key={ci} className="text-xs text-foreground/80 flex gap-1.5">
+                                  <X className="h-3 w-3 text-red-400 shrink-0 mt-0.5" />
+                                  {c}
+                                </li>
+                              ))}
+                            </ul>
+                          </td>
+                        ))}
+                      </tr>
+                    )}
+                    {aiResult.jobs[0]?.transferableSkills && (
+                      <tr className="border-b border-border/50">
+                        <td className="p-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider align-top">Transferable Skills</td>
+                        {aiResult.jobs.map((aj, i) => (
+                          <td key={i} className="p-3 align-top">
+                            <div className="flex flex-wrap gap-1">
+                              {aj.transferableSkills?.map((s, si) => (
+                                <Badge key={si} variant="outline" className="text-[10px]">{s}</Badge>
+                              ))}
+                            </div>
+                          </td>
+                        ))}
+                      </tr>
+                    )}
+                    {aiResult.jobs[0]?.fitAnalysis && (
+                      <tr className="border-b border-border/50">
+                        <td className="p-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider align-top whitespace-nowrap">Resume Fit</td>
+                        {aiResult.jobs.map((aj, i) => (
+                          <td key={i} className="p-3 align-top space-y-2">
+                            {aj.fitAnalysis && (
+                              <>
+                                <div className="flex items-center gap-2">
+                                  <Progress value={aj.fitAnalysis.overallFit} className="h-1.5 flex-1" />
+                                  <span className="text-xs font-medium">{aj.fitAnalysis.overallFit}%</span>
+                                </div>
+                                <div>
+                                  <span className="text-[10px] font-semibold text-muted-foreground uppercase">Strengths</span>
+                                  <ul className="mt-0.5 space-y-0.5">
+                                    {aj.fitAnalysis.strengths.map((s, si) => (
+                                      <li key={si} className="text-xs text-foreground/80">{s}</li>
+                                    ))}
+                                  </ul>
+                                </div>
+                                <div>
+                                  <span className="text-[10px] font-semibold text-muted-foreground uppercase">Gaps</span>
+                                  <ul className="mt-0.5 space-y-0.5">
+                                    {aj.fitAnalysis.gaps.map((g, gi) => (
+                                      <li key={gi} className="text-xs text-foreground/80">{g}</li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              </>
+                            )}
+                          </td>
+                        ))}
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }

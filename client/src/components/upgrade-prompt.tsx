@@ -14,7 +14,7 @@ interface UpgradePromptProps {
 
 const PRO_HIGHLIGHTS = [
   "Resume matching & fit scores",
-  "Career Advisor comparisons",
+  "Deep job comparison & analysis",
   "Market insights & salary data",
   "Job alerts & notifications",
   "Up to 5 resumes",

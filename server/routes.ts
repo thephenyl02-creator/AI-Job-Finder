@@ -35,6 +35,7 @@ import {
 } from "./lib/law-firm-scraper";
 import { LAW_FIRMS_AND_COMPANIES } from "./lib/law-firms-list";
 import { categorizeJob } from "./lib/job-categorizer";
+import { extractStructuredDescription } from "./lib/description-extractor";
 import { matchNewJobsAgainstAlerts } from "./lib/alert-matcher";
 import { parseJobFile, parseMultipleJobsFromText } from "./lib/job-file-parser";
 import { JOB_TAXONOMY } from "@shared/schema";
@@ -2252,7 +2253,7 @@ Be specific and actionable. Focus on legal tech industry keywords and ATS best p
         "title", "company", "location", "isRemote", "locationType", "salaryMin", "salaryMax",
         "roleType", "description", "requirements", "applyUrl", "isActive",
         "roleCategory", "roleSubcategory", "seniorityLevel", "keySkills", "aiSummary",
-        "legalRelevanceScore", "reviewStatus",
+        "legalRelevanceScore", "reviewStatus", "structuredDescription",
       ];
       const updates: Record<string, any> = {};
       for (const field of allowedFields) {
@@ -2309,7 +2310,10 @@ Be specific and actionable. Focus on legal tech industry keywords and ATS best p
       const job = await storage.getJob(id);
       if (!job) return res.status(404).json({ error: "Job not found" });
 
-      const categorization = await categorizeJob(job.title, job.description, job.company);
+      const [categorization, structured] = await Promise.all([
+        categorizeJob(job.title, job.description, job.company),
+        extractStructuredDescription(job.description, job.company, job.title),
+      ]);
       const updateData: any = {
         roleCategory: categorization.category,
         roleSubcategory: categorization.subcategory,
@@ -2322,6 +2326,7 @@ Be specific and actionable. Focus on legal tech industry keywords and ATS best p
         aiNiceToHaves: categorization.aiNiceToHaves || null,
         legalRelevanceScore: categorization.legalRelevanceScore,
         reviewStatus: categorization.reviewStatus,
+        structuredDescription: structured,
       };
       if (categorization.reviewStatus === "rejected") {
         updateData.isActive = false;
@@ -2333,6 +2338,63 @@ Be specific and actionable. Focus on legal tech industry keywords and ATS best p
       console.error("Error recategorizing job:", error);
       res.status(500).json({ error: "Failed to recategorize job" });
     }
+  });
+
+  let structuredBackfillRunning = false;
+  app.post("/api/admin/jobs/backfill-structured", isAuthenticated, async (req, res) => {
+    if (!(await isAdminCheck(req))) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    if (structuredBackfillRunning) {
+      return res.json({ message: "Backfill already in progress" });
+    }
+    structuredBackfillRunning = true;
+    const batchSize = parseInt(req.query.batchSize as string) || 5;
+    const limit = parseInt(req.query.limit as string) || 999;
+    try {
+      const allJobs = await storage.getActiveJobs();
+      const needsStructuring = allJobs.filter(j => !j.structuredDescription).slice(0, limit);
+      res.json({ message: `Starting backfill for ${needsStructuring.length} jobs`, total: needsStructuring.length });
+
+      let done = 0;
+      let errors = 0;
+      for (let i = 0; i < needsStructuring.length; i += batchSize) {
+        const batch = needsStructuring.slice(i, i + batchSize);
+        await Promise.all(
+          batch.map(async (job) => {
+            try {
+              const structured = await extractStructuredDescription(job.description, job.company, job.title);
+              await storage.updateJob(job.id, { structuredDescription: structured } as any);
+              done++;
+              if (done % 10 === 0) {
+                console.log(`Structured backfill: ${done}/${needsStructuring.length} jobs processed`);
+              }
+            } catch (err: any) {
+              errors++;
+              console.error(`Structured backfill error for job ${job.id}:`, err.message);
+            }
+          })
+        );
+        if (i + batchSize < needsStructuring.length) {
+          await new Promise(r => setTimeout(r, 500));
+        }
+      }
+      console.log(`Structured backfill complete: ${done} processed, ${errors} errors`);
+    } catch (err) {
+      console.error("Structured backfill error:", err);
+    } finally {
+      structuredBackfillRunning = false;
+    }
+  });
+
+  app.get("/api/admin/jobs/backfill-status", isAuthenticated, async (req, res) => {
+    if (!(await isAdminCheck(req))) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    const allJobs = await storage.getActiveJobs();
+    const total = allJobs.length;
+    const structured = allJobs.filter(j => j.structuredDescription).length;
+    res.json({ total, structured, remaining: total - structured, running: structuredBackfillRunning });
   });
 
   // Validate a job URL (public endpoint for job submission validation)
