@@ -121,16 +121,16 @@ export default function Landing() {
               <div>
                 <ScrollReveal delay={0.1} direction="none">
                   <p className="text-sm font-medium text-muted-foreground tracking-wide uppercase mb-5" data-testid="text-hero-label">
-                    Built for lawyers & law students moving into tech
+                    For legal professionals navigating what's next
                   </p>
                 </ScrollReveal>
 
                 <ScrollReveal delay={0.2}>
                   <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[3.25rem] xl:text-5xl font-serif font-medium text-foreground mb-6 leading-[1.25] tracking-tight" data-testid="text-hero-title">
-                    Every legal tech role.
+                    The legal job market has never been this confusing.
                     <br />
                     <span className="relative inline-block mt-3 sm:mt-4 pb-2">
-                      One place to find it.
+                      We make sense of it.
                       <motion.span
                         className="absolute bottom-0 left-0 right-0 h-[3px] bg-primary/40 rounded-full"
                         initial={{ scaleX: 0 }}
@@ -144,7 +144,7 @@ export default function Landing() {
 
                 <ScrollReveal delay={0.35}>
                   <p className="text-lg text-muted-foreground mb-8 leading-relaxed" data-testid="text-hero-subtitle">
-                    Whether you're a practicing attorney, paralegal, or law student &mdash; legal tech companies need people who understand the law <em>and</em> technology. We collect the roles, match them to your experience, and show you exactly where you fit.
+                    New titles, shifting roles, and an industry being reshaped by technology. We track every legal tech position so you don't have to figure it out alone.
                   </p>
                 </ScrollReveal>
 
@@ -152,7 +152,7 @@ export default function Landing() {
                   <div className="flex flex-col sm:flex-row items-start gap-3 mb-4">
                     <Button size="lg" asChild className="text-base px-8" data-testid="button-hero-get-started">
                       <a href="/auth">
-                        Browse Open Roles
+                        Find Your Next Role
                         <ArrowRight className="ml-2 h-4 w-4" />
                       </a>
                     </Button>
@@ -350,10 +350,10 @@ export default function Landing() {
                 Why this exists
               </p>
               <h2 className="text-3xl sm:text-4xl font-serif font-medium text-foreground mb-4 tracking-tight">
-                Most job boards don't speak your language
+                New job titles every month. No clear path. Sound familiar?
               </h2>
               <p className="text-lg text-muted-foreground max-w-2xl mb-12">
-                You search "legal tech" on LinkedIn and get 500 software engineer roles. You search on legal job boards and get associate positions at BigLaw. Neither understands what you're actually looking for. We do.
+                "Legal Engineer." "CLM Specialist." "Legal Ops Analyst." Three years ago, most of these roles didn't exist. Now they're everywhere &mdash; but good luck finding them on LinkedIn between 500 software engineer postings, or on legal job boards buried under BigLaw associate listings. We built this because neither side gets it.
               </p>
             </ScrollReveal>
 
@@ -361,20 +361,20 @@ export default function Landing() {
               {[
                 {
                   icon: Search,
-                  title: "Tell us what you want",
-                  description: "Describe your ideal role in plain language. \"I want a product role at a legal tech company, ideally remote.\" That's it. No boolean operators. No keyword guessing.",
+                  title: "Search in plain language",
+                  description: "Say what you're looking for the way you'd tell a friend. \"I want a remote product role at a legal tech company.\" We'll find exactly that. No keyword games.",
                   testId: "text-feature-search",
                 },
                 {
                   icon: FileText,
-                  title: "Let your resume do the work",
-                  description: "Upload your resume and we'll match it against every open role. You'll see a clear fit score, what transfers, and what gaps to address before applying.",
+                  title: "See where you actually fit",
+                  description: "Upload your resume. We'll match it against open roles and show you a clear fit score &mdash; what transfers, what's missing, and where to focus.",
                   testId: "text-feature-resume",
                 },
                 {
                   icon: Compass,
                   title: "Compare before you leap",
-                  description: "Considering multiple offers? Compare jobs side by side and get deep career analysis showing how each role leverages your legal background differently.",
+                  description: "Weighing two offers? Compare roles side by side and see how each one uses your legal background differently. No guessing.",
                   testId: "text-feature-advisor",
                 },
               ].map((feature) => (
@@ -405,10 +405,10 @@ export default function Landing() {
                 Who this is for
               </p>
               <h2 className="text-3xl sm:text-4xl font-serif font-medium text-foreground mb-4 tracking-tight">
-                If any of this sounds like you
+                You don't need to be technical. You need to be ready.
               </h2>
               <p className="text-lg text-muted-foreground max-w-2xl mb-12">
-                You don't need to be technical. You need to be curious about where law is headed.
+                The legal industry is changing fast. These roles are for people who want to be part of that change, not caught off guard by it.
               </p>
             </ScrollReveal>
 
@@ -416,23 +416,23 @@ export default function Landing() {
               {[
                 {
                   icon: GraduationCap,
-                  title: "Attorneys exploring what's next",
-                  description: "Product, operations, and strategy roles at companies that actually value your JD. No coding required.",
+                  title: "Attorneys rethinking their path",
+                  description: "Your JD is an asset, not a limitation. Product, strategy, and ops roles where legal thinking is the whole point.",
                 },
                 {
                   icon: Users,
-                  title: "Paralegals & legal ops",
-                  description: "You've been streamlining workflows for years. Legal tech companies are building exactly what you've been wishing existed.",
+                  title: "Paralegals and legal ops pros",
+                  description: "You already know what's broken in legal workflows. These companies are building the fix &mdash; and they need your perspective.",
                 },
                 {
                   icon: RefreshCw,
-                  title: "Career changers",
-                  description: "Leaving traditional practice doesn't mean leaving law behind. Your domain expertise is rare and valuable in the right company.",
+                  title: "Lawyers making a move",
+                  description: "Leaving a firm doesn't mean leaving law. Your domain expertise is hard to hire for &mdash; the right company knows that.",
                 },
                 {
                   icon: BookOpen,
-                  title: "Students & new grads",
-                  description: "Find internships and entry-level roles at companies shaping the future of legal work. Get in early.",
+                  title: "Students who see where this is going",
+                  description: "Get into legal tech early. Internships and entry-level roles at companies that are shaping how law actually works.",
                 },
               ].map((audience, index) => (
                 <StaggerItem key={audience.title}>
@@ -467,17 +467,17 @@ export default function Landing() {
                   <Badge variant="outline" className="text-xs font-medium">Pro from $5/mo</Badge>
                 </div>
                 <h2 className="text-3xl sm:text-4xl font-serif font-medium text-foreground mb-4 tracking-tight">
-                  Your legal career got you here.
+                  The market won't wait.
                   <br />
-                  Let's figure out what's next.
+                  Your next role might already be here.
                 </h2>
                 <p className="text-lg text-muted-foreground mb-8 max-w-lg mx-auto">
-                  Every week, new legal tech roles go live. Browse and apply for free, or upgrade to Pro for resume matching, career comparisons, and personalized alerts.
+                  New legal tech positions go live every week. Browse and apply for free, or go Pro for resume matching, career comparisons, and alerts when roles match your profile.
                 </p>
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
                   <Button size="lg" asChild className="text-base px-10" data-testid="button-cta-final">
                     <a href="/auth">
-                      Get Started Free
+                      Find Your Next Role
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </a>
                   </Button>
@@ -574,7 +574,7 @@ export default function Landing() {
               </span>
             </div>
             <p className="text-xs text-muted-foreground">
-              Where legal professionals find their next move in technology.
+              Clarity in a changing legal job market.
             </p>
           </div>
         </div>
