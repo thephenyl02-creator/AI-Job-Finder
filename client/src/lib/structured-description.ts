@@ -39,15 +39,38 @@ export function cleanStructuredText(text: string): string {
 }
 
 export function parseStructuredDescription(raw: unknown): StructuredDescription | null {
-  if (!raw) return null;
-  let data = raw;
+  if (raw === null || raw === undefined) return null;
+  let data: unknown = raw;
+
   if (typeof data === 'string') {
+    if (!data.trim()) return null;
     try { data = JSON.parse(data); } catch { return null; }
+    if (typeof data === 'string') {
+      try { data = JSON.parse(data); } catch { return null; }
+    }
   }
-  if (typeof data !== 'object' || data === null) return null;
+
+  if (typeof data !== 'object' || data === null || Array.isArray(data)) return null;
+
   const obj = data as Record<string, unknown>;
-  if (!obj.aboutCompany && !obj.responsibilities && !obj.minimumQualifications && !obj.preferredQualifications && !obj.skillsRequired) {
-    return null;
-  }
-  return obj as unknown as StructuredDescription;
+  const keys = ['aboutCompany', 'responsibilities', 'minimumQualifications', 'preferredQualifications', 'skillsRequired'] as const;
+  const hasAnyKey = keys.some(k => {
+    const v = obj[k];
+    if (v === null || v === undefined) return false;
+    if (typeof v === 'string') return v.trim().length > 0;
+    if (Array.isArray(v)) return v.length > 0;
+    return true;
+  });
+
+  if (!hasAnyKey) return null;
+
+  const result: StructuredDescription = {
+    aboutCompany: typeof obj.aboutCompany === 'string' ? obj.aboutCompany : '',
+    responsibilities: Array.isArray(obj.responsibilities) ? obj.responsibilities.filter((x): x is string => typeof x === 'string' && x.trim().length > 0) : [],
+    minimumQualifications: Array.isArray(obj.minimumQualifications) ? obj.minimumQualifications.filter((x): x is string => typeof x === 'string' && x.trim().length > 0) : [],
+    preferredQualifications: Array.isArray(obj.preferredQualifications) ? obj.preferredQualifications.filter((x): x is string => typeof x === 'string' && x.trim().length > 0) : [],
+    skillsRequired: Array.isArray(obj.skillsRequired) ? obj.skillsRequired.filter((x): x is string => typeof x === 'string' && x.trim().length > 0) : [],
+  };
+
+  return result;
 }

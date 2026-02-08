@@ -127,12 +127,13 @@ function AdminStructuredPreview({ data, aiSummary }: { data: StructuredDescripti
       {sections.map(({ key, title, items, text }) => {
         const hasText = text && text.trim();
         const hasItems = items && items.length > 0;
+        if (!hasText && !hasItems) return null;
         return (
           <div key={key}>
             <p className="font-semibold text-foreground text-[10px] uppercase tracking-wider mb-1">{title}</p>
             {hasText ? (
               <p className="text-xs text-foreground/80 leading-relaxed pl-2">{cleanStructuredText(text!)}</p>
-            ) : hasItems ? (
+            ) : (
               <ul className="space-y-0.5 pl-2">
                 {items!.map((item, i) => (
                   <li key={i} className="flex gap-1.5 text-xs text-foreground/80 leading-relaxed">
@@ -141,8 +142,6 @@ function AdminStructuredPreview({ data, aiSummary }: { data: StructuredDescripti
                   </li>
                 ))}
               </ul>
-            ) : (
-              <p className="text-[10px] text-muted-foreground italic pl-2">Not specified</p>
             )}
           </div>
         );

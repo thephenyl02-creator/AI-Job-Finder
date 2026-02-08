@@ -362,6 +362,7 @@ function StructuredDescriptionView({ data }: { data: StructuredDescription }) {
       {sections.map(({ key, title, items, text, icon: Icon }) => {
         const hasText = text && text.trim();
         const hasItems = items && items.length > 0;
+        if (!hasText && !hasItems) return null;
         return (
           <div key={key} data-testid={`structured-${key}`}>
             <div className="flex items-center gap-2 mb-2.5">
@@ -370,7 +371,7 @@ function StructuredDescriptionView({ data }: { data: StructuredDescription }) {
             </div>
             {hasText ? (
               <p className="text-sm text-muted-foreground leading-relaxed pl-6">{cleanStructuredText(text!)}</p>
-            ) : hasItems ? (
+            ) : (
               <ul className="space-y-1.5 pl-6">
                 {items!.map((item, i) => (
                   <li key={i} className="text-sm text-muted-foreground leading-relaxed flex items-start gap-2">
@@ -379,8 +380,6 @@ function StructuredDescriptionView({ data }: { data: StructuredDescription }) {
                   </li>
                 ))}
               </ul>
-            ) : (
-              <p className="text-sm text-muted-foreground/50 italic pl-6">Not specified</p>
             )}
           </div>
         );
