@@ -145,7 +145,10 @@ export default function Events() {
                 Legal Tech Events
               </h1>
               <p className="text-muted-foreground leading-relaxed max-w-2xl" data-testid="text-events-subtitle">
-                Curated conferences, summits, workshops, and networking events for legal technology professionals. Each event is hand-picked for relevance to your career.
+                Conferences, summits, workshops, and networking events for legal technology professionals.
+              </p>
+              <p className="text-xs text-muted-foreground/70 mt-2 max-w-2xl" data-testid="text-events-disclaimer">
+                Event details are sourced from public information and may change. Please verify dates, locations, and registration details directly with event organizers before making plans.
               </p>
             </div>
           </ScrollReveal>

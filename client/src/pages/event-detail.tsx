@@ -130,13 +130,10 @@ export default function EventDetail() {
     }
   }, [id]);
 
-  const handleRegisterClick = async () => {
-    if (!event) return;
-    try {
-      await apiRequest("POST", `/api/events/${event.id}/register-click`);
-    } catch {
-    }
+  const handleRegisterClick = () => {
+    if (!event?.registrationUrl) return;
     window.open(event.registrationUrl, "_blank", "noopener,noreferrer");
+    apiRequest("POST", `/api/events/${event.id}/register-click`).catch(() => {});
   };
 
   const handleShare = async () => {
@@ -304,6 +301,9 @@ export default function EventDetail() {
                 Share
               </Button>
             </div>
+            <p className="text-xs text-muted-foreground/60 mt-2" data-testid="text-event-disclaimer">
+              Event details are sourced from public information and may change. Please verify directly with the organizer before registering.
+            </p>
           </ScrollReveal>
 
           {event.description && (
