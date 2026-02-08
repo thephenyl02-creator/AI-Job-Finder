@@ -1039,7 +1039,7 @@ ${JSON.stringify(jobSummaries, null, 2)}`
   });
 
   // ATS Resume Review - analyze resume for ATS friendliness
-  app.post("/api/resume/ats-review", isAuthenticated, async (req, res) => {
+  app.post("/api/resume/ats-review", isAuthenticated, requirePro, async (req, res) => {
     try {
       const user = req.user as any;
       const userId = user?.id;
@@ -4624,7 +4624,7 @@ Return JSON: { "suggestion": "<improved content>", "tips": ["<tip>"] }`;
   });
 
   // Job-specific ATS review for built resume
-  app.post("/api/built-resumes/:id/ats-review", isAuthenticated, async (req, res) => {
+  app.post("/api/built-resumes/:id/ats-review", isAuthenticated, requirePro, async (req, res) => {
     try {
       const userId = (req.user as any)?.id;
       if (!userId) return res.status(401).json({ error: "Unauthorized" });

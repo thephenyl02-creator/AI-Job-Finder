@@ -980,12 +980,12 @@ function ATSPanel({
           variant="outline"
           size="sm"
           className="w-full"
-          onClick={onRunReview}
-          disabled={isReviewing}
+          onClick={isPro ? onRunReview : undefined}
+          disabled={isReviewing || !isPro}
           data-testid="button-run-ats-review"
         >
           {isReviewing ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <BarChart3 className="h-3.5 w-3.5 mr-1.5" />}
-          Run ATS Review
+          {isPro ? "Run ATS Review" : "ATS Review (Pro)"}
         </Button>
 
         {hasTargetJob && (
@@ -1733,8 +1733,12 @@ export default function ResumeBuilder() {
       queryClient.invalidateQueries({ queryKey: ["/api/built-resumes"] });
       toast({ title: "ATS Review Complete", description: "Resume analyzed successfully." });
     },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to run ATS review.", variant: "destructive" });
+    onError: (error: any) => {
+      if (error.message?.includes("403")) {
+        toast({ title: "Pro Feature", description: "ATS Review is available for Pro subscribers. Upgrade to access this feature.", variant: "destructive" });
+      } else {
+        toast({ title: "Error", description: "Failed to run ATS review.", variant: "destructive" });
+      }
     },
   });
 

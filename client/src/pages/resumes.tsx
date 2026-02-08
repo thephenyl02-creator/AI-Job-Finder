@@ -1239,28 +1239,41 @@ export default function Resumes() {
                     </>
                   )}
                 </Button>
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => {
-                    const primary = userResumes.find(r => r.isPrimary);
-                    runAtsReview(primary?.id || userResumes[0]?.id);
-                  }}
-                  disabled={atsReviewMutation.isPending}
-                  data-testid="button-ats-review"
-                >
-                  {atsReviewMutation.isPending ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Reviewing...
-                    </>
-                  ) : (
-                    <>
-                      <ShieldCheck className="h-4 w-4 mr-2" />
+                {isPro ? (
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => {
+                      const primary = userResumes.find(r => r.isPrimary);
+                      runAtsReview(primary?.id || userResumes[0]?.id);
+                    }}
+                    disabled={atsReviewMutation.isPending}
+                    data-testid="button-ats-review"
+                  >
+                    {atsReviewMutation.isPending ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Reviewing...
+                      </>
+                    ) : (
+                      <>
+                        <ShieldCheck className="h-4 w-4 mr-2" />
+                        ATS Review
+                      </>
+                    )}
+                  </Button>
+                ) : (
+                  <Link href="/pricing">
+                    <Button variant="outline" className="w-full gap-2" data-testid="button-ats-review-upgrade">
+                      <ShieldCheck className="h-4 w-4" />
                       ATS Review
-                    </>
-                  )}
-                </Button>
+                      <Badge variant="secondary" className="text-[10px] ml-1">
+                        <Crown className="h-2.5 w-2.5 mr-0.5" />
+                        Pro
+                      </Badge>
+                    </Button>
+                  </Link>
+                )}
               </div>
             )}
           </div>
