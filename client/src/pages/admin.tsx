@@ -18,6 +18,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import type { Job, StructuredDescription } from "@shared/schema";
 import { JOB_TAXONOMY } from "@shared/schema";
 import { cleanStructuredText, parseStructuredDescription } from "@/lib/structured-description";
+import { StructuredDescriptionView } from "@/components/structured-description-view";
 
 const SENIORITY_OPTIONS = ["Intern", "Fellowship", "Entry", "Mid", "Senior", "Lead", "Director", "VP"];
 
@@ -104,51 +105,6 @@ function cleanAdminText(text: string): string {
   return cleaned.trim();
 }
 
-function AdminStructuredPreview({ data, aiSummary }: { data: StructuredDescription; aiSummary?: string | null }) {
-  const sections = [
-    { key: "aboutCompany", title: "About the Company", items: null, text: data.aboutCompany },
-    { key: "responsibilities", title: "Responsibilities", items: data.responsibilities, text: null },
-    { key: "minimumQualifications", title: "Minimum Qualifications", items: data.minimumQualifications, text: null },
-    { key: "preferredQualifications", title: "Preferred Qualifications", items: data.preferredQualifications, text: null },
-    { key: "skillsRequired", title: "Skills Required", items: data.skillsRequired, text: null },
-  ];
-
-  return (
-    <div className="space-y-3" data-testid="admin-structured-preview">
-      {aiSummary && (
-        <div className="rounded-md bg-muted/50 border border-border/30 p-2.5 mb-2">
-          <div className="flex items-center gap-1.5 mb-1">
-            <Sparkles className="h-3 w-3 text-muted-foreground shrink-0" />
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">At a Glance</span>
-          </div>
-          <p className="text-xs text-foreground/80 leading-relaxed">{cleanStructuredText(aiSummary)}</p>
-        </div>
-      )}
-      {sections.map(({ key, title, items, text }) => {
-        const hasText = text && text.trim();
-        const hasItems = items && items.length > 0;
-        if (!hasText && !hasItems) return null;
-        return (
-          <div key={key}>
-            <p className="font-semibold text-foreground text-[10px] uppercase tracking-wider mb-1">{title}</p>
-            {hasText ? (
-              <p className="text-xs text-foreground/80 leading-relaxed pl-2">{cleanStructuredText(text!)}</p>
-            ) : (
-              <ul className="space-y-0.5 pl-2">
-                {items!.map((item, i) => (
-                  <li key={i} className="flex gap-1.5 text-xs text-foreground/80 leading-relaxed">
-                    <span className="shrink-0 mt-1.5 w-1 h-1 rounded-full bg-foreground/25" />
-                    <span>{adminHighlight(cleanStructuredText(item))}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
 
 function AdminJobDescription({ description }: { description?: string | null }) {
   if (!description) return <p className="text-xs text-muted-foreground italic">No description</p>;
@@ -1867,10 +1823,10 @@ export default function AdminPage() {
                         >
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0 flex-1">
-                              <h4 className="font-medium truncate" data-testid={`text-job-title-${job.id}`}>{job.title}</h4>
+                              <h4 className="font-medium truncate" data-testid={`text-job-title-${job.id}`}>{cleanStructuredText(job.title)}</h4>
                               <p className="text-sm text-muted-foreground" data-testid={`text-job-company-${job.id}`}>
-                                {job.company}
-                                {job.location && ` \u2022 ${job.location}`}
+                                {cleanStructuredText(job.company)}
+                                {job.location && ` \u2022 ${cleanStructuredText(job.location)}`}
                               </p>
                             </div>
                             <div className="flex items-center gap-1 shrink-0">
@@ -1990,7 +1946,7 @@ export default function AdminPage() {
                             >
                               <SelectTrigger className="h-auto py-0.5 px-2 text-xs border-dashed w-auto min-w-0 gap-1" data-testid={`select-inline-category-${job.id}`}>
                                 <Tag className="h-3 w-3 shrink-0" />
-                                <span className="truncate">{job.roleCategory || "No category"}</span>
+                                <span className="truncate">{job.roleCategory ? cleanStructuredText(job.roleCategory) : "No category"}</span>
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="_none">No category</SelectItem>
@@ -2019,7 +1975,7 @@ export default function AdminPage() {
                             </Select>
                             {job.keySkills && job.keySkills.length > 0 && job.keySkills.slice(0, 3).map((skill, si) => (
                               <Badge key={si} variant="outline" className="text-xs bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800">
-                                {skill}
+                                {cleanStructuredText(skill)}
                               </Badge>
                             ))}
                             {job.keySkills && job.keySkills.length > 3 && (
@@ -2047,8 +2003,17 @@ export default function AdminPage() {
                                           Structured
                                         </Badge>
                                       </div>
-                                      <div className="max-h-[350px] overflow-y-auto pr-2">
-                                        <AdminStructuredPreview data={parsed} aiSummary={job.aiSummary} />
+                                      <div className="max-h-[400px] overflow-y-auto pr-2">
+                                        {job.aiSummary && (
+                                          <div className="rounded-md bg-muted/50 border border-border/30 p-2.5 mb-3">
+                                            <div className="flex items-center gap-1.5 mb-1">
+                                              <Sparkles className="h-3 w-3 text-muted-foreground shrink-0" />
+                                              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">At a Glance</span>
+                                            </div>
+                                            <p className="text-xs text-foreground/80 leading-relaxed">{cleanStructuredText(job.aiSummary)}</p>
+                                          </div>
+                                        )}
+                                        <StructuredDescriptionView data={parsed} compact />
                                       </div>
                                     </>
                                   );

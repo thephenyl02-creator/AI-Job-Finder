@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { usePageTitle } from "@/hooks/use-page-title";
 import { Link } from "wouter";
+import { cleanStructuredText } from "@/lib/structured-description";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -190,11 +191,11 @@ export default function Landing() {
                           <CardContent className="p-3.5">
                             <div className="flex items-start justify-between gap-3">
                               <div className="min-w-0 flex-1">
-                                <p className="text-sm font-semibold text-foreground truncate">{job.title}</p>
+                                <p className="text-sm font-semibold text-foreground truncate">{cleanStructuredText(job.title)}</p>
                                 <div className="flex items-center gap-3 mt-1.5 flex-wrap">
                                   <span className="flex items-center gap-1 text-xs text-muted-foreground">
                                     <Building2 className="h-3 w-3 shrink-0" />
-                                    <span className="truncate">{job.company}</span>
+                                    <span className="truncate">{cleanStructuredText(job.company)}</span>
                                   </span>
                                   {job.location && (
                                     <span className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -206,7 +207,7 @@ export default function Landing() {
                               </div>
                               {job.roleCategory && (
                                 <Badge variant="outline" className="text-[10px] shrink-0 whitespace-nowrap">
-                                  {job.roleCategory}
+                                  {cleanStructuredText(job.roleCategory)}
                                 </Badge>
                               )}
                             </div>
@@ -249,11 +250,11 @@ export default function Landing() {
                       >
                         <Card className="bg-background/80 backdrop-blur-sm border-border/50 h-full" data-testid={`hero-job-card-mobile-${i}`}>
                           <CardContent className="p-3">
-                            <p className="text-sm font-semibold text-foreground truncate">{job.title}</p>
+                            <p className="text-sm font-semibold text-foreground truncate">{cleanStructuredText(job.title)}</p>
                             <div className="flex items-center gap-2 mt-1.5">
                               <span className="flex items-center gap-1 text-xs text-muted-foreground truncate">
                                 <Building2 className="h-3 w-3 shrink-0" />
-                                {job.company}
+                                {cleanStructuredText(job.company)}
                               </span>
                             </div>
                             {job.location && (

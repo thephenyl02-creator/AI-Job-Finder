@@ -15,6 +15,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Job, Resume, StructuredDescription } from "@shared/schema";
 import type { ResumeExtractedData } from "@shared/models/auth";
 import { decodeHtmlEntities, fixMissingSentenceSpaces, cleanStructuredText, parseStructuredDescription } from "@/lib/structured-description";
+import { StructuredDescriptionView } from "@/components/structured-description-view";
 import { Link } from "wouter";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -348,45 +349,6 @@ function groupBlocksIntoSections(blocks: Block[]): DescriptionSection[] {
 }
 
 
-function StructuredDescriptionView({ data }: { data: StructuredDescription }) {
-  const sections = [
-    { key: "aboutCompany", title: "About the Company", items: null, text: data.aboutCompany, icon: Building2 },
-    { key: "responsibilities", title: "Responsibilities", items: data.responsibilities, text: null, icon: Briefcase },
-    { key: "minimumQualifications", title: "Minimum Qualifications", items: data.minimumQualifications, text: null, icon: CheckCircle2 },
-    { key: "preferredQualifications", title: "Preferred Qualifications", items: data.preferredQualifications, text: null, icon: Star },
-    { key: "skillsRequired", title: "Skills Required", items: data.skillsRequired, text: null, icon: Hash },
-  ];
-
-  return (
-    <div className="space-y-6" data-testid="section-structured-description">
-      {sections.map(({ key, title, items, text, icon: Icon }) => {
-        const hasText = text && text.trim();
-        const hasItems = items && items.length > 0;
-        if (!hasText && !hasItems) return null;
-        return (
-          <div key={key} data-testid={`structured-${key}`}>
-            <div className="flex items-center gap-2 mb-2.5">
-              <Icon className="h-4 w-4 text-muted-foreground" />
-              <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider">{title}</h3>
-            </div>
-            {hasText ? (
-              <p className="text-sm text-muted-foreground leading-relaxed pl-6">{cleanStructuredText(text!)}</p>
-            ) : (
-              <ul className="space-y-1.5 pl-6">
-                {items!.map((item, i) => (
-                  <li key={i} className="text-sm text-muted-foreground leading-relaxed flex items-start gap-2">
-                    <span className="text-muted-foreground/40 mt-1.5 shrink-0 w-1 h-1 rounded-full bg-muted-foreground/40" />
-                    <span>{cleanStructuredText(item)}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
 
 function DescriptionContent({ text, testId, compact, isPro }: { text?: string | null; testId: string; compact?: boolean; isPro?: boolean }) {
   if (!text) return null;
@@ -879,18 +841,18 @@ export default function JobDetail() {
             className="text-2xl sm:text-3xl font-serif font-medium text-foreground tracking-tight leading-tight"
             data-testid="text-job-detail-title"
           >
-            {job.title}
+            {cleanStructuredText(job.title)}
           </h1>
 
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm text-muted-foreground mt-3">
             <span className="flex items-center gap-1.5">
               <Building2 className="h-3.5 w-3.5 shrink-0" />
-              <span className="font-medium text-foreground/80" data-testid="text-job-detail-company">{job.company}</span>
+              <span className="font-medium text-foreground/80" data-testid="text-job-detail-company">{cleanStructuredText(job.company)}</span>
             </span>
             {job.location && (
               <span className="flex items-center gap-1.5">
                 <MapPin className="h-3.5 w-3.5 shrink-0" />
-                <span data-testid="text-job-detail-location">{job.location}</span>
+                <span data-testid="text-job-detail-location">{cleanStructuredText(job.location)}</span>
               </span>
             )}
             {locationTypeLabel && (
@@ -1212,17 +1174,17 @@ export default function JobDetail() {
                     <Card className="hover-elevate cursor-pointer h-full" data-testid={`card-similar-job-${sj.id}`}>
                       <CardContent className="p-4">
                         <h3 className="font-medium text-foreground text-sm leading-snug line-clamp-2" data-testid={`text-similar-title-${sj.id}`}>
-                          {sj.title}
+                          {cleanStructuredText(sj.title)}
                         </h3>
                         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1.5 text-xs text-muted-foreground">
                           <span className="flex items-center gap-1">
                             <Building2 className="h-3 w-3" />
-                            {sj.company}
+                            {cleanStructuredText(sj.company)}
                           </span>
                           {sj.location && (
                             <span className="flex items-center gap-1">
                               <MapPin className="h-3 w-3" />
-                              {sj.location}
+                              {cleanStructuredText(sj.location)}
                             </span>
                           )}
                           {sjSalary && (
@@ -1232,7 +1194,7 @@ export default function JobDetail() {
                             </span>
                           )}
                         </div>
-                        <div className="flex flex-wrap gap-1.5 mt-2">
+                        <div className="flex flex-wrap gap-1 mt-2">
                           {sjLegalFit && (
                             <Badge variant="secondary" className="text-[10px] gap-0.5 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400">
                               <Scale className="h-2.5 w-2.5" />
@@ -1240,7 +1202,15 @@ export default function JobDetail() {
                             </Badge>
                           )}
                           {sj.seniorityLevel && (
-                            <Badge variant="outline" className="text-xs">{sj.seniorityLevel}</Badge>
+                            <Badge variant="outline" className="text-[10px]">{sj.seniorityLevel}</Badge>
+                          )}
+                          {sj.keySkills && sj.keySkills.slice(0, 3).map((skill, si) => (
+                            <Badge key={si} variant="outline" className="text-[10px]">
+                              {cleanStructuredText(skill)}
+                            </Badge>
+                          ))}
+                          {sj.keySkills && sj.keySkills.length > 3 && (
+                            <span className="text-[10px] text-muted-foreground self-center">+{sj.keySkills.length - 3}</span>
                           )}
                         </div>
                       </CardContent>

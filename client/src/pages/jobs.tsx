@@ -1354,16 +1354,16 @@ function CategorySection({
                                 </button>
                               <div className="min-w-0 flex-1">
                                 <h4 className="font-medium text-foreground text-sm sm:text-base" data-testid={`text-job-title-${job.id}`}>
-                                  {job.title}
+                                  {cleanStructuredText(job.title)}
                                 </h4>
                                 <div className="flex flex-wrap items-center gap-x-2 sm:gap-x-3 gap-y-1 mt-1 text-xs sm:text-sm text-muted-foreground">
                                   <span className="flex items-center gap-1">
                                     <Building2 className="h-3 w-3 shrink-0" />
-                                    <span data-testid={`text-job-company-${job.id}`}>{job.company}</span>
+                                    <span data-testid={`text-job-company-${job.id}`}>{cleanStructuredText(job.company)}</span>
                                   </span>
                                   <span className="flex items-center gap-1">
                                     <MapPin className="h-3 w-3 shrink-0" />
-                                    <span data-testid={`text-job-location-${job.id}`}>{job.location || "Not specified"}</span>
+                                    <span data-testid={`text-job-location-${job.id}`}>{job.location ? cleanStructuredText(job.location) : "Not specified"}</span>
                                   </span>
                                   {locType && (
                                     <Badge variant="outline" className="text-xs" data-testid={`badge-loc-type-${job.id}`}>
@@ -1400,6 +1400,32 @@ function CategorySection({
                                   <p className="text-xs sm:text-sm text-muted-foreground mt-2 line-clamp-2">
                                     {cleanStructuredText(job.aiSummary)}
                                   </p>
+                                )}
+                                {((job.keySkills && job.keySkills.length > 0) || (job.legalRelevanceScore && job.legalRelevanceScore >= 8)) && (
+                                  <div className="flex flex-wrap gap-1 mt-2">
+                                    {job.legalRelevanceScore && job.legalRelevanceScore >= 8 && (
+                                      <Badge
+                                        variant="secondary"
+                                        className={`text-[10px] gap-0.5 ${
+                                          job.legalRelevanceScore >= 9
+                                            ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400"
+                                            : "bg-sky-100 dark:bg-sky-900/30 text-sky-700 dark:text-sky-400"
+                                        }`}
+                                        data-testid={`badge-legal-fit-${job.id}`}
+                                      >
+                                        <Scale className="h-2.5 w-2.5" />
+                                        {job.legalRelevanceScore >= 9 ? "JD Preferred" : "Legal Background Valued"}
+                                      </Badge>
+                                    )}
+                                    {job.keySkills && job.keySkills.slice(0, 4).map((skill, si) => (
+                                      <Badge key={si} variant="outline" className="text-[10px]" data-testid={`badge-skill-${job.id}-${si}`}>
+                                        {cleanStructuredText(skill)}
+                                      </Badge>
+                                    ))}
+                                    {job.keySkills && job.keySkills.length > 4 && (
+                                      <span className="text-[10px] text-muted-foreground self-center">+{job.keySkills.length - 4}</span>
+                                    )}
+                                  </div>
                                 )}
                               </div>
                               </div>
