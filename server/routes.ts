@@ -2190,6 +2190,7 @@ Be specific and actionable. Focus on legal tech industry keywords and ATS best p
       const source = req.query.source as string;
       const active = req.query.active as string;
       const seniority = req.query.seniority as string;
+      const reviewStatus = req.query.reviewStatus as string;
 
       let filtered = allJobs;
       if (search) {
@@ -2212,6 +2213,13 @@ Be specific and actionable. Focus on legal tech industry keywords and ATS best p
       }
       if (seniority) {
         filtered = filtered.filter(j => j.seniorityLevel === seniority);
+      }
+      if (reviewStatus) {
+        if (reviewStatus === "unscored") {
+          filtered = filtered.filter(j => j.legalRelevanceScore === null || j.legalRelevanceScore === undefined);
+        } else {
+          filtered = filtered.filter(j => j.reviewStatus === reviewStatus);
+        }
       }
 
       const total = filtered.length;
@@ -2237,6 +2245,7 @@ Be specific and actionable. Focus on legal tech industry keywords and ATS best p
         "title", "company", "location", "isRemote", "locationType", "salaryMin", "salaryMax",
         "roleType", "description", "requirements", "applyUrl", "isActive",
         "roleCategory", "roleSubcategory", "seniorityLevel", "keySkills", "aiSummary",
+        "legalRelevanceScore", "reviewStatus",
       ];
       const updates: Record<string, any> = {};
       for (const field of allowedFields) {
@@ -2294,7 +2303,7 @@ Be specific and actionable. Focus on legal tech industry keywords and ATS best p
       if (!job) return res.status(404).json({ error: "Job not found" });
 
       const categorization = await categorizeJob(job.title, job.description, job.company);
-      const updated = await storage.updateJob(id, {
+      const updateData: any = {
         roleCategory: categorization.category,
         roleSubcategory: categorization.subcategory,
         seniorityLevel: categorization.seniorityLevel,
@@ -2304,7 +2313,13 @@ Be specific and actionable. Focus on legal tech industry keywords and ATS best p
         aiResponsibilities: categorization.aiResponsibilities || null,
         aiQualifications: categorization.aiQualifications || null,
         aiNiceToHaves: categorization.aiNiceToHaves || null,
-      });
+        legalRelevanceScore: categorization.legalRelevanceScore,
+        reviewStatus: categorization.reviewStatus,
+      };
+      if (categorization.reviewStatus === "rejected") {
+        updateData.isActive = false;
+      }
+      const updated = await storage.updateJob(id, updateData);
 
       res.json({ success: true, job: updated, categorization });
     } catch (error: any) {
@@ -2394,6 +2409,7 @@ Be specific and actionable. Focus on legal tech industry keywords and ATS best p
       });
 
       let done = 0;
+      let rejected = 0;
       const batchSize = 5;
       for (let i = 0; i < needsCategorization.length; i += batchSize) {
         const batch = needsCategorization.slice(i, i + batchSize);
@@ -2401,7 +2417,7 @@ Be specific and actionable. Focus on legal tech industry keywords and ATS best p
           batch.map(async (job) => {
             try {
               const result = await categorizeJob(job.title, job.description, job.company);
-              await storage.updateJob(job.id, {
+              const updateData: any = {
                 roleCategory: result.category,
                 roleSubcategory: result.subcategory,
                 seniorityLevel: result.seniorityLevel,
@@ -2411,10 +2427,17 @@ Be specific and actionable. Focus on legal tech industry keywords and ATS best p
                 aiResponsibilities: result.aiResponsibilities || null,
                 aiQualifications: result.aiQualifications || null,
                 aiNiceToHaves: result.aiNiceToHaves || null,
-              });
+                legalRelevanceScore: result.legalRelevanceScore,
+                reviewStatus: result.reviewStatus,
+              };
+              if (result.reviewStatus === "rejected") {
+                updateData.isActive = false;
+                rejected++;
+              }
+              await storage.updateJob(job.id, updateData);
               done++;
               if (done % 10 === 0) {
-                console.log(`Categorized ${done}/${needsCategorization.length} jobs`);
+                console.log(`Categorized ${done}/${needsCategorization.length} jobs (${rejected} rejected)`);
               }
             } catch (err) {
               console.error(`Failed to categorize job ${job.id} (${job.title}):`, err);
@@ -2425,9 +2448,146 @@ Be specific and actionable. Focus on legal tech industry keywords and ATS best p
           await new Promise((r) => setTimeout(r, 1000));
         }
       }
-      console.log(`Finished re-categorizing ${done}/${needsCategorization.length} jobs`);
+      console.log(`Finished re-categorizing ${done}/${needsCategorization.length} jobs (${rejected} rejected as irrelevant)`);
     } catch (error: any) {
       console.error("Error re-categorizing jobs:", error);
+    }
+  });
+
+  app.post("/api/admin/scan-relevance", isAuthenticated, async (req, res) => {
+    if (!(await isAdminCheck(req))) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    try {
+      const allJobs = await storage.getActiveJobs();
+      const unscored = allJobs.filter(j => j.legalRelevanceScore === null || j.legalRelevanceScore === undefined);
+      
+      const batchLimit = req.body.limit ? Math.min(parseInt(req.body.limit), allJobs.length) : allJobs.length;
+      const toProcess = unscored.slice(0, batchLimit);
+
+      console.log(`Scanning ${toProcess.length} jobs for legal relevance (${unscored.length} total unscored)...`);
+      res.json({
+        success: true,
+        message: `Scanning ${toProcess.length} jobs for legal relevance in background...`,
+        total: unscored.length,
+        processing: toProcess.length,
+      });
+
+      let done = 0;
+      let approved = 0;
+      let needsReview = 0;
+      let rejected = 0;
+      const batchSize = 5;
+      for (let i = 0; i < toProcess.length; i += batchSize) {
+        const batch = toProcess.slice(i, i + batchSize);
+        await Promise.all(
+          batch.map(async (job) => {
+            try {
+              const result = await categorizeJob(job.title, job.description, job.company);
+              const updateData: any = {
+                legalRelevanceScore: result.legalRelevanceScore,
+                reviewStatus: result.reviewStatus,
+              };
+              if (!job.roleCategory || job.roleCategory === '') {
+                updateData.roleCategory = result.category;
+                updateData.roleSubcategory = result.subcategory;
+                updateData.seniorityLevel = result.seniorityLevel;
+                updateData.keySkills = result.keySkills;
+                updateData.aiSummary = result.aiSummary;
+                updateData.matchKeywords = result.matchKeywords;
+                updateData.aiResponsibilities = result.aiResponsibilities || null;
+                updateData.aiQualifications = result.aiQualifications || null;
+                updateData.aiNiceToHaves = result.aiNiceToHaves || null;
+              }
+              if (result.reviewStatus === "rejected") {
+                updateData.isActive = false;
+                rejected++;
+              } else if (result.reviewStatus === "approved") {
+                approved++;
+              } else {
+                needsReview++;
+              }
+              await storage.updateJob(job.id, updateData);
+              done++;
+              if (done % 10 === 0) {
+                console.log(`Scanned ${done}/${toProcess.length}: ${approved} approved, ${needsReview} needs review, ${rejected} rejected`);
+              }
+            } catch (err: any) {
+              console.error(`Failed to scan job ${job.id} (${job.title}):`, err.message);
+            }
+          })
+        );
+        if (i + batchSize < toProcess.length) {
+          await new Promise((r) => setTimeout(r, 500));
+        }
+      }
+      console.log(`Relevance scan complete: ${done} processed — ${approved} approved, ${needsReview} needs review, ${rejected} rejected`);
+    } catch (error: any) {
+      console.error("Error scanning relevance:", error);
+    }
+  });
+
+  app.get("/api/admin/relevance-stats", isAuthenticated, async (req, res) => {
+    if (!(await isAdminCheck(req))) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    try {
+      const allJobs = await storage.getJobs();
+      const active = allJobs.filter(j => j.isActive);
+      const stats = {
+        totalJobs: allJobs.length,
+        activeJobs: active.length,
+        scored: active.filter(j => j.legalRelevanceScore !== null).length,
+        unscored: active.filter(j => j.legalRelevanceScore === null).length,
+        approved: allJobs.filter(j => j.reviewStatus === 'approved').length,
+        needsReview: allJobs.filter(j => j.reviewStatus === 'needs_review').length,
+        rejected: allJobs.filter(j => j.reviewStatus === 'rejected').length,
+        byScore: {
+          high: active.filter(j => j.legalRelevanceScore && j.legalRelevanceScore >= 7).length,
+          medium: active.filter(j => j.legalRelevanceScore && j.legalRelevanceScore >= 4 && j.legalRelevanceScore < 7).length,
+          low: active.filter(j => j.legalRelevanceScore && j.legalRelevanceScore < 4).length,
+        }
+      };
+      res.json(stats);
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to get relevance stats" });
+    }
+  });
+
+  app.post("/api/admin/jobs/:id/review", isAuthenticated, async (req, res) => {
+    if (!(await isAdminCheck(req))) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    try {
+      const id = parseInt(req.params.id as string);
+      if (isNaN(id)) return res.status(400).json({ error: "Invalid job ID" });
+      
+      const { action } = req.body;
+      if (!action || !['approve', 'reject'].includes(action)) {
+        return res.status(400).json({ error: "Action must be 'approve' or 'reject'" });
+      }
+      
+      const updateData: any = {
+        reviewStatus: action === 'approve' ? 'approved' : 'rejected',
+        manuallyEdited: true,
+        editedAt: new Date(),
+      };
+      if (req.user && (req.user as any).id) {
+        updateData.editedBy = (req.user as any).id;
+      }
+      if (action === 'reject') {
+        updateData.isActive = false;
+      } else if (action === 'approve') {
+        updateData.isActive = true;
+      }
+      
+      const updated = await storage.updateJob(id, updateData);
+      if (!updated) return res.status(404).json({ error: "Job not found" });
+      
+      res.json({ success: true, job: updated });
+    } catch (error: any) {
+      console.error("Error reviewing job:", error);
+      res.status(500).json({ error: "Failed to review job" });
     }
   });
 

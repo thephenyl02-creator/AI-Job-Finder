@@ -496,18 +496,20 @@ export async function runScheduledScrape(triggeredBy: string = 'scheduler'): Pro
     
     try {
       const activeJobs = await storage.getActiveJobs();
-      const uncategorized = activeJobs.filter(j => !j.roleCategory || j.roleCategory === '');
+      const needsScoring = activeJobs.filter(j => !j.roleCategory || j.roleCategory === '' || j.legalRelevanceScore === null || j.legalRelevanceScore === undefined);
       
-      if (uncategorized.length > 0) {
-        logInfo('AI', `Categorizing ${uncategorized.length} uncategorized jobs...`);
+      if (needsScoring.length > 0) {
+        logInfo('AI', `Categorizing & scoring ${needsScoring.length} jobs for legal relevance...`);
+        let rejectedCount = 0;
+        let needsReviewCount = 0;
         const batchSize = 5;
-        for (let i = 0; i < uncategorized.length; i += batchSize) {
-          const batch = uncategorized.slice(i, i + batchSize);
+        for (let i = 0; i < needsScoring.length; i += batchSize) {
+          const batch = needsScoring.slice(i, i + batchSize);
           await Promise.all(
             batch.map(async (job) => {
               try {
                 const result = await categorizeJob(job.title, job.description, job.company);
-                await storage.updateJob(job.id, {
+                const updateData: any = {
                   roleCategory: result.category,
                   roleSubcategory: result.subcategory,
                   seniorityLevel: result.seniorityLevel,
@@ -517,20 +519,31 @@ export async function runScheduledScrape(triggeredBy: string = 'scheduler'): Pro
                   aiResponsibilities: result.aiResponsibilities || null,
                   aiQualifications: result.aiQualifications || null,
                   aiNiceToHaves: result.aiNiceToHaves || null,
-                });
+                  legalRelevanceScore: result.legalRelevanceScore,
+                  reviewStatus: result.reviewStatus,
+                };
+                if (result.reviewStatus === "rejected") {
+                  updateData.isActive = false;
+                  rejectedCount++;
+                  logInfo('AI', `REJECTED (score ${result.legalRelevanceScore}): ${job.title} at ${job.company}`);
+                } else if (result.reviewStatus === "needs_review") {
+                  needsReviewCount++;
+                  logInfo('AI', `NEEDS REVIEW (score ${result.legalRelevanceScore}): ${job.title} at ${job.company}`);
+                }
+                await storage.updateJob(job.id, updateData);
                 categorizedCount++;
               } catch (err: any) {
                 errors.push(`Categorize job ${job.id}: ${err.message}`);
               }
             })
           );
-          if (i + batchSize < uncategorized.length) {
+          if (i + batchSize < needsScoring.length) {
             await new Promise((r) => setTimeout(r, 500));
           }
         }
-        logSuccess('AI', `Categorized ${categorizedCount}/${uncategorized.length} jobs`);
+        logSuccess('AI', `Categorized ${categorizedCount}/${needsScoring.length} jobs — ${rejectedCount} rejected, ${needsReviewCount} need review`);
       } else {
-        logInfo('AI', 'All active jobs already categorized');
+        logInfo('AI', 'All active jobs already categorized and scored');
       }
     } catch (err: any) {
       logError('AI', 'Categorization phase failed', { error: err.message });

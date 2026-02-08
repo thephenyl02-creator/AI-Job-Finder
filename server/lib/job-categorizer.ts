@@ -17,6 +17,8 @@ export interface JobCategorizationResult {
   salaryMin?: number;
   salaryMax?: number;
   employmentType?: string;
+  legalRelevanceScore?: number;
+  reviewStatus?: string;
 }
 
 export async function categorizeJob(
@@ -28,20 +30,43 @@ export async function categorizeJob(
     .map(([cat, data]) => `${cat}:\n${data.subcategories.map(s => `  - ${s}`).join('\n')}`)
     .join('\n\n');
 
-  const prompt = `You are an expert at categorizing legal tech jobs for attorneys and legal professionals interested in AI.
+  const prompt = `You are an expert at evaluating and categorizing jobs for a platform called "Legal Tech Careers" — built exclusively for lawyers and law students transitioning into legal technology roles.
+
+CRITICAL MISSION: This platform ONLY shows jobs where legal knowledge is REQUIRED, PREFERRED, or MEANINGFULLY USEFUL. Every job must feel relevant to a lawyer. If legal knowledge is not important for the role, it should NOT be on this platform.
 
 Job Title: ${title}
 Company: ${company}
-Description: ${description.substring(0, 1500)}
+Description: ${description.substring(0, 2000)}
+
+=== STEP 1: LEGAL RELEVANCE SCORING (1-10) ===
+
+Score how relevant this job is for lawyers/legal professionals transitioning to tech:
+
+SCORE 9-10: Legal knowledge is REQUIRED. Examples: Product Counsel, Privacy Attorney, Legal Engineer, eDiscovery Counsel, Compliance Counsel, Legal Operations Manager, Legal AI Specialist, Legal Knowledge Engineer.
+
+SCORE 7-8: Legal knowledge is STRONGLY PREFERRED or the work directly involves legal processes/data. Examples: Legal Product Manager, Contract Automation Specialist, RegTech Product Manager, Legal Solutions Consultant, Innovation Manager at a law firm, CLM Implementation Consultant.
+
+SCORE 5-6: The role is at a legal tech company and legal domain knowledge would be USEFUL but isn't explicitly required. Examples: Customer Success Manager at a legal tech vendor (serving law firm clients), Technical Writer creating legal software documentation, Sales Engineer at an eDiscovery platform.
+
+SCORE 3-4: The role is at a legal tech company but is primarily a generic tech/business role where legal knowledge provides minimal advantage. Examples: General Software Engineer at a legal tech company, HR Manager at a legal tech startup, Marketing Manager, Revenue Operations Analyst.
+
+SCORE 1-2: Generic technology role with NO legal connection. Examples: Backend Engineer at a non-legal company, General IT Support, DevOps Engineer with no legal domain work.
+
+COMPANY CONTEXT SIGNALS (adjust score accordingly):
+- Known legal tech companies (Everlaw, Relativity, NetDocuments, Clio, LegalZoom, Ironclad, Disco, Litera, Lex Machina, Lighthouse, vLex, Thomson Reuters Legal, LexisNexis, Westlaw): Jobs here get a +1 boost because legal domain knowledge genuinely helps even in broader roles.
+- Law firms or legal departments: Jobs here are likely legal-tech relevant.
+- General tech companies (unless the role specifically involves legal/compliance work): No boost.
+
+=== STEP 2: CATEGORIZATION ===
 
 Categorize this job into ONE of these categories and subcategories:
 
 ${taxonomyText}
 
 CATEGORIZATION GUIDANCE:
-- "Legal AI & Machine Learning": For AI/ML engineers, data scientists, NLP specialists, AI product managers
-- "Legal Product & Innovation": For product managers, innovation leaders, UX designers, digital transformation
-- "Legal Knowledge Engineering": For knowledge managers, research engineers, taxonomy/ontology specialists
+- "Legal AI & Machine Learning": For AI/ML engineers, data scientists, NLP specialists, AI product managers working on LEGAL AI products
+- "Legal Product & Innovation": For product managers, innovation leaders, UX designers, digital transformation in legal
+- "Legal Knowledge Engineering": For knowledge managers, research engineers, taxonomy/ontology specialists in legal
 - "Legal Operations": For legal ops managers, process improvement, vendor management, implementations
 - "Contract Technology": For CLM specialists, contract automation, smart contracts, transaction tech
 - "Compliance & RegTech": For regulatory tech, compliance automation, privacy, AML/KYC
@@ -52,6 +77,8 @@ CATEGORIZATION GUIDANCE:
 - "Courts & Public Legal Systems": For court tech, access to justice, government legal tech
 - "Legal Research & Academia": For academic researchers, computational law scientists
 - "Emerging LegalTech Roles": For new/cutting-edge roles like AI auditors, safety specialists
+
+=== STEP 3: EXTRACTION ===
 
 Also extract:
 - Seniority level: MUST be exactly one of: Intern, Fellowship, Entry, Mid, Senior, Lead, Director, VP
@@ -75,7 +102,7 @@ Also extract:
 - Salary: Extract salary/compensation if mentioned. Convert to annual USD amounts. Handle formats like "$120K-$150K", "$120,000 - $150,000/year", "$55/hr". If hourly, multiply by 2080 for annual. Set salaryMin and salaryMax. If only one number, set both to that number. If NOT mentioned, set both to null.
 - Remote: Set isRemote to true if the job is remote, hybrid-remote, or remote-first. Look for "remote", "work from home", "distributed", "hybrid" in both the title AND description. If not mentioned, set to false.
 - Employment type: Set employmentType to one of: "full-time", "part-time", "contract", "temporary", "internship". Default to "full-time" if not specified.
-- Summary (3 sentences max, focus on: what you'll do, what they're looking for, what makes it interesting)
+- Summary (3 sentences max, focus on: what you'll do, what they're looking for, what makes it interesting for a LAWYER transitioning to tech)
 - Match keywords for search (5-10 relevant terms)
 - aiResponsibilities: Extract 4-8 bullet points describing what the person will actually DO in this role. Focus on concrete activities, not vague corporate speak. Strip boilerplate. Each bullet should be one clear sentence. If description is too short, set to null.
 - aiQualifications: Extract 4-8 REQUIRED qualifications (must-haves). Include years of experience, degrees, certifications, specific tools/skills they explicitly require. Each bullet should be one clear sentence. If description is too short, set to null.
@@ -83,6 +110,7 @@ Also extract:
 
 Return ONLY valid JSON:
 {
+  "legalRelevanceScore": 8,
   "category": "Legal AI & Machine Learning",
   "subcategory": "Legal AI Engineer",
   "seniorityLevel": "Senior",
@@ -101,6 +129,7 @@ Return ONLY valid JSON:
 }
 
 CRITICAL RULES:
+- legalRelevanceScore: MUST be an integer 1-10. Be STRICT. This is the most important field. A wrong score ruins platform credibility.
 - experienceMin/experienceMax: MUST be null if NOT explicitly stated. Do not guess.
 - salaryMin/salaryMax: MUST be null if NOT explicitly stated. Convert all amounts to annual USD.
 - isRemote: Check BOTH title and description for remote indicators.
@@ -128,6 +157,18 @@ CRITICAL RULES:
     const aiSeniority = result.seniorityLevel || "Mid";
     const validatedSeniority = validateSeniority(aiSeniority, title, description);
 
+    const rawScore = typeof result.legalRelevanceScore === "number" ? result.legalRelevanceScore : 5;
+    const legalRelevanceScore = Math.max(1, Math.min(10, rawScore));
+    
+    let reviewStatus: string;
+    if (legalRelevanceScore >= 7) {
+      reviewStatus = "approved";
+    } else if (legalRelevanceScore >= 4) {
+      reviewStatus = "needs_review";
+    } else {
+      reviewStatus = "rejected";
+    }
+
     return {
       category: validCategory,
       subcategory: validSubcategory,
@@ -144,6 +185,8 @@ CRITICAL RULES:
       salaryMin: typeof result.salaryMin === "number" && result.salaryMin > 0 ? result.salaryMin : undefined,
       salaryMax: typeof result.salaryMax === "number" && result.salaryMax > 0 ? result.salaryMax : undefined,
       employmentType: result.employmentType || "full-time",
+      legalRelevanceScore,
+      reviewStatus,
     };
   } catch (error) {
     console.error("AI categorization error:", error);
@@ -386,6 +429,8 @@ function fallbackCategorization(
     salaryMin: salary.min,
     salaryMax: salary.max,
     employmentType: "full-time",
+    legalRelevanceScore: 5,
+    reviewStatus: "needs_review",
   };
 }
 

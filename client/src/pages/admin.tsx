@@ -192,9 +192,11 @@ export default function AdminPage() {
   const [jobsSourceFilter, setJobsSourceFilter] = useState("all");
   const [jobsActiveFilter, setJobsActiveFilter] = useState("all");
   const [jobsSeniorityFilter, setJobsSeniorityFilter] = useState("");
+  const [jobsReviewFilter, setJobsReviewFilter] = useState("all");
   const [editingJob, setEditingJob] = useState<Job | null>(null);
   const [editForm, setEditForm] = useState<Partial<Job>>({});
   const [expandedJobId, setExpandedJobId] = useState<number | null>(null);
+  const [isScanningRelevance, setIsScanningRelevance] = useState(false);
 
   const { data: companies, isLoading: loadingCompanies } = useQuery<Company[]>({
     queryKey: ["/api/admin/scraper/companies"],
@@ -221,6 +223,7 @@ export default function AdminPage() {
     ...(jobsSourceFilter !== "all" && { source: jobsSourceFilter }),
     ...(jobsActiveFilter !== "all" && { active: jobsActiveFilter }),
     ...(jobsSeniorityFilter && { seniority: jobsSeniorityFilter }),
+    ...(jobsReviewFilter !== "all" && { reviewStatus: jobsReviewFilter }),
   });
 
   const { data: adminJobs, isLoading: loadingAdminJobs } = useQuery<AdminJobsResponse>({
@@ -348,6 +351,37 @@ export default function AdminPage() {
       toast({ title: "Failed to update status", description: error.message, variant: "destructive" });
     },
   });
+
+  const reviewJobMutation = useMutation({
+    mutationFn: async ({ id, action }: { id: number; action: 'approve' | 'reject' }) => {
+      const res = await apiRequest("POST", `/api/admin/jobs/${id}/review`, { action });
+      return res.json();
+    },
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ predicate: (query) => (query.queryKey[0] as string).startsWith("/api/admin/jobs") });
+      queryClient.invalidateQueries({ predicate: (query) => (query.queryKey[0] as string).startsWith("/api/jobs") });
+      toast({ title: variables.action === 'approve' ? "Job approved" : "Job rejected and deactivated" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Review failed", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const handleScanRelevance = async () => {
+    setIsScanningRelevance(true);
+    try {
+      const res = await apiRequest("POST", "/api/admin/scan-relevance", {});
+      const data = await res.json();
+      toast({
+        title: "Relevance scan started",
+        description: data.message,
+      });
+    } catch (error: any) {
+      toast({ title: "Failed to start scan", description: error.message, variant: "destructive" });
+    } finally {
+      setTimeout(() => setIsScanningRelevance(false), 5000);
+    }
+  };
 
   const openEditDialog = (job: Job) => {
     setEditingJob(job);
@@ -1660,6 +1694,33 @@ export default function AdminPage() {
                       <SelectItem value="false">Inactive</SelectItem>
                     </SelectContent>
                   </Select>
+                  <Select
+                    value={jobsReviewFilter}
+                    onValueChange={(v) => { setJobsReviewFilter(v); setJobsPage(1); }}
+                  >
+                    <SelectTrigger className="w-[160px]" data-testid="select-review-filter">
+                      <ShieldCheck className="h-4 w-4 mr-2" />
+                      <SelectValue placeholder="Review" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Reviews</SelectItem>
+                      <SelectItem value="needs_review">Needs Review</SelectItem>
+                      <SelectItem value="approved">Approved</SelectItem>
+                      <SelectItem value="rejected">Rejected</SelectItem>
+                      <SelectItem value="unscored">Unscored</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleScanRelevance}
+                    disabled={isScanningRelevance}
+                    data-testid="button-scan-relevance"
+                    className="shrink-0"
+                  >
+                    {isScanningRelevance ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Zap className="h-4 w-4 mr-2" />}
+                    Scan Relevance
+                  </Button>
                 </div>
 
                 {loadingAdminJobs ? (
@@ -1737,6 +1798,55 @@ export default function AdminPage() {
                             </div>
                           </div>
                           <div className="flex flex-wrap gap-2">
+                            {job.legalRelevanceScore != null && (
+                              <Badge
+                                variant="outline"
+                                className={`text-xs ${
+                                  job.legalRelevanceScore >= 7
+                                    ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800'
+                                    : job.legalRelevanceScore >= 4
+                                    ? 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800'
+                                    : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800'
+                                }`}
+                                data-testid={`badge-relevance-${job.id}`}
+                              >
+                                {job.legalRelevanceScore}/10
+                              </Badge>
+                            )}
+                            {job.reviewStatus === 'needs_review' && (
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-auto py-0.5 px-2 text-xs text-green-700 dark:text-green-400 border-green-300 dark:border-green-700"
+                                  onClick={() => reviewJobMutation.mutate({ id: job.id, action: 'approve' })}
+                                  disabled={reviewJobMutation.isPending}
+                                  data-testid={`button-approve-${job.id}`}
+                                >
+                                  <CheckCircle className="h-3 w-3 mr-1" />Approve
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-auto py-0.5 px-2 text-xs text-red-700 dark:text-red-400 border-red-300 dark:border-red-700"
+                                  onClick={() => reviewJobMutation.mutate({ id: job.id, action: 'reject' })}
+                                  disabled={reviewJobMutation.isPending}
+                                  data-testid={`button-reject-${job.id}`}
+                                >
+                                  <XCircle className="h-3 w-3 mr-1" />Reject
+                                </Button>
+                              </div>
+                            )}
+                            {job.reviewStatus === 'approved' && (
+                              <Badge variant="outline" className="text-xs bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800" data-testid={`badge-approved-${job.id}`}>
+                                <ShieldCheck className="h-2.5 w-2.5 mr-1" />Approved
+                              </Badge>
+                            )}
+                            {job.reviewStatus === 'rejected' && (
+                              <Badge variant="outline" className="text-xs bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800" data-testid={`badge-rejected-${job.id}`}>
+                                <ShieldX className="h-2.5 w-2.5 mr-1" />Rejected
+                              </Badge>
+                            )}
                             {job.manuallyEdited && (
                               <Badge variant="outline" className="text-xs bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800" data-testid={`badge-edited-${job.id}`}>
                                 <Pencil className="h-2.5 w-2.5 mr-1" />Curated
