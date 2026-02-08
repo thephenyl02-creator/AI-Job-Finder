@@ -38,6 +38,9 @@ export const jobs = pgTable("jobs", {
   viewCount: integer("view_count").default(0),
   applyClickCount: integer("apply_click_count").default(0),
   lastScrapedAt: timestamp("last_scraped_at").default(sql`CURRENT_TIMESTAMP`),
+  manuallyEdited: boolean("manually_edited").default(false),
+  editedBy: integer("edited_by"),
+  editedAt: timestamp("edited_at"),
 });
 
 export const jobCategories = pgTable("job_categories", {
