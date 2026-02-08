@@ -121,7 +121,7 @@ export default function Landing() {
               <div>
                 <ScrollReveal delay={0.1} direction="none">
                   <p className="text-sm font-medium text-muted-foreground tracking-wide uppercase mb-5" data-testid="text-hero-label">
-                    For legal professionals navigating what's next
+                    Legal tech jobs &mdash; finally, in one place
                   </p>
                 </ScrollReveal>
 
@@ -130,7 +130,7 @@ export default function Landing() {
                     The legal job market has never been this confusing.
                     <br />
                     <span className="relative inline-block mt-3 sm:mt-4 pb-2">
-                      We make sense of it.
+                      Start here.
                       <motion.span
                         className="absolute bottom-0 left-0 right-0 h-[3px] bg-primary/40 rounded-full"
                         initial={{ scaleX: 0 }}
@@ -144,7 +144,7 @@ export default function Landing() {
 
                 <ScrollReveal delay={0.35}>
                   <p className="text-lg text-muted-foreground mb-8 leading-relaxed" data-testid="text-hero-subtitle">
-                    New titles, shifting roles, and an industry being reshaped by technology. We track every legal tech position so you don't have to figure it out alone.
+                    Yesterday you knew what your career looked like. Today you're seeing job titles that didn't exist two years ago. We track every legal tech role so you can stop guessing and start applying.
                   </p>
                 </ScrollReveal>
 
@@ -398,6 +398,24 @@ export default function Landing() {
           </div>
         </section>
 
+        <section className="border-t border-border/40">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-12 sm:py-16">
+            <ScrollReveal>
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-6 rounded-md bg-muted/40 border border-border/40">
+                <p className="text-base text-foreground font-medium text-center sm:text-left" data-testid="text-mid-cta">
+                  Ready to see what's out there? It takes 30 seconds.
+                </p>
+                <Button asChild className="shrink-0" data-testid="button-mid-cta">
+                  <a href="/auth">
+                    Browse Roles
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </a>
+                </Button>
+              </div>
+            </ScrollReveal>
+          </div>
+        </section>
+
         <section className="border-t border-border/40 bg-muted/30">
           <div className="max-w-5xl mx-auto px-4 sm:px-6 py-20 sm:py-28">
             <ScrollReveal>
@@ -408,7 +426,7 @@ export default function Landing() {
                 You don't need to be technical. You need to be ready.
               </h2>
               <p className="text-lg text-muted-foreground max-w-2xl mb-12">
-                The legal industry is changing fast. These roles are for people who want to be part of that change, not caught off guard by it.
+                Every week, roles appear that didn't exist a year ago. They're built for people with legal backgrounds who are curious enough to make a move.
               </p>
             </ScrollReveal>
 
@@ -467,12 +485,12 @@ export default function Landing() {
                   <Badge variant="outline" className="text-xs font-medium">Pro from $5/mo</Badge>
                 </div>
                 <h2 className="text-3xl sm:text-4xl font-serif font-medium text-foreground mb-4 tracking-tight">
-                  The market won't wait.
+                  Roles are being posted right now.
                   <br />
-                  Your next role might already be here.
+                  Don't find out about them later.
                 </h2>
                 <p className="text-lg text-muted-foreground mb-8 max-w-lg mx-auto">
-                  New legal tech positions go live every week. Browse and apply for free, or go Pro for resume matching, career comparisons, and alerts when roles match your profile.
+                  Browse and apply for free. Go Pro for resume matching, career comparisons, and alerts the moment a role fits your profile.
                 </p>
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
                   <Button size="lg" asChild className="text-base px-10" data-testid="button-cta-final">
@@ -574,7 +592,7 @@ export default function Landing() {
               </span>
             </div>
             <p className="text-xs text-muted-foreground">
-              Clarity in a changing legal job market.
+              The job board that actually understands legal tech.
             </p>
           </div>
         </div>
