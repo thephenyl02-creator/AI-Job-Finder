@@ -2513,8 +2513,8 @@ Be specific and actionable. Focus on legal tech industry keywords and ATS best p
     const batchSize = parseInt(req.query.batchSize as string) || 5;
     const limit = parseInt(req.query.limit as string) || 999;
     try {
-      const allJobs = await storage.getActiveJobs();
-      const needsStructuring = allJobs.filter(j => !j.structuredDescription).slice(0, limit);
+      const allJobs = await storage.getJobs();
+      const needsStructuring = allJobs.filter(j => !j.structuredDescription && j.description).slice(0, limit);
       res.json({ message: `Starting backfill for ${needsStructuring.length} jobs`, total: needsStructuring.length });
 
       let done = 0;
@@ -2552,7 +2552,7 @@ Be specific and actionable. Focus on legal tech industry keywords and ATS best p
     if (!(await isAdminCheck(req))) {
       return res.status(403).json({ error: "Admin access required" });
     }
-    const allJobs = await storage.getActiveJobs();
+    const allJobs = await storage.getJobs();
     const total = allJobs.length;
     const structured = allJobs.filter(j => j.structuredDescription).length;
     res.json({ total, structured, remaining: total - structured, running: structuredBackfillRunning });

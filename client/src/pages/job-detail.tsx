@@ -388,6 +388,20 @@ function cleanStructuredText(text: string): string {
   return cleaned;
 }
 
+function parseStructuredDescription(raw: unknown): StructuredDescription | null {
+  if (!raw) return null;
+  let data = raw;
+  if (typeof data === 'string') {
+    try { data = JSON.parse(data); } catch { return null; }
+  }
+  if (typeof data !== 'object' || data === null) return null;
+  const obj = data as Record<string, unknown>;
+  if (!obj.aboutCompany && !obj.responsibilities && !obj.minimumQualifications && !obj.preferredQualifications && !obj.skillsRequired) {
+    return null;
+  }
+  return obj as unknown as StructuredDescription;
+}
+
 function StructuredDescriptionView({ data }: { data: StructuredDescription }) {
   const sections = [
     { key: "aboutCompany", title: "About the Company", items: null, text: data.aboutCompany, icon: Building2 },
@@ -1063,17 +1077,29 @@ export default function JobDetail() {
               </div>
             )}
 
-            {job.structuredDescription && typeof job.structuredDescription === 'object' ? (
-              <div data-testid="section-full-description">
-                <StructuredDescriptionView data={job.structuredDescription as StructuredDescription} />
-              </div>
-            ) : (
-              <div data-testid="section-full-description" className="text-center py-8">
-                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground mx-auto mb-3" />
-                <p className="text-sm text-muted-foreground">Job details are being processed...</p>
-                <p className="text-xs text-muted-foreground/60 mt-1">This typically takes a few moments. Refresh the page shortly.</p>
-              </div>
-            )}
+            {(() => {
+              const structured = parseStructuredDescription(job.structuredDescription);
+              if (structured) {
+                return (
+                  <div data-testid="section-full-description">
+                    <StructuredDescriptionView data={structured} />
+                  </div>
+                );
+              }
+              if (job.description) {
+                return (
+                  <div data-testid="section-full-description">
+                    <DescriptionContent text={job.description} testId="text-job-description" isPro={isPro} />
+                    {job.requirements && (
+                      <div className="mt-8 pt-6 border-t border-border/40">
+                        <DescriptionContent text={job.requirements} testId="text-job-requirements" isPro={isPro} />
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+              return null;
+            })()}
 
             {resumeFit && resumeFit.length > 0 && (
               <div data-testid="section-resume-fit" className="mt-6 pt-6 border-t border-border/40">
