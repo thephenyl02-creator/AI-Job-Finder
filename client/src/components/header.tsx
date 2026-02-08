@@ -77,7 +77,7 @@ export function Header() {
     <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border/40">
       <nav className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-2">
         <div className="flex items-center gap-4 lg:gap-6">
-          <Link href="/" className="flex items-center gap-2.5 hover:opacity-80 transition-opacity" data-testid="logo-header">
+          <Link href={isAuthenticated ? "/jobs" : "/"} className="flex items-center gap-2.5 hover:opacity-80 transition-opacity" data-testid="logo-header">
             <Logo className="h-5 w-5 text-foreground" />
             <span className="text-sm font-semibold text-foreground tracking-tight hidden sm:inline">
               Legal Tech Careers
