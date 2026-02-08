@@ -929,7 +929,7 @@ export default function JobDetail() {
                   data-testid="badge-role-category"
                 >
                   <Briefcase className="h-3 w-3" />
-                  {job.roleCategory}
+                  {cleanStructuredText(job.roleCategory)}
                 </Badge>
               )}
               {job.legalRelevanceScore && job.legalRelevanceScore >= 8 && (
@@ -958,7 +958,7 @@ export default function JobDetail() {
                   className="text-xs"
                   data-testid={`badge-skill-${i}`}
                 >
-                  {skill}
+                  {cleanStructuredText(skill)}
                 </Badge>
               ))}
             </div>

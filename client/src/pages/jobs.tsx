@@ -332,7 +332,7 @@ export default function Jobs() {
 
   const searchPlaceholder = useMemo(() => {
     if (isPersonalized && searchSuggestions.length > 0) {
-      const example = searchSuggestions[0].query;
+      const example = cleanStructuredText(searchSuggestions[0].query);
       return `Try "${example}" or describe what you're looking for...`;
     }
     return "Describe what you're looking for, e.g. 'remote compliance role' or 'entry level legal tech in New York'";
@@ -597,7 +597,7 @@ export default function Jobs() {
                     onClick={() => setSmartQuery(s.query)}
                     data-testid={`chip-${s.label.toLowerCase().replace(/\s+/g, "-")}`}
                   >
-                    {s.label}
+                    {cleanStructuredText(s.label)}
                   </Button>
                 ))}
               </div>
@@ -1081,7 +1081,7 @@ export default function Jobs() {
                           onClick={() => { setSmartQuery(s.query); handleClearSearch(); }}
                           data-testid={`empty-chip-${s.label.toLowerCase().replace(/\s+/g, "-")}`}
                         >
-                          {s.label}
+                          {cleanStructuredText(s.label)}
                         </Button>
                       ))}
                     </div>
@@ -1680,7 +1680,7 @@ function BrowseCompareView({ jobs, onClose, onClear }: { jobs: Job[]; onClose: (
         <div className="flex flex-wrap gap-1">
           {job.keySkills && job.keySkills.length > 0
             ? job.keySkills.slice(0, 5).map((skill, i) => (
-                <Badge key={i} variant="outline" className="text-[10px]">{skill}</Badge>
+                <Badge key={i} variant="outline" className="text-[10px]">{cleanStructuredText(skill)}</Badge>
               ))
             : <span className="text-sm text-muted-foreground">-</span>
           }
