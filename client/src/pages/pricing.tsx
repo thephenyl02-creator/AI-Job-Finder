@@ -3,6 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { usePageTitle } from "@/hooks/use-page-title";
 import { useAuth } from "@/hooks/use-auth";
 import { useSubscription } from "@/hooks/use-subscription";
+import { useActivityTracker } from "@/hooks/use-activity-tracker";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { Button } from "@/components/ui/button";
@@ -95,8 +96,11 @@ export default function Pricing() {
   usePageTitle("Pricing");
   const { isAuthenticated } = useAuth();
   const { isPro } = useSubscription();
+  const { track } = useActivityTracker();
   const { toast } = useToast();
   const [, navigate] = useLocation();
+
+  useEffect(() => { track({ eventType: "page_view", pagePath: "/pricing" }); }, []);
   const [billingInterval, setBillingInterval] = useState<"month" | "year">("month");
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 

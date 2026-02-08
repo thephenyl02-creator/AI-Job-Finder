@@ -1770,7 +1770,7 @@ class DatabaseStorage implements IStorage {
         type: "explore",
         title: "Explore opportunities",
         description: "Search for legal tech roles that match your background and interests.",
-        action: "/search",
+        action: "/jobs",
         priority: 5,
       });
     }

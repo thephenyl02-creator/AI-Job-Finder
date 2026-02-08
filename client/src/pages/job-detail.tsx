@@ -948,15 +948,28 @@ export default function JobDetail() {
   const [, setLocation] = useLocation();
   const params = useParams<{ id: string }>();
   const jobId = params.id;
-
-  useEffect(() => {
-    if (jobId) trackNow({ eventType: "job_view", entityType: "job", entityId: jobId });
-  }, [jobId]);
+  const trackedJobRef = useRef<string | null>(null);
 
   const { data: job, isLoading } = useQuery<Job>({
     queryKey: [`/api/jobs/${jobId}`],
     enabled: isAuthenticated && !!jobId,
   });
+
+  useEffect(() => {
+    if (jobId && job && trackedJobRef.current !== jobId) {
+      trackedJobRef.current = jobId;
+      trackNow({
+        eventType: "job_view",
+        entityType: "job",
+        entityId: jobId,
+        metadata: {
+          company: job.company,
+          roleCategory: job.roleCategory,
+          title: job.title,
+        },
+      });
+    }
+  }, [jobId, job?.id]);
 
   const { data: savedJobIds = [] } = useQuery<number[]>({
     queryKey: ["/api/saved-jobs/ids"],
@@ -1020,7 +1033,16 @@ export default function JobDetail() {
 
   const handleApplyClick = async () => {
     if (!job) return;
-    trackNow({ eventType: "apply_click", entityType: "job", entityId: String(job.id) });
+    trackNow({
+      eventType: "apply_click",
+      entityType: "job",
+      entityId: String(job.id),
+      metadata: {
+        company: job.company,
+        roleCategory: job.roleCategory,
+        title: job.title,
+      },
+    });
     try {
       await apiRequest("POST", `/api/jobs/${job.id}/apply-click`);
     } catch (e) {

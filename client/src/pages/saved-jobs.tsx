@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { usePageTitle } from "@/hooks/use-page-title";
 import { Header } from "@/components/header";
@@ -7,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/use-auth";
 import { useSubscription } from "@/hooks/use-subscription";
+import { useActivityTracker } from "@/hooks/use-activity-tracker";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Job, SavedJob } from "@shared/schema";
 import {
@@ -64,6 +66,9 @@ export default function SavedJobs() {
   usePageTitle("Saved Jobs");
   const { isAuthenticated } = useAuth();
   const { isFree } = useSubscription();
+  const { track } = useActivityTracker();
+
+  useEffect(() => { track({ eventType: "page_view", pagePath: "/saved-jobs" }); }, []);
 
   const { data: savedJobs = [], isLoading } = useQuery<SavedJobWithJob[]>({
     queryKey: ["/api/saved-jobs"],
@@ -75,6 +80,7 @@ export default function SavedJobs() {
   const unsaveMutation = useMutation({
     mutationFn: async (jobId: number) => {
       await apiRequest("DELETE", `/api/saved-jobs/${jobId}`);
+      track({ eventType: "unsave_job", entityType: "job", entityId: String(jobId) });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/saved-jobs"] });
