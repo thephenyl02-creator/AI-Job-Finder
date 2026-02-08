@@ -1,0 +1,40 @@
+can you tell me I am building a platform called Legal Technology Careers for Lawyers.
+
+This platform is only for lawyers and law students who want to move into legal technology, AI-related legal roles, or technology-focused roles inside law firms and companies.
+
+Do not show random technology jobs like software engineer or general IT roles.
+
+Only show jobs where a legal background is required, preferred, or clearly useful, or where the work involves legal processes, compliance, legal data, legal AI, or technology adoption in legal teams.
+
+The platform should understand that legal tech job titles are changing and overlapping because of AI. Jobs should be grouped based on the type of work, not only the job title.
+
+Examples of roles that should be included:
+
+Product Counsel
+
+Legal Product Counsel
+
+Privacy Attorney / Privacy Lawyer
+
+Innovation Manager (Law Firm or Legal Department)
+
+Legal Engineer
+
+AI Adoption Manager (Legal or Compliance Teams)
+
+Legal Operations Manager
+
+Legal AI Specialist
+
+Legal Solutions Consultant
+
+Compliance or Regulatory Technology Roles
+
+Legal Knowledge Engineer
+
+The goal is to help lawyers understand realistic career transition options into technology and innovation roles.
+
+Every job shown on the platform should feel relevant to lawyers.
+If legal knowledge is not important for the role, do not show it.
+
+All jobs should be curated and evaluated before being shown on the platform. why there is problem in categorization, then sub categotization and all  also can you scan all the jobs are remove those are irrelevant and also the can you fix the scrapper accordingly that it listens to the admin because I dont want to look like a clown think like a product leader are you doing this everything on the admin side or on the user side ? do you think it will be great or is there anything you can you want to say to make it full proof do you think the above suggested ideas is full proof also I want to publish it before looking like a clown so will you be able to scan all the jobs and how can I make sure these mistakes will never arise in job updating on the part of admin and this is a night mare for a product comoany to have broken links in jobs and in events it is now somehow showing randim broken events sometimes
