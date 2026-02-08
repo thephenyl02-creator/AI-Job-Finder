@@ -53,6 +53,8 @@ import {
   User,
   Clock,
   ExternalLink,
+  Lock,
+  ArrowUpDown,
 } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
@@ -1456,6 +1458,18 @@ function BrowseCompareView({ jobs, onClose, onClear }: { jobs: Job[]; onClose: (
   const { toast } = useToast();
   const [aiResult, setAiResult] = useState<ComparisonAIResult | null>(null);
 
+  const { data: resumes } = useQuery<any[]>({
+    queryKey: ["/api/resumes"],
+    enabled: isAuthenticated,
+  });
+
+  const primaryResume = resumes?.find((r: any) => r.isPrimary) || resumes?.[0];
+  const resumeSkills: string[] = useMemo(() => {
+    if (!primaryResume?.extractedData) return [];
+    const ed = primaryResume.extractedData as any;
+    return (ed.skills || []).map((s: string) => s.toLowerCase().trim());
+  }, [primaryResume]);
+
   const aiAnalysisMutation = useMutation({
     mutationFn: async () => {
       const payload = {
@@ -1509,6 +1523,89 @@ function BrowseCompareView({ jobs, onClose, onClear }: { jobs: Job[]; onClose: (
       default: return "bg-muted text-muted-foreground";
     }
   };
+
+  const differentiators = useMemo(() => {
+    const diffs: string[] = [];
+    const salaries = jobs.map(j => {
+      const mid = j.salaryMin && j.salaryMax ? (j.salaryMin + j.salaryMax) / 2 : j.salaryMin || j.salaryMax;
+      return mid;
+    }).filter(Boolean) as number[];
+    if (salaries.length >= 2) {
+      const gap = Math.max(...salaries) - Math.min(...salaries);
+      if (gap > 0) {
+        const fmt = (n: number) => `$${Math.round(n / 1000)}K`;
+        diffs.push(`Salary gap: ${fmt(gap)}`);
+      }
+    }
+    const locationTypes = new Set(jobs.map(j => getLocationLabel(j)).filter(Boolean));
+    if (locationTypes.size > 1) {
+      diffs.push(`Work style: ${Array.from(locationTypes).join(" vs ")}`);
+    }
+    const levels = new Set(jobs.map(j => j.seniorityLevel).filter(Boolean));
+    if (levels.size > 1) {
+      diffs.push(`Seniority: ${Array.from(levels).join(" vs ")}`);
+    }
+    const categories = new Set(jobs.map(j => j.roleCategory).filter(Boolean));
+    if (categories.size > 1) {
+      diffs.push(`Different focus areas`);
+    }
+    const companies = jobs.map(j => j.company);
+    if (new Set(companies).size === jobs.length) {
+      diffs.push(`${jobs.length} different companies`);
+    }
+    return diffs;
+  }, [jobs]);
+
+  const skillsAnalysis = useMemo(() => {
+    const allSkillSets = jobs.map(j => (j.keySkills || []).map(s => s.toLowerCase().trim()));
+    if (allSkillSets.every(s => s.length === 0)) return null;
+
+    const shared: string[] = [];
+    const uniquePerJob: string[][] = jobs.map(() => []);
+
+    if (allSkillSets.length >= 2) {
+      const firstSet = new Set(allSkillSets[0]);
+      firstSet.forEach(skill => {
+        if (allSkillSets.every(set => set.includes(skill))) {
+          shared.push(skill);
+        }
+      });
+      allSkillSets.forEach((skillSet, idx) => {
+        skillSet.forEach(skill => {
+          if (!shared.includes(skill)) {
+            const isUnique = allSkillSets.every((otherSet, otherIdx) =>
+              otherIdx === idx || !otherSet.includes(skill)
+            );
+            if (isUnique && !uniquePerJob[idx].includes(skill)) {
+              uniquePerJob[idx].push(skill);
+            }
+          }
+        });
+      });
+    }
+
+    return { shared, uniquePerJob };
+  }, [jobs]);
+
+  const resumeMatchScores = useMemo(() => {
+    if (resumeSkills.length === 0) return null;
+    return jobs.map(job => {
+      const jobSkills = (job.keySkills || []).map(s => s.toLowerCase().trim());
+      if (jobSkills.length === 0) return null;
+      const matched = jobSkills.filter(js => {
+        if (js.length < 3) return resumeSkills.some(rs => rs === js);
+        return resumeSkills.some(rs => {
+          if (rs.length < 3) return rs === js;
+          const words1 = js.split(/\s+/);
+          const words2 = rs.split(/\s+/);
+          return js === rs
+            || words1.some(w => w.length >= 3 && words2.includes(w))
+            || words2.some(w => w.length >= 3 && words1.includes(w));
+        });
+      });
+      return Math.round((matched.length / jobSkills.length) * 100);
+    });
+  }, [jobs, resumeSkills]);
 
   const rows: { label: string; render: (job: Job) => React.ReactNode }[] = [
     {
@@ -1632,6 +1729,24 @@ function BrowseCompareView({ jobs, onClose, onClear }: { jobs: Job[]; onClose: (
         </div>
       </div>
 
+      {differentiators.length > 0 && (
+        <Card data-testid="section-differentiators">
+          <CardContent className="py-3 px-4">
+            <div className="flex items-start gap-2">
+              <ArrowUpDown className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
+              <div>
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Key Differences</span>
+                <div className="flex flex-wrap gap-2 mt-1.5">
+                  {differentiators.map((diff, i) => (
+                    <Badge key={i} variant="secondary" className="text-xs">{diff}</Badge>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
@@ -1663,6 +1778,96 @@ function BrowseCompareView({ jobs, onClose, onClear }: { jobs: Job[]; onClose: (
                     ))}
                   </tr>
                 ))}
+
+                {skillsAnalysis && skillsAnalysis.shared.length > 0 && (
+                  <tr className="border-t border-border/50">
+                    <td className="p-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider align-top whitespace-nowrap">
+                      Shared Skills
+                    </td>
+                    <td colSpan={jobs.length} className="p-3 align-top">
+                      <div className="flex flex-wrap gap-1">
+                        {skillsAnalysis.shared.map((skill, i) => (
+                          <Badge key={i} variant="secondary" className="text-[10px] bg-primary/10 text-primary border-primary/20 capitalize">
+                            {skill}
+                          </Badge>
+                        ))}
+                      </div>
+                    </td>
+                  </tr>
+                )}
+
+                {skillsAnalysis && skillsAnalysis.uniquePerJob.some(u => u.length > 0) && (
+                  <tr className="border-t border-border/50">
+                    <td className="p-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider align-top whitespace-nowrap">
+                      Unique Skills
+                    </td>
+                    {jobs.map((job, idx) => (
+                      <td key={job.id} className="p-3 align-top">
+                        <div className="flex flex-wrap gap-1">
+                          {skillsAnalysis.uniquePerJob[idx].length > 0
+                            ? skillsAnalysis.uniquePerJob[idx].map((skill, i) => (
+                                <Badge key={i} variant="outline" className="text-[10px] capitalize">{skill}</Badge>
+                              ))
+                            : <span className="text-xs text-muted-foreground">None unique</span>
+                          }
+                        </div>
+                      </td>
+                    ))}
+                  </tr>
+                )}
+
+                {resumeMatchScores && (
+                  <tr className="border-t border-border">
+                    <td className="p-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider align-top whitespace-nowrap">
+                      Resume Match
+                    </td>
+                    {jobs.map((job, idx) => {
+                      const score = resumeMatchScores[idx];
+                      return (
+                        <td key={job.id} className="p-3 align-top">
+                          {score !== null ? (
+                            <div className="space-y-1.5">
+                              <div className="flex items-center gap-2">
+                                <Progress value={score} className="h-1.5 flex-1" />
+                                <span className="text-xs font-medium text-foreground">{score}%</span>
+                              </div>
+                              <span className="text-[10px] text-muted-foreground">
+                                {score >= 70 ? "Strong skill match" : score >= 40 ? "Partial match" : "Skills gap"}
+                              </span>
+                              {!isPro && (
+                                <Link href="/pricing">
+                                  <span className="text-[10px] text-primary flex items-center gap-1 mt-0.5 cursor-pointer" data-testid={`link-resume-deep-${job.id}`}>
+                                    <Lock className="h-2.5 w-2.5" />
+                                    Full gap analysis with Pro
+                                  </span>
+                                </Link>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">No skills data</span>
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                )}
+
+                {!resumeMatchScores && isAuthenticated && (
+                  <tr className="border-t border-border">
+                    <td className="p-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider align-top whitespace-nowrap">
+                      Resume Match
+                    </td>
+                    <td colSpan={jobs.length} className="p-3 align-top">
+                      <Link href="/resumes">
+                        <span className="text-xs text-primary flex items-center gap-1.5 cursor-pointer" data-testid="link-upload-resume-compare">
+                          <Upload className="h-3 w-3" />
+                          Upload a resume to see skill match scores
+                        </span>
+                      </Link>
+                    </td>
+                  </tr>
+                )}
+
                 <tr className="border-t border-border">
                   <td className="p-3" />
                   {jobs.map((job) => (
