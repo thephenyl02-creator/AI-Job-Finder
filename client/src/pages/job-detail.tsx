@@ -920,7 +920,7 @@ export default function JobDetail() {
             )}
           </div>
 
-          {(job.roleCategory || (job.legalRelevanceScore && job.legalRelevanceScore >= 8)) && (
+          {(job.roleCategory || job.roleSubcategory || (job.legalRelevanceScore && job.legalRelevanceScore >= 8)) && (
             <div className="flex flex-wrap gap-1.5 mt-3" data-testid="section-job-badges">
               {job.roleCategory && (
                 <Badge
@@ -930,6 +930,15 @@ export default function JobDetail() {
                 >
                   <Briefcase className="h-3 w-3" />
                   {cleanStructuredText(job.roleCategory)}
+                </Badge>
+              )}
+              {job.roleSubcategory && (
+                <Badge
+                  variant="outline"
+                  className="gap-1 text-xs"
+                  data-testid="badge-role-subcategory"
+                >
+                  {cleanStructuredText(job.roleSubcategory)}
                 </Badge>
               )}
               {job.legalRelevanceScore && job.legalRelevanceScore >= 8 && (

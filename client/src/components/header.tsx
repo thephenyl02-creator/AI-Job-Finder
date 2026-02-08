@@ -197,7 +197,7 @@ export function Header() {
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-10 w-10 rounded-full hidden lg:flex" data-testid="button-user-menu">
+                  <Button variant="ghost" size="icon" className="rounded-full hidden lg:flex" data-testid="button-user-menu">
                     <Avatar className="h-8 w-8">
                       <AvatarImage src={user?.profileImageUrl || undefined} alt={user?.firstName || "User"} />
                       <AvatarFallback className="bg-muted text-muted-foreground text-xs font-medium">
@@ -234,9 +234,24 @@ export function Header() {
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
+                      <Link href="/saved-jobs" className="cursor-pointer" data-testid="link-saved-jobs-dropdown">
+                        <Bookmark className="mr-2 h-4 w-4" />
+                        <span>Saved Jobs</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
                       <Link href="/events" className="cursor-pointer" data-testid="link-events">
                         <Calendar className="mr-2 h-4 w-4" />
                         <span>Events</span>
+                      </Link>
+                    </DropdownMenuItem>
+                  </DropdownMenuGroup>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuGroup>
+                    <DropdownMenuItem asChild>
+                      <Link href="/resume-builder" className="cursor-pointer" data-testid="link-resume-builder-dropdown">
+                        <PenLine className="mr-2 h-4 w-4" />
+                        <span>Resume Builder</span>
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
