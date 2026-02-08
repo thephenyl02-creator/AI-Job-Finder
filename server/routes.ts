@@ -459,6 +459,140 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/admin/events", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      if (!(await storage.isUserAdmin(user?.id))) return res.status(403).json({ error: "Admin access required" });
+      const allEvents = await storage.getAllEventsAdmin();
+      res.json(allEvents);
+    } catch (error) {
+      console.error("Error fetching admin events:", error);
+      res.status(500).json({ error: "Failed to fetch events" });
+    }
+  });
+
+  app.post("/api/admin/events/ai-extract", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      if (!(await storage.isUserAdmin(user?.id))) return res.status(403).json({ error: "Admin access required" });
+
+      const { title, url, description: rawDesc } = req.body;
+      if (!title && !url && !rawDesc) return res.status(400).json({ error: "Provide at least a title, URL, or description" });
+
+      const openai = (await import('./lib/openai-client')).getOpenAIClient();
+
+      const prompt = `Extract structured event information from the following input. Fill in as many fields as possible based on what you can infer. If you cannot determine a field, use null.
+
+Input:
+${title ? `Title: ${title}` : ''}
+${url ? `URL: ${url}` : ''}
+${rawDesc ? `Description: ${rawDesc}` : ''}
+
+Return a JSON object with these fields:
+{
+  "title": "Full event title",
+  "organizer": "Organization hosting the event",
+  "eventType": "conference|seminar|webinar|workshop|cle|networking|hackathon|panel",
+  "startDate": "YYYY-MM-DD or null if unknown",
+  "endDate": "YYYY-MM-DD or null",
+  "location": "City, Country or Online",
+  "attendanceType": "in-person|virtual|hybrid",
+  "description": "2-3 sentence description of the event",
+  "registrationUrl": "URL for registration",
+  "cost": "Price range or Free or TBD",
+  "isFree": true/false,
+  "topics": ["Topic 1", "Topic 2", "Topic 3"],
+  "cleCredits": "CLE credits info or null"
+}
+
+Return ONLY the JSON object, no other text.`;
+
+      const response = await openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: 'You are a legal technology events expert. Extract and structure event information accurately. Today is ' + new Date().toISOString().split('T')[0] },
+          { role: 'user', content: prompt },
+        ],
+        temperature: 0.2,
+        max_tokens: 1500,
+        response_format: { type: 'json_object' },
+      });
+
+      const content = response.choices[0]?.message?.content;
+      if (!content) return res.status(500).json({ error: "Empty AI response" });
+
+      const extracted = JSON.parse(content);
+      res.json(extracted);
+    } catch (error) {
+      console.error("Error extracting event info:", error);
+      res.status(500).json({ error: "Failed to extract event information" });
+    }
+  });
+
+  app.post("/api/admin/events/validate-links", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      if (!(await storage.isUserAdmin(user?.id))) return res.status(403).json({ error: "Admin access required" });
+
+      const allEvents = await storage.getAllEventsAdmin();
+      const activeEvents = allEvents.filter(e => e.isActive);
+      const results: { id: number; title: string; url: string; status: number; ok: boolean }[] = [];
+
+      const https = await import('https');
+      const http = await import('http');
+      const { URL } = await import('url');
+
+      const checkUrl = (url: string): Promise<{ status: number; ok: boolean }> => {
+        return new Promise((resolve) => {
+          try {
+            const parsed = new URL(url);
+            const mod = parsed.protocol === 'https:' ? https : http;
+            const req = mod.request(parsed, { method: 'GET', timeout: 12000, headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' } }, (r) => {
+              r.resume();
+              if (r.statusCode && r.statusCode >= 300 && r.statusCode < 400 && r.headers.location) {
+                resolve({ status: r.statusCode, ok: true });
+              } else {
+                resolve({ status: r.statusCode || 0, ok: (r.statusCode || 0) < 400 });
+              }
+            });
+            req.on('error', () => resolve({ status: 0, ok: false }));
+            req.on('timeout', () => { req.destroy(); resolve({ status: 0, ok: false }); });
+            req.end();
+          } catch {
+            resolve({ status: 0, ok: false });
+          }
+        });
+      };
+
+      for (let i = 0; i < activeEvents.length; i += 5) {
+        const batch = activeEvents.slice(i, i + 5);
+        const checks = await Promise.all(batch.map(async (evt) => {
+          const r = await checkUrl(evt.registrationUrl);
+          return { id: evt.id, title: evt.title, url: evt.registrationUrl, ...r };
+        }));
+        results.push(...checks);
+      }
+
+      const broken = results.filter(r => !r.ok && r.status !== 403);
+      res.json({ total: results.length, broken: broken.length, results });
+    } catch (error) {
+      console.error("Error validating links:", error);
+      res.status(500).json({ error: "Failed to validate links" });
+    }
+  });
+
+  app.post("/api/admin/events/deactivate-past", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      if (!(await storage.isUserAdmin(user?.id))) return res.status(403).json({ error: "Admin access required" });
+      const count = await storage.deactivatePastEvents();
+      res.json({ deactivated: count });
+    } catch (error) {
+      console.error("Error deactivating past events:", error);
+      res.status(500).json({ error: "Failed to deactivate past events" });
+    }
+  });
+
   // ============ End Events Routes ============
 
   app.get("/api/search/suggestions", isAuthenticated, async (req, res) => {

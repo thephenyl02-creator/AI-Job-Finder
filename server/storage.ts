@@ -80,6 +80,7 @@ export interface IStorage {
   deleteBuiltResume(id: number, userId: string): Promise<void>;
   // Events
   getEvents(filters?: { eventType?: string; attendanceType?: string; isFree?: boolean; topic?: string; upcoming?: boolean }): Promise<Event[]>;
+  getAllEventsAdmin(): Promise<Event[]>;
   getEvent(id: number): Promise<Event | undefined>;
   createEvent(event: InsertEvent): Promise<Event>;
   updateEvent(id: number, data: Partial<InsertEvent>): Promise<Event | undefined>;
@@ -1980,6 +1981,13 @@ class DatabaseStorage implements IStorage {
       .from(events)
       .where(and(...conditions))
       .orderBy(events.startDate);
+  }
+
+  async getAllEventsAdmin(): Promise<Event[]> {
+    return db
+      .select()
+      .from(events)
+      .orderBy(desc(events.startDate));
   }
 
   async getEvent(id: number): Promise<Event | undefined> {
