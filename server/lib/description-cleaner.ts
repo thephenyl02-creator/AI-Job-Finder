@@ -37,6 +37,67 @@ function ensureCompleteSentence(text: string): string {
   return trimmed;
 }
 
+function fixAshbyDashPrefixParagraphs(text: string): string {
+  const lines = text.split('\n');
+  const dashLines = lines.filter(l => /^- /.test(l.trim()));
+  const nonEmpty = lines.filter(l => l.trim().length > 0);
+  if (dashLines.length < 3 || dashLines.length < nonEmpty.length * 0.5) return text;
+
+  const fixed: string[] = [];
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (/^- /.test(trimmed)) {
+      const content = trimmed.slice(2).trim();
+      if (content.length > 80 && !content.includes('\n')) {
+        fixed.push(content);
+      } else {
+        fixed.push(trimmed);
+      }
+    } else {
+      fixed.push(trimmed);
+    }
+  }
+  return fixed.join('\n');
+}
+
+function stripMultiParagraphCompanyIntro(text: string): string {
+  const paragraphs = text.split(/\n{2,}/);
+  if (paragraphs.length < 3) return text;
+
+  const roleSignals = [
+    /\b(?:about (?:the |this )?role|the (?:role|opportunity|challenge|position)|in this role|what you(?:'ll| will)|your (?:role|responsibilities|impact)|we(?:'re| are) (?:looking|seeking|hiring))\b/i,
+    /(?:^|\.\s+)As (?:a|an|the) /,
+    /\b(?:responsibilities|qualifications|requirements|key duties)\b/i,
+    /(?:^|\.\s+)(?:You will|You'll|In this role)/,
+  ];
+
+  let roleStartIdx = -1;
+  for (let i = 0; i < paragraphs.length; i++) {
+    const p = paragraphs[i].trim();
+    for (const signal of roleSignals) {
+      if (signal.test(p)) {
+        roleStartIdx = i;
+        break;
+      }
+    }
+    if (roleStartIdx >= 0) break;
+  }
+
+  if (roleStartIdx <= 1) return text;
+
+  const introParagraphs = paragraphs.slice(0, roleStartIdx);
+  const introText = introParagraphs.join('\n\n');
+  if (introText.length > text.length * 0.6) return text;
+
+  const remaining = paragraphs.slice(roleStartIdx).join('\n\n').trim();
+  if (remaining.length < 200) return text;
+
+  let result = remaining;
+  result = result.replace(/^(?:About (?:the |this )?role|The (?:Role|Opportunity|Challenge|Position|Team))\s*:?\s*\n*/i, '');
+
+  return result;
+}
+
 function stripBoilerplate(text: string): string {
   let cleaned = text;
 
@@ -52,14 +113,7 @@ function stripBoilerplate(text: string): string {
   cleaned = cleaned.replace(/^About\s+[\w\s&.'()-]{2,30}\s+(?:We\s)/i, 'We ');
   cleaned = cleaned.replace(/^(?:Intro description|Job Description|Role Description|Position Description)\s*:?\s*/i, '');
 
-  const companyIntroWithSeparator = /^(?:[\w\s&.'()-]{2,50})\s+(?:is|are)\s+(?:a|an|the|on a|where|building)\s+[^]*?\n\n/;
-  const introSepMatch = cleaned.match(companyIntroWithSeparator);
-  if (introSepMatch && introSepMatch[0].length < cleaned.length * 0.25) {
-    const afterIntro = cleaned.slice(introSepMatch[0].length).trim();
-    if (afterIntro.length > 200) {
-      cleaned = afterIntro;
-    }
-  }
+  cleaned = stripMultiParagraphCompanyIntro(cleaned);
 
   cleaned = cleaned.replace(/^(?:The Opportunity|The Role|Overview|Position Summary|Job Summary|Role Summary|Position Overview)\s*:?\s*\n*/i, '');
 
@@ -216,6 +270,7 @@ export function cleanJobDescription(text: string): string {
   cleaned = cleaned.replace(/^[ \t]+/gm, '');
 
   cleaned = fixMissingSentenceSpaces(cleaned);
+  cleaned = fixAshbyDashPrefixParagraphs(cleaned);
   cleaned = stripBoilerplate(cleaned);
   cleaned = normalizeFlatText(cleaned);
 

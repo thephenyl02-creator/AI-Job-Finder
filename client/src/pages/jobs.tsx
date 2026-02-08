@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { usePageTitle } from "@/hooks/use-page-title";
 import { useLocation, useSearch } from "wouter";
@@ -52,7 +52,9 @@ import {
   CheckCircle2,
   User,
   Clock,
+  ExternalLink,
 } from "lucide-react";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import type { ResumeExtractedData } from "@shared/schema";
 import { queryClient } from "@/lib/queryClient";
@@ -135,6 +137,22 @@ export default function Jobs() {
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [refinedSummary, setRefinedSummary] = useState<string | null>(null);
+
+  const [compareIds, setCompareIds] = useState<Set<number>>(new Set());
+  const [showCompare, setShowCompare] = useState(false);
+  const MAX_COMPARE = 3;
+
+  const toggleCompare = (jobId: number) => {
+    setCompareIds(prev => {
+      const next = new Set(prev);
+      if (next.has(jobId)) {
+        next.delete(jobId);
+      } else if (next.size < MAX_COMPARE) {
+        next.add(jobId);
+      }
+      return next;
+    });
+  };
 
   const { data: usageLimits } = useQuery<{
     isPro: boolean;
@@ -307,6 +325,15 @@ export default function Jobs() {
   });
 
   const searchSuggestions = suggestionsData?.suggestions ?? DEFAULT_SEARCH_SUGGESTIONS;
+  const isPersonalized = suggestionsData?.personalized ?? false;
+
+  const searchPlaceholder = useMemo(() => {
+    if (isPersonalized && searchSuggestions.length > 0) {
+      const example = searchSuggestions[0].query;
+      return `Try "${example}" or describe what you're looking for...`;
+    }
+    return "Describe what you're looking for, e.g. 'remote compliance role' or 'entry level legal tech in New York'";
+  }, [isPersonalized, searchSuggestions]);
 
   const [isUploadingResume, setIsUploadingResume] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -528,7 +555,7 @@ export default function Jobs() {
             <div className="flex items-end gap-2">
               <div className="flex-1 min-w-0">
                 <Textarea
-                  placeholder="Describe what you're looking for in plain language, e.g. 'remote compliance role for a mid-career attorney' or 'entry level legal tech jobs in New York'"
+                  placeholder={searchPlaceholder}
                   className="resize-none border-0 text-sm sm:text-base focus-visible:ring-0 shadow-none min-h-[52px] max-h-[100px] placeholder:text-muted-foreground/50 leading-relaxed"
                   rows={2}
                   value={smartQuery}
@@ -555,6 +582,9 @@ export default function Jobs() {
 
             {!smartQuery && !searchResults && guidedStep === "idle" && (
               <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                {isPersonalized && (
+                  <span className="text-[10px] text-muted-foreground/60 mr-0.5" data-testid="text-personalized-label">For you:</span>
+                )}
                 {searchSuggestions.map((s) => (
                   <Button
                     key={s.label}
@@ -1067,6 +1097,9 @@ export default function Jobs() {
                 searchResults={searchResults}
                 getCategoryIcon={getCategoryIcon}
                 onJobClick={(id) => setLocation(`/jobs/${id}`)}
+                compareIds={compareIds}
+                onToggleCompare={toggleCompare}
+                maxCompare={MAX_COMPARE}
               />
             ) : (
               <>
@@ -1083,6 +1116,9 @@ export default function Jobs() {
                       searchResults={searchResults}
                       getCategoryIcon={getCategoryIcon}
                       onJobClick={(id) => setLocation(`/jobs/${id}`)}
+                      compareIds={compareIds}
+                      onToggleCompare={toggleCompare}
+                      maxCompare={MAX_COMPARE}
                     />
                   );
                 })}
@@ -1096,6 +1132,9 @@ export default function Jobs() {
                     searchResults={searchResults}
                     getCategoryIcon={getCategoryIcon}
                     onJobClick={(id) => setLocation(`/jobs/${id}`)}
+                    compareIds={compareIds}
+                    onToggleCompare={toggleCompare}
+                    maxCompare={MAX_COMPARE}
                   />
                 )}
               </>
@@ -1104,6 +1143,73 @@ export default function Jobs() {
         )}
 
       </main>
+
+      <AnimatePresence>
+        {compareIds.size > 0 && !showCompare && (
+          <motion.div
+            initial={{ y: 80, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 80, opacity: 0 }}
+            className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50"
+            data-testid="compare-floating-bar"
+          >
+            <Card className="shadow-lg border-primary/20">
+              <CardContent className="p-3 flex items-center gap-3">
+                <Badge variant="default" className="shrink-0">{compareIds.size}</Badge>
+                <span className="text-sm text-foreground whitespace-nowrap">
+                  {compareIds.size === 1 ? "job selected" : "jobs selected"}
+                </span>
+                <Button
+                  size="sm"
+                  disabled={compareIds.size < 2}
+                  onClick={() => setShowCompare(true)}
+                  className="gap-1.5 shrink-0"
+                  data-testid="button-open-compare"
+                >
+                  <Scale className="h-3.5 w-3.5" />
+                  Compare
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setCompareIds(new Set())}
+                  data-testid="button-clear-compare"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </Button>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showCompare && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm"
+            data-testid="compare-overlay"
+          >
+            <motion.div
+              initial={{ y: 40, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 40, opacity: 0 }}
+              className="fixed inset-x-0 bottom-0 top-16 sm:inset-4 sm:top-auto sm:max-h-[80vh] bg-background border rounded-t-xl sm:rounded-xl shadow-2xl overflow-auto"
+            >
+              <div className="p-4 sm:p-6">
+                <BrowseCompareView
+                  jobs={allJobs.filter(j => compareIds.has(j.id))}
+                  onClose={() => setShowCompare(false)}
+                  onClear={() => { setCompareIds(new Set()); setShowCompare(false); }}
+                />
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <Footer />
     </div>
   );
@@ -1118,6 +1224,9 @@ function CategorySection({
   searchResults,
   getCategoryIcon,
   onJobClick,
+  compareIds,
+  onToggleCompare,
+  maxCompare,
 }: {
   category: string;
   jobs: (Job | JobWithScore)[];
@@ -1127,6 +1236,9 @@ function CategorySection({
   searchResults: JobWithScore[] | null;
   getCategoryIcon: (icon: string) => typeof Brain;
   onJobClick: (jobId: number) => void;
+  compareIds: Set<number>;
+  onToggleCompare: (jobId: number) => void;
+  maxCompare: number;
 }) {
   const Icon = getCategoryIcon(taxonomy.icon);
 
@@ -1208,14 +1320,34 @@ function CategorySection({
                             if (days < 30) return `${Math.floor(days / 7)}w ago`;
                             return `${Math.floor(days / 30)}mo ago`;
                           })() : null;
+                          const isSelected = compareIds.has(job.id);
+                          const canSelect = isSelected || compareIds.size < maxCompare;
                           return (
                             <div
                               key={job.id}
-                              className="p-3 rounded-lg border bg-card hover-elevate transition-colors cursor-pointer"
+                              className={`p-3 rounded-lg border bg-card hover-elevate transition-colors cursor-pointer ${isSelected ? "ring-1 ring-primary/40" : ""}`}
                               data-testid={`card-job-${job.id}`}
                               onClick={() => onJobClick(job.id)}
                             >
-                              <div className="min-w-0">
+                              <div className="flex gap-2">
+                                <button
+                                  className={`shrink-0 mt-0.5 w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+                                    isSelected
+                                      ? "bg-primary border-primary text-primary-foreground"
+                                      : canSelect
+                                      ? "border-muted-foreground/30 hover:border-primary/50"
+                                      : "border-muted-foreground/10 opacity-40 cursor-not-allowed"
+                                  }`}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (canSelect || isSelected) onToggleCompare(job.id);
+                                  }}
+                                  data-testid={`checkbox-compare-${job.id}`}
+                                  aria-label={isSelected ? "Remove from comparison" : "Add to comparison"}
+                                >
+                                  {isSelected && <Check className="h-3 w-3" />}
+                                </button>
+                              <div className="min-w-0 flex-1">
                                 <h4 className="font-medium text-foreground text-sm sm:text-base" data-testid={`text-job-title-${job.id}`}>
                                   {job.title}
                                 </h4>
@@ -1265,6 +1397,7 @@ function CategorySection({
                                   </p>
                                 )}
                               </div>
+                              </div>
                             </div>
                           );
                         })}
@@ -1277,5 +1410,181 @@ function CategorySection({
         )}
       </AnimatePresence>
     </Card>
+  );
+}
+
+function BrowseCompareView({ jobs, onClose, onClear }: { jobs: Job[]; onClose: () => void; onClear: () => void }) {
+  const formatSalary = (min?: number | null, max?: number | null): string | null => {
+    if (!min && !max) return null;
+    const fmt = (n: number) => {
+      const k = n / 1000;
+      return k % 1 === 0 ? `$${k.toFixed(0)}K` : `$${k.toFixed(1)}K`;
+    };
+    if (min && max) return `${fmt(min)} \u2013 ${fmt(max)}`;
+    if (min) return `${fmt(min)}+`;
+    return `Up to ${fmt(max!)}`;
+  };
+
+  const getLocationLabel = (job: Job): string => {
+    if (job.locationType === 'remote' || (!job.locationType && job.isRemote)) return 'Remote';
+    if (job.locationType === 'hybrid') return 'Hybrid';
+    if (job.locationType === 'onsite') return 'On-site';
+    return '';
+  };
+
+  const getLegalFitLabel = (score: number | null | undefined): string | null => {
+    if (!score || score < 8) return null;
+    if (score >= 9) return "JD Preferred";
+    return "Legal Background Valued";
+  };
+
+  const rows: { label: string; render: (job: Job) => React.ReactNode }[] = [
+    {
+      label: "Company",
+      render: (job) => (
+        <div className="flex items-center gap-2">
+          <Avatar className="h-6 w-6 rounded-md">
+            <AvatarImage src={job.companyLogo || undefined} alt={job.company} />
+            <AvatarFallback className="rounded-md bg-primary/10 text-primary text-[10px] font-semibold">
+              {job.company.substring(0, 2).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+          <span className="text-sm font-medium text-foreground">{job.company}</span>
+        </div>
+      ),
+    },
+    {
+      label: "Location",
+      render: (job) => (
+        <div className="space-y-1">
+          <span className="text-sm text-foreground/80">{job.location || "Not specified"}</span>
+          {getLocationLabel(job) && (
+            <Badge variant="secondary" className={`text-[10px] block w-fit ${
+              getLocationLabel(job) === 'Remote'
+                ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                : getLocationLabel(job) === 'Hybrid'
+                ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
+                : 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400'
+            }`}>
+              {getLocationLabel(job)}
+            </Badge>
+          )}
+        </div>
+      ),
+    },
+    {
+      label: "Salary",
+      render: (job) => {
+        const salary = formatSalary(job.salaryMin, job.salaryMax);
+        return salary
+          ? <span className="text-sm font-medium text-green-600 dark:text-green-400">{salary}</span>
+          : <span className="text-sm text-muted-foreground">Not listed</span>;
+      },
+    },
+    {
+      label: "Level",
+      render: (job) => (
+        <span className="text-sm text-foreground/80">{job.seniorityLevel || "Not specified"}</span>
+      ),
+    },
+    {
+      label: "Legal Fit",
+      render: (job) => {
+        const label = getLegalFitLabel(job.legalRelevanceScore);
+        if (!label) return <span className="text-sm text-muted-foreground">-</span>;
+        return (
+          <Badge variant="secondary" className={`text-[10px] gap-0.5 ${
+            job.legalRelevanceScore! >= 9
+              ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400"
+              : "bg-sky-100 dark:bg-sky-900/30 text-sky-700 dark:text-sky-400"
+          }`}>
+            <Scale className="h-2.5 w-2.5" />
+            {label}
+          </Badge>
+        );
+      },
+    },
+    {
+      label: "Key Skills",
+      render: (job) => (
+        <div className="flex flex-wrap gap-1">
+          {job.keySkills && job.keySkills.length > 0
+            ? job.keySkills.slice(0, 5).map((skill, i) => (
+                <Badge key={i} variant="outline" className="text-[10px]">{skill}</Badge>
+              ))
+            : <span className="text-sm text-muted-foreground">-</span>
+          }
+        </div>
+      ),
+    },
+  ];
+
+  return (
+    <div className="space-y-4" data-testid="section-browse-compare">
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <h2 className="text-lg font-serif font-medium text-foreground" data-testid="heading-browse-compare">
+          Compare {jobs.length} Jobs
+        </h2>
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" onClick={onClear} className="gap-1.5 text-muted-foreground" data-testid="button-clear-all-compare">
+            Clear
+          </Button>
+          <Button variant="ghost" size="sm" onClick={onClose} className="gap-1.5" data-testid="button-close-browse-compare">
+            <X className="h-4 w-4" />
+            Close
+          </Button>
+        </div>
+      </div>
+
+      <Card>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="border-b border-border">
+                  <th className="p-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider w-24 sm:w-32 align-top" />
+                  {jobs.map((job) => (
+                    <th key={job.id} className="p-3 align-top min-w-[180px]">
+                      <Link href={`/jobs/${job.id}`} className="hover:text-primary transition-colors">
+                        <span className="text-sm font-semibold text-foreground leading-snug line-clamp-2" data-testid={`browse-compare-title-${job.id}`}>
+                          {job.title}
+                        </span>
+                      </Link>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row, ri) => (
+                  <tr key={row.label} className={ri < rows.length - 1 ? "border-b border-border/50" : ""}>
+                    <td className="p-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider align-top whitespace-nowrap">
+                      {row.label}
+                    </td>
+                    {jobs.map((job) => (
+                      <td key={job.id} className="p-3 align-top">
+                        {row.render(job)}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+                <tr className="border-t border-border">
+                  <td className="p-3" />
+                  {jobs.map((job) => (
+                    <td key={job.id} className="p-3">
+                      <Button asChild size="sm" className="gap-1.5 w-full" data-testid={`browse-compare-apply-${job.id}`}>
+                        <a href={job.applyUrl} target="_blank" rel="noopener noreferrer">
+                          Apply
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
+                      </Button>
+                    </td>
+                  ))}
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 }

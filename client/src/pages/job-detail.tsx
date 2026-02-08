@@ -12,7 +12,8 @@ import { useSubscription } from "@/hooks/use-subscription";
 import { useActivityTracker } from "@/hooks/use-activity-tracker";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { Job } from "@shared/schema";
+import type { Job, Resume } from "@shared/schema";
+import type { ResumeExtractedData } from "@shared/models/auth";
 import { Link } from "wouter";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -42,7 +43,10 @@ import {
   Sparkles,
   Globe,
   CalendarDays,
+  CheckCircle2,
+  Upload,
 } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 
 const BULLET_PATTERN = /^(?:[-•*]\s|(?:\d+)[.)]\s)/;
 
@@ -135,6 +139,42 @@ function decodeHtmlEntities(text: string): string {
     .replace(/&#x([0-9a-fA-F]+);/g, (_, h) => String.fromCharCode(parseInt(h, 16)));
 }
 
+function fixDashPrefixParagraphs(text: string): string {
+  const lines = text.split('\n');
+  const dashLines = lines.filter(l => /^- /.test(l.trim()));
+  const nonEmpty = lines.filter(l => l.trim().length > 0);
+  if (dashLines.length < 3 || dashLines.length < nonEmpty.length * 0.5) return text;
+  return lines.map(line => {
+    const trimmed = line.trim();
+    if (/^- /.test(trimmed)) {
+      const content = trimmed.slice(2).trim();
+      if (content.length > 80) return content;
+    }
+    return trimmed;
+  }).join('\n');
+}
+
+function stripCompanyBoilerplate(text: string): string {
+  const paragraphs = text.split(/\n{2,}/);
+  if (paragraphs.length < 3) return text;
+  const roleSignals = [
+    /\b(?:about (?:the |this )?role|the (?:role|opportunity|challenge|position)|in this role|what you(?:'ll| will)|your (?:role|responsibilities|impact)|we(?:'re| are) (?:looking|seeking|hiring))\b/i,
+    /(?:^|\.\s+)As (?:a|an|the) /,
+    /\b(?:responsibilities|qualifications|requirements|key duties)\b/i,
+    /(?:^|\.\s+)(?:You will|You'll|In this role)/,
+  ];
+  let roleIdx = -1;
+  for (let i = 0; i < paragraphs.length; i++) {
+    if (roleSignals.some(s => s.test(paragraphs[i].trim()))) { roleIdx = i; break; }
+  }
+  if (roleIdx <= 1) return text;
+  const introText = paragraphs.slice(0, roleIdx).join('\n\n');
+  if (introText.length > text.length * 0.6) return text;
+  const remaining = paragraphs.slice(roleIdx).join('\n\n').trim();
+  if (remaining.length < 200) return text;
+  return remaining.replace(/^(?:About (?:the |this )?role|The (?:Role|Opportunity|Challenge|Position|Team))\s*:?\s*\n*/i, '');
+}
+
 function cleanDescription(text: string): string {
   let cleaned = decodeHtmlEntities(text);
   if (/<[a-z][^>]*>/i.test(cleaned)) {
@@ -149,6 +189,8 @@ function cleanDescription(text: string): string {
   cleaned = cleaned.replace(/ {2,}/g, ' ');
   cleaned = cleaned.replace(/\n{3,}/g, '\n\n');
   cleaned = cleaned.replace(/^[ \t]+/gm, '');
+  cleaned = fixDashPrefixParagraphs(cleaned);
+  cleaned = stripCompanyBoilerplate(cleaned);
   return cleaned.trim();
 }
 
@@ -657,6 +699,37 @@ export default function JobDetail() {
 
   const jobIsSaved = job ? savedJobIds.includes(job.id) : false;
 
+  const { data: userResumes = [] } = useQuery<Resume[]>({
+    queryKey: ["/api/resumes"],
+    enabled: isAuthenticated,
+  });
+
+  const resumeFit = useMemo(() => {
+    if (!job?.keySkills?.length || userResumes.length === 0) return null;
+    const jobSkillsLower = job.keySkills.map(s => s.toLowerCase().trim());
+    const results = userResumes
+      .filter(r => r.extractedData && typeof r.extractedData === 'object')
+      .map(resume => {
+        const data = resume.extractedData as ResumeExtractedData;
+        const resumeSkills = (data.skills || []).map(s => s.toLowerCase().trim());
+        let matchCount = 0;
+        const matched: string[] = [];
+        const missing: string[] = [];
+        for (const js of job.keySkills!) {
+          const jsLower = js.toLowerCase().trim();
+          const found = resumeSkills.some(rs =>
+            rs.includes(jsLower) || jsLower.includes(rs) ||
+            rs.split(/\s+/).some(w => jsLower.split(/\s+/).includes(w))
+          );
+          if (found) { matchCount++; matched.push(js); } else { missing.push(js); }
+        }
+        const score = Math.round((matchCount / jobSkillsLower.length) * 100);
+        return { resumeId: resume.id, label: resume.label, isPrimary: resume.isPrimary, score, matched, missing, totalSkills: jobSkillsLower.length };
+      })
+      .sort((a, b) => b.score - a.score);
+    return results.length > 0 ? results : null;
+  }, [job?.keySkills, userResumes]);
+
   const { toast } = useToast();
   const saveJobMutation = useMutation({
     mutationFn: async () => {
@@ -880,6 +953,67 @@ export default function JobDetail() {
                       {skill}
                     </Badge>
                   ))}
+                </div>
+              </div>
+            )}
+
+            {resumeFit && resumeFit.length > 0 && (
+              <div data-testid="section-resume-fit" className="mb-6">
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Resume Fit</h3>
+                <div className="space-y-2.5">
+                  {resumeFit.map((rf) => (
+                    <div
+                      key={rf.resumeId}
+                      className="rounded-md border border-border/40 p-3"
+                      data-testid={`resume-fit-${rf.resumeId}`}
+                    >
+                      <div className="flex items-center justify-between gap-3 mb-2 flex-wrap">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <FileText className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                          <span className="text-sm font-medium text-foreground truncate">{rf.label}</span>
+                          {rf.isPrimary && (
+                            <Badge variant="secondary" className="text-[10px]">Primary</Badge>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className={`text-sm font-semibold ${
+                            rf.score >= 60 ? "text-green-600 dark:text-green-400" :
+                            rf.score >= 30 ? "text-amber-600 dark:text-amber-400" :
+                            "text-muted-foreground"
+                          }`}>
+                            {rf.score}% match
+                          </span>
+                        </div>
+                      </div>
+                      <Progress value={rf.score} className="h-1.5 mb-2" />
+                      <div className="flex flex-wrap gap-1">
+                        {rf.matched.map((s, i) => (
+                          <Badge key={`m-${i}`} variant="outline" className="text-[10px] bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800/40 gap-0.5">
+                            <CheckCircle2 className="h-2.5 w-2.5" />
+                            {s}
+                          </Badge>
+                        ))}
+                        {rf.missing.map((s, i) => (
+                          <Badge key={`g-${i}`} variant="outline" className="text-[10px] text-muted-foreground gap-0.5">
+                            {s}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {!resumeFit && userResumes.length === 0 && job?.keySkills && job.keySkills.length > 0 && (
+              <div data-testid="section-resume-cta" className="mb-6">
+                <div className="rounded-md border border-dashed border-border/50 p-4 text-center">
+                  <Upload className="h-5 w-5 text-muted-foreground mx-auto mb-2" />
+                  <p className="text-sm text-muted-foreground">Upload a resume to see how well you match this role</p>
+                  <Button variant="outline" size="sm" className="mt-2 gap-1.5" onClick={() => setLocation("/resumes")} data-testid="button-upload-resume-cta">
+                    <FileText className="h-3.5 w-3.5" />
+                    Upload Resume
+                  </Button>
                 </div>
               </div>
             )}
