@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { usePageTitle } from "@/hooks/use-page-title";
 import { Header } from "@/components/header";
@@ -15,6 +15,7 @@ import {
   Bookmark,
   BookmarkX,
   Briefcase,
+  Check,
   Clock,
   Crown,
   DollarSign,
@@ -22,6 +23,9 @@ import {
   Loader2,
   MapPin,
   AlertTriangle,
+  Scale,
+  X,
+  ArrowLeftRight,
 } from "lucide-react";
 import { Link } from "wouter";
 import { Footer } from "@/components/footer";
@@ -60,13 +64,182 @@ function formatSalary(min?: number | null, max?: number | null): string | null {
   return `Up to ${fmt(max!)}`;
 }
 
+function getLocationLabel(job: Job): string {
+  if (job.locationType === 'remote' || (!job.locationType && job.isRemote)) return 'Remote';
+  if (job.locationType === 'hybrid') return 'Hybrid';
+  if (job.locationType === 'onsite') return 'On-site';
+  return '';
+}
+
+function getLegalFitLabel(score: number | null | undefined): string | null {
+  if (!score || score < 8) return null;
+  if (score >= 9) return "JD Preferred";
+  return "Legal Background Valued";
+}
+
+const MAX_COMPARE = 3;
 const FREE_SAVE_LIMIT = 5;
+
+function CompareView({ jobs, onClose }: { jobs: Job[]; onClose: () => void }) {
+  const rows: { label: string; render: (job: Job) => React.ReactNode }[] = [
+    {
+      label: "Company",
+      render: (job) => (
+        <div className="flex items-center gap-2">
+          <Avatar className="h-6 w-6 rounded-md">
+            <AvatarImage src={job.companyLogo || undefined} alt={job.company} />
+            <AvatarFallback className="rounded-md bg-primary/10 text-primary text-[10px] font-semibold">
+              {job.company.substring(0, 2).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+          <span className="text-sm font-medium text-foreground">{job.company}</span>
+        </div>
+      ),
+    },
+    {
+      label: "Location",
+      render: (job) => (
+        <div className="space-y-1">
+          <span className="text-sm text-foreground/80">{job.location || "Not specified"}</span>
+          {getLocationLabel(job) && (
+            <Badge variant="secondary" className={`text-[10px] block w-fit ${
+              getLocationLabel(job) === 'Remote'
+                ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                : getLocationLabel(job) === 'Hybrid'
+                ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
+                : 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400'
+            }`}>
+              {getLocationLabel(job)}
+            </Badge>
+          )}
+        </div>
+      ),
+    },
+    {
+      label: "Salary",
+      render: (job) => {
+        const salary = formatSalary(job.salaryMin, job.salaryMax);
+        return salary
+          ? <span className="text-sm font-medium text-green-600 dark:text-green-400">{salary}</span>
+          : <span className="text-sm text-muted-foreground">Not listed</span>;
+      },
+    },
+    {
+      label: "Level",
+      render: (job) => (
+        <span className="text-sm text-foreground/80">{job.seniorityLevel || "Not specified"}</span>
+      ),
+    },
+    {
+      label: "Legal Fit",
+      render: (job) => {
+        const label = getLegalFitLabel(job.legalRelevanceScore);
+        if (!label) return <span className="text-sm text-muted-foreground">-</span>;
+        return (
+          <Badge variant="secondary" className={`text-[10px] gap-0.5 ${
+            job.legalRelevanceScore! >= 9
+              ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400"
+              : "bg-sky-100 dark:bg-sky-900/30 text-sky-700 dark:text-sky-400"
+          }`}>
+            <Scale className="h-2.5 w-2.5" />
+            {label}
+          </Badge>
+        );
+      },
+    },
+    {
+      label: "Key Skills",
+      render: (job) => (
+        <div className="flex flex-wrap gap-1">
+          {job.keySkills && job.keySkills.length > 0
+            ? job.keySkills.slice(0, 5).map((skill, i) => (
+                <Badge key={i} variant="outline" className="text-[10px]">{skill}</Badge>
+              ))
+            : <span className="text-sm text-muted-foreground">-</span>
+          }
+        </div>
+      ),
+    },
+    {
+      label: "Posted",
+      render: (job) => (
+        <span className="text-sm text-foreground/80">{getPostingAge(job.postedDate)}</span>
+      ),
+    },
+  ];
+
+  return (
+    <div className="space-y-4" data-testid="section-compare-view">
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <h2 className="text-lg font-serif font-medium text-foreground" data-testid="heading-compare">
+          Compare {jobs.length} Jobs
+        </h2>
+        <Button variant="ghost" size="sm" onClick={onClose} className="gap-1.5" data-testid="button-close-compare">
+          <X className="h-4 w-4" />
+          Close
+        </Button>
+      </div>
+
+      <Card>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="border-b border-border">
+                  <th className="p-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider w-24 sm:w-32 align-top" />
+                  {jobs.map((job) => (
+                    <th key={job.id} className="p-3 align-top min-w-[180px]">
+                      <Link href={`/jobs/${job.id}`} className="hover:text-primary transition-colors">
+                        <span className="text-sm font-semibold text-foreground leading-snug line-clamp-2" data-testid={`compare-title-${job.id}`}>
+                          {job.title}
+                        </span>
+                      </Link>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row, ri) => (
+                  <tr key={row.label} className={ri < rows.length - 1 ? "border-b border-border/50" : ""}>
+                    <td className="p-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider align-top whitespace-nowrap">
+                      {row.label}
+                    </td>
+                    {jobs.map((job) => (
+                      <td key={job.id} className="p-3 align-top" data-testid={`compare-${row.label.toLowerCase().replace(/\s/g, '-')}-${job.id}`}>
+                        {row.render(job)}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+                <tr className="border-t border-border">
+                  <td className="p-3" />
+                  {jobs.map((job) => (
+                    <td key={job.id} className="p-3">
+                      <Button asChild size="sm" className="gap-1.5 w-full" data-testid={`compare-apply-${job.id}`}>
+                        <a href={job.applyUrl} target="_blank" rel="noopener noreferrer">
+                          Apply
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
+                      </Button>
+                    </td>
+                  ))}
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
 
 export default function SavedJobs() {
   usePageTitle("Saved Jobs");
   const { isAuthenticated } = useAuth();
   const { isFree } = useSubscription();
   const { track } = useActivityTracker();
+  const [compareMode, setCompareMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
   useEffect(() => { track({ eventType: "page_view", pagePath: "/saved-jobs" }); }, []);
 
@@ -91,6 +264,27 @@ export default function SavedJobs() {
   const urgentJobs = savedJobs.filter(sj => getUrgencyLevel(sj.job.postedDate) === "urgent");
   const warningJobs = savedJobs.filter(sj => getUrgencyLevel(sj.job.postedDate) === "warning");
 
+  const toggleSelect = (jobId: number) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(jobId)) {
+        next.delete(jobId);
+      } else if (next.size < MAX_COMPARE) {
+        next.add(jobId);
+      }
+      return next;
+    });
+  };
+
+  const selectedJobs = savedJobs
+    .filter(sj => selectedIds.has(sj.job.id))
+    .map(sj => sj.job);
+
+  const exitCompare = () => {
+    setCompareMode(false);
+    setSelectedIds(new Set());
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -110,6 +304,30 @@ export default function SavedJobs() {
             </p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
+            {savedJobs.length >= 2 && !compareMode && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCompareMode(true)}
+                className="gap-1.5"
+                data-testid="button-enter-compare"
+              >
+                <ArrowLeftRight className="h-3.5 w-3.5" />
+                Compare
+              </Button>
+            )}
+            {compareMode && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={exitCompare}
+                className="gap-1.5"
+                data-testid="button-exit-compare"
+              >
+                <X className="h-3.5 w-3.5" />
+                Cancel
+              </Button>
+            )}
             {isFree && remaining === 0 && (
               <Button size="sm" asChild data-testid="button-upgrade-saved-jobs">
                 <Link href="/pricing" className="gap-1.5">
@@ -126,6 +344,23 @@ export default function SavedJobs() {
             </Button>
           </div>
         </div>
+
+        {compareMode && (
+          <div className="mb-4 rounded-md bg-muted/50 border border-border/30 px-4 py-3 flex items-center gap-3 flex-wrap" data-testid="compare-instructions">
+            <ArrowLeftRight className="h-4 w-4 text-muted-foreground shrink-0" />
+            <p className="text-sm text-muted-foreground flex-1">
+              {selectedIds.size < 2
+                ? `Select 2\u20133 jobs to compare side by side (${selectedIds.size} selected)`
+                : `Comparing ${selectedIds.size} jobs \u2014 select up to ${MAX_COMPARE}`}
+            </p>
+          </div>
+        )}
+
+        {compareMode && selectedIds.size >= 2 && (
+          <div className="mb-6">
+            <CompareView jobs={selectedJobs} onClose={exitCompare} />
+          </div>
+        )}
 
         {(urgentJobs.length > 0 || warningJobs.length > 0) && (
           <Card className="mb-6 border-destructive/50 bg-destructive/5">
@@ -173,11 +408,15 @@ export default function SavedJobs() {
             {savedJobs.map((sj) => {
               const urgency = getUrgencyLevel(sj.job.postedDate);
               const salary = formatSalary(sj.job.salaryMin, sj.job.salaryMax);
+              const isSelected = selectedIds.has(sj.job.id);
+              const atLimit = selectedIds.size >= MAX_COMPARE && !isSelected;
               return (
                 <Card
                   key={sj.id}
                   className={`hover-elevate transition-all ${
-                    urgency === "urgent"
+                    isSelected
+                      ? "ring-2 ring-primary/50 border-primary/30"
+                      : urgency === "urgent"
                       ? "border-destructive/40"
                       : urgency === "warning"
                       ? "border-yellow-500/40"
@@ -187,6 +426,24 @@ export default function SavedJobs() {
                 >
                   <CardContent className="p-4 sm:p-5">
                     <div className="flex items-start gap-3 sm:gap-4">
+                      {compareMode && (
+                        <button
+                          onClick={() => toggleSelect(sj.job.id)}
+                          disabled={atLimit}
+                          className={`mt-1 shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+                            isSelected
+                              ? "bg-primary border-primary text-primary-foreground"
+                              : atLimit
+                              ? "border-muted-foreground/30 cursor-not-allowed"
+                              : "border-muted-foreground/40 hover:border-primary/60"
+                          }`}
+                          data-testid={`checkbox-compare-${sj.job.id}`}
+                          aria-label={`Select ${sj.job.title} for comparison`}
+                        >
+                          {isSelected && <Check className="h-3 w-3" />}
+                        </button>
+                      )}
+
                       <Avatar className="h-11 w-11 rounded-lg flex-shrink-0">
                         <AvatarImage src={sj.job.companyLogo || undefined} alt={sj.job.company} />
                         <AvatarFallback className="rounded-lg bg-primary/10 text-primary font-semibold text-sm">

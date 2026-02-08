@@ -375,28 +375,20 @@ function DescriptionContent({ text, testId, compact, isPro }: { text?: string | 
   }
 
   return (
-    <div className="space-y-8" data-testid={testId}>
-      {sections.map((section, si) => {
-        const SectionIcon = section.icon;
-        return (
-          <div key={`${section.heading}-${si}`} data-testid={`section-${section.heading.toLowerCase().replace(/\s+/g, '-')}`}>
-            <div className="flex items-center gap-2.5 mb-4">
-              <div className="w-7 h-7 rounded-md bg-muted flex items-center justify-center shrink-0">
-                <SectionIcon className="h-3.5 w-3.5 text-muted-foreground" />
-              </div>
-              <h3 className="text-base font-semibold text-foreground">
-                {section.heading}
-              </h3>
-            </div>
-            <div className="space-y-2.5 pl-[2.375rem]">
-              {section.blocks.map((block, i) => renderBlock(block, si * 100 + i))}
-            </div>
-            {si < sections.length - 1 && (
-              <div className="border-b border-border/40 mt-8" />
-            )}
+    <div className="space-y-7" data-testid={testId}>
+      {sections.map((section, si) => (
+        <div key={`${section.heading}-${si}`} data-testid={`section-${section.heading.toLowerCase().replace(/\s+/g, '-')}`}>
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+            {section.heading}
+          </h3>
+          <div className="space-y-2.5">
+            {section.blocks.map((block, i) => renderBlock(block, si * 100 + i))}
           </div>
-        );
-      })}
+          {si < sections.length - 1 && (
+            <div className="border-b border-border/40 mt-7" />
+          )}
+        </div>
+      ))}
     </div>
   );
 }
@@ -820,21 +812,19 @@ export default function JobDetail() {
             )}
           </div>
 
-          {job.legalRelevanceScore && job.legalRelevanceScore >= 7 && (
+          {job.legalRelevanceScore && job.legalRelevanceScore >= 8 && (
             <div className="flex flex-wrap gap-1.5 mt-3" data-testid="section-legal-fit">
               <Badge
                 variant="secondary"
                 className={`gap-1 ${
                   job.legalRelevanceScore >= 9
                     ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800"
-                    : job.legalRelevanceScore >= 8
-                    ? "bg-sky-100 dark:bg-sky-900/30 text-sky-700 dark:text-sky-400 border-sky-200 dark:border-sky-800"
-                    : "bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-400 border-violet-200 dark:border-violet-800"
+                    : "bg-sky-100 dark:bg-sky-900/30 text-sky-700 dark:text-sky-400 border-sky-200 dark:border-sky-800"
                 }`}
                 data-testid="badge-legal-fit"
               >
                 <Scale className="h-3 w-3" />
-                {job.legalRelevanceScore >= 9 ? "JD Preferred" : job.legalRelevanceScore >= 8 ? "Legal Background Valued" : "Domain Knowledge Helpful"}
+                {job.legalRelevanceScore >= 9 ? "JD Preferred" : "Legal Background Valued"}
               </Badge>
             </div>
           )}
@@ -866,38 +856,31 @@ export default function JobDetail() {
         <Card className="mb-6" data-testid="section-job-details">
           <CardContent className="p-5 sm:p-6">
             {job.aiSummary && (
-              <div data-testid="section-ai-summary">
-                <div className="flex items-center gap-2.5 mb-3">
-                  <div className="w-7 h-7 rounded-md bg-muted flex items-center justify-center shrink-0">
-                    <Sparkles className="h-3.5 w-3.5 text-muted-foreground" />
+              <div data-testid="section-ai-summary" className="mb-6">
+                <div className="rounded-md bg-muted/50 border border-border/30 p-4">
+                  <div className="flex items-center gap-2 mb-2.5">
+                    <Sparkles className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                    <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground" data-testid="heading-ai-summary">
+                      At a Glance
+                    </span>
                   </div>
-                  <h2 className="text-base font-semibold text-foreground" data-testid="heading-ai-summary">
-                    Quick Summary
-                  </h2>
+                  <p className="text-[0.925rem] text-foreground/80 leading-[1.75]" data-testid="text-ai-summary">
+                    {job.aiSummary}
+                  </p>
                 </div>
-                <p className="text-[0.925rem] text-foreground/80 leading-[1.75] pl-[2.375rem]" data-testid="text-ai-summary">
-                  {job.aiSummary}
-                </p>
-                <div className="border-b border-border/40 my-6" />
               </div>
             )}
 
             {job.keySkills && job.keySkills.length > 0 && (
-              <div data-testid="section-skills">
-                <div className="flex items-center gap-2.5 mb-3">
-                  <div className="w-7 h-7 rounded-md bg-muted flex items-center justify-center shrink-0">
-                    <Hash className="h-3.5 w-3.5 text-muted-foreground" />
-                  </div>
-                  <h2 className="text-base font-semibold text-foreground">Key Skills</h2>
-                </div>
-                <div className="flex flex-wrap gap-1.5 pl-[2.375rem]">
+              <div data-testid="section-skills" className="mb-6">
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Key Skills</h3>
+                <div className="flex flex-wrap gap-1.5">
                   {job.keySkills.map((skill, i) => (
                     <Badge key={i} variant="outline" data-testid={`badge-skill-${i}`}>
                       {skill}
                     </Badge>
                   ))}
                 </div>
-                <div className="border-b border-border/40 my-6" />
               </div>
             )}
 
@@ -913,9 +896,7 @@ export default function JobDetail() {
               </div>
             )}
 
-            <div className="border-b border-border/40 my-6" />
-
-            <div className="flex items-center gap-3 pt-1">
+            <div className="border-t border-border/40 mt-7 pt-5">
               <Button
                 variant="outline"
                 size="sm"
@@ -942,7 +923,7 @@ export default function JobDetail() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {similarJobs.map(sj => {
                 const sjSalary = formatSalary(sj.salaryMin, sj.salaryMax);
-                const sjLegalFit = sj.legalRelevanceScore && sj.legalRelevanceScore >= 7;
+                const sjLegalFit = sj.legalRelevanceScore && sj.legalRelevanceScore >= 8;
                 return (
                   <Link key={sj.id} href={`/jobs/${sj.id}`}>
                     <Card className="hover-elevate cursor-pointer h-full" data-testid={`card-similar-job-${sj.id}`}>
