@@ -503,7 +503,8 @@ function fixMissingSentenceSpaces(text: string): string {
 
 function cleanDescription(text: string): string {
   let cleaned = text;
-  if (cleaned.includes('&lt;') || cleaned.includes('&gt;') || cleaned.includes('&amp;') || /<[a-z][^>]*>/i.test(cleaned)) {
+  cleaned = decodeHtmlEntities(cleaned);
+  if (/<[a-z][^>]*>/i.test(cleaned)) {
     cleaned = stripHtmlToText(cleaned);
   }
   cleaned = cleaned.replace(/\u00A0/g, ' ');

@@ -29,7 +29,17 @@ export function stripHtml(html: string): string {
   decoded = decoded.replace(/<\/h[1-6]>/gi, '\n\n');
   decoded = decoded.replace(/<[^>]*>/g, ' ');
 
-  decoded = decoded.replace(/&amp;/g, '&');
+  decoded = decoded.replace(/&mdash;/g, '\u2014');
+  decoded = decoded.replace(/&ndash;/g, '\u2013');
+  decoded = decoded.replace(/&rsquo;/g, '\u2019');
+  decoded = decoded.replace(/&lsquo;/g, '\u2018');
+  decoded = decoded.replace(/&rdquo;/g, '\u201D');
+  decoded = decoded.replace(/&ldquo;/g, '\u201C');
+  decoded = decoded.replace(/&bull;/g, '\u2022');
+  decoded = decoded.replace(/&hellip;/g, '\u2026');
+  decoded = decoded.replace(/&trade;/g, '\u2122');
+  decoded = decoded.replace(/&copy;/g, '\u00A9');
+  decoded = decoded.replace(/&reg;/g, '\u00AE');
   decoded = decoded.replace(/&nbsp;/g, ' ');
   decoded = decoded.replace(/&lt;/g, '<');
   decoded = decoded.replace(/&gt;/g, '>');
@@ -37,9 +47,8 @@ export function stripHtml(html: string): string {
   decoded = decoded.replace(/&#39;/g, "'");
   decoded = decoded.replace(/&apos;/g, "'");
   decoded = decoded.replace(/&#x27;/g, "'");
+  decoded = decoded.replace(/&#x([0-9a-fA-F]+);/g, (_, h) => String.fromCharCode(parseInt(h, 16)));
   decoded = decoded.replace(/&#(\d+);/g, (_, num) => String.fromCharCode(parseInt(num)));
-
-  decoded = decoded.replace(/&nbsp;/g, ' ');
   decoded = decoded.replace(/&amp;/g, '&');
 
   decoded = decoded.replace(/[ \t]+/g, ' ');
