@@ -1153,7 +1153,7 @@ function JobSelector({
   const [search, setSearch] = useState("");
 
   const { data: jobs } = useQuery<Job[]>({
-    queryKey: ["/api/jobs", "active=true"],
+    queryKey: ["/api/jobs"],
   });
 
   const filtered = (jobs || []).filter(
