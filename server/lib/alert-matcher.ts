@@ -2,8 +2,9 @@ import { storage } from "../storage";
 import type { Job, JobAlert, InsertNotification } from "@shared/schema";
 
 function jobMatchesAlert(job: Job, alert: JobAlert): boolean {
-  if (alert.isRemoteOnly && !job.isRemote) {
-    return false;
+  if (alert.isRemoteOnly) {
+    const isRemoteJob = job.isRemote || job.locationType === 'remote';
+    if (!isRemoteJob) return false;
   }
 
   if (alert.categories && alert.categories.length > 0) {
@@ -63,7 +64,7 @@ export async function matchNewJobsAgainstAlerts(
           alertId: alert.id,
           jobId: job.id,
           title: `New match: ${job.title}`,
-          message: `${job.company} posted "${job.title}"${job.location ? ` in ${job.location}` : ""}${job.isRemote ? " (Remote)" : ""}. Matched your "${alert.name}" alert.`,
+          message: `${job.company} posted "${job.title}"${job.location ? ` in ${job.location}` : ""}${(job.isRemote || job.locationType === 'remote') ? " (Remote)" : job.locationType === 'hybrid' ? " (Hybrid)" : ""}. Matched your "${alert.name}" alert.`,
           isRead: false,
         });
       }

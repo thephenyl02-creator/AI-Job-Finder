@@ -377,7 +377,9 @@ export default function Jobs() {
       await fetch("/api/resume", { method: "DELETE" });
       queryClient.invalidateQueries({ queryKey: ["/api/resume"] });
       toast({ title: "Resume removed", description: "You can upload a new one anytime." });
-    } catch {}
+    } catch (err) {
+      console.error("Failed to remove resume:", err);
+    }
   };
 
   const { data: locationsData = [] } = useQuery<{ location: string; count: number }[]>({

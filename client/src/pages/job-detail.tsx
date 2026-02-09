@@ -491,7 +491,7 @@ export default function JobDetail() {
         },
       });
     }
-  }, [jobId, job?.id]);
+  }, [jobId, job]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
