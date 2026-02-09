@@ -1,0 +1,113 @@
+You are working inside my existing full-stack app (Vite + React + Tailwind, Node/Express API, Drizzle DB).
+I want a PREMIUM “quality gate” for job listings: no job is shown to users unless it has a structuredDescription.
+
+GOAL
+- Every job must have a structuredDescription JSON before it appears in:
+  - /jobs list
+  - job detail page
+  - saved jobs
+  - resume matches
+  - job comparison
+  - alerts
+
+CORE RULE
+- A job is only “public” when:
+  structuredDescription exists AND has minimum required fields.
+
+REQUIRED FIELDS in structuredDescription
+- summary (string)
+- minimumQualifications (string[])
+- preferredQualifications (string[])
+- requiredSkills (string[])
+- responsibilities (string[])
+- roleCategory (string)
+- seniority (string)
+
+ADD TO DATABASE
+1) jobs.isPublished (boolean default false)
+2) jobs.structuredDescription (json nullable)
+3) jobs.structuredStatus (enum: "missing" | "generated" | "edited" | "approved")
+4) jobs.structuredUpdatedAt (timestamp nullable)
+
+PUBLISHING LOGIC
+- New scraped jobs:
+  - stored as isPublished=false, structuredStatus="missing"
+  - automatically queued for AI generation
+  - once generated, set structuredStatus="generated", still not published
+  - admin must approve -> isPublished=true, structuredStatus="approved"
+
+- Manual posted jobs (admin post-job):
+  - allow posting raw text, but do NOT publish immediately
+  - require generating structuredDescription then admin approves
+
+API CHANGES
+1) Public endpoints must ONLY return published jobs:
+- GET /api/jobs -> filter isPublished=true
+- GET /api/jobs/:id -> if not published, return 404 or {error:"not published"}
+
+2) Admin endpoints can see everything:
+- GET /api/admin/jobs -> returns all jobs, including unpublished
+- GET /api/admin/jobs/:id -> returns full job
+
+3) Structured generation endpoint:
+- POST /api/admin/jobs/:id/generate-structured
+  - cleans raw job.description first (strip HTML, remove EEO/how-to-apply/footer boilerplate)
+  - calls AI with strict JSON output
+  - saves structuredDescription as JSON (not string)
+  - sets structuredStatus="generated"
+  - returns structuredDescription
+
+4) Approval endpoint:
+- POST /api/admin/jobs/:id/approve
+  - validate structuredDescription has required fields + non-empty arrays
+  - set isPublished=true
+  - structuredStatus="approved"
+
+5) Unpublish endpoint:
+- POST /api/admin/jobs/:id/unpublish
+  - set isPublished=false
+  - keep structuredDescription
+
+6) Batch backfill:
+- POST /api/admin/jobs/backfill-structured?batchSize=5
+  - generate structuredDescription for missing jobs
+  - does NOT publish
+- GET /api/admin/jobs/backfill-status
+  - counts: total, missing, generatedNotApproved, approvedPublished
+
+FRONTEND CHANGES
+A) Jobs list page:
+- It should show only published jobs (from public /api/jobs)
+- Add a “New jobs coming soon” banner if count is low.
+
+B) Job detail page:
+- Only shows published jobs.
+- If user somehow navigates to unpublished job id:
+  - show a nice “This job is being standardized” page with CTA to go back.
+
+C) Admin UI:
+- Add a “Standardization Queue” tab:
+  - shows jobs where structuredStatus is "missing" or "generated"
+  - for each job: buttons:
+    - Generate Structured
+    - Edit Structured
+    - Approve + Publish
+- Show a “Quality checklist” before publish:
+  - Minimum Qualifications >= 3 bullets
+  - Responsibilities >= 4 bullets
+  - Skills >= 6 bullets
+  - roleCategory chosen
+  - summary <= 350 chars
+
+AI PROMPT RULES (Important)
+- Return ONLY valid JSON.
+- Minimum qualifications MUST include: “must/required/minimum”, years, bar/licensure, certifications.
+- Preferred qualifications MUST include: “preferred/bonus/plus/nice to have”.
+- Skills must be short keywords.
+- Responsibilities must start with action verbs.
+- Add lawyerTransitionNotes as 2–4 bullets in plain language.
+
+DELIVERABLE
+- Implement DB changes, endpoints, and UI gating.
+- Ensure no unpublished job can appear in any user-facing screen.
+- Ensure build passes and TypeScript types are updated across server/client.
