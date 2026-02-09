@@ -1,0 +1,101 @@
+You are working inside my existing full-stack job platform (React/Vite/Tailwind + Node/Express + Drizzle).
+I already added /api/health + error logging. Now I want a diagnostics endpoint to permanently eliminate guesswork about job visibility and mismatches.
+
+GOAL:
+Add a diagnostics API endpoint that tells me exactly why a specific job is NOT visible publicly, and what needs to change.
+
+---------------------------------------------------
+1) SERVER ROUTE
+---------------------------------------------------
+Create:
+GET /api/diagnostics/jobs/:id
+
+This endpoint should be ADMIN-ONLY (same auth guard you use for admin routes).
+
+It must return:
+
+{
+  "jobId": "...",
+  "publiclyVisible": boolean,
+  "reasons": string[],                // machine readable reasons
+  "recommendedFixes": string[],        // human readable fixes
+  "checks": {
+    "exists": boolean,
+    "isPublished": boolean,
+    "isActive": boolean,
+    "status": string | null,
+    "expiresAt": ISO | null,
+    "isExpired": boolean,
+    "structuredDescriptionPresent": boolean,
+    "structuredDescriptionValid": boolean,
+    "structuredFieldsMissing": string[],  // list of required keys missing
+    "source": string | null               // if you store source/scrape info
+  },
+  "publicRule": "isPublished && isActive && (!expiresAt || expiresAt > now) && structuredDescriptionValid",
+  "now": ISO string
+}
+
+---------------------------------------------------
+2) VISIBILITY CHECKS (Use same rules as public endpoints)
+---------------------------------------------------
+Public visibility should be considered TRUE only if:
+- isPublished === true
+- isActive === true
+- expiresAt is null OR expiresAt > now
+- structuredDescription exists AND passes validation (required keys + arrays not empty)
+
+Required structuredDescription fields:
+- summary (string, non-empty)
+- minimumQualifications (array length >= 1)
+- preferredQualifications (array, can be empty but must exist)
+- requiredSkills (array length >= 1)
+- responsibilities (array length >= 1)
+- roleCategory (string, non-empty)
+- seniority (string, non-empty)
+
+If any fails, add reasons like:
+- "NOT_PUBLISHED"
+- "INACTIVE"
+- "EXPIRED"
+- "MISSING_STRUCTURED_DESCRIPTION"
+- "INVALID_STRUCTURED_DESCRIPTION"
+- "MISSING_STRUCTURED_FIELDS"
+
+And recommendedFixes like:
+- "Publish this job from Admin (Approve → Publish)."
+- "Set isActive=true or remove expiry block."
+- "Regenerate structured description or edit missing fields."
+- "Set expiresAt to a future date or clear expiresAt."
+
+---------------------------------------------------
+3) REUSE EXISTING PARSERS
+---------------------------------------------------
+If structuredDescription may be stored as a string:
+- safely parse it before validation
+- if parse fails => structuredDescriptionValid=false
+
+---------------------------------------------------
+4) OPTIONAL: INCLUDE RELATED ENDPOINT OUTPUT
+---------------------------------------------------
+Also return:
+- "publicEndpointWouldReturn404": boolean
+(Compute by running the same logic used by getPublicJobById)
+
+---------------------------------------------------
+5) FRONTEND ADMIN UI TOOL (Optional but recommended)
+---------------------------------------------------
+Add a "Diagnose" button on admin job row:
+- opens a modal
+- fetches /api/diagnostics/jobs/:id
+- shows:
+  - Visible / Not Visible badge
+  - reasons list
+  - recommended fixes list
+  - copy JSON button
+
+---------------------------------------------------
+DELIVERABLE
+---------------------------------------------------
+Implement /api/diagnostics/jobs/:id with admin auth, full checks, reasons, and recommended fixes.
+Ensure it uses the same public visibility rules as /api/jobs and /api/jobs/:id.
+TypeScript must compile.
