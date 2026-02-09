@@ -1,0 +1,127 @@
+Make these exact changes to fix job descriptions rendering differently in admin vs user view.
+
+File 1: server/lib/scheduled-scraper.ts
+
+Change 1A: Find this line:
+
+import { isDescriptionFlat } from './description-cleaner';
+
+Replace with:
+
+import { isDescriptionFlat } from './description-cleaner';
+import { extractStructuredDescription } from './description-extractor';
+
+
+Change 1B: Find this exact block inside the Phase 4 categorization loop:
+
+                  legalRelevanceScore: result.legalRelevanceScore,
+                  reviewStatus: result.reviewStatus,
+                };
+                if (result.reviewStatus === "rejected") {
+
+Replace with:
+
+                  legalRelevanceScore: result.legalRelevanceScore,
+                  reviewStatus: result.reviewStatus,
+                };
+
+                // Extract structured description for consistent rendering
+                if (job.description && !job.structuredDescription) {
+                  try {
+                    const structured = await extractStructuredDescription(job.description, job.company, job.title);
+                    if (structured) {
+                      updateData.structuredDescription = structured;
+                    }
+                  } catch (extractErr: any) {
+                    logWarn('AI', `Structured extraction failed for job ${job.id}: ${extractErr.message?.slice(0, 80)}`);
+                  }
+                }
+
+                if (result.reviewStatus === "rejected") {
+
+
+Change 1C: Find this exact block:
+
+    } catch (err: any) {
+      logError('FORMAT', 'Description formatting phase failed', { error: err.message });
+      errors.push(`Formatting phase: ${err.message}`);
+    }
+
+    // === PHASE 5: Alert matching for new jobs ===
+
+Replace with:
+
+    } catch (err: any) {
+      logError('FORMAT', 'Description formatting phase failed', { error: err.message });
+      errors.push(`Formatting phase: ${err.message}`);
+    }
+
+    // === PHASE 4.6: Structured description backfill for existing jobs ===
+    logInfo('PHASE', '--- Phase 4.6: Structured Description Backfill ---');
+    try {
+      const allActiveForStructured = await storage.getActiveJobs();
+      const needsStructured = allActiveForStructured.filter(j =>
+        j.description && j.description.length > 100 && !j.structuredDescription
+      );
+
+      if (needsStructured.length > 0) {
+        logInfo('AI', `Extracting structured descriptions for ${needsStructured.length} jobs...`);
+        let structuredCount = 0;
+        const structBatchSize = 3;
+        for (let i = 0; i < needsStructured.length; i += structBatchSize) {
+          const batch = needsStructured.slice(i, i + structBatchSize);
+          await Promise.all(
+            batch.map(async (job) => {
+              try {
+                const structured = await extractStructuredDescription(job.description, job.company, job.title);
+                if (structured) {
+                  await storage.updateJob(job.id, { structuredDescription: structured } as any);
+                  structuredCount++;
+                }
+              } catch (err: any) {
+                logWarn('AI', `Structured extraction failed for job ${job.id}: ${err.message?.slice(0, 80)}`);
+              }
+            })
+          );
+          if (i + structBatchSize < needsStructured.length) {
+            await new Promise((r) => setTimeout(r, 500));
+          }
+        }
+        logSuccess('AI', `Extracted structured descriptions for ${structuredCount}/${needsStructured.length} jobs`);
+      } else {
+        logInfo('AI', 'All jobs already have structured descriptions');
+      }
+    } catch (err: any) {
+      logError('AI', 'Structured description backfill failed', { error: err.message });
+      errors.push(`Structured backfill: ${err.message}`);
+    }
+
+    // === PHASE 5: Alert matching for new jobs ===
+
+
+File 2: client/src/pages/job-detail.tsx
+
+Change 2A: Find this exact function:
+
+function isLikelyHeading(text: string): boolean {
+  const t = text.trim();
+  if (t.length > 80 || t.length < 2) return false;
+  if (t.endsWith(':')) return true;
+  if (t === t.toUpperCase() && t.length > 3 && /[A-Z]/.test(t)) return true;
+  return false;
+}
+
+Replace with:
+
+function isLikelyHeading(text: string): boolean {
+  const t = text.trim();
+  if (t.length > 80 || t.length < 2) return false;
+  if (t.endsWith(':')) return true;
+  if (t === t.toUpperCase() && t.length > 3 && /[A-Z]/.test(t)) return true;
+  const headingRe = /^(?:About|What|Who|Responsibilities|Qualifications|Requirements|Skills|Benefits|Perks|Compensation|Getting|In this|How you|Why|Our|The|Your|Key|Core|Preferred|Required|Nice|Education|Experience|Pluses?|Overview|Summary|Position|Role|Minimum|Additional|Essential|Desired|Duties|Mission|Values|Culture|Team|Company|Description|Expectations|Opportunity)\b/i;
+  if (headingRe.test(t) && t.length < 80) return true;
+  return false;
+}
+
+
+After making all changes, go to /admin/scraper and click Run Now. Do NOT change any other files.
