@@ -67,6 +67,8 @@ function isLikelyHeading(text: string): boolean {
   if (t.length > 80 || t.length < 2) return false;
   if (t.endsWith(':')) return true;
   if (t === t.toUpperCase() && t.length > 3 && /[A-Z]/.test(t)) return true;
+  const headingRe = /^(?:About|What|Who|Responsibilities|Qualifications|Requirements|Skills|Benefits|Perks|Compensation|Getting|In this|How you|Why|Our|The|Your|Key|Core|Preferred|Required|Nice|Education|Experience|Pluses?|Overview|Summary|Position|Role|Minimum|Additional|Essential|Desired|Duties|Mission|Values|Culture|Team|Company|Description|Expectations|Opportunity)\b/i;
+  if (headingRe.test(t) && t.length < 80) return true;
   return false;
 }
 
