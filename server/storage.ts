@@ -18,6 +18,11 @@ export interface IStorage {
   deactivateStaleJobs(scrapedExternalIds: Set<string>, sources: string[]): Promise<number>;
   trackJobView(jobId: number): Promise<void>;
   trackApplyClick(jobId: number): Promise<void>;
+  getPublishedJobs(): Promise<Job[]>;
+  getJobsForStandardization(status?: string): Promise<Job[]>;
+  publishJob(id: number): Promise<Job | undefined>;
+  unpublishJob(id: number): Promise<Job | undefined>;
+  updateStructuredStatus(id: number, status: string, structuredDescription?: any): Promise<Job | undefined>;
   // User Resume
   updateUserResume(userId: string, resumeText: string, filename: string, extractedData: ResumeExtractedData): Promise<void>;
   getUserResume(userId: string): Promise<{ resumeFilename: string | null; extractedData: ResumeExtractedData | null } | null>;
@@ -192,8 +197,62 @@ class DatabaseStorage implements IStorage {
     return db
       .select()
       .from(jobs)
-      .where(eq(jobs.isActive, true))
+      .where(and(eq(jobs.isActive, true), eq(jobs.isPublished, true)))
       .orderBy(desc(jobs.postedDate));
+  }
+
+  async getPublishedJobs(): Promise<Job[]> {
+    return db
+      .select()
+      .from(jobs)
+      .where(and(eq(jobs.isActive, true), eq(jobs.isPublished, true)))
+      .orderBy(desc(jobs.postedDate));
+  }
+
+  async getJobsForStandardization(status?: string): Promise<Job[]> {
+    const conditions = [eq(jobs.isActive, true)];
+    if (status) {
+      conditions.push(eq(jobs.structuredStatus, status));
+    }
+    return db
+      .select()
+      .from(jobs)
+      .where(and(...conditions))
+      .orderBy(desc(jobs.postedDate));
+  }
+
+  async publishJob(id: number): Promise<Job | undefined> {
+    const [updated] = await db
+      .update(jobs)
+      .set({ isPublished: true })
+      .where(eq(jobs.id, id))
+      .returning();
+    return updated;
+  }
+
+  async unpublishJob(id: number): Promise<Job | undefined> {
+    const [updated] = await db
+      .update(jobs)
+      .set({ isPublished: false })
+      .where(eq(jobs.id, id))
+      .returning();
+    return updated;
+  }
+
+  async updateStructuredStatus(id: number, status: string, structuredDescription?: any): Promise<Job | undefined> {
+    const updateData: any = {
+      structuredStatus: status,
+      structuredUpdatedAt: new Date(),
+    };
+    if (structuredDescription !== undefined) {
+      updateData.structuredDescription = structuredDescription;
+    }
+    const [updated] = await db
+      .update(jobs)
+      .set(updateData)
+      .where(eq(jobs.id, id))
+      .returning();
+    return updated;
   }
 
   async getJobByExternalId(externalId: string): Promise<Job | undefined> {

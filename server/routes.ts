@@ -35,7 +35,7 @@ import {
 } from "./lib/law-firm-scraper";
 import { LAW_FIRMS_AND_COMPANIES } from "./lib/law-firms-list";
 import { categorizeJob } from "./lib/job-categorizer";
-import { extractStructuredDescription } from "./lib/description-extractor";
+import { extractStructuredDescription, validateStructuredDescription } from "./lib/description-extractor";
 import { matchNewJobsAgainstAlerts } from "./lib/alert-matcher";
 
 async function extractStructuredDescriptionBackground(jobId: number, description: string, company: string, title: string) {
@@ -2122,6 +2122,164 @@ Be specific and actionable. Focus on legal tech industry keywords and ATS best p
     } catch (error: any) {
       console.error("Error previewing URL:", error);
       res.status(500).json({ error: error.message || "Failed to preview URL" });
+    }
+  });
+
+  app.get("/api/admin/standardization-queue", isAuthenticated, async (req, res) => {
+    if (!(await isAdminCheck(req))) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    try {
+      const status = req.query.status as string | undefined;
+      const allJobs = status
+        ? await storage.getJobsForStandardization(status)
+        : await storage.getJobsForStandardization();
+
+      const counts = {
+        missing: 0,
+        generated: 0,
+        edited: 0,
+        approved: 0,
+        published: 0,
+        total: allJobs.length,
+      };
+
+      for (const job of allJobs) {
+        const s = (job.structuredStatus || "missing") as string;
+        if (s in counts) counts[s as keyof typeof counts]++;
+        if (job.isPublished) counts.published++;
+      }
+
+      res.json({ jobs: allJobs, counts });
+    } catch (error) {
+      console.error("Error fetching standardization queue:", error);
+      res.status(500).json({ error: "Failed to fetch standardization queue" });
+    }
+  });
+
+  app.post("/api/admin/jobs/bulk-publish", isAuthenticated, async (req, res) => {
+    if (!(await isAdminCheck(req))) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    try {
+      const approvedJobs = await storage.getJobsForStandardization("approved");
+      let published = 0;
+      for (const job of approvedJobs) {
+        if (!job.isPublished) {
+          await storage.publishJob(job.id);
+          published++;
+        }
+      }
+      res.json({ published, total: approvedJobs.length });
+    } catch (error) {
+      console.error("Error bulk publishing:", error);
+      res.status(500).json({ error: "Failed to bulk publish" });
+    }
+  });
+
+  app.post("/api/admin/jobs/:id/generate-structured", isAuthenticated, async (req, res) => {
+    if (!(await isAdminCheck(req))) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    try {
+      const id = parseInt(req.params.id as string);
+      const job = await storage.getJob(id);
+      if (!job) return res.status(404).json({ error: "Job not found" });
+
+      const structured = await extractStructuredDescription(
+        job.description || "",
+        job.company,
+        job.title
+      );
+
+      const validation = validateStructuredDescription(structured);
+
+      const updated = await storage.updateStructuredStatus(id, "generated", structured);
+
+      res.json({ job: updated, validation });
+    } catch (error) {
+      console.error("Error generating structured description:", error);
+      res.status(500).json({ error: "Failed to generate structured description" });
+    }
+  });
+
+  app.post("/api/admin/jobs/:id/validate-structured", isAuthenticated, async (req, res) => {
+    if (!(await isAdminCheck(req))) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    try {
+      const id = parseInt(req.params.id as string);
+      const job = await storage.getJob(id);
+      if (!job) return res.status(404).json({ error: "Job not found" });
+      if (!job.structuredDescription) {
+        return res.json({ valid: false, issues: ["No structured description exists"] });
+      }
+
+      const validation = validateStructuredDescription(job.structuredDescription as any);
+      res.json(validation);
+    } catch (error) {
+      console.error("Error validating structured description:", error);
+      res.status(500).json({ error: "Failed to validate" });
+    }
+  });
+
+  app.post("/api/admin/jobs/:id/approve", isAuthenticated, async (req, res) => {
+    if (!(await isAdminCheck(req))) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    try {
+      const id = parseInt(req.params.id as string);
+      const job = await storage.getJob(id);
+      if (!job) return res.status(404).json({ error: "Job not found" });
+      if (!job.structuredDescription) {
+        return res.status(400).json({ error: "Job has no structured description to approve" });
+      }
+
+      const validation = validateStructuredDescription(job.structuredDescription as any);
+      if (!validation.valid) {
+        return res.status(400).json({ error: "Structured description does not pass quality checks", issues: validation.issues });
+      }
+
+      const updated = await storage.updateStructuredStatus(id, "approved");
+      res.json({ job: updated });
+    } catch (error) {
+      console.error("Error approving job:", error);
+      res.status(500).json({ error: "Failed to approve job" });
+    }
+  });
+
+  app.post("/api/admin/jobs/:id/publish", isAuthenticated, async (req, res) => {
+    if (!(await isAdminCheck(req))) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    try {
+      const id = parseInt(req.params.id as string);
+      const job = await storage.getJob(id);
+      if (!job) return res.status(404).json({ error: "Job not found" });
+      if (job.structuredStatus !== "approved") {
+        return res.status(400).json({ error: "Job must be approved before publishing" });
+      }
+
+      const updated = await storage.publishJob(id);
+      res.json({ job: updated });
+    } catch (error) {
+      console.error("Error publishing job:", error);
+      res.status(500).json({ error: "Failed to publish job" });
+    }
+  });
+
+  app.post("/api/admin/jobs/:id/unpublish", isAuthenticated, async (req, res) => {
+    if (!(await isAdminCheck(req))) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    try {
+      const id = parseInt(req.params.id as string);
+      const updated = await storage.unpublishJob(id);
+      if (!updated) return res.status(404).json({ error: "Job not found" });
+      res.json({ job: updated });
+    } catch (error) {
+      console.error("Error unpublishing job:", error);
+      res.status(500).json({ error: "Failed to unpublish job" });
     }
   });
 
