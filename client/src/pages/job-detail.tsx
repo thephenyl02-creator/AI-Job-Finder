@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo, useCallback } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { usePageTitle } from "@/hooks/use-page-title";
 import { useLocation, useParams } from "wouter";
@@ -52,121 +52,6 @@ import {
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 
-const BULLET_PATTERN = /^(?:[-•*]\s|(?:\d+)[.)]\s)/;
-
-function isBulletLine(line: string): boolean {
-  return BULLET_PATTERN.test(line.trim());
-}
-
-function stripBulletPrefix(line: string): string {
-  return line.trim().replace(/^(?:[-•*]\s+|(?:\d+)[.)]\s+)/, '');
-}
-
-function isLikelyHeading(text: string): boolean {
-  const t = text.trim();
-  if (t.length > 80 || t.length < 2) return false;
-  if (t.endsWith(':')) return true;
-  if (t === t.toUpperCase() && t.length > 3 && /[A-Z]/.test(t)) return true;
-  const headingRe = /^(?:About|What|Who|Responsibilities|Qualifications|Requirements|Skills|Benefits|Perks|Compensation|Getting|In this|How you|Why|Our|The|Your|Key|Core|Preferred|Required|Nice|Education|Experience|Pluses?|Overview|Summary|Position|Role|Minimum|Additional|Essential|Desired|Duties|Mission|Values|Culture|Team|Company|Description|Expectations|Opportunity)\b/i;
-  if (headingRe.test(t) && t.length < 80) return true;
-  return false;
-}
-
-type Block = { type: 'paragraph' | 'heading' | 'bullet'; content: string };
-
-function splitFlatParagraph(text: string): Block[] {
-  if (text.length < 400) return [{ type: 'paragraph', content: text }];
-  const sentences = text.split(/(?<=[.!?])\s+(?=[A-Z])/);
-  if (sentences.length <= 3) return [{ type: 'paragraph', content: text }];
-  const paragraphs: string[] = [];
-  let buf = '';
-  for (const s of sentences) {
-    if (buf && buf.length > 150) {
-      paragraphs.push(buf);
-      buf = s;
-    } else {
-      buf = buf ? buf + ' ' + s : s;
-    }
-  }
-  if (buf) paragraphs.push(buf);
-  return paragraphs.map(p => ({ type: 'paragraph' as const, content: p }));
-}
-
-function parseTextIntoBlocks(text: string): Block[] {
-  const newlineCount = (text.match(/\n/g) || []).length;
-  if (newlineCount < 3 && text.length > 400) {
-    return splitFlatParagraph(text);
-  }
-
-  const lines = text.split('\n');
-  const blocks: Block[] = [];
-  let currentParagraph = '';
-
-  const flushParagraph = () => {
-    const trimmed = currentParagraph.trim();
-    if (trimmed) blocks.push({ type: 'paragraph', content: trimmed });
-    currentParagraph = '';
-  };
-
-  for (const line of lines) {
-    const trimmedLine = line.trim();
-    if (!trimmedLine) { flushParagraph(); continue; }
-    if (isBulletLine(trimmedLine)) {
-      flushParagraph();
-      blocks.push({ type: 'bullet', content: stripBulletPrefix(trimmedLine) });
-      continue;
-    }
-    if (isLikelyHeading(trimmedLine) && !currentParagraph.trim()) {
-      flushParagraph();
-      blocks.push({ type: 'heading', content: trimmedLine });
-      continue;
-    }
-    if (currentParagraph) {
-      currentParagraph += ' ' + trimmedLine;
-    } else {
-      currentParagraph = trimmedLine;
-    }
-  }
-  flushParagraph();
-  return blocks;
-}
-
-function fixDashPrefixParagraphs(text: string): string {
-  const lines = text.split('\n');
-  const dashLines = lines.filter(l => /^- /.test(l.trim()));
-  const nonEmpty = lines.filter(l => l.trim().length > 0);
-  if (dashLines.length < 3 || dashLines.length < nonEmpty.length * 0.5) return text;
-  return lines.map(line => {
-    const trimmed = line.trim();
-    if (/^- /.test(trimmed)) {
-      const content = trimmed.slice(2).trim();
-      if (content.length > 80) return content;
-    }
-    return trimmed;
-  }).join('\n');
-}
-
-function stripCompanyBoilerplate(text: string): string {
-  const paragraphs = text.split(/\n{2,}/);
-  if (paragraphs.length < 3) return text;
-  const roleSignals = [
-    /\b(?:about (?:the |this )?role|the (?:role|opportunity|challenge|position)|in this role|what you(?:'ll| will)|your (?:role|responsibilities|impact)|we(?:'re| are) (?:looking|seeking|hiring))\b/i,
-    /(?:^|\.\s+)As (?:a|an|the) /,
-    /\b(?:responsibilities|qualifications|requirements|key duties)\b/i,
-    /(?:^|\.\s+)(?:You will|You'll|In this role)/,
-  ];
-  let roleIdx = -1;
-  for (let i = 0; i < paragraphs.length; i++) {
-    if (roleSignals.some(s => s.test(paragraphs[i].trim()))) { roleIdx = i; break; }
-  }
-  if (roleIdx <= 1) return text;
-  const introText = paragraphs.slice(0, roleIdx).join('\n\n');
-  if (introText.length > text.length * 0.6) return text;
-  const remaining = paragraphs.slice(roleIdx).join('\n\n').trim();
-  if (remaining.length < 200) return text;
-  return remaining.replace(/^(?:About (?:the |this )?role|The (?:Role|Opportunity|Challenge|Position|Team))\s*:?\s*\n*/i, '');
-}
-
 function cleanDescription(text: string): string {
   let cleaned = decodeHtmlEntities(text);
   if (/<[a-z][^>]*>/i.test(cleaned)) {
@@ -175,17 +60,16 @@ function cleanDescription(text: string): string {
     cleaned = cleaned.replace(/<(?:p|div|h[1-6]|ul|ol|table|tbody|thead|section|article)(?:\s[^>]*)?>/gi, '\n');
     cleaned = cleaned.replace(/<li(?:\s[^>]*)?>/gi, '- ');
     cleaned = cleaned.replace(/<[^>]+>/g, '');
-    cleaned = cleaned.replace(/&[a-z]+;/gi, ' ');
   }
   cleaned = cleaned.replace(/\u00A0/g, ' ');
   cleaned = cleaned.replace(/ {2,}/g, ' ');
   cleaned = cleaned.replace(/\n{3,}/g, '\n\n');
   cleaned = cleaned.replace(/^[ \t]+/gm, '');
-  cleaned = fixDashPrefixParagraphs(cleaned);
   cleaned = fixMissingSentenceSpaces(cleaned);
-  cleaned = stripCompanyBoilerplate(cleaned);
   return cleaned.trim();
 }
+
+const HEADING_RE = /^(?:About|What|Who|Responsibilities|Qualifications|Requirements|Skills|Benefits|Perks|Compensation|Getting|In this|How you|Why|Our|The|Your|Key|Core|Preferred|Required|Nice|Education|Experience|Pluses?|Overview|Summary|Position|Role|Minimum|Additional|Essential|Desired|Duties|Mission|Values|Culture|Team|Company|Description|Expectations|Opportunity)\b/i;
 
 function linkifyEmails(content: string) {
   const emailRegex = /([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})/g;
@@ -288,143 +172,77 @@ function renderHighlightedContent(content: string, activeCategories: Set<Highlig
 }
 
 
-interface DescriptionSection {
-  heading: string;
-  blocks: Block[];
-  icon: typeof Briefcase;
-  priority: number;
-}
-
-const SECTION_CLASSIFY: { pattern: RegExp; label: string; icon: typeof Briefcase; priority: number }[] = [
-  { pattern: /(?:responsibilities|what you(?:'ll| will) do|in this role|your role|day.to.day|daily|your impact|key duties)/i, label: 'Responsibilities', icon: Target, priority: 1 },
-  { pattern: /(?:qualifications|requirements|what (?:you(?:'ll| will) need|we(?:'re| are) looking for)|skills|experience|about you|who you are|must.have)/i, label: 'Qualifications', icon: GraduationCap, priority: 2 },
-  { pattern: /(?:preferred|nice.to.have|plus|bonus|desired|ideal)/i, label: 'Nice to Have', icon: Star, priority: 3 },
-  { pattern: /(?:benefits|perks|compensation|salary|pay|what we offer|why (?:join|work))/i, label: 'Benefits & Perks', icon: Gift, priority: 4 },
-  { pattern: /(?:about (?:the |this )?(?:company|team|us)|our (?:mission|culture|values|team)|who we are)/i, label: 'About the Company', icon: Users, priority: 5 },
-  { pattern: /(?:getting started|onboarding|how to apply|application|apply)/i, label: 'Getting Started', icon: Zap, priority: 6 },
-];
-
-function classifySection(heading: string): { label: string; icon: typeof Briefcase; priority: number } {
-  for (const { pattern, label, icon, priority } of SECTION_CLASSIFY) {
-    if (pattern.test(heading)) return { label, icon, priority };
-  }
-  return { label: heading.replace(/:$/, ''), icon: Briefcase, priority: 10 };
-}
-
-function groupBlocksIntoSections(blocks: Block[]): DescriptionSection[] {
-  const sections: DescriptionSection[] = [];
-  let currentSection: DescriptionSection | null = null;
-  let introBlocks: Block[] = [];
-  let sectionIdx = 0;
-
-  for (const block of blocks) {
-    if (block.type === 'heading') {
-      if (currentSection) {
-        sections.push(currentSection);
-      } else if (introBlocks.length > 0) {
-        sections.push({ heading: 'Overview', blocks: introBlocks, icon: FileText, priority: 0 });
-        introBlocks = [];
-      }
-      const classified = classifySection(block.content);
-      currentSection = {
-        heading: classified.label,
-        blocks: [],
-        icon: classified.icon,
-        priority: classified.priority,
-      };
-      sectionIdx++;
-    } else {
-      if (currentSection) {
-        currentSection.blocks.push(block);
-      } else {
-        introBlocks.push(block);
-      }
-    }
-  }
-  if (currentSection) sections.push(currentSection);
-  if (introBlocks.length > 0 && sections.length === 0) {
-    sections.push({ heading: 'Overview', blocks: introBlocks, icon: FileText, priority: 0 });
-  } else if (introBlocks.length > 0) {
-    sections.unshift({ heading: 'Overview', blocks: introBlocks, icon: FileText, priority: 0 });
-  }
-  return sections;
-}
-
-
-
 function DescriptionContent({ text, testId, compact, isPro }: { text?: string | null; testId: string; compact?: boolean; isPro?: boolean }) {
   if (!text) return null;
 
   const cleanedText = useMemo(() => cleanDescription(text), [text]);
-  const blocks = useMemo(() => parseTextIntoBlocks(cleanedText), [cleanedText]);
-  const sections = useMemo(() => groupBlocksIntoSections(blocks), [blocks]);
+  const lines = useMemo(() => cleanedText.split('\n').filter(l => l.trim()), [cleanedText]);
 
   const activeCategories = useMemo(() => {
     if (isPro) return new Set(Object.keys(HIGHLIGHT_CATEGORIES) as HighlightCategory[]);
     return new Set<HighlightCategory>();
   }, [isPro]);
 
-  const renderBlock = useCallback((block: Block, i: number) => {
-    const highlighted = renderHighlightedContent(block.content, activeCategories);
-    if (block.type === 'bullet') {
-      return (
-        <li key={i} className="flex gap-3 text-[0.925rem] text-foreground/80 leading-[1.7]" data-testid={`bullet-${i}`}>
-          <span className="shrink-0 mt-[0.65rem] w-[5px] h-[5px] rounded-full bg-primary/40" />
-          <span>{highlighted}</span>
-        </li>
-      );
-    }
-    return (
-      <p key={i} className="text-[0.925rem] text-foreground/80 leading-[1.7]" data-testid={`para-${i}`}>
-        {highlighted}
-      </p>
-    );
-  }, [activeCategories]);
-
   if (compact) {
     return (
       <div className="space-y-2" data-testid={testId}>
-        {blocks.slice(0, 12).map((block, i) => {
-          if (block.type === 'heading') {
-            return <p key={i} className="font-medium text-foreground text-sm pt-2 first:pt-0">{block.content}</p>;
+        {lines.slice(0, 12).map((line, i) => {
+          const trimmed = line.trim();
+          const isBullet = /^[-•*]\s/.test(trimmed) || /^\d+[.)]\s/.test(trimmed);
+          const isHead = (HEADING_RE.test(trimmed) && trimmed.length < 80) || (trimmed.endsWith(':') && trimmed.length < 80) || (trimmed === trimmed.toUpperCase() && trimmed.length > 3 && trimmed.length < 80 && /[A-Z]/.test(trimmed));
+
+          if (isHead) {
+            return <p key={i} className="font-medium text-foreground text-sm pt-2 first:pt-0">{trimmed}</p>;
           }
-          if (block.type === 'bullet') {
+          if (isBullet) {
+            const content = trimmed.replace(/^[-•*]\s+|^\d+[.)]\s+/, '');
             return (
               <div key={i} className="flex gap-2 pl-1 text-sm">
                 <span className="shrink-0 mt-[0.45rem] w-1.5 h-1.5 rounded-full bg-foreground/25" />
-                <span className="text-foreground/90">{block.content}</span>
+                <span className="text-foreground/90">{content}</span>
               </div>
             );
           }
-          return <p key={i} className="text-sm text-foreground/90">{block.content}</p>;
+          return <p key={i} className="text-sm text-foreground/90">{trimmed}</p>;
         })}
       </div>
     );
   }
 
-  if (sections.length <= 1) {
-    return (
-      <div className="space-y-3.5" data-testid={testId}>
-        {blocks.map(renderBlock)}
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-7" data-testid={testId}>
-      {sections.map((section, si) => (
-        <div key={`${section.heading}-${si}`} data-testid={`section-${section.heading.toLowerCase().replace(/\s+/g, '-')}`}>
-          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-            {section.heading}
-          </h3>
-          <div className="space-y-2.5">
-            {section.blocks.map((block, i) => renderBlock(block, si * 100 + i))}
-          </div>
-          {si < sections.length - 1 && (
-            <div className="border-b border-border/40 mt-7" />
-          )}
-        </div>
-      ))}
+    <div className="space-y-1.5" data-testid={testId}>
+      {lines.map((line, i) => {
+        const trimmed = line.trim();
+        if (!trimmed) return null;
+        const isBullet = /^[-•*]\s/.test(trimmed) || /^\d+[.)]\s/.test(trimmed);
+        const isHead = (HEADING_RE.test(trimmed) && trimmed.length < 80) || (trimmed.endsWith(':') && trimmed.length < 80) || (trimmed === trimmed.toUpperCase() && trimmed.length > 3 && trimmed.length < 80 && /[A-Z]/.test(trimmed));
+
+        const renderContent = (content: string) => {
+          return renderHighlightedContent(content, activeCategories);
+        };
+
+        if (isHead) {
+          return (
+            <h3 key={i} className="text-sm font-semibold text-muted-foreground uppercase tracking-wider pt-4 first:pt-0 pb-1">
+              {trimmed.replace(/:$/, '')}
+            </h3>
+          );
+        }
+        if (isBullet) {
+          const content = trimmed.replace(/^[-•*]\s+|^\d+[.)]\s+/, '');
+          return (
+            <li key={i} className="flex gap-3 text-[0.925rem] text-foreground/80 leading-[1.7] pl-1" data-testid={`bullet-${i}`}>
+              <span className="shrink-0 mt-[0.65rem] w-[5px] h-[5px] rounded-full bg-primary/40" />
+              <span>{renderContent(content)}</span>
+            </li>
+          );
+        }
+        return (
+          <p key={i} className="text-[0.925rem] text-foreground/80 leading-[1.7]" data-testid={`para-${i}`}>
+            {renderContent(trimmed)}
+          </p>
+        );
+      })}
     </div>
   );
 }
