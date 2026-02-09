@@ -45,6 +45,9 @@ export const jobs = pgTable("jobs", {
   reviewStatus: varchar("review_status", { length: 20 }),
   descriptionFormatted: boolean("description_formatted").default(false),
   structuredDescription: jsonb("structured_description"),
+  isPublished: boolean("is_published").default(false),
+  structuredStatus: varchar("structured_status", { length: 20 }).default("missing"),
+  structuredUpdatedAt: timestamp("structured_updated_at"),
 });
 
 export const jobCategories = pgTable("job_categories", {
@@ -587,13 +590,17 @@ export interface ResumeSections {
 }
 
 export interface StructuredDescription {
+  summary: string;
   aboutCompany: string;
   responsibilities: string[];
   minimumQualifications: string[];
   preferredQualifications: string[];
   skillsRequired: string[];
-  seniority?: string;
-  legalTechCategory?: string;
+  seniority: string;
+  legalTechCategory: string;
   aiRelevanceScore?: string;
   lawyerTransitionFriendly?: boolean;
+  lawyerTransitionNotes?: string[];
 }
+
+export type StructuredStatus = "missing" | "generated" | "edited" | "approved";

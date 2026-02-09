@@ -1,10 +1,10 @@
 import type { StructuredDescription } from "@shared/schema";
 import { cleanStructuredText } from "@/lib/structured-description";
-import { Building2, Briefcase, CheckCircle2, Star, Hash, TrendingUp, Layers, Bot, Scale } from "lucide-react";
+import { Building2, Briefcase, CheckCircle2, Star, Hash, TrendingUp, Layers, Bot, Scale, BookOpen } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 function MetaBadges({ data, compact }: { data: StructuredDescription; compact?: boolean }) {
-  const hasMeta = data.seniority || data.legalTechCategory || data.aiRelevanceScore || data.lawyerTransitionFriendly;
+  const hasMeta = !!(data.seniority || data.legalTechCategory || data.aiRelevanceScore || data.lawyerTransitionFriendly);
   if (!hasMeta) return null;
 
   const iconSize = compact ? "h-3 w-3" : "h-3.5 w-3.5";
@@ -41,7 +41,7 @@ function MetaBadges({ data, compact }: { data: StructuredDescription; compact?: 
 }
 
 export function StructuredDescriptionView({ data, compact }: { data: StructuredDescription; compact?: boolean }) {
-  const sections = [
+  const sections: { key: string; title: string; items: string[] | null; text: string | null; icon: typeof Building2 }[] = [
     { key: "aboutCompany", title: "About the Company", items: null, text: data.aboutCompany, icon: Building2 },
     { key: "responsibilities", title: "Responsibilities", items: data.responsibilities, text: null, icon: Briefcase },
     { key: "minimumQualifications", title: "Minimum Qualifications", items: data.minimumQualifications, text: null, icon: CheckCircle2 },
@@ -49,9 +49,16 @@ export function StructuredDescriptionView({ data, compact }: { data: StructuredD
     { key: "skillsRequired", title: "Skills Required", items: data.skillsRequired, text: null, icon: Hash },
   ];
 
+  if (data.lawyerTransitionNotes && data.lawyerTransitionNotes.length > 0) {
+    sections.push({ key: "lawyerTransitionNotes", title: "Lawyer Transition Notes", items: data.lawyerTransitionNotes, text: null, icon: BookOpen });
+  }
+
   if (compact) {
     return (
       <div className="space-y-3" data-testid="section-structured-description">
+        {data.summary && (
+          <p className="text-xs text-muted-foreground italic leading-relaxed" data-testid="structured-summary">{cleanStructuredText(data.summary)}</p>
+        )}
         <MetaBadges data={data} compact />
         {sections.map(({ key, title, items, text, icon: Icon }) => {
           const hasText = text && text.trim();
@@ -84,6 +91,9 @@ export function StructuredDescriptionView({ data, compact }: { data: StructuredD
 
   return (
     <div className="space-y-6" data-testid="section-structured-description">
+      {data.summary && (
+        <p className="text-sm text-muted-foreground italic leading-relaxed" data-testid="structured-summary">{cleanStructuredText(data.summary)}</p>
+      )}
       <MetaBadges data={data} />
       {sections.map(({ key, title, items, text, icon: Icon }) => {
         const hasText = text && text.trim();
