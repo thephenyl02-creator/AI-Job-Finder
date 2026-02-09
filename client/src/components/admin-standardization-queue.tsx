@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import type { Job, StructuredDescription } from "@shared/schema";
 import {
@@ -21,6 +22,11 @@ import {
   TrendingUp,
   Scale,
   Bot,
+  Stethoscope,
+  Copy,
+  Check,
+  X,
+  Info,
 } from "lucide-react";
 
 interface QueueData {
@@ -84,9 +90,188 @@ function QualityChecklist({ sd }: { sd: StructuredDescription | null }) {
   );
 }
 
+interface DiagnosticsResult {
+  jobId: number;
+  publiclyVisible: boolean;
+  reasons: string[];
+  recommendedFixes: string[];
+  checks: {
+    exists: boolean;
+    isPublished: boolean;
+    isActive: boolean;
+    status: string | null;
+    expiresAt: string | null;
+    isExpired: boolean;
+    structuredDescriptionPresent: boolean;
+    structuredDescriptionValid: boolean;
+    structuredFieldsMissing: string[];
+    source: string | null;
+  };
+  publicEndpointWouldReturn404: boolean;
+  publicRule: string;
+  now: string;
+}
+
+function DiagnosticsModal({ jobId, jobTitle, open, onClose }: { jobId: number; jobTitle: string; open: boolean; onClose: () => void }) {
+  const { toast } = useToast();
+  const [copied, setCopied] = useState(false);
+
+  const { data, isLoading, error } = useQuery<DiagnosticsResult>({
+    queryKey: ["/api/diagnostics/jobs", jobId],
+    queryFn: async () => {
+      const res = await fetch(`/api/diagnostics/jobs/${jobId}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch diagnostics");
+      return res.json();
+    },
+    enabled: open,
+  });
+
+  const handleCopy = () => {
+    if (data) {
+      navigator.clipboard.writeText(JSON.stringify(data, null, 2));
+      setCopied(true);
+      toast({ title: "Copied diagnostics JSON to clipboard" });
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Stethoscope className="h-5 w-5" />
+            Job Diagnostics
+          </DialogTitle>
+        </DialogHeader>
+
+        {isLoading && (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          </div>
+        )}
+
+        {error && (
+          <p className="text-sm text-destructive py-4">Failed to load diagnostics.</p>
+        )}
+
+        {data && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div>
+                <p className="text-sm font-medium truncate max-w-[280px]" data-testid="diagnostics-job-title">{jobTitle}</p>
+                <p className="text-xs text-muted-foreground">ID: {data.jobId}</p>
+              </div>
+              {data.publiclyVisible ? (
+                <Badge className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300" data-testid="diagnostics-visibility-badge">
+                  <Eye className="h-3 w-3 mr-1" /> Visible
+                </Badge>
+              ) : (
+                <Badge className="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300" data-testid="diagnostics-visibility-badge">
+                  <EyeOff className="h-3 w-3 mr-1" /> Not Visible
+                </Badge>
+              )}
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">Checks</h4>
+                <div className="space-y-1" data-testid="diagnostics-checks">
+                  {[
+                    { label: "Exists in DB", pass: data.checks.exists },
+                    { label: "Published", pass: data.checks.isPublished },
+                    { label: "Active", pass: data.checks.isActive },
+                    { label: "Structured Description Present", pass: data.checks.structuredDescriptionPresent },
+                    { label: "Structured Description Valid", pass: data.checks.structuredDescriptionValid },
+                  ].map((c) => (
+                    <div key={c.label} className="flex items-center gap-2 text-xs">
+                      {c.pass ? (
+                        <CheckCircle2 className="h-3 w-3 text-green-500 shrink-0" />
+                      ) : (
+                        <X className="h-3 w-3 text-red-500 shrink-0" />
+                      )}
+                      <span className={c.pass ? "text-muted-foreground" : "text-foreground"}>{c.label}</span>
+                    </div>
+                  ))}
+                  {data.checks.status && (
+                    <div className="flex items-center gap-2 text-xs">
+                      <Info className="h-3 w-3 text-muted-foreground shrink-0" />
+                      <span className="text-muted-foreground">Status: {data.checks.status}</span>
+                    </div>
+                  )}
+                  {data.checks.source && (
+                    <div className="flex items-center gap-2 text-xs">
+                      <Info className="h-3 w-3 text-muted-foreground shrink-0" />
+                      <span className="text-muted-foreground">Source: {data.checks.source}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {data.checks.structuredFieldsMissing.length > 0 && (
+                <div>
+                  <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">Missing Fields</h4>
+                  <div className="space-y-0.5" data-testid="diagnostics-missing-fields">
+                    {data.checks.structuredFieldsMissing.map((f, i) => (
+                      <div key={i} className="flex items-center gap-2 text-xs">
+                        <AlertTriangle className="h-3 w-3 text-amber-500 shrink-0" />
+                        <span>{f}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {data.reasons.length > 0 && (
+                <div>
+                  <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">Reasons Not Visible</h4>
+                  <div className="space-y-0.5" data-testid="diagnostics-reasons">
+                    {data.reasons.map((r, i) => (
+                      <div key={i} className="text-xs font-mono bg-muted/50 rounded px-2 py-1">{r}</div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {data.recommendedFixes.length > 0 && (
+                <div>
+                  <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">Recommended Fixes</h4>
+                  <div className="space-y-1" data-testid="diagnostics-fixes">
+                    {data.recommendedFixes.map((f, i) => (
+                      <div key={i} className="text-xs text-foreground flex items-start gap-2">
+                        <span className="text-muted-foreground shrink-0">{i + 1}.</span>
+                        <span>{f}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {data.reasons.length === 0 && (
+                <p className="text-xs text-green-600 dark:text-green-400">This job passes all visibility checks.</p>
+              )}
+
+              <div className="pt-2 border-t border-border/30 flex items-center justify-between gap-2 flex-wrap">
+                <p className="text-[10px] text-muted-foreground font-mono">
+                  Rule: {data.publicRule}
+                </p>
+                <Button size="sm" variant="outline" onClick={handleCopy} data-testid="button-copy-diagnostics">
+                  {copied ? <Check className="h-3.5 w-3.5 mr-1" /> : <Copy className="h-3.5 w-3.5 mr-1" />}
+                  {copied ? "Copied" : "Copy JSON"}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function JobQueueRow({ job, onRefreshQueue }: { job: Job; onRefreshQueue: () => void }) {
   const { toast } = useToast();
   const [expanded, setExpanded] = useState(false);
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
   const sd = job.structuredDescription as StructuredDescription | null;
   const status = (job.structuredStatus || "missing") as string;
 
@@ -183,11 +368,16 @@ function JobQueueRow({ job, onRefreshQueue }: { job: Job; onRefreshQueue: () => 
               Unpublish
             </Button>
           )}
+          <Button size="icon" variant="ghost" onClick={() => setShowDiagnostics(true)} data-testid={`button-diagnose-${job.id}`}>
+            <Stethoscope className="h-4 w-4" />
+          </Button>
           <Button size="icon" variant="ghost" onClick={() => setExpanded(!expanded)} data-testid={`button-expand-${job.id}`}>
             {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
           </Button>
         </div>
       </div>
+
+      <DiagnosticsModal jobId={job.id} jobTitle={job.title} open={showDiagnostics} onClose={() => setShowDiagnostics(false)} />
 
       {expanded && (
         <div className="mt-3 pt-3 border-t border-border/30">

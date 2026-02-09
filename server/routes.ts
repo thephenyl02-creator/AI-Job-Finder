@@ -2177,6 +2177,135 @@ Be specific and actionable. Focus on legal tech industry keywords and ATS best p
     }
   });
 
+  app.get("/api/diagnostics/jobs/:id", isAuthenticated, async (req, res) => {
+    if (!(await isAdminCheck(req))) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    try {
+      const jobId = parseInt(req.params.id as string);
+      if (isNaN(jobId)) return res.status(400).json({ error: "Invalid job ID" });
+
+      const now = new Date().toISOString();
+      const job = await storage.getJob(jobId);
+
+      if (!job) {
+        return res.json({
+          jobId,
+          publiclyVisible: false,
+          reasons: ["NOT_FOUND"],
+          recommendedFixes: ["This job ID does not exist in the database."],
+          checks: {
+            exists: false, isPublished: false, isActive: false,
+            status: null, expiresAt: null, isExpired: false,
+            structuredDescriptionPresent: false, structuredDescriptionValid: false,
+            structuredFieldsMissing: [], source: null,
+          },
+          publicEndpointWouldReturn404: true,
+          publicRule: "isPublished && isActive && structuredDescriptionValid",
+          now,
+        });
+      }
+
+      const reasons: string[] = [];
+      const recommendedFixes: string[] = [];
+
+      if (!job.isPublished) {
+        reasons.push("NOT_PUBLISHED");
+        recommendedFixes.push("Publish this job from Admin (Approve \u2192 Publish).");
+      }
+      if (!job.isActive) {
+        reasons.push("INACTIVE");
+        recommendedFixes.push("Set isActive=true or re-activate this job.");
+      }
+
+      let sdParsed: any = null;
+      let sdPresent = false;
+      let sdValid = false;
+      const sdFieldsMissing: string[] = [];
+
+      if (job.structuredDescription) {
+        try {
+          sdParsed = typeof job.structuredDescription === "string"
+            ? JSON.parse(job.structuredDescription)
+            : job.structuredDescription;
+          sdPresent = true;
+        } catch {
+          sdPresent = false;
+          reasons.push("INVALID_STRUCTURED_DESCRIPTION");
+          recommendedFixes.push("Structured description is corrupted JSON. Regenerate it.");
+        }
+      }
+
+      if (!sdPresent) {
+        if (!reasons.includes("INVALID_STRUCTURED_DESCRIPTION")) {
+          reasons.push("MISSING_STRUCTURED_DESCRIPTION");
+          recommendedFixes.push("Generate a structured description from the Admin Standardization Queue.");
+        }
+      } else {
+        const requiredFields: { key: string; type: "string" | "array"; minLength?: number }[] = [
+          { key: "summary", type: "string" },
+          { key: "aboutCompany", type: "string" },
+          { key: "responsibilities", type: "array", minLength: 4 },
+          { key: "minimumQualifications", type: "array", minLength: 3 },
+          { key: "skillsRequired", type: "array", minLength: 6 },
+          { key: "seniority", type: "string" },
+          { key: "legalTechCategory", type: "string" },
+        ];
+
+        for (const field of requiredFields) {
+          const val = sdParsed[field.key];
+          if (field.type === "string") {
+            if (!val || (typeof val === "string" && val.trim().length === 0)) {
+              sdFieldsMissing.push(field.key);
+            }
+          } else if (field.type === "array") {
+            if (!Array.isArray(val) || val.length < (field.minLength || 1)) {
+              sdFieldsMissing.push(`${field.key} (need ${field.minLength || 1}+, have ${Array.isArray(val) ? val.length : 0})`);
+            }
+          }
+        }
+
+        if (sdParsed.summary && typeof sdParsed.summary === "string" && sdParsed.summary.length > 350) {
+          sdFieldsMissing.push("summary (exceeds 350 chars)");
+        }
+
+        sdValid = sdFieldsMissing.length === 0;
+        if (!sdValid) {
+          reasons.push("MISSING_STRUCTURED_FIELDS");
+          recommendedFixes.push(`Regenerate structured description or edit missing fields: ${sdFieldsMissing.join(", ")}.`);
+        }
+      }
+
+      const publiclyVisible = !!job.isPublished && !!job.isActive && (sdPresent && sdValid);
+      const publicEndpointWouldReturn404 = !job.isPublished || !job.isActive;
+
+      res.json({
+        jobId,
+        publiclyVisible,
+        reasons,
+        recommendedFixes,
+        checks: {
+          exists: true,
+          isPublished: !!job.isPublished,
+          isActive: !!job.isActive,
+          status: job.structuredStatus || null,
+          expiresAt: null,
+          isExpired: false,
+          structuredDescriptionPresent: sdPresent,
+          structuredDescriptionValid: sdValid,
+          structuredFieldsMissing: sdFieldsMissing,
+          source: job.source || null,
+        },
+        publicEndpointWouldReturn404,
+        publicRule: "isPublished && isActive && structuredDescriptionValid",
+        now,
+      });
+    } catch (error) {
+      console.error("Error running job diagnostics:", error);
+      res.status(500).json({ error: "Failed to run diagnostics" });
+    }
+  });
+
   app.post("/api/admin/jobs/:id/generate-structured", isAuthenticated, async (req, res) => {
     if (!(await isAdminCheck(req))) {
       return res.status(403).json({ error: "Admin access required" });
