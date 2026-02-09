@@ -7,6 +7,7 @@ import { categorizeJob } from './job-categorizer';
 import { matchNewJobsAgainstAlerts } from './alert-matcher';
 import { formatFlatDescription } from './description-formatter';
 import { isDescriptionFlat } from './description-cleaner';
+import { extractStructuredDescription } from './description-extractor';
 
 const SCRAPE_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 hours
 const LINK_CHECK_TIMEOUT = 10000; // 10 seconds for each request
@@ -524,6 +525,16 @@ export async function runScheduledScrape(triggeredBy: string = 'scheduler'): Pro
                   legalRelevanceScore: result.legalRelevanceScore,
                   reviewStatus: result.reviewStatus,
                 };
+                if (job.description && !job.structuredDescription) {
+                  try {
+                    const structured = await extractStructuredDescription(job.description, job.company, job.title);
+                    if (structured) {
+                      updateData.structuredDescription = structured;
+                    }
+                  } catch (extractErr: any) {
+                    logWarn('AI', `Structured extraction failed for job ${job.id}: ${extractErr.message?.slice(0, 80)}`);
+                  }
+                }
                 if (result.reviewStatus === "rejected") {
                   updateData.isActive = false;
                   rejectedCount++;
@@ -600,6 +611,46 @@ export async function runScheduledScrape(triggeredBy: string = 'scheduler'): Pro
     } catch (err: any) {
       logError('FORMAT', 'Description formatting phase failed', { error: err.message });
       errors.push(`Formatting phase: ${err.message}`);
+    }
+
+    // === PHASE 4.6: Structured description backfill for existing jobs ===
+    logInfo('PHASE', '--- Phase 4.6: Structured Description Backfill ---');
+    try {
+      const allActiveForStructured = await storage.getActiveJobs();
+      const needsStructured = allActiveForStructured.filter(j =>
+        j.description && j.description.length > 100 && !j.structuredDescription
+      );
+
+      if (needsStructured.length > 0) {
+        logInfo('AI', `Extracting structured descriptions for ${needsStructured.length} jobs...`);
+        let structuredCount = 0;
+        const structBatchSize = 3;
+        for (let i = 0; i < needsStructured.length; i += structBatchSize) {
+          const batch = needsStructured.slice(i, i + structBatchSize);
+          await Promise.all(
+            batch.map(async (job) => {
+              try {
+                const structured = await extractStructuredDescription(job.description, job.company, job.title);
+                if (structured) {
+                  await storage.updateJob(job.id, { structuredDescription: structured } as any);
+                  structuredCount++;
+                }
+              } catch (err: any) {
+                logWarn('AI', `Structured extraction failed for job ${job.id}: ${err.message?.slice(0, 80)}`);
+              }
+            })
+          );
+          if (i + structBatchSize < needsStructured.length) {
+            await new Promise((r) => setTimeout(r, 500));
+          }
+        }
+        logSuccess('AI', `Extracted structured descriptions for ${structuredCount}/${needsStructured.length} jobs`);
+      } else {
+        logInfo('AI', 'All jobs already have structured descriptions');
+      }
+    } catch (err: any) {
+      logError('AI', 'Structured description backfill failed', { error: err.message });
+      errors.push(`Structured backfill: ${err.message}`);
     }
 
     // === PHASE 5: Alert matching for new jobs ===
