@@ -592,4 +592,8 @@ export interface StructuredDescription {
   minimumQualifications: string[];
   preferredQualifications: string[];
   skillsRequired: string[];
+  seniority?: string;
+  legalTechCategory?: string;
+  aiRelevanceScore?: string;
+  lawyerTransitionFriendly?: boolean;
 }

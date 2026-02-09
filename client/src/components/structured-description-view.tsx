@@ -1,6 +1,44 @@
 import type { StructuredDescription } from "@shared/schema";
 import { cleanStructuredText } from "@/lib/structured-description";
-import { Building2, Briefcase, CheckCircle2, Star, Hash } from "lucide-react";
+import { Building2, Briefcase, CheckCircle2, Star, Hash, TrendingUp, Layers, Bot, Scale } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+
+function MetaBadges({ data, compact }: { data: StructuredDescription; compact?: boolean }) {
+  const hasMeta = data.seniority || data.legalTechCategory || data.aiRelevanceScore || data.lawyerTransitionFriendly;
+  if (!hasMeta) return null;
+
+  const iconSize = compact ? "h-3 w-3" : "h-3.5 w-3.5";
+  const badgeSize = compact ? "text-[10px]" : "text-xs";
+
+  return (
+    <div className={`flex flex-wrap items-center gap-2 ${compact ? "mb-2" : "mb-4"}`} data-testid="structured-meta-badges">
+      {data.seniority && (
+        <Badge variant="secondary" className={badgeSize} data-testid="badge-seniority">
+          <TrendingUp className={`${iconSize} mr-1`} />
+          {data.seniority}
+        </Badge>
+      )}
+      {data.legalTechCategory && (
+        <Badge variant="secondary" className={badgeSize} data-testid="badge-legal-tech-category">
+          <Layers className={`${iconSize} mr-1`} />
+          {data.legalTechCategory}
+        </Badge>
+      )}
+      {data.aiRelevanceScore && (
+        <Badge variant="secondary" className={badgeSize} data-testid="badge-ai-relevance">
+          <Bot className={`${iconSize} mr-1`} />
+          AI: {data.aiRelevanceScore}
+        </Badge>
+      )}
+      {data.lawyerTransitionFriendly && (
+        <Badge variant="outline" className={`${badgeSize} border-green-500/30 text-green-700 dark:text-green-400`} data-testid="badge-lawyer-friendly">
+          <Scale className={`${iconSize} mr-1`} />
+          Lawyer-Friendly Transition
+        </Badge>
+      )}
+    </div>
+  );
+}
 
 export function StructuredDescriptionView({ data, compact }: { data: StructuredDescription; compact?: boolean }) {
   const sections = [
@@ -14,6 +52,7 @@ export function StructuredDescriptionView({ data, compact }: { data: StructuredD
   if (compact) {
     return (
       <div className="space-y-3" data-testid="section-structured-description">
+        <MetaBadges data={data} compact />
         {sections.map(({ key, title, items, text, icon: Icon }) => {
           const hasText = text && text.trim();
           const hasItems = items && items.length > 0;
@@ -45,6 +84,7 @@ export function StructuredDescriptionView({ data, compact }: { data: StructuredD
 
   return (
     <div className="space-y-6" data-testid="section-structured-description">
+      <MetaBadges data={data} />
       {sections.map(({ key, title, items, text, icon: Icon }) => {
         const hasText = text && text.trim();
         const hasItems = items && items.length > 0;

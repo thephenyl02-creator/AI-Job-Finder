@@ -30,7 +30,11 @@ Return valid JSON with this exact structure:
   "responsibilities": ["responsibility 1", "responsibility 2", ...],
   "minimumQualifications": ["qualification 1", "qualification 2", ...],
   "preferredQualifications": ["qualification 1", "qualification 2", ...],
-  "skillsRequired": ["skill 1", "skill 2", ...]
+  "skillsRequired": ["skill 1", "skill 2", ...],
+  "seniority": "Entry-Level | Mid-Level | Senior | Lead | Director | VP | C-Suite",
+  "legalTechCategory": "The primary legal tech category this role falls into (e.g., Contract Management, eDiscovery, Legal AI, Compliance Tech, Legal Analytics, Practice Management, IP Tech, RegTech, Access to Justice Tech, Legal Marketplace, Court Tech, General Legal Tech)",
+  "aiRelevanceScore": "Low | Medium | High - how relevant is AI/ML/automation to this role's daily work",
+  "lawyerTransitionFriendly": true/false - whether a lawyer without deep technical background could realistically transition into this role
 }`
       },
       {
@@ -62,6 +66,10 @@ ${rawDescription.substring(0, 12000)}`
       minimumQualifications: ensureArray(parsed.minimumQualifications),
       preferredQualifications: ensureArray(parsed.preferredQualifications),
       skillsRequired: ensureArray(parsed.skillsRequired),
+      seniority: typeof parsed.seniority === "string" ? parsed.seniority : "",
+      legalTechCategory: typeof parsed.legalTechCategory === "string" ? parsed.legalTechCategory : "",
+      aiRelevanceScore: typeof parsed.aiRelevanceScore === "string" ? parsed.aiRelevanceScore : "",
+      lawyerTransitionFriendly: typeof parsed.lawyerTransitionFriendly === "boolean" ? parsed.lawyerTransitionFriendly : false,
     };
   } catch {
     return buildFallbackStructure(rawDescription, company);
@@ -93,5 +101,9 @@ function buildFallbackStructure(description: string, company: string): Structure
     minimumQualifications: qualifications.slice(0, 8),
     preferredQualifications: [],
     skillsRequired: [],
+    seniority: "",
+    legalTechCategory: "",
+    aiRelevanceScore: "",
+    lawyerTransitionFriendly: false,
   };
 }

@@ -455,7 +455,7 @@ export default function AdminPage() {
     });
   };
 
-  const updateStructuredField = (field: keyof StructuredDescription, value: string) => {
+  const updateStructuredField = (field: keyof StructuredDescription, value: string | boolean) => {
     setEditForm((f) => {
       const current = (f.structuredDescription as StructuredDescription) || {
         aboutCompany: "",
@@ -463,11 +463,18 @@ export default function AdminPage() {
         minimumQualifications: [],
         preferredQualifications: [],
         skillsRequired: [],
+        seniority: "",
+        legalTechCategory: "",
+        aiRelevanceScore: "",
+        lawyerTransitionFriendly: false,
       };
-      if (field === "aboutCompany") {
-        return { ...f, structuredDescription: { ...current, aboutCompany: value } };
+      if (field === "aboutCompany" || field === "seniority" || field === "legalTechCategory" || field === "aiRelevanceScore") {
+        return { ...f, structuredDescription: { ...current, [field]: value } };
       }
-      const lines = value.split("\n").filter((l) => l.trim());
+      if (field === "lawyerTransitionFriendly") {
+        return { ...f, structuredDescription: { ...current, lawyerTransitionFriendly: value as boolean } };
+      }
+      const lines = (value as string).split("\n").filter((l) => l.trim());
       return { ...f, structuredDescription: { ...current, [field]: lines } };
     });
   };
@@ -476,6 +483,10 @@ export default function AdminPage() {
     const sd = editForm.structuredDescription as StructuredDescription | null;
     if (!sd) return "";
     if (field === "aboutCompany") return sd.aboutCompany || "";
+    if (field === "seniority") return sd.seniority || "";
+    if (field === "legalTechCategory") return sd.legalTechCategory || "";
+    if (field === "aiRelevanceScore") return sd.aiRelevanceScore || "";
+    if (field === "lawyerTransitionFriendly") return sd.lawyerTransitionFriendly ? "true" : "false";
     const arr = sd[field];
     return Array.isArray(arr) ? arr.join("\n") : "";
   };
@@ -2330,6 +2341,68 @@ export default function AdminPage() {
                           placeholder="Contract review&#10;Python&#10;Project management..."
                           data-testid="input-edit-sd-skills"
                         />
+                      </div>
+                      <div className="border-t pt-3 mt-3 space-y-3">
+                        <p className="text-xs font-medium text-foreground">Role Classification</p>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1.5">
+                            <Label htmlFor="edit-sd-seniority" className="text-xs">Seniority</Label>
+                            <select
+                              id="edit-sd-seniority"
+                              className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+                              value={getStructuredFieldValue("seniority")}
+                              onChange={(e) => updateStructuredField("seniority", e.target.value)}
+                              data-testid="select-edit-sd-seniority"
+                            >
+                              <option value="">Not set</option>
+                              <option value="Entry-Level">Entry-Level</option>
+                              <option value="Mid-Level">Mid-Level</option>
+                              <option value="Senior">Senior</option>
+                              <option value="Lead">Lead</option>
+                              <option value="Director">Director</option>
+                              <option value="VP">VP</option>
+                              <option value="C-Suite">C-Suite</option>
+                            </select>
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label htmlFor="edit-sd-ai-relevance" className="text-xs">AI Relevance</Label>
+                            <select
+                              id="edit-sd-ai-relevance"
+                              className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+                              value={getStructuredFieldValue("aiRelevanceScore")}
+                              onChange={(e) => updateStructuredField("aiRelevanceScore", e.target.value)}
+                              data-testid="select-edit-sd-ai-relevance"
+                            >
+                              <option value="">Not set</option>
+                              <option value="Low">Low</option>
+                              <option value="Medium">Medium</option>
+                              <option value="High">High</option>
+                            </select>
+                          </div>
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="edit-sd-category" className="text-xs">Legal Tech Category</Label>
+                          <input
+                            id="edit-sd-category"
+                            type="text"
+                            className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+                            value={getStructuredFieldValue("legalTechCategory")}
+                            onChange={(e) => updateStructuredField("legalTechCategory", e.target.value)}
+                            placeholder="e.g., Contract Management, eDiscovery, Legal AI..."
+                            data-testid="input-edit-sd-category"
+                          />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <input
+                            id="edit-sd-lawyer-friendly"
+                            type="checkbox"
+                            className="rounded border"
+                            checked={(editForm.structuredDescription as StructuredDescription | null)?.lawyerTransitionFriendly || false}
+                            onChange={(e) => updateStructuredField("lawyerTransitionFriendly", e.target.checked)}
+                            data-testid="checkbox-edit-sd-lawyer-friendly"
+                          />
+                          <Label htmlFor="edit-sd-lawyer-friendly" className="text-xs">Lawyer-Friendly Transition</Label>
+                        </div>
                       </div>
                     </div>
                   )}
