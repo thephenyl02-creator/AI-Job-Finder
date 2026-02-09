@@ -19,6 +19,7 @@ import type { Job, StructuredDescription } from "@shared/schema";
 import { JOB_TAXONOMY } from "@shared/schema";
 import { cleanStructuredText, parseStructuredDescription } from "@/lib/structured-description";
 import { StructuredDescriptionView } from "@/components/structured-description-view";
+import AdminStandardizationQueue from "@/components/admin-standardization-queue";
 
 const SENIORITY_OPTIONS = ["Intern", "Fellowship", "Entry", "Mid", "Senior", "Lead", "Director", "VP"];
 
@@ -1702,6 +1703,8 @@ export default function AdminPage() {
               )}
             </CardContent>
           </Card>
+
+          <AdminStandardizationQueue />
 
           <Card>
             <CardHeader>

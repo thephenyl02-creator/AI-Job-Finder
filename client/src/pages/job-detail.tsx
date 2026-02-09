@@ -645,6 +645,26 @@ export default function JobDetail() {
     );
   }
 
+  if (!job.isPublished) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-12 text-center">
+          <div className="rounded-md border border-border/50 bg-muted/30 p-8">
+            <Clock className="h-8 w-8 text-muted-foreground mx-auto mb-4" />
+            <h1 className="text-xl font-semibold text-foreground mb-2" data-testid="text-job-standardizing">Being Standardized</h1>
+            <p className="text-sm text-muted-foreground mb-1 font-medium">{cleanStructuredText(job.title)} at {cleanStructuredText(job.company)}</p>
+            <p className="text-sm text-muted-foreground mb-6">This job listing is currently being reviewed and standardized. It will be available soon.</p>
+            <Button onClick={() => setLocation("/jobs")} data-testid="button-back-jobs-standardizing">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Browse Available Jobs
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <Header />

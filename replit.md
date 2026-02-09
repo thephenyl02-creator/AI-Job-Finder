@@ -77,11 +77,16 @@ A freemium SaaS job search platform specifically designed for legal professional
 - **Scrape Run Tracking**: `scrape_runs` table records every run with timestamps, duration, counts (found/inserted/updated/categorized/alerts), source details, errors, and trigger source (scheduler/manual).
 - **Admin Dashboard**: `/admin/scraper` page shows real-time scraper status, run history, health metrics, source breakdown, cumulative stats, and manual controls (start/stop/run-now).
 
-### Structured Job Descriptions
-- **AI Extraction**: `server/lib/description-extractor.ts` uses GPT-4o-mini to parse raw job descriptions into 5 uniform sections: About the Company, Responsibilities, Minimum Qualifications, Preferred Qualifications, Skills Required.
+### Structured Job Descriptions & Quality Gate
+- **AI Extraction**: `server/lib/description-extractor.ts` uses GPT-4o-mini to parse raw job descriptions into a uniform JSON format: summary (max 350 chars), aboutCompany, responsibilities, minimumQualifications, preferredQualifications, skillsRequired, seniority, legalTechCategory, aiRelevanceScore, lawyerTransitionFriendly, lawyerTransitionNotes.
+- **Quality Gate**: Jobs must have complete structured descriptions and be explicitly approved before becoming visible to users. Three new DB columns: `isPublished` (boolean), `structuredStatus` (missing|generated|edited|approved), `structuredUpdatedAt`.
+- **Validation**: `validateStructuredDescription()` enforces minimum thresholds: summary present, 4+ responsibilities, 3+ min qualifications, 6+ skills, seniority & category set.
+- **Publishing Workflow**: missing → generated (AI) → edited (admin optional) → approved (passes validation) → published (visible to users).
+- **Admin Standardization Queue**: `AdminStandardizationQueue` component (`client/src/components/admin-standardization-queue.tsx`) provides generate/approve/publish/unpublish buttons per job, quality checklist, status filter counters, and bulk publish.
+- **API Endpoints**: `GET /api/admin/standardization-queue`, `POST /api/admin/jobs/:id/generate-structured`, `POST /api/admin/jobs/:id/validate-structured`, `POST /api/admin/jobs/:id/approve`, `POST /api/admin/jobs/:id/publish`, `POST /api/admin/jobs/:id/unpublish`, `POST /api/admin/jobs/bulk-publish`.
+- **Frontend Gating**: `/api/jobs` only returns published jobs. Job detail page shows "Being Standardized" message for unpublished jobs.
 - **Data Storage**: `structuredDescription` JSONB column on jobs table (type `StructuredDescription` in schema).
-- **Pipeline Integration**: Extraction runs automatically during AI categorization (`/api/admin/recategorize`). Backfill endpoint at `/api/admin/jobs/backfill-structured`.
-- **Rendering**: `StructuredDescriptionView` component in `job-detail.tsx` displays 5 sections with icons and proper formatting (paragraph for About, bullet lists for others). Falls back to raw description if unavailable.
+- **Rendering**: `StructuredDescriptionView` component displays summary, 5 sections with icons, metadata badges (seniority, category, AI relevance, lawyer-friendly), and lawyer transition notes. Falls back to raw description if unavailable.
 - **Admin Editing**: Admin edit dialog includes a collapsible "Structured Sections" panel where admins can edit each section individually (one item per line for list fields).
 
 ### Unified Job Comparison

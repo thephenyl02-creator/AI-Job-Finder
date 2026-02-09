@@ -87,6 +87,7 @@ export function validateStructuredDescription(sd: StructuredDescription): { vali
   const issues: string[] = [];
   if (!sd.summary || sd.summary.trim().length === 0) issues.push("Missing summary");
   if (sd.summary && sd.summary.length > 350) issues.push("Summary exceeds 350 characters");
+  if (!sd.aboutCompany || sd.aboutCompany.trim().length === 0) issues.push("Missing about company");
   if (!sd.minimumQualifications || sd.minimumQualifications.length < 3) issues.push("Minimum qualifications needs at least 3 bullets");
   if (!sd.responsibilities || sd.responsibilities.length < 4) issues.push("Responsibilities needs at least 4 bullets");
   if (!sd.skillsRequired || sd.skillsRequired.length < 6) issues.push("Skills required needs at least 6 bullets");
