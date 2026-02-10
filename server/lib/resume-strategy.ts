@@ -16,6 +16,8 @@ export interface StrategyOutput {
   reorderSuggestions: string[];
   emphasisSuggestions: string[];
   addSpecificityPrompts: string[];
+  risks: string[];
+  nextBestRoleIfNotFit?: string;
 }
 
 function getJobSignal(sd: StructuredDescription): string {
@@ -59,14 +61,17 @@ export async function computeStrategy(input: StrategyInput): Promise<StrategyOut
   const jobSignal = getJobSignal(input.structuredDescription);
   const resumeSignal = getResumeSignal(input.resumeData);
 
-  const systemPrompt = `You are a career strategist for legal professionals transitioning into legal technology roles. Your job is to analyze a candidate's resume against a specific job posting and provide structured, actionable strategy recommendations.
+  const systemPrompt = `You are an alignment strategist for legal professionals transitioning into legal technology roles. Your job is to analyze a candidate's resume against a specific job posting and provide structured, actionable positioning recommendations.
 
 Rules:
 - Never suggest adding experience the candidate does not have.
 - Focus on repositioning, reordering, emphasizing, and adding specificity to existing experience.
+- NEVER produce rewritten bullet text. Only describe what to change, not how the text should read.
 - Be lawyer-professional and concise. Each suggestion should be 1-2 sentences max.
 - Tailor advice specifically to the legal-tech industry transition.
-- If the candidate is already well-aligned, say so—don't manufacture gaps.`;
+- If the candidate is already well-aligned, say so—don't manufacture gaps.
+- Include credibility risks: warn about claims the candidate should NOT make unless genuinely true.
+- If the candidate appears to be a poor fit, provide one alternative role suggestion.`;
 
   const userPrompt = `Target Role: ${input.jobTitle} at ${input.company}
 
@@ -81,15 +86,19 @@ Analyze the candidate's fit for this role and return a JSON object with exactly 
   "topStrengths": ["3-6 specific strengths the candidate brings to this role"],
   "keyGaps": ["3-6 areas where the candidate's resume doesn't clearly address job requirements"],
   "reorderSuggestions": ["2-4 suggestions about what to move up/down in the resume for this specific role"],
-  "emphasisSuggestions": ["2-4 suggestions about what to emphasize or highlight more prominently"],
-  "addSpecificityPrompts": ["2-4 prompts asking the candidate to add specific details they may have omitted"]
+  "emphasisSuggestions": ["3-6 themes or areas to highlight more prominently"],
+  "addSpecificityPrompts": ["3-5 prompts asking the candidate to add specific details they may have omitted"],
+  "risks": ["2-3 credibility warnings about claims the candidate should NOT make unless genuinely true"],
+  "nextBestRoleIfNotFit": "One sentence suggesting an alternative role type if this one is a poor fit, or null if the candidate is a reasonable fit"
 }
 
 Examples of good suggestions:
 - reorderSuggestions: "Move contract lifecycle / agreements work above litigation details for this role."
 - emphasisSuggestions: "Emphasize cross-functional stakeholder coordination and implementation exposure."
 - addSpecificityPrompts: "Add specificity: type of agreements, stakeholders, and scope of coordination."
-- addSpecificityPrompts: "If you have any tools exposure (Salesforce, Gainsight), add it—only if true."`;
+- addSpecificityPrompts: "If you have any tools exposure (Salesforce, Gainsight), add it—only if true."
+- risks: "Don't claim hands-on CLM implementation experience unless you directly configured a CLM platform."
+- risks: "Avoid overstating 'data analytics' unless you've worked with dashboards, SQL, or reporting tools."`;
 
   const response = await openai.chat.completions.create({
     model: "gpt-4o-mini",
@@ -99,7 +108,7 @@ Examples of good suggestions:
     ],
     response_format: { type: "json_object" },
     temperature: 0.4,
-    max_tokens: 1500,
+    max_tokens: 2000,
   });
 
   const content = response.choices[0]?.message?.content;
@@ -117,5 +126,7 @@ Examples of good suggestions:
     reorderSuggestions: parsed.reorderSuggestions || [],
     emphasisSuggestions: parsed.emphasisSuggestions || [],
     addSpecificityPrompts: parsed.addSpecificityPrompts || [],
+    risks: parsed.risks || [],
+    nextBestRoleIfNotFit: parsed.nextBestRoleIfNotFit || undefined,
   };
 }

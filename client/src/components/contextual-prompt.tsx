@@ -61,10 +61,10 @@ function getPromptChips(
 
     case "career-advisor":
       if (hasPersona && categories.length >= 2) {
-        chips.push({ label: `${categories[0]} vs ${categories[1]} - which path?` });
+        chips.push({ label: `${categories[0]} vs ${categories[1]} — which path suits me?` });
       }
-      chips.push({ label: "What should I consider when comparing roles?" });
-      chips.push({ label: "How to evaluate company culture fit?" });
+      chips.push({ label: "What career paths are available in legal tech?" });
+      chips.push({ label: "What skills should I build for a transition?" });
       break;
 
     case "alerts":
@@ -193,7 +193,7 @@ export function ContextualPrompt({ pageContext, jobId, searchQuery, className = 
   const contextTitles: Record<string, string> = {
     search: "Search Assistant",
     resumes: "Resume Advisor",
-    "career-advisor": "Career Guide",
+    "career-advisor": "Career Path Guide",
     alerts: "Alert Advisor",
     insights: "Market Analyst",
     "job-detail": "Job Advisor",

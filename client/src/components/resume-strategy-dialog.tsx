@@ -20,6 +20,8 @@ import {
   ArrowUpDown,
   Target,
   Search,
+  ShieldAlert,
+  Lightbulb,
 } from "lucide-react";
 
 interface StrategyResult {
@@ -30,6 +32,8 @@ interface StrategyResult {
     reorderSuggestions: string[];
     emphasisSuggestions: string[];
     addSpecificityPrompts: string[];
+    risks: string[];
+    nextBestRoleIfNotFit?: string;
   };
 }
 
@@ -118,6 +122,13 @@ export function ResumeStrategyDialog({
           color: "text-indigo-600 dark:text-indigo-400",
           bgColor: "bg-indigo-50 dark:bg-indigo-900/20",
         },
+        {
+          title: "Credibility Risks",
+          icon: ShieldAlert,
+          items: result.strategy.risks,
+          color: "text-red-600 dark:text-red-400",
+          bgColor: "bg-red-50 dark:bg-red-900/20",
+        },
       ]
     : [];
 
@@ -127,12 +138,12 @@ export function ResumeStrategyDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2" data-testid="text-strategy-title">
             <Compass className="h-5 w-5" />
-            Resume Strategy for This Role
+            Alignment Strategy
           </DialogTitle>
           <DialogDescription data-testid="text-strategy-description">
-            Structured guidance on what to emphasize, reorder, or clarify to fit{" "}
+            How to position your resume for{" "}
             <span className="font-medium text-foreground">{jobTitle}</span> at{" "}
-            <span className="font-medium text-foreground">{company}</span> — without rewriting your resume.
+            <span className="font-medium text-foreground">{company}</span> (no rewrites).
           </DialogDescription>
         </DialogHeader>
 
@@ -227,6 +238,16 @@ export function ResumeStrategyDialog({
                   </Card>
                 ))}
             </div>
+
+            {result.strategy.nextBestRoleIfNotFit && (
+              <div className="rounded-md border border-border/40 p-3 flex items-start gap-2" data-testid="section-next-best-role">
+                <Lightbulb className="h-3.5 w-3.5 mt-0.5 text-amber-500 shrink-0" />
+                <p className="text-sm text-muted-foreground">
+                  <span className="font-medium text-foreground">If this isn't the right fit:</span>{" "}
+                  {result.strategy.nextBestRoleIfNotFit}
+                </p>
+              </div>
+            )}
 
             <p className="text-xs text-muted-foreground italic">
               These suggestions are based on your uploaded resume. They focus on positioning and emphasis — no rewrites are made here.

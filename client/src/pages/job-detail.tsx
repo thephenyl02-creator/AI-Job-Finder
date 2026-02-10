@@ -292,9 +292,10 @@ function renderBoldText(text: string, pk: number) {
 
 const JOB_QUESTION_CHIPS = [
   "Break down what this role does day-to-day",
-  "How does my legal background apply here?",
-  "What skills should I highlight in my application?",
+  "Which parts of legal experience are typically useful in this role?",
+  "What skills does this role require?",
   "Explain the technical requirements in plain language",
+  "Define unfamiliar terms in this job description",
 ];
 
 function JobChat({ jobId }: { jobId: string }) {
@@ -347,11 +348,11 @@ function JobChat({ jobId }: { jobId: string }) {
             <MessageCircle className="h-3.5 w-3.5 text-muted-foreground" />
           </div>
           <h2 className="text-base font-semibold text-foreground" data-testid="heading-job-chat">
-            Questions About This Role
+            Understand This Role (Plain-English)
           </h2>
         </div>
         <p className="text-sm text-muted-foreground mb-4 pl-[2.375rem]">
-          Get plain-language answers tailored to your legal background.
+          Get clear explanations of the role and its requirements — no resume edits here.
         </p>
 
         <div ref={scrollRef} className="max-h-72 overflow-y-auto space-y-2 mb-4">
@@ -434,6 +435,11 @@ function JobChat({ jobId }: { jobId: string }) {
             <Send className="h-4 w-4" />
           </Button>
         </div>
+
+        <p className="text-xs text-muted-foreground mt-3 pt-3 border-t border-border/30" data-testid="text-strategy-redirect">
+          Want guidance on what to emphasize in your resume for this role?{" "}
+          Use <span className="font-medium text-foreground">Alignment Strategy</span> in the section below.
+        </p>
       </CardContent>
     </Card>
   );
@@ -892,7 +898,8 @@ export default function JobDetail() {
 
             {resumeFit && resumeFit.length > 0 && (
               <div data-testid="section-resume-fit" className="mt-6 pt-6 border-t border-border/40">
-                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Resume Fit</h3>
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-1">Resume Fit</h3>
+                <p className="text-xs text-muted-foreground mb-3">Job-specific fit analysis.</p>
                 <div className="space-y-2.5">
                   {resumeFit.map((rf) => (
                     <div
@@ -997,10 +1004,10 @@ export default function JobDetail() {
                         <div className="p-1.5 rounded-md bg-blue-50 dark:bg-blue-900/20">
                           <Compass className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                         </div>
-                        <h4 className="text-sm font-semibold text-foreground">Resume Strategy for This Role</h4>
+                        <h4 className="text-sm font-semibold text-foreground">Alignment Strategy</h4>
                       </div>
                       <p className="text-xs text-muted-foreground leading-relaxed">
-                        Get structured guidance on what to emphasize, reorder, or clarify to fit this role — without rewriting your entire resume.
+                        How to position your resume for this job (no rewrites).
                       </p>
                       <Button
                         variant="outline"
@@ -1023,11 +1030,11 @@ export default function JobDetail() {
                         </div>
                         <h4 className="text-sm font-semibold text-foreground">Rewrite Selected Lines</h4>
                       </div>
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        Bullet rewrites aligned to this job.
+                      </p>
                       <p className="text-[11px] font-medium text-foreground/70" data-testid="text-trust-line-card">
                         We rewrite for alignment, not exaggeration.
-                      </p>
-                      <p className="text-xs text-muted-foreground leading-relaxed">
-                        Your experience stays truthful — we only reframe it to match this job.
                       </p>
                       {isPro ? (
                         <Button

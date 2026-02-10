@@ -1477,6 +1477,110 @@ Be specific and actionable. Focus on legal tech industry keywords and ATS best p
     }
   });
 
+  app.post("/api/career-path-advisor", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const userId = user?.id;
+      if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+      if (req.body.jobId || req.body.jobs) {
+        return res.status(400).json({
+          error: "Career Path Advisor does not accept job IDs. This feature provides career-level guidance only — not job-specific advice. Use Alignment Strategy for job-specific positioning."
+        });
+      }
+
+      const userResumes = await storage.getUserResumes(userId);
+      const primaryResume = userResumes.find((r: any) => r.isPrimary) || userResumes[0];
+      if (!primaryResume || !primaryResume.extractedData) {
+        return res.status(400).json({ error: "No parsed resume found. Please upload a resume first." });
+      }
+
+      const resumeData = primaryResume.extractedData as any;
+
+      const resumeParts: string[] = [];
+      if (resumeData.summary) resumeParts.push(`Summary: ${resumeData.summary}`);
+      if (resumeData.experience?.length) {
+        const expLines = resumeData.experience.slice(0, 8).map(
+          (e: any) => `- ${e.title} at ${e.company} (${e.duration}): ${e.description?.slice(0, 250) || ""}`
+        );
+        resumeParts.push(`Experience:\n${expLines.join("\n")}`);
+      }
+      if (resumeData.skills?.length) resumeParts.push(`Skills: ${resumeData.skills.join(", ")}`);
+      if (resumeData.education?.length) {
+        const eduLines = resumeData.education.map((e: any) => `- ${e.degree}, ${e.institution} (${e.year})`);
+        resumeParts.push(`Education:\n${eduLines.join("\n")}`);
+      }
+      if (resumeData.totalYearsExperience) resumeParts.push(`Total Years Experience: ${resumeData.totalYearsExperience}`);
+
+      const resumeSignal = resumeParts.join("\n\n");
+
+      const allJobs = await storage.getActiveJobs();
+      const categories = Array.from(new Set(allJobs.map(j => j.roleCategory).filter(Boolean)));
+      const topCompanies = Array.from(new Set(allJobs.map(j => j.company))).slice(0, 20);
+
+      const systemPrompt = `You are a career path advisor for legal professionals exploring transitions into legal technology. You provide 6–24 month career direction — NOT job-specific resume edits.
+
+STRICT RULES:
+- You must NOT mention specific job postings, match scores, or fit percentages.
+- You must NOT suggest resume rewrites, bullet point changes, or section reordering.
+- You must NOT say "for this role" or "for this job" — there is no specific job in context.
+- Focus on career trajectory, skill development, and stepping-stone roles.
+- Be honest about gaps and realistic about timelines.
+- Keep advice practical and grounded — no generic motivational fluff.
+
+Available legal tech categories in the market: ${categories.join(", ")}
+Top hiring companies: ${topCompanies.join(", ")}`;
+
+      const userPrompt = `Candidate Resume:
+${resumeSignal}
+
+Based on this candidate's background, provide career path guidance for transitioning into legal technology. Return a JSON object with exactly this shape:
+{
+  "recommendedPaths": [
+    { "path": "Category name (e.g., Legal Ops, Legal Product, Privacy/Compliance)", "why": "1-2 sentence explanation of why this path suits this candidate" }
+  ],
+  "transitionSteps": ["3-6 concrete steps the candidate should take over the next 6-24 months"],
+  "suggestedSteppingStoneRoles": ["3-6 specific job titles that would be realistic next steps"],
+  "learningPlan": ["3-5 practical learning items — courses, certifications, skills to develop"],
+  "confidenceNotes": ["2-3 honest observations about what's strong and what's missing in the candidate's profile for legal tech"]
+}
+
+Provide 2-4 recommended paths. Be specific to this candidate's actual experience — do not give generic advice.`;
+
+      const { getOpenAIClient } = await import("./lib/openai-client");
+      const completion = await getOpenAIClient().chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        response_format: { type: "json_object" },
+        temperature: 0.5,
+        max_tokens: 2000,
+      });
+
+      const content = completion.choices[0]?.message?.content;
+      if (!content) throw new Error("Empty response from AI");
+
+      const parsed = JSON.parse(content);
+
+      if (!parsed.recommendedPaths || !Array.isArray(parsed.recommendedPaths)) {
+        throw new Error("Invalid AI response format");
+      }
+
+      res.json({
+        recommendedPaths: parsed.recommendedPaths || [],
+        transitionSteps: parsed.transitionSteps || [],
+        suggestedSteppingStoneRoles: parsed.suggestedSteppingStoneRoles || [],
+        learningPlan: parsed.learningPlan || [],
+        confidenceNotes: parsed.confidenceNotes || [],
+      });
+    } catch (error: any) {
+      console.error("Error in career path advisor:", error);
+      res.status(500).json({ error: "Failed to generate career path advice" });
+    }
+  });
+
   // Compare resume to job (like iPhone comparison)
   app.post("/api/compare/:jobId", isAuthenticated, async (req, res) => {
     try {
@@ -4466,25 +4570,46 @@ Legal Tech Careers is a job platform connecting legal professionals with opportu
 SAMPLE OF AVAILABLE JOBS:
 ${jobSummaries}`;
 
-      const systemPrompt = `You are a friendly and knowledgeable career assistant for Legal Tech Careers, a job platform for legal professionals exploring technology careers. Your role is to help users understand job listings, evaluate their fit, and navigate their career transition.
+      const systemPrompt = `You are a friendly and knowledgeable role explainer for Legal Tech Careers, a job platform for legal professionals exploring technology careers. Your role is to help users understand job listings and role requirements in plain English.
 
-IMPORTANT GUIDELINES:
+ROLE BOUNDARIES — STRICTLY ENFORCED:
+You are a "Role Explainer" ONLY. You explain what a job is, what it requires, and what day-to-day work looks like.
+
+You MUST NOT:
+- Suggest resume edits, rewrites, or bullet point changes
+- Tell the user what to emphasize, reorder, or highlight in their resume
+- Provide match scores or fit percentages
+- Recommend career paths, long-term transitions, or stepping-stone roles
+- Output rewritten bullet text of any kind
+
+If the user asks questions like "What should I highlight in my application?", "How should I rewrite my resume?", or "What should I emphasize?", you MUST redirect:
+"That's a great question — but it falls under **Alignment Strategy**, which gives you structured guidance on positioning your resume for this role. You can find it in the 'Improve Your Application' section below. Here, I can explain what this role requires so you understand it clearly."
+Then provide the role requirement explanation (not application advice).
+
+You MAY:
+- Explain responsibilities and day-to-day work
+- Translate technical requirements into plain language
+- Define terms, acronyms, and industry jargon
+- Describe what the role typically expects (general requirements)
+- Give examples of what "success in the role" looks like (non-resume-specific)
+- Explain which parts of legal experience are typically useful for a given type of role (general mapping, not resume coaching)
+
+FORMATTING GUIDELINES:
 - Use plain, everyday language. Avoid jargon. If you must use a technical term, explain it simply in parentheses.
 - Be warm but concise. Keep responses focused and helpful.
 - Never mention that you are an AI or use phrases like "AI-powered".
 - When discussing a specific job, break down what the role actually involves day-to-day.
-- When comparing the user's resume to a job, be honest but constructive. Highlight strengths first, then gaps, then actionable steps.
 - If the user asks about something you don't have data for, say so honestly rather than guessing.
 - Format responses with short paragraphs. Use **bold** for emphasis on key points.
 - When listing items, use bullet points (- item) for readability.
 ${personaContext ? `\nYou have access to this user's behavioral profile from their activity on the platform. Use it to personalize your responses:
 - Reference their interests and activity patterns naturally, don't list them back robotically.
-- Suggest jobs and career paths that align with their demonstrated interests.
-- Tailor language to their career stage (e.g., more detailed explanations for early-career, strategic guidance for senior).
+- Mention relevant job listings that match their interests when helpful.
+- Tailor language to their career stage (e.g., more detailed explanations for early-career, more nuanced for senior).
 - If they've been exploring specific companies or categories, proactively mention relevant opportunities.
 - Never say "based on your profile" or "your data shows." Instead, weave personalization naturally: "Since you've been looking at compliance roles..." or "Given your interest in remote positions..."` : ""}
 ${jobContext ? "\nThe user is currently looking at a specific job posting. Use the job details below to answer their questions about this role." : ""}
-${resumeContext ? "\nThe user has uploaded their resume. Use their background to personalize advice and evaluate job fit." : ""}
+${resumeContext ? "\nThe user has uploaded their resume. Use their background to provide context, but do NOT give resume editing advice — only explain the role requirements." : ""}
 ${jobContext}
 ${resumeContext}
 ${personaContext}

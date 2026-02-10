@@ -499,7 +499,7 @@ export default function AdminAnalyticsPage() {
                       { label: "Total Saved Jobs", value: features.totalSavedJobs, icon: Bookmark },
                       { label: "Job Alerts Created", value: features.alertsCreated, icon: Bell },
                       { label: "Alert Users", value: features.alertsActiveUsers, icon: Bell },
-                      { label: "Career Advisor Views", value: features.careerAdvisorViews, icon: TrendingUp },
+                      { label: "Career Path Advisor Views", value: features.careerAdvisorViews, icon: TrendingUp },
                       { label: "Market Insights Views", value: features.insightsViews, icon: BarChart3 },
                       { label: "Resume Builder Views", value: features.resumeBuilderViews, icon: FileText },
                     ].map((f, i) => (
