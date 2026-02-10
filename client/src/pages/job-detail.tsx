@@ -444,10 +444,6 @@ function JobChat({ jobId }: { jobId: string }) {
           </Button>
         </div>
 
-        <p className="text-xs text-muted-foreground mt-3 pt-3 border-t border-border/30" data-testid="text-strategy-redirect">
-          Want guidance on what to emphasize in your resume for this role?{" "}
-          Use <span className="font-medium text-foreground">Alignment Strategy</span> in the section below.
-        </p>
       </CardContent>
     </Card>
   );
