@@ -1,0 +1,93 @@
+Act as a senior engineer working inside my existing Replit full-stack app (React client + server). I need you to update ONLY the landing page copy and a few UI labels to reposition the product from “job board” to “career clarity for lawyers moving into legal tech & AI.”
+
+IMPORTANT CONSTRAINTS:
+- Do NOT change routing, authentication, pricing logic, job fetching, database schema, or API routes.
+- Do NOT add new dependencies.
+- Keep the existing layout and styling system (Tailwind/shadcn/etc.). Minimal code changes.
+- Only modify text/copy + small labels + add one tiny micro-section.
+
+STEP 1 — FIND THE LANDING PAGE FILE
+1) Search the codebase for the current hero headline text:
+   "Legal tech jobs — finally, in one place"
+   and open the React component where it appears.
+2) Confirm this is the main public landing page (not an email template or marketing copy file).
+3) Make all changes ONLY in that landing page component (and its immediate child components if needed for labels). Do not refactor or move files.
+
+STEP 2 — APPLY COPY + LABEL CHANGES (TEXT-FIRST)
+
+A) HERO SECTION (above the fold)
+- Replace headline:
+  "Legal tech jobs — finally, in one place"
+  with:
+  "Legal Technology Careers — explained for lawyers"
+
+- Replace subheading:
+  "The legal job market has never been this confusing. Start here."
+  with:
+  "Curated legal tech & AI roles, explained in plain language so you can stop guessing and start applying."
+
+- Replace the paragraph that includes “We track every legal tech role…” (remove the word “every” and any claim that sounds like total coverage) with:
+  "We curate legal tech and AI roles that actually make sense for lawyers — and explain what each role means, what transfers from legal work, and what skills matter next."
+
+- Keep the current CTAs/buttons and their functionality. If the hero currently has:
+  Primary: "Find Your Next Role" (keep)
+  Secondary: "See Pricing" (keep)
+  Also add a small text link near the CTAs (if there isn’t one already) that says:
+  "Upload Resume"
+  It should point to the existing resume upload / pro / sign-in flow (whatever currently exists) without adding new routes.
+
+B) ADD A NEW MICRO-SECTION (right below hero OR just above “Live roles”)
+Title:
+  "Not just jobs. Career clarity."
+Body (2–3 lines):
+  "Legal tech titles change fast. We translate roles into plain language, show what’s transferable from legal work, and help you apply with confidence."
+Keep it simple, same style as existing sections.
+
+C) LIVE ROLES SECTION
+- Do NOT change job data, fetching, or list rendering.
+- Add a subtle label reinforcing the positioning:
+  Add small text either:
+   - in the section header OR
+   - on each job card (preferred if easy)
+  Label text:
+    "Why this fits lawyers →"
+  It should link to the same job detail route as the card/title (no new routes).
+
+D) PLATFORM STATS SECTION
+- Remove the timestamp line if present (e.g., “Updated 4:17:03 PM”).
+- Keep numbers, but soften labels:
+  "Open Positions" -> "Roles curated"
+  "Companies Hiring" -> "Companies hiring in legal tech"
+  "Career Paths" -> "Career paths explained"
+  "Upcoming Events" -> "Events & sessions"
+
+E) FEATURES SECTION (3 cards)
+Keep titles, rewrite descriptions to outcomes:
+
+1) "Search in plain language"
+   Replace description with:
+   "Search like you’d say it to a friend — remote, product, privacy, AI, legal ops — and find roles that actually match lawyers."
+
+2) "See where you actually fit"
+   Replace description with:
+   "Get a realistic fit score — what transfers from your legal experience, what’s missing, and where to focus next."
+
+3) "Compare before you leap"
+   Replace description with:
+   "Compare roles side by side and see how each one uses your legal background — so you choose with clarity."
+
+F) FOOTER TAGLINE
+Replace:
+  "The job board that actually understands legal tech."
+with:
+  "Career clarity for lawyers moving into legal tech and AI."
+
+STEP 3 — VERIFY
+- Run the app.
+- Confirm the landing page renders with no TypeScript errors.
+- Confirm job list still loads.
+- Confirm links still work.
+
+DELIVERABLE
+- Tell me exactly which file(s) you modified (paths).
+- Summarize the exact text changes made.
