@@ -1,0 +1,179 @@
+You are updating the landing page to its FINAL production version.
+
+IMPORTANT CONSTRAINTS:
+- Modify ONLY: client/src/pages/landing.tsx
+- DO NOT change routing, auth, API calls, database, schema, queries, or dependencies.
+- DO NOT refactor logic.
+- DO NOT add new pages.
+- This is ONLY a copy + layout + styling refinement.
+- Keep all existing data fetching and components working.
+
+GOAL:
+The landing page must feel ultra-premium, calm, and category-defining.
+The product is NOT a job board. It provides career clarity for lawyers moving into legal tech and AI.
+Reduce clutter, remove repetition, and create a clear narrative flow.
+
+====================================================
+1) HERO SECTION (FINAL VERSION — DO NOT MODIFY AGAIN)
+====================================================
+
+Eyebrow text (small uppercase):
+"FOR LAWYERS MOVING INTO LEGAL TECH & AI"
+
+Main headline (H1 — EXACT TEXT):
+"Find legal tech roles that actually fit lawyers."
+
+Typography:
+- className="text-4xl sm:text-5xl lg:text-6xl font-semibold leading-[1.05] tracking-tight max-w-[560px]"
+
+Subheadline (ONE sentence only):
+"Curated roles, plain-English role clarity, and a fit check — so you apply with confidence, not guesses."
+
+Typography:
+- className="text-base sm:text-lg text-muted-foreground leading-relaxed max-w-[560px]"
+
+CTAs:
+Primary button: "Explore roles" (keep existing handler)
+Secondary button: "Upload resume" (use existing auth/resume flow, do not add routes)
+
+Below buttons add micro-trust text:
+"Free to browse • No credit card required"
+Style:
+text-xs text-muted-foreground
+
+Reduce hero vertical height:
+pt-10 sm:pt-12 pb-10 sm:pb-12
+
+REMOVE:
+- any long explanatory paragraph above the fold
+- underline animations or decorative emphasis in the headline
+
+====================================================
+2) MARKET GAP SECTION (REPLACES LONG EXPLANATIONS)
+====================================================
+
+Immediately below hero add a compact section:
+
+Title:
+"Job boards weren’t built for this market."
+
+Bullets (ONLY these three):
+- "Legal tech searches return software engineering roles."
+- "Legal job boards return traditional associate roles."
+- "New roles are real — but hard to decode."
+
+Closing line (one sentence):
+"We curate the right roles and translate them for lawyers."
+
+No long paragraphs.
+
+====================================================
+3) CAREER PATHS SECTION (MOVE HIGHER)
+====================================================
+
+Place this section directly after the market gap section.
+
+Title:
+"Explore by career path — not job title"
+
+Display existing career path categories as chips or cards.
+If navigation already exists, keep it.
+If not, render visually only (no new logic).
+
+This section should come BEFORE features.
+
+====================================================
+4) FEATURES SECTION (RENAME INTERNALLY TO “HOW THIS HELPS”)
+====================================================
+
+Keep ONLY three cards:
+
+Card 1:
+Title: "Curated roles"
+Description:
+"Only roles that make sense for legal backgrounds — tagged by career path."
+
+Card 2:
+Title: "Role clarity"
+Description:
+"What the role actually is, what transfers from legal work, and what matters next."
+
+Card 3:
+Title: "Fit check"
+Description:
+"Resume fit score + gaps + realistic tweaks to increase alignment."
+
+Keep descriptions short (1–2 lines max).
+
+====================================================
+5) PROOF / STATS SECTION (SIMPLIFIED)
+====================================================
+
+Keep existing metrics but change labels to:
+
+- "170+ roles mapped"
+- "18 companies hiring in legal tech"
+- "10 career paths explained"
+
+REMOVE:
+- timestamps
+- “updated at” text
+- dashboard styling
+
+Display as simple centered metrics.
+
+====================================================
+6) REMOVE ENTIRE SECTION
+====================================================
+
+Delete or remove the entire:
+"Who this is for"
+section.
+
+Do not replace it with another long explanation.
+
+====================================================
+7) LIVE ROLES PANEL (DESKTOP ONLY)
+====================================================
+
+Keep the right-side live roles preview but:
+
+- Show ONLY first 3 roles (slice array to 3).
+- Remove repeated helper text like:
+  "Why this fits lawyers →"
+- Keep a small badge showing total open roles.
+- Wrap panel in:
+  rounded-2xl border bg-card p-4 shadow-sm
+
+====================================================
+8) FINAL CTA SECTION
+====================================================
+
+Title:
+"Stop guessing. Start applying with clarity."
+
+Buttons:
+- Explore roles
+- Upload resume
+
+====================================================
+9) ULTRA PREMIUM SPACING RULES
+====================================================
+
+Between major sections use:
+py-20 or py-24
+
+Use consistent vertical rhythm.
+Avoid dense stacking of sections.
+
+====================================================
+10) VERIFY
+====================================================
+
+After changes:
+- App builds without TypeScript errors
+- Jobs still load
+- Buttons still work
+- Only landing.tsx was modified
+
+Return a short summary of changes applied.
