@@ -1,0 +1,51 @@
+Update ONLY client/src/pages/landing.tsx. Do not change routes, auth, APIs, DB, or components outside this file. Keep the two-column layout. We are only reducing visual clutter above the fold.
+
+GOAL:
+Make the hero feel premium and simple: fewer words, fewer elements, less vertical height.
+
+1) HERO HEADLINE + SUBHEAD (reduce text)
+Replace the current long H1 text with a short headline:
+"Curated legal tech & AI roles."
+
+Set H1 to wrap in 1–2 lines max.
+- Use classes like:
+  className="text-4xl sm:text-5xl lg:text-6xl font-semibold leading-[1.05] tracking-tight max-w-[520px]"
+
+Add/keep a subheadline under it:
+"Explained for lawyers — so you can explore, match, and apply with clarity."
+- Use:
+  className="text-base sm:text-lg text-muted-foreground leading-relaxed max-w-[520px]"
+
+Move the longer explanation sentence (“We curate legal tech and AI roles…”) DOWN one section (below the buttons) or remove it entirely from above the fold. Above the fold should be headline + one subheadline only.
+
+2) CTA AREA (simplify)
+Keep two buttons only:
+- Find Your Next Role
+- See Pricing
+Keep “Upload Resume” as a small link UNDER the buttons, but reduce emphasis:
+  className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-4"
+
+Also keep the “Free to browse…” line but make it text-xs.
+
+3) LIVE ROLES PANEL (remove noise)
+- Remove the helper line: “Open any role to see why it fits lawyers →”
+- Remove the “Sign in to see all roles and apply” line from inside the panel OR make it smaller and lighter (text-xs).
+- Reduce number of visible role cards in the panel from 5 to 3 (slice the array or limit mapping).
+
+4) LIVE ROLES PANEL HEADER
+Keep only:
+- "Live roles"
+- badge "170+ open"
+No extra text under header.
+
+5) SPACING (reduce vertical clutter)
+Reduce padding at top of hero section:
+pt-10 sm:pt-12
+pb-10 sm:pb-12
+
+6) DO NOT touch anything else (stats/features sections can stay as-is)
+
+VERIFY:
+- No TS errors
+- Layout still responsive
+- Data still loads
