@@ -16,6 +16,7 @@ import type { Job, Resume, StructuredDescription } from "@shared/schema";
 import type { ResumeExtractedData } from "@shared/models/auth";
 import { decodeHtmlEntities, fixMissingSentenceSpaces, cleanStructuredText, parseStructuredDescription } from "@/lib/structured-description";
 import { StructuredDescriptionView } from "@/components/structured-description-view";
+import { ResumeRewriteDialog } from "@/components/resume-rewrite-dialog";
 import { Link } from "wouter";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -49,6 +50,7 @@ import {
   Upload,
   Crown,
   Lock,
+  PenLine,
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 
@@ -471,6 +473,7 @@ export default function JobDetail() {
   const applyButtonRef = useRef<HTMLDivElement>(null);
   const [showStickyBar, setShowStickyBar] = useState(false);
   const [showApplyNudge, setShowApplyNudge] = useState(false);
+  const [showRewriteDialog, setShowRewriteDialog] = useState(false);
 
   const { data: job, isLoading } = useQuery<Job>({
     queryKey: [`/api/jobs/${jobId}`],
@@ -794,6 +797,31 @@ export default function JobDetail() {
               <Bookmark className={`h-4 w-4 ${jobIsSaved ? "fill-current" : ""}`} />
               {jobIsSaved ? "Saved" : "Save"}
             </Button>
+            {isPro ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowRewriteDialog(true)}
+                className="gap-1.5"
+                data-testid="button-rewrite-bullets"
+              >
+                <PenLine className="h-4 w-4" />
+                Rewrite Resume
+              </Button>
+            ) : isAuthenticated ? (
+              <Link href="/pricing">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 text-muted-foreground"
+                  data-testid="button-rewrite-locked"
+                >
+                  <Lock className="h-3.5 w-3.5" />
+                  Rewrite Resume
+                  <Badge variant="secondary" className="text-[10px] ml-1">Pro</Badge>
+                </Button>
+              </Link>
+            ) : null}
           </div>
 
           <AnimatePresence>
@@ -1106,6 +1134,16 @@ export default function JobDetail() {
       </AnimatePresence>
 
       <Footer />
+
+      {job && (
+        <ResumeRewriteDialog
+          open={showRewriteDialog}
+          onOpenChange={setShowRewriteDialog}
+          jobId={job.id}
+          jobTitle={job.title}
+          company={job.company}
+        />
+      )}
     </div>
   );
 }
