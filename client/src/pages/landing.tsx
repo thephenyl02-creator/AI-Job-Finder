@@ -113,43 +113,36 @@ export default function Landing() {
       </header>
 
       <main className="pt-16">
-        <section className="relative dot-grid">
-          <GradientOrb className="w-[600px] h-[600px] bg-primary -top-48 -right-48" />
-          <GradientOrb className="w-[400px] h-[400px] bg-chart-2 top-32 -left-32" />
+        <section className="relative">
+          <GradientOrb className="w-[600px] h-[600px] bg-primary/20 -top-48 -right-48" />
+          <GradientOrb className="w-[400px] h-[400px] bg-chart-2/20 top-32 -left-32" />
 
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-16 sm:pt-24 pb-16 sm:pb-20 relative">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-10 sm:pt-14 pb-10 sm:pb-14 relative">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-start">
               <div>
                 <ScrollReveal delay={0.1} direction="none">
-                  <p className="text-sm font-medium text-muted-foreground tracking-wide uppercase mb-5" data-testid="text-hero-label">
-                    Legal Technology Careers &mdash; explained for lawyers
+                  <p className="text-xs font-semibold text-muted-foreground tracking-[0.18em] uppercase mb-4" data-testid="text-hero-label">
+                    Legal technology careers &mdash; explained for lawyers
                   </p>
                 </ScrollReveal>
 
                 <ScrollReveal delay={0.2}>
-                  <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[3.25rem] xl:text-5xl font-serif font-medium text-foreground mb-6 leading-[1.25] tracking-tight" data-testid="text-hero-title">
-                    Curated legal tech & AI roles, explained in plain language so you can stop guessing and{" "}
-                    <span className="relative inline-block mt-3 sm:mt-4 pb-2">
-                      start applying.
-                      <motion.span
-                        className="absolute bottom-0 left-0 right-0 h-[3px] bg-primary/40 rounded-full"
-                        initial={{ scaleX: 0 }}
-                        animate={{ scaleX: 1 }}
-                        transition={{ delay: 1, duration: 0.8, ease: "easeOut" }}
-                        style={{ transformOrigin: "left" }}
-                      />
-                    </span>
+                  <h1 className="text-4xl sm:text-5xl lg:text-6xl font-semibold text-foreground mb-5 leading-[1.05] tracking-tight max-w-[560px]" data-testid="text-hero-title">
+                    Curated legal tech & AI roles,
+                    <br />
+                    explained in plain language
+                    <span className="hidden sm:inline"> so you can stop guessing and start applying.</span>
                   </h1>
                 </ScrollReveal>
 
                 <ScrollReveal delay={0.35}>
-                  <p className="text-lg text-muted-foreground mb-8 leading-relaxed" data-testid="text-hero-subtitle">
+                  <p className="text-base sm:text-lg text-muted-foreground mb-7 leading-relaxed max-w-[560px]" data-testid="text-hero-subtitle">
                     We curate legal tech and AI roles that actually make sense for lawyers &mdash; and explain what each role means, what transfers from legal work, and what skills matter next.
                   </p>
                 </ScrollReveal>
 
                 <ScrollReveal delay={0.5}>
-                  <div className="flex flex-col sm:flex-row items-start gap-3 mb-4">
+                  <div className="flex flex-col sm:flex-row items-center gap-3 mb-3">
                     <Button size="lg" asChild className="text-base px-8" data-testid="button-hero-get-started">
                       <a href="/auth">
                         Find Your Next Role
@@ -166,7 +159,7 @@ export default function Landing() {
                     <p className="text-sm text-muted-foreground" data-testid="text-hero-free-note">
                       Free to browse. No credit card required.
                     </p>
-                    <a href="/auth" className="text-sm font-medium text-primary hover:underline" data-testid="link-hero-upload-resume">
+                    <a href="/auth" className="text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground" data-testid="link-hero-upload-resume">
                       Upload Resume
                     </a>
                   </div>
@@ -175,64 +168,66 @@ export default function Landing() {
 
               <ScrollReveal delay={0.4} direction="none">
                 <div className="hidden lg:block" data-testid="hero-job-preview">
-                  <div className="flex items-center justify-between gap-2 mb-3">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Live roles</p>
-                    {stats?.totalJobs ? (
-                      <Badge variant="secondary" className="text-xs" data-testid="badge-job-count">
-                        {stats.totalJobs}+ open
-                      </Badge>
-                    ) : null}
-                  </div>
-                  <div className="space-y-2.5">
-                    {featuredJobs?.slice(0, 5).map((job, i) => (
-                      <motion.div
-                        key={job.id}
-                        initial={{ opacity: 0, y: 8 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.6 + i * 0.1, duration: 0.4 }}
-                      >
-                        <Card className="bg-background/80 backdrop-blur-sm border-border/50" data-testid={`hero-job-card-${i}`}>
-                          <CardContent className="p-3.5">
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="min-w-0 flex-1">
-                                <p className="text-sm font-semibold text-foreground truncate">{cleanStructuredText(job.title)}</p>
-                                <div className="flex items-center gap-3 mt-1.5 flex-wrap">
-                                  <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                                    <Building2 className="h-3 w-3 shrink-0" />
-                                    <span className="truncate">{cleanStructuredText(job.company)}</span>
-                                  </span>
-                                  {job.location && (
+                  <div className="rounded-2xl border border-border/60 bg-background/70 backdrop-blur-sm p-4 shadow-sm">
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Live roles</p>
+                      {stats?.totalJobs ? (
+                        <Badge variant="secondary" className="text-xs" data-testid="badge-job-count">
+                          {stats.totalJobs}+ open
+                        </Badge>
+                      ) : null}
+                    </div>
+                    <p className="text-xs text-muted-foreground mb-3">
+                      Open any role to see why it fits lawyers &rarr;
+                    </p>
+                    <div className="space-y-2.5">
+                      {featuredJobs?.slice(0, 5).map((job, i) => (
+                        <motion.div
+                          key={job.id}
+                          initial={{ opacity: 0, y: 8 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: 0.6 + i * 0.1, duration: 0.4 }}
+                        >
+                          <Card className="border-border/60 bg-background" data-testid={`hero-job-card-${i}`}>
+                            <CardContent className="p-3.5">
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-sm font-semibold text-foreground truncate">{cleanStructuredText(job.title)}</p>
+                                  <div className="flex items-center gap-3 mt-1.5 flex-wrap">
                                     <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                                      <MapPin className="h-3 w-3 shrink-0" />
-                                      <span className="truncate">{(job.locationType === 'remote' || (!job.locationType && job.isRemote)) ? "Remote" : job.locationType === 'hybrid' ? "Hybrid" : shortenLocation(job.location)}</span>
+                                      <Building2 className="h-3 w-3 shrink-0" />
+                                      <span className="truncate">{cleanStructuredText(job.company)}</span>
                                     </span>
-                                  )}
+                                    {job.location && (
+                                      <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                                        <MapPin className="h-3 w-3 shrink-0" />
+                                        <span className="truncate">{(job.locationType === 'remote' || (!job.locationType && job.isRemote)) ? "Remote" : job.locationType === 'hybrid' ? "Hybrid" : shortenLocation(job.location)}</span>
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
+                                {job.roleCategory && (
+                                  <Badge variant="outline" className="text-[10px] shrink-0 whitespace-nowrap">
+                                    {cleanStructuredText(job.roleCategory)}
+                                  </Badge>
+                                )}
                               </div>
-                              {job.roleCategory && (
-                                <Badge variant="outline" className="text-[10px] shrink-0 whitespace-nowrap">
-                                  {cleanStructuredText(job.roleCategory)}
-                                </Badge>
-                              )}
-                            </div>
-                            <a href={`/jobs/${job.id}`} className="flex items-center gap-1 text-[11px] text-primary font-medium mt-2 hover:underline" data-testid={`link-why-fits-lawyers-${i}`}>
-                              Why this fits lawyers <ArrowRight className="h-3 w-3" />
-                            </a>
-                          </CardContent>
-                        </Card>
-                      </motion.div>
-                    ))}
-                    {(!featuredJobs || featuredJobs.length === 0) && (
-                      <div className="space-y-2.5">
-                        {[...Array(5)].map((_, i) => (
-                          <div key={i} className="h-16 rounded-md bg-muted/40 animate-pulse" />
-                        ))}
-                      </div>
-                    )}
+                            </CardContent>
+                          </Card>
+                        </motion.div>
+                      ))}
+                      {(!featuredJobs || featuredJobs.length === 0) && (
+                        <div className="space-y-2.5">
+                          {[...Array(5)].map((_, i) => (
+                            <div key={i} className="h-16 rounded-md bg-muted/40 animate-pulse" />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground text-center mt-3">
+                      Sign in to see all roles and apply
+                    </p>
                   </div>
-                  <p className="text-xs text-muted-foreground text-center mt-3">
-                    Sign in to see all roles and apply
-                  </p>
                 </div>
               </ScrollReveal>
 
