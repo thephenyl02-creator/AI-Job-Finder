@@ -1,0 +1,171 @@
+Update ONLY this file: client/src/pages/landing.tsx
+
+Do NOT change routes, auth, API calls, queries, database, or component structure. Keep all logic and data usage the same. Only adjust COPY + Tailwind classnames to make the hero and “Live roles” preview look premium and balanced. No new dependencies.
+
+GOAL:
+- Make the hero look modern and not “newspaper poster”
+- Make the right-side “Live roles” look like a clean panel
+- Reduce vertical height above the fold
+- Remove “dashboard vibe” from stats timestamp
+- Keep layout responsive
+
+========================
+1) HERO SECTION — FIX TYPOGRAPHY + HEIGHT
+========================
+
+A) Find this section wrapper:
+<div className="max-w-5xl mx-auto px-4 sm:px-6 pt-16 sm:pt-24 pb-16 sm:pb-20 relative">
+
+Change to:
+<div className="max-w-5xl mx-auto px-4 sm:px-6 pt-10 sm:pt-14 pb-10 sm:pb-14 relative">
+
+B) Find the hero label paragraph (currently):
+<p className="text-sm font-medium text-muted-foreground tracking-wide uppercase mb-5">
+  Legal tech jobs — finally, in one place
+</p>
+
+Replace with:
+<p className="text-xs font-semibold text-muted-foreground tracking-[0.18em] uppercase mb-4">
+  Legal technology careers — explained for lawyers
+</p>
+
+C) Find the H1 (currently has font-serif and large leading):
+<h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[3.25rem] xl:text-5xl font-serif font-medium text-foreground mb-6 leading-[1.25] tracking-tight">
+
+Replace the className ONLY with:
+className="text-4xl sm:text-5xl lg:text-6xl font-semibold text-foreground mb-5 leading-[1.05] tracking-tight max-w-[560px]"
+
+And update the text inside the H1 to:
+Curated legal tech & AI roles,
+<br />
+explained in plain language
+<span className="hidden sm:inline"> so you can stop guessing and start applying.</span>
+
+Remove the underline animation span entirely (the “Start here.” underline). It’s adding visual noise.
+
+D) Replace the hero subtitle paragraph (currently “Yesterday you knew…”):
+<p className="text-lg text-muted-foreground mb-8 leading-relaxed">
+  Yesterday you knew what your career looked like...
+</p>
+
+With:
+<p className="text-base sm:text-lg text-muted-foreground mb-7 leading-relaxed max-w-[560px]">
+  We curate legal tech and AI roles that actually make sense for lawyers — and explain what each role means, what transfers from legal work, and what skills matter next.
+</p>
+
+E) CTA Row cleanup:
+Find:
+<div className="flex flex-col sm:flex-row items-start gap-3 mb-4">
+
+Change items-start to items-center, and make buttons aligned:
+<div className="flex flex-col sm:flex-row items-center gap-3 mb-3">
+
+Below the “Free to browse…” line, add ONE subtle link:
+<Link href="/auth">
+  <a className="text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground">
+    Upload Resume
+  </a>
+</Link>
+
+(Do not add a new route—use /auth as the gate like your other CTAs.)
+
+========================
+2) LIVE ROLES (RIGHT SIDE) — MAKE IT A PANEL
+========================
+
+A) In the desktop preview wrapper:
+<div className="hidden lg:block">
+
+Wrap the whole live roles block in a panel container:
+<div className="hidden lg:block">
+  <div className="rounded-2xl border border-border/60 bg-background/70 backdrop-blur-sm p-4 shadow-sm">
+    ...existing content...
+  </div>
+</div>
+
+B) Inside job cards, slightly simplify visuals:
+Change Card class from:
+<Card className="bg-background/80 backdrop-blur-sm border-border/50">
+
+to:
+<Card className="border-border/60 bg-background">
+
+C) Add a single helper line under “Live roles” header:
+Right after the header row (below the Live roles + badge), add:
+<p className="text-xs text-muted-foreground mb-3">
+  Open any role to see why it fits lawyers →
+</p>
+
+Do NOT add “Why this fits lawyers” on every card.
+
+(If you already added it elsewhere, remove it from cards.)
+
+========================
+3) STATS SECTION — REMOVE TIMESTAMP + SOFTEN LABELS
+========================
+
+A) Remove the “Updated {time}” element entirely:
+Delete this block:
+{dataUpdatedAt ? (
+  <span className="text-xs text-muted-foreground ml-1">
+    Updated {new Date(dataUpdatedAt).toLocaleTimeString()}
+  </span>
+) : null}
+
+B) Change labels:
+- "Open Positions" -> "Roles curated"
+- "Companies Hiring" -> "Companies hiring in legal tech"
+- "Career Paths" -> "Career paths explained"
+- "Upcoming Events" -> "Events & sessions"
+
+(Only replace the label text.)
+
+========================
+4) FEATURES SECTION — OUTCOME COPY (keep titles)
+========================
+
+Keep titles the same, replace descriptions:
+
+Search in plain language:
+"Search like you’d say it to a friend — remote, product, privacy, AI, legal ops — and find roles that actually match lawyers."
+
+See where you actually fit:
+"Get a realistic fit score — what transfers from your legal experience, what’s missing, and where to focus next."
+
+Compare before you leap:
+"Compare roles side by side and see how each one uses your legal background — so you choose with clarity."
+
+========================
+5) BACKGROUND NOISE — TONE DOWN DOT GRID + ORBS
+========================
+
+In the hero section wrapper:
+<section className="relative dot-grid">
+
+Change to:
+<section className="relative">
+
+And reduce orb intensity by adding opacity:
+Change GradientOrb classNames to add /20 like:
+<GradientOrb className="w-[600px] h-[600px] bg-primary/20 -top-48 -right-48" />
+<GradientOrb className="w-[400px] h-[400px] bg-chart-2/20 top-32 -left-32" />
+
+========================
+6) FOOTER TAGLINE
+========================
+
+Replace:
+"The job board that actually understands legal tech."
+With:
+"Career clarity for lawyers moving into legal tech and AI."
+
+========================
+VERIFY
+========================
+
+- Run the app
+- Confirm landing renders with no TS errors
+- Confirm /api/stats and /api/featured-jobs still load
+- Confirm buttons still go to /auth and /pricing
+
+Return the final diff summary.
