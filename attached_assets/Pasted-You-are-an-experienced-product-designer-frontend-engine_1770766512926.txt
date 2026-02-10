@@ -1,0 +1,96 @@
+You are an experienced product designer + frontend engineer. Make the landing page feel ultra-premium and category-defining. This is a copy + layout + styling refinement only.
+
+SCOPE / CONSTRAINTS:
+- Modify ONLY client/src/pages/landing.tsx
+- Do NOT change routing, auth, pricing logic, job fetching, API endpoints, DB schema, or dependencies.
+- Keep all existing data sources and logic. Only restructure sections, tighten copy, and adjust Tailwind classes.
+- Preserve responsiveness.
+
+GOAL:
+Reduce clutter and create a premium hierarchy. The page should communicate one clear promise above the fold and feel calm, confident, and modern.
+
+IMPLEMENT:
+
+1) HEADER
+- Keep existing header structure.
+- Change nav label to include "Career Paths" (if you already have it; otherwise keep existing).
+- Keep styling minimal.
+
+2) HERO (ABOVE THE FOLD)
+Replace the hero content with this hierarchy:
+Eyebrow (small uppercase):
+"FOR LAWYERS MOVING INTO LEGAL TECH & AI"
+
+H1:
+"The legal tech career layer — built for lawyers."
+
+Subheadline:
+"Curated roles, plain-English role clarity, and a fit check — so you apply with confidence, not guesses."
+
+Buttons (two only):
+Primary: "Explore roles" (keep existing handler/link)
+Secondary: "Upload resume" (link to existing /auth or existing resume flow; do not add routes)
+
+Micro trust line:
+"Free to browse • No credit card required"
+
+Typography classes (premium):
+- Eyebrow: text-xs font-semibold tracking-[0.22em] text-muted-foreground
+- H1: text-4xl sm:text-5xl lg:text-6xl font-semibold leading-[1.05] tracking-tight max-w-[560px]
+- Subhead: text-base sm:text-lg text-muted-foreground leading-relaxed max-w-[560px]
+Reduce hero padding so it fits on one screen:
+pt-10 sm:pt-12 pb-10 sm:pb-12
+
+3) LIVE ROLES PANEL (DESKTOP ONLY)
+- Keep it in the right column on lg only.
+- Wrap in a premium panel:
+  rounded-2xl border bg-card p-4 shadow-sm
+- Show ONLY 3 roles (slice to 3).
+- Remove repeated "Why this fits lawyers →" from each card.
+- Keep a small badge showing "170+ open" in the panel header only.
+- Remove any extra helper sentence under the panel header.
+
+4) GAP SECTION (REPLACES LONG “WHY THIS EXISTS” PARAGRAPH ABOVE THE FOLD)
+Add a compact section just below hero:
+Title: "Job boards weren’t built for this market."
+Bullets (3):
+- "Legal tech searches return software engineering roles."
+- "Legal job boards return traditional associate roles."
+- "New roles are real — but hard to decode."
+Closing line:
+"We curate the right roles and translate them for lawyers."
+
+Keep it tight: no long paragraphs.
+
+5) 3 OUTCOME CARDS (REFINE EXISTING FEATURE CARDS)
+Use these titles + descriptions:
+- "Curated roles" — "Only roles that make sense for legal backgrounds — tagged by career path."
+- "Role clarity" — "What the role actually is, what transfers from legal work, and what matters next."
+- "Fit check (Pro)" — "Resume fit score + gaps + realistic tweaks to increase alignment."
+
+6) PROOF METRICS (QUIET)
+- Keep the three metrics but remove timestamps and any “dashboard feel”.
+- Show as simple inline metrics with small labels.
+- Remove “Updated {time}”.
+
+7) CAREER PATHS SECTION
+Add a section:
+Title: "Explore by career path — not job title"
+Add chips:
+Legal Operations, Privacy & Data, Legal Product, Contract Tech, Compliance/RegTech, Legal Engineering, Knowledge/PSL, Litigation Tech, AI Adoption
+If click behavior exists, wire it. If not, render as visual chips only.
+
+8) FINAL CTA
+Title: "Stop guessing. Start applying with clarity."
+Buttons: Explore roles / Upload resume (existing links)
+
+VISUAL CLEANUP:
+- Remove dot-grid background or reduce it substantially on the landing page only.
+- Keep spacing consistent (space-y-6 / space-y-8).
+- Avoid extra decorative underlines and animated emphasis in hero.
+
+VERIFY:
+- No TS errors
+- Jobs preview still loads
+- Buttons work
+Return the file path changed and a short summary.
