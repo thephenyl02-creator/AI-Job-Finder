@@ -70,7 +70,7 @@ function shortenLocation(location: string): string {
 
 export default function Landing() {
   usePageTitle();
-  const { data: stats, dataUpdatedAt } = useQuery<Stats>({
+  const { data: stats } = useQuery<Stats>({
     queryKey: ["/api/stats"],
     refetchInterval: 10000,
   });
@@ -122,16 +122,15 @@ export default function Landing() {
               <div>
                 <ScrollReveal delay={0.1} direction="none">
                   <p className="text-sm font-medium text-muted-foreground tracking-wide uppercase mb-5" data-testid="text-hero-label">
-                    Legal tech jobs &mdash; finally, in one place
+                    Legal Technology Careers &mdash; explained for lawyers
                   </p>
                 </ScrollReveal>
 
                 <ScrollReveal delay={0.2}>
                   <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[3.25rem] xl:text-5xl font-serif font-medium text-foreground mb-6 leading-[1.25] tracking-tight" data-testid="text-hero-title">
-                    The legal job market has never been this confusing.
-                    <br />
+                    Curated legal tech & AI roles, explained in plain language so you can stop guessing and{" "}
                     <span className="relative inline-block mt-3 sm:mt-4 pb-2">
-                      Start here.
+                      start applying.
                       <motion.span
                         className="absolute bottom-0 left-0 right-0 h-[3px] bg-primary/40 rounded-full"
                         initial={{ scaleX: 0 }}
@@ -145,7 +144,7 @@ export default function Landing() {
 
                 <ScrollReveal delay={0.35}>
                   <p className="text-lg text-muted-foreground mb-8 leading-relaxed" data-testid="text-hero-subtitle">
-                    Yesterday you knew what your career looked like. Today you're seeing job titles that didn't exist two years ago. We track every legal tech role so you can stop guessing and start applying.
+                    We curate legal tech and AI roles that actually make sense for lawyers &mdash; and explain what each role means, what transfers from legal work, and what skills matter next.
                   </p>
                 </ScrollReveal>
 
@@ -163,9 +162,14 @@ export default function Landing() {
                       </Button>
                     </Link>
                   </div>
-                  <p className="text-sm text-muted-foreground" data-testid="text-hero-free-note">
-                    Free to browse. No credit card required.
-                  </p>
+                  <div className="flex items-center gap-4">
+                    <p className="text-sm text-muted-foreground" data-testid="text-hero-free-note">
+                      Free to browse. No credit card required.
+                    </p>
+                    <a href="/auth" className="text-sm font-medium text-primary hover:underline" data-testid="link-hero-upload-resume">
+                      Upload Resume
+                    </a>
+                  </div>
                 </ScrollReveal>
               </div>
 
@@ -211,6 +215,9 @@ export default function Landing() {
                                 </Badge>
                               )}
                             </div>
+                            <a href={`/jobs/${job.id}`} className="flex items-center gap-1 text-[11px] text-primary font-medium mt-2 hover:underline" data-testid={`link-why-fits-lawyers-${i}`}>
+                              Why this fits lawyers <ArrowRight className="h-3 w-3" />
+                            </a>
                           </CardContent>
                         </Card>
                       </motion.div>
@@ -285,6 +292,21 @@ export default function Landing() {
           </div>
         </section>
 
+        <section className="border-t border-border/40">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-12 sm:py-16">
+            <ScrollReveal>
+              <div className="max-w-2xl">
+                <h2 className="text-2xl sm:text-3xl font-serif font-medium text-foreground mb-3 tracking-tight" data-testid="text-clarity-title">
+                  Not just jobs. Career clarity.
+                </h2>
+                <p className="text-base text-muted-foreground leading-relaxed" data-testid="text-clarity-body">
+                  Legal tech titles change fast. We translate roles into plain language, show what's transferable from legal work, and help you apply with confidence.
+                </p>
+              </div>
+            </ScrollReveal>
+          </div>
+        </section>
+
         <section className="border-t border-border/40 bg-primary/[0.04] dark:bg-primary/[0.08]" data-testid="stats-section">
           <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
             <div className="flex items-center justify-center gap-2 mb-5">
@@ -293,11 +315,6 @@ export default function Landing() {
                 <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
               </span>
               <span className="text-sm font-medium text-foreground/80" data-testid="stats-live-label">Live Platform Stats</span>
-              {dataUpdatedAt ? (
-                <span className="text-xs text-muted-foreground ml-1">
-                  Updated {new Date(dataUpdatedAt).toLocaleTimeString()}
-                </span>
-              ) : null}
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-8">
               <div className="text-center" data-testid="stat-jobs">
@@ -308,7 +325,7 @@ export default function Landing() {
                     <span className="text-muted-foreground/40">&mdash;</span>
                   )}
                 </div>
-                <div className="text-xs sm:text-sm text-muted-foreground mt-1.5 font-medium uppercase tracking-wide">Open Positions</div>
+                <div className="text-xs sm:text-sm text-muted-foreground mt-1.5 font-medium uppercase tracking-wide">Roles Curated</div>
               </div>
               <div className="text-center sm:border-x border-border/40" data-testid="stat-companies">
                 <div className="text-3xl sm:text-5xl font-serif font-bold text-foreground tabular-nums tracking-tight">
@@ -318,7 +335,7 @@ export default function Landing() {
                     <span className="text-muted-foreground/40">&mdash;</span>
                   )}
                 </div>
-                <div className="text-xs sm:text-sm text-muted-foreground mt-1.5 font-medium uppercase tracking-wide">Companies Hiring</div>
+                <div className="text-xs sm:text-sm text-muted-foreground mt-1.5 font-medium uppercase tracking-wide">Companies hiring in legal tech</div>
               </div>
               <div className="text-center" data-testid="stat-categories">
                 <div className="text-3xl sm:text-5xl font-serif font-bold text-foreground tabular-nums tracking-tight">
@@ -328,7 +345,7 @@ export default function Landing() {
                     <span className="text-muted-foreground/40">&mdash;</span>
                   )}
                 </div>
-                <div className="text-xs sm:text-sm text-muted-foreground mt-1.5 font-medium uppercase tracking-wide">Career Paths</div>
+                <div className="text-xs sm:text-sm text-muted-foreground mt-1.5 font-medium uppercase tracking-wide">Career paths explained</div>
               </div>
               <div className="text-center sm:border-l border-border/40" data-testid="stat-events">
                 <div className="text-3xl sm:text-5xl font-serif font-bold text-foreground tabular-nums tracking-tight">
@@ -338,7 +355,7 @@ export default function Landing() {
                     <span className="text-muted-foreground/40">&mdash;</span>
                   )}
                 </div>
-                <div className="text-xs sm:text-sm text-muted-foreground mt-1.5 font-medium uppercase tracking-wide">Upcoming Events</div>
+                <div className="text-xs sm:text-sm text-muted-foreground mt-1.5 font-medium uppercase tracking-wide">Events & sessions</div>
               </div>
             </div>
           </div>
@@ -363,19 +380,19 @@ export default function Landing() {
                 {
                   icon: Search,
                   title: "Search in plain language",
-                  description: "Say what you're looking for the way you'd tell a friend. \"I want a remote product role at a legal tech company.\" We'll find exactly that. No keyword games.",
+                  description: "Search like you'd say it to a friend \u2014 remote, product, privacy, AI, legal ops \u2014 and find roles that actually match lawyers.",
                   testId: "text-feature-search",
                 },
                 {
                   icon: FileText,
                   title: "See where you actually fit",
-                  description: "Upload your resume. We'll match it against open roles and show you a clear fit score &mdash; what transfers, what's missing, and where to focus.",
+                  description: "Get a realistic fit score \u2014 what transfers from your legal experience, what's missing, and where to focus next.",
                   testId: "text-feature-resume",
                 },
                 {
                   icon: Compass,
                   title: "Compare before you leap",
-                  description: "Weighing two offers? Compare roles side by side and see how each one uses your legal background differently. No guessing.",
+                  description: "Compare roles side by side and see how each one uses your legal background \u2014 so you choose with clarity.",
                   testId: "text-feature-advisor",
                 },
               ].map((feature) => (
@@ -593,7 +610,7 @@ export default function Landing() {
               </span>
             </div>
             <p className="text-xs text-muted-foreground">
-              The job board that actually understands legal tech.
+              Career clarity for lawyers moving into legal tech and AI.
             </p>
           </div>
         </div>
