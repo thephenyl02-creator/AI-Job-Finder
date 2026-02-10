@@ -1,0 +1,143 @@
+You are working inside my existing AI-Job-Finder codebase (React client + Express server + Drizzle/Postgres). I need you to add TRUST + FRESHNESS features to job listings and job detail pages: Source attribution, Last Checked/Updated, Report Broken Link, and an admin-friendly workflow to review reports and mark jobs as expired.
+
+GOAL:
+Make the platform feel truly curated and trustworthy for lawyers by showing:
+- where the job came from (source domain / ATS)
+- when it was last verified
+- an easy way to report broken/duplicate/outdated jobs
+And ensure admin can review and take action.
+
+---------------------------------------
+1) DATABASE CHANGES
+---------------------------------------
+Update jobs table (Drizzle schema) to include:
+- source_name (text)          // e.g., “Workday”, “Greenhouse”, “Company Careers”, “Lever”
+- source_domain (text)        // e.g., “careers.company.com”
+- source_url (text)           // canonical job URL stored after cleaning params
+- last_checked_at (timestamp) // when we last verified the job link/content
+- job_status (text)           // “open” | “closed” | “needs_review”
+- closed_reason (text, nullable) // “404”, “Removed”, “Duplicate”, “Expired”
+- closed_at (timestamp, nullable)
+
+Create a new table job_reports:
+- id
+- job_id
+- reporter_user_id (nullable; allow anonymous if you prefer, but logged-in is better)
+- report_type (text)  // “broken_link” | “duplicate” | “wrong_category” | “outdated” | “spam”
+- details (text, nullable)
+- created_at
+- status (text)       // “new” | “reviewed” | “resolved”
+- admin_notes (text, nullable)
+- resolved_at (timestamp, nullable)
+
+Add indexes:
+- job_reports(job_id), job_reports(status), jobs(job_status)
+
+Add migrations.
+
+---------------------------------------
+2) URL CANONICALIZATION (IMPORTANT)
+---------------------------------------
+Implement a helper canonicalizeJobUrl(url):
+- strip tracking params: utm_*, gclid, fbclid, etc.
+- trim whitespace
+- normalize http/https if needed
+- store canonical in jobs.source_url (or applyUrl if you already use that; but keep source_url canonical)
+
+When ingesting/scraping jobs:
+- Detect source platform (lever, greenhouse, workday, icims, smartrecruiters, etc.) by URL patterns.
+- Populate source_name + source_domain + source_url.
+- Set last_checked_at = now.
+- Set job_status = “open” on insert unless otherwise detected.
+
+---------------------------------------
+3) SERVER ENDPOINTS
+---------------------------------------
+A) POST /api/jobs/:jobId/report
+- Auth optional (but prefer logged-in)
+- Body: { reportType, details }
+- Validate reportType enum
+- Create job_reports row with status “new”
+- Return success
+
+B) GET /api/admin/job-reports (admin only)
+- Returns newest first
+- Filter by status (new/reviewed/resolved)
+
+C) POST /api/admin/job-reports/:reportId/resolve (admin only)
+- Body: { action, adminNotes }
+- action enum:
+  - “mark_closed” (sets job_status=closed, closed_reason from reportType or admin selection)
+  - “mark_open” (if false report)
+  - “merge_duplicate” (optional stub if duplicate handling exists)
+  - “mark_needs_review”
+- Set report status to “resolved”, resolved_at
+
+D) POST /api/admin/jobs/:jobId/mark-closed (admin only)
+- Body: { reason }
+- Sets job_status=closed, closed_reason, closed_at
+
+E) OPTIONAL: Scheduled checker endpoint / cron job
+- A job that periodically verifies job links:
+  - For “open” jobs, do a HEAD/GET fetch to source_url
+  - If 404/410 or “no longer available” text found, mark job_status=closed and closed_reason
+  - Update last_checked_at
+Implement conservatively (rate limit, domain throttling).
+
+---------------------------------------
+4) CLIENT UI CHANGES (USER-FACING)
+---------------------------------------
+A) Job Cards (list view):
+Display a small footer row:
+- “Source: {source_name or domain}”
+- “Checked: {relative time}” (e.g., “Checked: 2 days ago”)
+Only if values exist; otherwise hide.
+
+B) Job Detail Page:
+Add a “Trust” block near Apply button:
+- Source: {source_name} ({source_domain})
+- Last checked: {formatted date/time}
+- Status: Open / Closed (if closed, show “This listing appears closed.” and hide Apply or warn)
+
+Add a link/button:
+[Report an issue]
+Opens a small modal:
+- Select report type (broken link / duplicate / wrong category / outdated / spam)
+- Optional details
+- Submit
+
+Show a confirmation toast: “Thanks — we’ll review this.”
+
+---------------------------------------
+5) CLIENT UI CHANGES (ADMIN)
+---------------------------------------
+Add an Admin page/tab: “Reports”
+- Table list of job reports:
+  - date, job title/company, report type, status
+  - open job detail in new tab
+- Actions:
+  - Resolve → mark closed (reason dropdown)
+  - Mark reviewed / resolved
+  - Add admin notes
+- When resolved, status updates live.
+
+---------------------------------------
+6) QUALITY + SAFETY
+---------------------------------------
+- Prevent spam: rate limit reports per IP/user (e.g., 5/day)
+- Sanitize details input
+- Ensure admin routes are protected by server-side requireAdmin middleware
+- Do not break existing job ingestion; populate fields when available, default safely when not.
+
+---------------------------------------
+7) DELIVERABLES
+---------------------------------------
+After implementing, show:
+- migrations created
+- updated schema.ts changes
+- endpoints added and example request/response
+- screenshots/description of:
+  (1) job detail trust block
+  (2) report modal
+  (3) admin reports page
+- explanation of how source_name detection works

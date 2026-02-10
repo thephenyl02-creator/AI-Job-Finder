@@ -1,0 +1,94 @@
+You are working inside my existing AI-Job-Finder codebase (React client + Express server). I need you to refactor the Job Detail page so job content is PUBLIC (no auth required), while personalized features remain AUTH-ONLY. This fixes the issue where `if (!isAuthenticated) return null;` prevents logged-out users from seeing State A of NextStepCard and blocks top-of-funnel usage.
+
+GOAL:
+- Logged-out users can view job title/company/location/description/source/last checked and click Apply.
+- Logged-out users see NextStepCard State A: “Sign in to see your fit for this role”.
+- Logged-in users additionally see: Resume Match, Alignment Strategy, Rewrite Selected Lines, and guided states B–D.
+
+NON-NEGOTIABLE:
+Do not break existing scraping/admin flows.
+Do not remove authentication from endpoints that return personalized data.
+Only expose safe job fields publicly.
+
+---------------------------------------
+1) BACKEND: PUBLIC JOB ENDPOINTS
+---------------------------------------
+A) Add/confirm public endpoint:
+GET /api/public/jobs/:jobId
+- No auth required
+- Returns only safe fields:
+  { id, title, company, location, employmentType, description, applyUrl, source_name, source_domain, last_checked_at, job_status, createdAt }
+- If job_status is “closed”, still return it but include status to show warning.
+
+B) Keep existing authenticated endpoints unchanged:
+- /api/jobs/:jobId (if it returns personalized data or restricted fields)
+- resume match endpoints, strategy, rewrite, etc.
+
+If you already have GET /api/jobs/:id requiring auth, DO NOT change it. Add the public route separately.
+
+---------------------------------------
+2) CLIENT: SPLIT JOB DETAIL PAGE INTO 2 LAYERS
+---------------------------------------
+Refactor the JobDetail page into:
+
+<JobDetailPage>
+  - Fetches public job data using /api/public/jobs/:jobId (no auth)
+  - Always renders PublicJobView with the public data
+  - Conditionally renders AuthFeatures only if isAuthenticated is true
+
+Create components:
+
+A) PublicJobView
+- Shows job title/company/location
+- Shows description
+- Shows “Source / Last checked / Status” trust block
+- Shows Apply button (with warning if closed)
+- Shows NextStepCard for logged-out users (State A)
+  State A text:
+  Title: “Your Next Step”
+  Message: “Sign in to see your fit for this role and get lawyer-friendly guidance.”
+  CTA: [Sign in]
+
+B) AuthFeatures (renders only when authenticated)
+- Existing Resume Upload + Match flow
+- After match exists: “Improve your application” cards:
+  - Alignment Strategy
+  - Rewrite Selected Lines (Pro-gated)
+- NextStepCard states B–D (upload/match/pro logic)
+IMPORTANT: AuthFeatures should never be mounted for logged-out users.
+
+Remove any `if (!isAuthenticated) return null;` early return from the top-level page.
+Instead, use it only to gate AuthFeatures.
+
+---------------------------------------
+3) STATE + DATA FLOW
+---------------------------------------
+- Public job fetch must not depend on auth state.
+- Auth features may reuse existing authenticated job fetches if needed (or just use the public job data where possible).
+- Ensure no duplicate fetch loops: cache public job data in component state and pass down.
+
+---------------------------------------
+4) ROUTING + ERROR HANDLING
+---------------------------------------
+- If public job fetch returns 404: show a friendly “Job not found” page.
+- If public job fetch succeeds but job is closed: show a subtle banner:
+  “This listing may no longer be available.”
+
+---------------------------------------
+5) QA CHECKLIST
+---------------------------------------
+Verify:
+1) Logged out user can open any job detail URL and see job content + Apply + trust block + NextStepCard sign-in CTA.
+2) Logged out user cannot see resume match, strategy, rewrite, or any personalized components.
+3) Logged in user sees everything as before (match/strategy/rewrite) PLUS the guided NextStepCard states B–D.
+4) No TypeScript errors, no route collisions.
+5) Public endpoint does not leak private user data or admin data.
+
+---------------------------------------
+DELIVERABLES
+---------------------------------------
+After implementing, show:
+- files changed
+- the new GET /api/public/jobs/:jobId route code
+- the new component structure (PublicJobView + AuthFeatures)
+- a short description of what logged-out vs logged-in users see

@@ -1,0 +1,72 @@
+You are working inside my existing AI-Job-Finder codebase (React client). I need you to remove confusing duplicate CTAs on the Job Details page. Right now the user sees TWO “Upload Resume” CTAs: one in the match empty-state banner and one in the “Your Next Step” card. This looks buggy and reduces conversion.
+
+GOAL:
+On the Job Details page, there must be ONLY ONE primary CTA per user state.
+- If the NextStepCard is present, it should be the single source of the CTA.
+- The match section can remain, but its empty state must NOT include a duplicate button.
+
+---------------------------------------
+1) REQUIRED BEHAVIOR
+---------------------------------------
+State: Logged in + no resume/match yet
+- NextStepCard shows:
+  “Upload your resume to see your fit score for this role.”
+  [Upload Resume]
+  “Takes ~30 seconds.”
+- The Resume Match empty-state banner above/below it should show ONLY informational text, no button.
+
+State: Logged in + match exists
+- NextStepCard changes to strategy/rewrite guidance (as already defined).
+- Resume Match section can show results and should not show any “Upload Resume” CTA.
+
+State: Logged out (if job page supports public view)
+- NextStepCard shows Sign in CTA.
+- No Upload Resume CTA visible.
+
+---------------------------------------
+2) IMPLEMENTATION INSTRUCTIONS
+---------------------------------------
+A) Locate the Job Details component where you render:
+- the resume upload banner / match empty state
+- the NextStepCard
+
+B) Refactor the match empty-state component to accept a prop like:
+- showCTA: boolean
+Default false when NextStepCard is rendered.
+
+C) Ensure only one Upload Resume handler exists.
+NextStepCard should call the same onUploadResume() handler currently used by the upload banner.
+
+D) Ensure styling remains clean:
+- Keep the empty-state banner as a light informational block
+- NextStepCard is the primary action card
+
+---------------------------------------
+3) UI COPY (for the empty-state banner)
+---------------------------------------
+Replace the banner content with:
+
+Title:
+“Resume Match”
+
+Body:
+“Upload your resume to see how well you match this role.”
+
+(No button)
+
+---------------------------------------
+4) QA CHECKLIST
+---------------------------------------
+Verify:
+1) Logged in + no match: only ONE Upload Resume button visible (inside NextStepCard).
+2) Logged in + match exists: no Upload Resume button visible anywhere.
+3) Logged out: no Upload Resume button visible.
+4) Clicking Upload Resume from NextStepCard triggers the same upload flow as before.
+
+---------------------------------------
+DELIVERABLES
+---------------------------------------
+After changes, show:
+- files changed
+- screenshot/description confirming only one Upload Resume CTA remains
+- brief note on where you toggled showCTA=false
