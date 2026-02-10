@@ -604,3 +604,16 @@ export interface StructuredDescription {
 }
 
 export type StructuredStatus = "missing" | "generated" | "edited" | "approved";
+
+export const resumeRewriteRuns = pgTable("resume_rewrite_runs", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id", { length: 255 }).notNull(),
+  jobId: integer("job_id").notNull(),
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`),
+  inputHash: text("input_hash"),
+  outputJson: jsonb("output_json"),
+  status: varchar("status", { length: 20 }).notNull().default("success"),
+  errorMessage: text("error_message"),
+});
+
+export type ResumeRewriteRun = typeof resumeRewriteRuns.$inferSelect;
