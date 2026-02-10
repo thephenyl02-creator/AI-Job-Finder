@@ -117,7 +117,7 @@ export default function Landing() {
           <GradientOrb className="w-[600px] h-[600px] bg-primary/20 -top-48 -right-48" />
           <GradientOrb className="w-[400px] h-[400px] bg-chart-2/20 top-32 -left-32" />
 
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-10 sm:pt-14 pb-10 sm:pb-14 relative">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-10 sm:pt-12 pb-10 sm:pb-12 relative">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-start">
               <div>
                 <ScrollReveal delay={0.1} direction="none">
@@ -127,17 +127,14 @@ export default function Landing() {
                 </ScrollReveal>
 
                 <ScrollReveal delay={0.2}>
-                  <h1 className="text-4xl sm:text-5xl lg:text-6xl font-semibold text-foreground mb-5 leading-[1.05] tracking-tight max-w-[560px]" data-testid="text-hero-title">
-                    Curated legal tech & AI roles,
-                    <br />
-                    explained in plain language
-                    <span className="hidden sm:inline"> so you can stop guessing and start applying.</span>
+                  <h1 className="text-4xl sm:text-5xl lg:text-6xl font-semibold text-foreground mb-5 leading-[1.05] tracking-tight max-w-[520px]" data-testid="text-hero-title">
+                    Curated legal tech & AI roles.
                   </h1>
                 </ScrollReveal>
 
                 <ScrollReveal delay={0.35}>
-                  <p className="text-base sm:text-lg text-muted-foreground mb-7 leading-relaxed max-w-[560px]" data-testid="text-hero-subtitle">
-                    We curate legal tech and AI roles that actually make sense for lawyers &mdash; and explain what each role means, what transfers from legal work, and what skills matter next.
+                  <p className="text-base sm:text-lg text-muted-foreground mb-7 leading-relaxed max-w-[520px]" data-testid="text-hero-subtitle">
+                    Explained for lawyers &mdash; so you can explore, match, and apply with clarity.
                   </p>
                 </ScrollReveal>
 
@@ -156,10 +153,10 @@ export default function Landing() {
                     </Link>
                   </div>
                   <div className="flex items-center gap-4">
-                    <p className="text-sm text-muted-foreground" data-testid="text-hero-free-note">
+                    <p className="text-xs text-muted-foreground" data-testid="text-hero-free-note">
                       Free to browse. No credit card required.
                     </p>
-                    <a href="/auth" className="text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground" data-testid="link-hero-upload-resume">
+                    <a href="/auth" className="text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground" data-testid="link-hero-upload-resume">
                       Upload Resume
                     </a>
                   </div>
@@ -169,7 +166,7 @@ export default function Landing() {
               <ScrollReveal delay={0.4} direction="none">
                 <div className="hidden lg:block" data-testid="hero-job-preview">
                   <div className="rounded-2xl border border-border/60 bg-background/70 backdrop-blur-sm p-4 shadow-sm">
-                    <div className="flex items-center justify-between gap-2 mb-1">
+                    <div className="flex items-center justify-between gap-2 mb-3">
                       <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Live roles</p>
                       {stats?.totalJobs ? (
                         <Badge variant="secondary" className="text-xs" data-testid="badge-job-count">
@@ -177,11 +174,8 @@ export default function Landing() {
                         </Badge>
                       ) : null}
                     </div>
-                    <p className="text-xs text-muted-foreground mb-3">
-                      Open any role to see why it fits lawyers &rarr;
-                    </p>
                     <div className="space-y-2.5">
-                      {featuredJobs?.slice(0, 5).map((job, i) => (
+                      {featuredJobs?.slice(0, 3).map((job, i) => (
                         <motion.div
                           key={job.id}
                           initial={{ opacity: 0, y: 8 }}
@@ -218,15 +212,12 @@ export default function Landing() {
                       ))}
                       {(!featuredJobs || featuredJobs.length === 0) && (
                         <div className="space-y-2.5">
-                          {[...Array(5)].map((_, i) => (
+                          {[...Array(3)].map((_, i) => (
                             <div key={i} className="h-16 rounded-md bg-muted/40 animate-pulse" />
                           ))}
                         </div>
                       )}
                     </div>
-                    <p className="text-xs text-muted-foreground text-center mt-3">
-                      Sign in to see all roles and apply
-                    </p>
                   </div>
                 </div>
               </ScrollReveal>
