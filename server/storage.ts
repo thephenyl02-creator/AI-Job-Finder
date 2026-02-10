@@ -1,7 +1,8 @@
 import { db } from "./db";
-import { jobs, users, userPreferences, jobCategories, jobSubmissions, jobAlerts, notifications, resumes, builtResumes, userActivities, userPersonas, savedJobs, jobApplications, events, scrapeRuns, type Job, type InsertJob, type User, type UserPreferences, type InsertUserPreferences, type ResumeExtractedData, type JobCategory, type JobSubmission, type InsertJobSubmission, type JobAlert, type InsertJobAlert, type Notification, type InsertNotification, type Resume, type InsertResume, type BuiltResume, type InsertBuiltResume, type UserActivity, type InsertUserActivity, type UserPersona, type InsertUserPersona, type SavedJob, type InsertSavedJob, type JobApplication, type InsertJobApplication, type JobApplicationWithJob, type Event, type InsertEvent, type ScrapeRun, type InsertScrapeRun, JOB_TAXONOMY } from "@shared/schema";
+import { jobs, users, userPreferences, jobCategories, jobSubmissions, jobAlerts, notifications, resumes, builtResumes, userActivities, userPersonas, savedJobs, jobApplications, events, scrapeRuns, jobReports, type Job, type InsertJob, type User, type UserPreferences, type InsertUserPreferences, type ResumeExtractedData, type JobCategory, type JobSubmission, type InsertJobSubmission, type JobAlert, type InsertJobAlert, type Notification, type InsertNotification, type Resume, type InsertResume, type BuiltResume, type InsertBuiltResume, type UserActivity, type InsertUserActivity, type UserPersona, type InsertUserPersona, type SavedJob, type InsertSavedJob, type JobApplication, type InsertJobApplication, type JobApplicationWithJob, type Event, type InsertEvent, type ScrapeRun, type InsertScrapeRun, type JobReport, type InsertJobReport, JOB_TAXONOMY } from "@shared/schema";
 import { eq, desc, and, sql, inArray, lt, gte, count } from "drizzle-orm";
 import { cleanJobDescription } from "./lib/description-cleaner";
+import { deriveSourceInfo } from "./lib/url-utils";
 
 export interface IStorage {
   // Jobs
@@ -132,6 +133,12 @@ export interface IStorage {
   updateScrapeRun(id: number, data: Partial<InsertScrapeRun>): Promise<ScrapeRun | undefined>;
   getScrapeRuns(limit?: number): Promise<ScrapeRun[]>;
   getLatestScrapeRun(): Promise<ScrapeRun | undefined>;
+  // Job Reports
+  createJobReport(report: InsertJobReport): Promise<JobReport>;
+  getJobReports(status?: string): Promise<(JobReport & { jobTitle?: string; jobCompany?: string })[]>;
+  getReportCountForJob(jobId: number): Promise<number>;
+  updateJobReportStatus(id: number, status: string, adminNotes?: string): Promise<JobReport | undefined>;
+  getPublicJob(id: number): Promise<Job | undefined>;
 }
 
 class DatabaseStorage implements IStorage {
@@ -161,6 +168,12 @@ class DatabaseStorage implements IStorage {
 
   async createJob(job: InsertJob): Promise<Job> {
     const cleaned = this.sanitizeJobFields(job);
+    if (cleaned.applyUrl && !cleaned.sourceDomain) {
+      const sourceInfo = deriveSourceInfo(cleaned.applyUrl as string, cleaned.source as string | null);
+      if (sourceInfo.sourceDomain) (cleaned as any).sourceDomain = sourceInfo.sourceDomain;
+      if (sourceInfo.sourceName) (cleaned as any).sourceName = sourceInfo.sourceName;
+      if (sourceInfo.sourceUrl) (cleaned as any).sourceUrl = sourceInfo.sourceUrl;
+    }
     const [newJob] = await db.insert(jobs).values(cleaned as InsertJob).returning();
     return newJob;
   }
@@ -2429,6 +2442,57 @@ class DatabaseStorage implements IStorage {
   async getLatestScrapeRun(): Promise<ScrapeRun | undefined> {
     const [run] = await db.select().from(scrapeRuns).orderBy(desc(scrapeRuns.startedAt)).limit(1);
     return run;
+  }
+
+  async createJobReport(report: InsertJobReport): Promise<JobReport> {
+    const [newReport] = await db.insert(jobReports).values(report).returning();
+    return newReport;
+  }
+
+  async getJobReports(status?: string): Promise<(JobReport & { jobTitle?: string; jobCompany?: string })[]> {
+    const conditions: any[] = [];
+    if (status) {
+      conditions.push(eq(jobReports.status, status));
+    }
+    const reports = conditions.length > 0
+      ? await db.select().from(jobReports).where(and(...conditions)).orderBy(desc(jobReports.createdAt))
+      : await db.select().from(jobReports).orderBy(desc(jobReports.createdAt));
+
+    const enriched = await Promise.all(
+      reports.map(async (report) => {
+        const job = await this.getJob(report.jobId);
+        return { ...report, jobTitle: job?.title, jobCompany: job?.company };
+      })
+    );
+    return enriched;
+  }
+
+  async getReportCountForJob(jobId: number): Promise<number> {
+    const [result] = await db
+      .select({ count: count() })
+      .from(jobReports)
+      .where(eq(jobReports.jobId, jobId));
+    return result?.count || 0;
+  }
+
+  async updateJobReportStatus(id: number, status: string, adminNotes?: string): Promise<JobReport | undefined> {
+    const updateData: any = { status };
+    if (adminNotes !== undefined) updateData.adminNotes = adminNotes;
+    if (status === "resolved") updateData.resolvedAt = new Date();
+    const [updated] = await db
+      .update(jobReports)
+      .set(updateData)
+      .where(eq(jobReports.id, id))
+      .returning();
+    return updated;
+  }
+
+  async getPublicJob(id: number): Promise<Job | undefined> {
+    const [job] = await db
+      .select()
+      .from(jobs)
+      .where(and(eq(jobs.id, id), eq(jobs.isActive, true), eq(jobs.isPublished, true)));
+    return job;
   }
 }
 

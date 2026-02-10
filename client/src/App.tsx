@@ -23,6 +23,7 @@ import SavedJobs from "@/pages/saved-jobs";
 import AdminAnalytics from "@/pages/admin-analytics";
 import AdminScraper from "@/pages/admin-scraper";
 import AdminEvents from "@/pages/admin-events";
+import AdminReports from "@/pages/admin-reports";
 import Pricing from "@/pages/pricing";
 import Terms from "@/pages/terms";
 import Privacy from "@/pages/privacy";
@@ -64,6 +65,7 @@ function AppRouter() {
       <Route path="/admin/analytics">{isAuthenticated ? <AdminAnalytics /> : <Landing />}</Route>
       <Route path="/admin/scraper">{isAuthenticated ? <AdminScraper /> : <Landing />}</Route>
       <Route path="/admin/events">{isAuthenticated ? <AdminEvents /> : <Landing />}</Route>
+      <Route path="/admin/reports">{isAuthenticated ? <AdminReports /> : <Landing />}</Route>
       <Route path="/career-advisor" component={CareerPathAdvisor} />
       <Route path="/insights">{isAuthenticated ? <Insights /> : <Landing />}</Route>
       <Route path="/alerts">{isAuthenticated ? <Alerts /> : <Landing />}</Route>

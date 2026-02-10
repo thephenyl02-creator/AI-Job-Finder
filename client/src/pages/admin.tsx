@@ -845,6 +845,12 @@ export default function AdminPage() {
                   Events
                 </Button>
               </Link>
+              <Link href="/admin/reports">
+                <Button variant="outline" data-testid="link-reports-admin">
+                  <ShieldX className="h-4 w-4 mr-2" />
+                  Reports
+                </Button>
+              </Link>
             </div>
           </div>
         </div>

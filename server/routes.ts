@@ -279,6 +279,80 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/public/jobs/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id as string);
+      if (isNaN(id)) return res.status(400).json({ error: "Invalid job ID" });
+      const job = await storage.getPublicJob(id);
+      if (!job) return res.status(404).json({ error: "Job not found" });
+      res.json(job);
+    } catch (error) {
+      console.error("Error fetching public job:", error);
+      res.status(500).json({ error: "Failed to fetch job" });
+    }
+  });
+
+  app.post("/api/jobs/:id/report", async (req, res) => {
+    try {
+      const jobId = parseInt(req.params.id as string);
+      if (isNaN(jobId)) return res.status(400).json({ error: "Invalid job ID" });
+      const job = await storage.getPublicJob(jobId);
+      if (!job) return res.status(404).json({ error: "Job not found" });
+      const schema = z.object({
+        reportType: z.enum(["broken_link", "duplicate", "wrong_category", "outdated", "spam"]),
+        details: z.string().max(1000).optional(),
+      });
+      const parsed = schema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ error: "Invalid report data" });
+      const userId = (req as any).user?.id || null;
+      const report = await storage.createJobReport({
+        jobId,
+        reporterUserId: userId,
+        reportType: parsed.data.reportType,
+        details: parsed.data.details || null,
+        status: "new",
+      });
+      res.json(report);
+    } catch (error) {
+      console.error("Error creating job report:", error);
+      res.status(500).json({ error: "Failed to create report" });
+    }
+  });
+
+  app.get("/api/admin/reports", isAuthenticated, async (req: any, res) => {
+    try {
+      const isAdmin = await storage.isUserAdmin(req.user.id);
+      if (!isAdmin) return res.status(403).json({ error: "Admin access required" });
+      const status = req.query.status as string | undefined;
+      const reports = await storage.getJobReports(status);
+      res.json(reports);
+    } catch (error) {
+      console.error("Error fetching reports:", error);
+      res.status(500).json({ error: "Failed to fetch reports" });
+    }
+  });
+
+  app.patch("/api/admin/reports/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const isAdmin = await storage.isUserAdmin(req.user.id);
+      if (!isAdmin) return res.status(403).json({ error: "Admin access required" });
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ error: "Invalid report ID" });
+      const schema = z.object({
+        status: z.enum(["new", "reviewed", "resolved"]),
+        adminNotes: z.string().max(2000).optional(),
+      });
+      const parsed = schema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ error: "Invalid data" });
+      const updated = await storage.updateJobReportStatus(id, parsed.data.status, parsed.data.adminNotes);
+      if (!updated) return res.status(404).json({ error: "Report not found" });
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating report:", error);
+      res.status(500).json({ error: "Failed to update report" });
+    }
+  });
+
   app.get("/api/jobs", isAuthenticated, async (req, res) => {
     try {
       const jobs = await storage.getActiveJobs();

@@ -274,6 +274,20 @@ export function JobCard({ job, showMatchScore = false, hasResume = false, isSave
               </Button>
             </div>
           </div>
+
+          {(job.sourceDomain || job.jobStatus === 'closed') && (
+            <div className="text-[11px] text-muted-foreground pt-2" data-testid={`text-source-attribution-${job.id}`}>
+              {job.sourceDomain && (
+                <span data-testid={`text-source-domain-${job.id}`}>via {job.sourceDomain}</span>
+              )}
+              {job.sourceDomain && job.jobStatus === 'closed' && (
+                <span className="mx-1">·</span>
+              )}
+              {job.jobStatus === 'closed' && (
+                <span className="text-amber-600" data-testid={`text-job-status-closed-${job.id}`}>May be closed</span>
+              )}
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

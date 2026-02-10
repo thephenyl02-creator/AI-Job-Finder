@@ -54,7 +54,14 @@ import {
   Lock,
   PenLine,
   Compass,
+  ShieldCheck,
+  AlertTriangle,
+  Flag,
 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
 
 function cleanDescription(text: string): string {
@@ -463,6 +470,21 @@ function getPostedDateLabel(date: Date | string | null | undefined): string | nu
   return `Posted ${months} ${months === 1 ? "month" : "months"} ago`;
 }
 
+function getLastCheckedLabel(date: Date | string | null | undefined): string | null {
+  if (!date) return null;
+  const d = new Date(date);
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
+  const hours = Math.floor(diffMs / (1000 * 60 * 60));
+  if (hours < 1) return "Verified just now";
+  if (hours < 24) return `Verified ${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return "Verified yesterday";
+  if (days < 7) return `Verified ${days} days ago`;
+  const weeks = Math.floor(days / 7);
+  return `Verified ${weeks} ${weeks === 1 ? "week" : "weeks"} ago`;
+}
+
 function getLocationTypeLabel(job: Job): string | null {
   if (job.locationType === 'remote' || (!job.locationType && job.isRemote)) return 'Remote';
   if (job.locationType === 'hybrid') return 'Hybrid';
@@ -484,11 +506,22 @@ export default function JobDetail() {
   const [showApplyNudge, setShowApplyNudge] = useState(false);
   const [showRewriteDialog, setShowRewriteDialog] = useState(false);
   const [showStrategyDialog, setShowStrategyDialog] = useState(false);
+  const [showReportDialog, setShowReportDialog] = useState(false);
+  const [reportType, setReportType] = useState<string>("broken_link");
+  const [reportDetails, setReportDetails] = useState("");
 
-  const { data: job, isLoading } = useQuery<Job>({
-    queryKey: [`/api/jobs/${jobId}`],
+  const { data: publicJob, isLoading: publicLoading } = useQuery<Job>({
+    queryKey: ['/api/public/jobs', jobId],
+    enabled: !isAuthenticated && !authLoading && !!jobId,
+  });
+
+  const { data: authJob, isLoading: authJobLoading } = useQuery<Job>({
+    queryKey: ['/api/jobs', jobId],
     enabled: isAuthenticated && !!jobId,
   });
+
+  const job = isAuthenticated ? authJob : publicJob;
+  const isLoading = isAuthenticated ? authJobLoading : publicLoading;
 
   useEffect(() => {
     if (jobId && job && trackedJobRef.current !== jobId) {
@@ -577,6 +610,19 @@ export default function JobDetail() {
     },
   });
 
+  const reportMutation = useMutation({
+    mutationFn: async ({ reportType, details }: { reportType: string; details?: string }) => {
+      if (!job) return;
+      await apiRequest("POST", `/api/jobs/${job.id}/report`, { reportType, details });
+    },
+    onSuccess: () => {
+      toast({ title: "Thanks for the report!", description: "We'll review it shortly." });
+      setShowReportDialog(false);
+      setReportType("broken_link");
+      setReportDetails("");
+    },
+  });
+
   const { data: similarJobs = [] } = useQuery<Job[]>({
     queryKey: ["/api/jobs", jobId, "similar"],
     queryFn: async () => {
@@ -640,23 +686,19 @@ export default function JobDetail() {
     );
   }
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated && !job) {
     return (
       <div className="min-h-screen bg-background">
         <Header />
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-12">
-          <NextStepCard
-            isLoggedIn={false}
-            isPro={false}
-            hasMatch={false}
-            matchScore={null}
-            onUploadResume={() => setLocation("/resumes")}
-            onOpenStrategy={() => {}}
-            onOpenRewrite={() => {}}
-            onSignIn={() => setLocation("/auth")}
-            roleCategory={null}
-          />
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-12 text-center">
+          <h1 className="text-2xl font-semibold text-foreground mb-4">Job Not Found</h1>
+          <p className="text-muted-foreground mb-6">This job listing may have been removed or is no longer available.</p>
+          <Button onClick={() => setLocation("/jobs")} data-testid="button-back-jobs">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Jobs
+          </Button>
         </div>
+        <Footer />
       </div>
     );
   }
@@ -806,6 +848,52 @@ export default function JobDetail() {
             </div>
           )}
 
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-muted-foreground mt-3" data-testid="section-trust-attribution">
+            {(job.sourceName || job.sourceDomain) && (
+              <span className="flex items-center gap-1">
+                {job.sourceUrl ? (
+                  <a
+                    href={job.sourceUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 hover:text-foreground transition-colors"
+                    data-testid="link-source-attribution"
+                  >
+                    <ExternalLink className="h-3 w-3 shrink-0" />
+                    Found on {job.sourceName || job.sourceDomain}
+                  </a>
+                ) : (
+                  <>
+                    <ExternalLink className="h-3 w-3 shrink-0" />
+                    <span data-testid="text-source-attribution">Found on {job.sourceName || job.sourceDomain}</span>
+                  </>
+                )}
+              </span>
+            )}
+            {getLastCheckedLabel(job.lastCheckedAt) && (
+              <span className="flex items-center gap-1" data-testid="text-last-verified">
+                <ShieldCheck className="h-3 w-3 shrink-0" />
+                {getLastCheckedLabel(job.lastCheckedAt)}
+              </span>
+            )}
+            {job.jobStatus === 'closed' && (
+              <Badge variant="secondary" className="text-[10px] gap-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800" data-testid="badge-job-closed">
+                <AlertTriangle className="h-2.5 w-2.5" />
+                This position may be closed
+              </Badge>
+            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-xs text-muted-foreground gap-1 h-auto py-0.5 px-1.5"
+              onClick={() => setShowReportDialog(true)}
+              data-testid="button-report-issue"
+            >
+              <Flag className="h-3 w-3" />
+              Report an issue
+            </Button>
+          </div>
+
           <div className="flex items-center gap-2 mt-4">
             <Button
               onClick={handleApplyClick}
@@ -815,17 +903,19 @@ export default function JobDetail() {
               <ExternalLink className="h-4 w-4" />
               Apply Now
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => saveJobMutation.mutate()}
-              disabled={saveJobMutation.isPending}
-              data-testid="button-save-job-detail"
-              className={`gap-1.5 ${jobIsSaved ? "text-primary" : ""}`}
-            >
-              <Bookmark className={`h-4 w-4 ${jobIsSaved ? "fill-current" : ""}`} />
-              {jobIsSaved ? "Saved" : "Save"}
-            </Button>
+            {isAuthenticated && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => saveJobMutation.mutate()}
+                disabled={saveJobMutation.isPending}
+                data-testid="button-save-job-detail"
+                className={`gap-1.5 ${jobIsSaved ? "text-primary" : ""}`}
+              >
+                <Bookmark className={`h-4 w-4 ${jobIsSaved ? "fill-current" : ""}`} />
+                {jobIsSaved ? "Saved" : "Save"}
+              </Button>
+            )}
           </div>
 
           <AnimatePresence>
@@ -916,7 +1006,7 @@ export default function JobDetail() {
               return null;
             })()}
 
-            {resumeFit && resumeFit.length > 0 && (
+            {isAuthenticated && resumeFit && resumeFit.length > 0 && (
               <div data-testid="section-resume-fit" className="mt-6 pt-6 border-t border-border/40">
                 <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-1">Resume Fit</h3>
                 <p className="text-xs text-muted-foreground mb-3">Job-specific fit analysis.</p>
@@ -965,7 +1055,7 @@ export default function JobDetail() {
               </div>
             )}
 
-            {!resumeFit && !isPro && userResumes.length > 0 && job?.keySkills && job.keySkills.length > 0 && (
+            {isAuthenticated && !resumeFit && !isPro && userResumes.length > 0 && job?.keySkills && job.keySkills.length > 0 && (
               <div data-testid="section-resume-match-teaser" className="mt-6 pt-6 border-t border-border/40">
                 <div className="rounded-md border border-border/40 p-4 relative overflow-hidden">
                   <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background/90 pointer-events-none z-10" />
@@ -997,19 +1087,6 @@ export default function JobDetail() {
                       </Button>
                     </Link>
                   </div>
-                </div>
-              </div>
-            )}
-
-            {isAuthenticated && userResumes.length === 0 && job?.keySkills && job.keySkills.length > 0 && (
-              <div data-testid="section-resume-cta" className="mt-6 pt-6 border-t border-border/40">
-                <div className="rounded-md border border-dashed border-border/50 p-4 text-center">
-                  <Upload className="h-5 w-5 text-muted-foreground mx-auto mb-2" />
-                  <p className="text-sm text-muted-foreground">Upload a resume to see how well you match this role</p>
-                  <Button variant="outline" size="sm" className="mt-2 gap-1.5" onClick={() => setLocation("/resumes")} data-testid="button-upload-resume-cta">
-                    <FileText className="h-3.5 w-3.5" />
-                    Upload Resume
-                  </Button>
                 </div>
               </div>
             )}
@@ -1116,13 +1193,13 @@ export default function JobDetail() {
           </CardContent>
         </Card>
 
-        {/* === QUESTIONS === */}
-        <div className="mb-8">
-          <JobChat jobId={jobId || ""} />
-        </div>
+        {isAuthenticated && (
+          <div className="mb-8">
+            <JobChat jobId={jobId || ""} />
+          </div>
+        )}
 
-        {/* === SIMILAR ROLES === */}
-        {similarJobs.length > 0 && (
+        {isAuthenticated && similarJobs.length > 0 && (
           <div className="mb-8" data-testid="section-similar-jobs">
             <h2 className="text-lg font-serif font-medium text-foreground mb-4 tracking-tight">Similar Roles</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1200,17 +1277,19 @@ export default function JobDetail() {
                 <p className="text-xs text-muted-foreground truncate">{job.company}</p>
               </div>
               <div className="flex items-center gap-2 w-full sm:w-auto">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => saveJobMutation.mutate()}
-                  disabled={saveJobMutation.isPending}
-                  className={`gap-1.5 ${jobIsSaved ? "text-primary" : ""}`}
-                  data-testid="button-save-sticky"
-                >
-                  <Bookmark className={`h-4 w-4 ${jobIsSaved ? "fill-current" : ""}`} />
-                  <span className="hidden sm:inline">{jobIsSaved ? "Saved" : "Save"}</span>
-                </Button>
+                {isAuthenticated && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => saveJobMutation.mutate()}
+                    disabled={saveJobMutation.isPending}
+                    className={`gap-1.5 ${jobIsSaved ? "text-primary" : ""}`}
+                    data-testid="button-save-sticky"
+                  >
+                    <Bookmark className={`h-4 w-4 ${jobIsSaved ? "fill-current" : ""}`} />
+                    <span className="hidden sm:inline">{jobIsSaved ? "Saved" : "Save"}</span>
+                  </Button>
+                )}
                 <Button
                   onClick={handleApplyClick}
                   className="gap-2 flex-1 sm:flex-none"
@@ -1246,6 +1325,61 @@ export default function JobDetail() {
           company={job.company}
         />
       )}
+
+      <Dialog open={showReportDialog} onOpenChange={setShowReportDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle data-testid="heading-report-dialog">Report an Issue</DialogTitle>
+            <DialogDescription>Help us keep listings accurate by reporting problems.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <RadioGroup value={reportType} onValueChange={setReportType} data-testid="radio-report-type">
+              {[
+                { value: "broken_link", label: "Broken link" },
+                { value: "duplicate", label: "Duplicate posting" },
+                { value: "wrong_category", label: "Wrong category" },
+                { value: "outdated", label: "Outdated/expired" },
+                { value: "spam", label: "Spam" },
+              ].map((opt) => (
+                <div key={opt.value} className="flex items-center space-x-2">
+                  <RadioGroupItem value={opt.value} id={`report-${opt.value}`} data-testid={`radio-report-${opt.value}`} />
+                  <Label htmlFor={`report-${opt.value}`} className="text-sm">{opt.label}</Label>
+                </div>
+              ))}
+            </RadioGroup>
+            <div>
+              <Label htmlFor="report-details" className="text-sm text-muted-foreground">Details (optional)</Label>
+              <Textarea
+                id="report-details"
+                value={reportDetails}
+                onChange={(e) => setReportDetails(e.target.value)}
+                placeholder="Any additional context..."
+                className="mt-1.5"
+                rows={3}
+                data-testid="textarea-report-details"
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="ghost" size="sm" onClick={() => setShowReportDialog(false)} data-testid="button-report-cancel">
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => reportMutation.mutate({ reportType, details: reportDetails || undefined })}
+                disabled={reportMutation.isPending}
+                data-testid="button-report-submit"
+              >
+                {reportMutation.isPending ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
+                ) : (
+                  <Flag className="h-3.5 w-3.5 mr-1.5" />
+                )}
+                Submit Report
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
