@@ -1,0 +1,97 @@
+You are working inside my existing AI-Job-Finder codebase (React client + Express server). I need you to update the “Questions About This Role” section so it NEVER overlaps with Resume Strategy or Rewrite features.
+
+GOAL:
+Convert “Questions About This Role” into a pure ROLE EXPLAINER module (plain-English understanding), not application coaching and not career advice.
+
+---------------------------------------
+1) UI COPY + STRUCTURE CHANGES (Client)
+---------------------------------------
+A) Rename the section:
+- Change heading from “Questions About This Role” to:
+  “Understand This Role (Plain-English)”
+- Change subtext to:
+  “Get clear explanations of the role and its requirements — no resume edits here.”
+
+B) Update the quick-question buttons:
+REMOVE (overlaps with Resume Strategy):
+- “What skills should I highlight in my application?”
+
+REPLACE with:
+- “What skills does this role require?”
+  (Requirements explanation only, no coaching)
+
+CHANGE (reduce personalization overlap):
+- Replace “How does my legal background apply here?”
+  with:
+  “Which parts of legal experience are typically useful in this role?”
+  (General mapping, not resume strategy)
+
+KEEP:
+- “Break down what this role does day-to-day”
+- “Explain the technical requirements in plain language”
+
+Add one optional button:
+- “Define unfamiliar terms in this job description”
+
+C) Add a small note/link that routes users correctly:
+Below the explainer module add:
+“If you want guidance on what to emphasize in your resume for this role, use Resume Strategy.”
+[View Strategy] button (links to the strategy modal/page)
+
+---------------------------------------
+2) BACKEND GUARDRAILS (Server)
+---------------------------------------
+Wherever the role Q&A endpoint is implemented (likely an endpoint used by this chat box),
+enforce strict output rules so it cannot produce overlapping content.
+
+Add a system instruction / guardrail:
+- This module is a “Role Explainer” ONLY.
+- It MUST NOT:
+  * suggest resume edits or rewrites
+  * tell the user what to emphasize in their resume
+  * tell the user to reorder sections
+  * provide bullet rewrites
+  * provide match scores
+  * recommend career paths or long-term transitions
+- It MAY:
+  * explain responsibilities and day-to-day work
+  * translate technical requirements into plain language
+  * define terms and acronyms
+  * describe what the role typically expects (general requirements)
+  * give examples of what “success in the role” looks like (non-resume-specific)
+
+If user asks overlap-type questions (e.g., “What should I highlight?”),
+the assistant must redirect:
+“Use Resume Strategy for application guidance. Here, I can explain what the role requires.”
+
+---------------------------------------
+3) IMPLEMENTATION DETAILS
+---------------------------------------
+- Find the component that renders the “Questions About This Role” section and update:
+  * heading text
+  * subtext
+  * quick question labels
+  * button click handlers (same function, different pre-filled prompts)
+
+- Find the server endpoint that handles these role questions and update the prompt rules.
+- Ensure the UI still works with existing state management, no TypeScript errors.
+
+---------------------------------------
+4) QA CHECKLIST
+---------------------------------------
+Test these cases:
+1) Clicking “What skills does this role require?” returns requirements, not resume advice.
+2) Asking “What should I highlight in my application?” triggers a redirect message:
+   “Use Resume Strategy…” and then provides role requirement explanation.
+3) No part of role Q&A returns rewritten bullets.
+4) The Resume Strategy card remains the only place that advises what to emphasize/reorder.
+5) The Rewrite Selected Lines feature remains the only place that rewrites text.
+
+---------------------------------------
+DELIVERABLES
+---------------------------------------
+After changes, show:
+- files changed
+- updated quick-question texts
+- the exact new guardrail/system instruction added to the role Q&A endpoint
+- one example response proving it does not give resume strategy or rewrites
