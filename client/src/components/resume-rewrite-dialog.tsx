@@ -20,7 +20,6 @@ import {
   Sparkles,
   ArrowRight,
   Lightbulb,
-  X,
   Plus,
   Trash2,
 } from "lucide-react";
@@ -59,16 +58,24 @@ export function ResumeRewriteDialog({
   const [result, setResult] = useState<RewriteResult | null>(null);
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
 
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
   const rewriteMutation = useMutation({
     mutationFn: async (data: { jobId: number; bullets: string[] }) => {
+      setErrorMessage(null);
       const res = await apiRequest("POST", "/api/resume/rewrite-for-job", data);
       return res.json() as Promise<RewriteResult>;
     },
     onSuccess: (data) => {
+      if (!data?.bullets || !Array.isArray(data.bullets) || data.bullets.length === 0) {
+        setErrorMessage("The AI returned an unexpected response. Please try again.");
+        return;
+      }
       setResult(data);
     },
     onError: (err: any) => {
       const msg = err?.message || "Failed to rewrite bullets";
+      setErrorMessage(msg);
       toast({ title: "Rewrite failed", description: msg, variant: "destructive" });
     },
   });
@@ -117,7 +124,7 @@ export function ResumeRewriteDialog({
       <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto" data-testid="dialog-resume-rewrite">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2" data-testid="text-rewrite-title">
-            <Sparkles className="h-5 w-5 text-primary" />
+            <Sparkles className="h-5 w-5" />
             Rewrite Bullets for This Role
           </DialogTitle>
           <DialogDescription data-testid="text-rewrite-description">
@@ -146,7 +153,6 @@ export function ResumeRewriteDialog({
                       size="icon"
                       variant="ghost"
                       onClick={() => removeBullet(idx)}
-                      className="mt-1 text-muted-foreground"
                       data-testid={`button-remove-bullet-${idx}`}
                     >
                       <Trash2 className="h-4 w-4" />
@@ -186,6 +192,12 @@ export function ResumeRewriteDialog({
                 )}
               </Button>
             </div>
+
+            {errorMessage && (
+              <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3" data-testid="text-rewrite-error">
+                <p className="text-sm text-destructive">{errorMessage}</p>
+              </div>
+            )}
 
             <p className="text-xs text-muted-foreground">
               Your experience stays truthful — we only rephrase to better match this role's language and keywords.

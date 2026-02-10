@@ -95,6 +95,14 @@ A freemium SaaS job search platform specifically designed for legal professional
 - **Deep Analysis (Pro)**: Pro users can click "Deep Analysis" to get AI-powered career analysis including overall strategy, best fit now/long-term/biggest shift recommendations, transition difficulty, pros/cons, transferable skills, and resume fit scoring.
 - **Career Advisor**: The standalone `/career-advisor` page has been removed. Its API endpoint (`/api/career-advisor/compare`) is reused by the unified comparison flow.
 
+### Resume Rewrite Assistant (Pro)
+- **Purpose**: AI-powered bullet point rewriting that tailors existing resume experience to match a specific job posting's language and keywords, while preserving truthful experience.
+- **Backend**: `server/lib/resume-rewrite.ts` extracts job signals (summary, responsibilities, skills, qualifications) from structured descriptions and sends them with user bullets to GPT-4o-mini.
+- **API Endpoint**: `POST /api/resume/rewrite-for-job` with Pro gating, Zod validation (1-10 bullets, 5-500 chars each), 5/day rate limit per user.
+- **Tracking**: `resume_rewrite_runs` table logs every run with userId, jobId, input hash, output JSON, status, and error messages.
+- **Frontend**: `ResumeRewriteDialog` component accessible from job detail page. Shows original vs rewritten bullets with matched keywords, improvement notes, suggested skills, and overall tips. Includes copy-to-clipboard for individual and all bullets.
+- **Gating**: Pro users see "Rewrite Resume" button; free users see locked version linking to pricing page.
+
 ### Events Autopilot
 - **Event Discovery Pipeline**: `server/lib/event-scraper.ts` uses OpenAI to discover real legal tech events from 5 global regions: North America, Europe, Asia-Pacific, Global Virtual, and Middle East/Africa/Latin America.
 - **Scheduling**: Runs automatically every 7 days on startup (30s delay for initial run). Uses `startEventScheduler()` from `event-scraper.ts`.
