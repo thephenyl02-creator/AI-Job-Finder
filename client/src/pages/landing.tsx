@@ -9,12 +9,8 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { LogoMark, Logo } from "@/components/logo";
 import {
   Search,
-  Users,
-  GraduationCap,
   ArrowRight,
   FileText,
-  RefreshCw,
-  BookOpen,
   Compass,
   MapPin,
   Building2,
@@ -24,7 +20,6 @@ import {
   ScrollReveal,
   StaggerContainer,
   StaggerItem,
-  AnimatedCounter,
   GradientOrb,
 } from "@/components/animations";
 import { motion } from "framer-motion";
@@ -147,7 +142,7 @@ export default function Landing() {
 
                 <ScrollReveal delay={0.2}>
                   <h1 className="text-4xl sm:text-5xl lg:text-6xl font-semibold text-foreground mb-5 leading-[1.05] tracking-tight max-w-[560px]" data-testid="text-hero-title">
-                    The legal tech career layer &mdash; built for lawyers.
+                    Find legal tech roles that actually fit lawyers.
                   </h1>
                 </ScrollReveal>
 
@@ -165,17 +160,14 @@ export default function Landing() {
                         <ArrowRight className="ml-2 h-4 w-4" />
                       </a>
                     </Button>
-                    <Link href="/pricing">
-                      <Button size="lg" variant="outline" className="text-base" data-testid="button-hero-pricing">
-                        See Pricing
-                      </Button>
-                    </Link>
+                    <Button size="lg" variant="outline" asChild className="text-base" data-testid="button-hero-upload">
+                      <a href="/auth">
+                        Upload resume
+                      </a>
+                    </Button>
                   </div>
                   <p className="text-xs text-muted-foreground" data-testid="text-hero-trust">
-                    Free to browse &bull; No credit card required &bull;{" "}
-                    <a href="/auth" className="underline underline-offset-4 hover:text-foreground" data-testid="link-hero-upload-resume">
-                      Upload resume
-                    </a>
+                    Free to browse &bull; No credit card required
                   </p>
                 </ScrollReveal>
               </div>
@@ -295,7 +287,7 @@ export default function Landing() {
 
         {/* ── GAP SECTION ── */}
         <section className="border-t border-border/40">
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-12 sm:py-16">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-20 sm:py-24">
             <ScrollReveal>
               <div className="max-w-2xl">
                 <h2 className="text-2xl sm:text-3xl font-serif font-medium text-foreground mb-6 tracking-tight" data-testid="text-gap-title">
@@ -321,57 +313,34 @@ export default function Landing() {
           </div>
         </section>
 
-        {/* ── METRICS ── */}
-        <section className="border-t border-border/40" data-testid="stats-section">
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-8">
-              <div className="text-center" data-testid="stat-jobs">
-                <div className="text-3xl sm:text-5xl font-serif font-bold text-foreground tabular-nums tracking-tight">
-                  {stats?.totalJobs ? (
-                    <AnimatedCounter value={stats.totalJobs} duration={2} />
-                  ) : (
-                    <span className="text-muted-foreground/40">&mdash;</span>
-                  )}
-                </div>
-                <div className="text-xs text-muted-foreground mt-1.5">Roles curated</div>
+        {/* ── CAREER PATHS ── */}
+        <section id="career-paths" className="border-t border-border/40 scroll-mt-20">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-20 sm:py-24">
+            <ScrollReveal>
+              <div className="text-center mb-8">
+                <h2 className="text-2xl sm:text-3xl font-serif font-medium text-foreground tracking-tight" data-testid="text-career-paths-title">
+                  Explore by career path &mdash; not job title
+                </h2>
               </div>
-              <div className="text-center" data-testid="stat-companies">
-                <div className="text-3xl sm:text-5xl font-serif font-bold text-foreground tabular-nums tracking-tight">
-                  {stats?.totalCompanies ? (
-                    <AnimatedCounter value={stats.totalCompanies} duration={1.6} />
-                  ) : (
-                    <span className="text-muted-foreground/40">&mdash;</span>
-                  )}
-                </div>
-                <div className="text-xs text-muted-foreground mt-1.5">Companies</div>
+              <div className="flex flex-wrap items-center justify-center gap-2.5" data-testid="career-paths-chips">
+                {careerPaths.map((path) => (
+                  <Badge
+                    key={path}
+                    variant="outline"
+                    className="text-sm px-4 py-1.5 no-default-active-elevate"
+                    data-testid={`chip-career-path-${path.toLowerCase().replace(/[\s\/&]+/g, "-")}`}
+                  >
+                    {path}
+                  </Badge>
+                ))}
               </div>
-              <div className="text-center" data-testid="stat-categories">
-                <div className="text-3xl sm:text-5xl font-serif font-bold text-foreground tabular-nums tracking-tight">
-                  {stats?.totalCategories ? (
-                    <AnimatedCounter value={stats.totalCategories} duration={1.2} />
-                  ) : (
-                    <span className="text-muted-foreground/40">&mdash;</span>
-                  )}
-                </div>
-                <div className="text-xs text-muted-foreground mt-1.5">Career paths</div>
-              </div>
-              <div className="text-center" data-testid="stat-events">
-                <div className="text-3xl sm:text-5xl font-serif font-bold text-foreground tabular-nums tracking-tight">
-                  {stats?.upcomingEvents ? (
-                    <AnimatedCounter value={stats.upcomingEvents} duration={1} />
-                  ) : (
-                    <span className="text-muted-foreground/40">&mdash;</span>
-                  )}
-                </div>
-                <div className="text-xs text-muted-foreground mt-1.5">Upcoming events</div>
-              </div>
-            </div>
+            </ScrollReveal>
           </div>
         </section>
 
-        {/* ── 3 OUTCOME CARDS ── */}
+        {/* ── HOW THIS HELPS ── */}
         <section className="border-t border-border/40">
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-20 sm:py-24">
             <StaggerContainer className="grid grid-cols-1 md:grid-cols-3 gap-6" staggerDelay={0.15}>
               {[
                 {
@@ -419,86 +388,29 @@ export default function Landing() {
           </div>
         </section>
 
-        {/* ── CAREER PATHS ── */}
-        <section id="career-paths" className="border-t border-border/40 scroll-mt-20">
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
-            <ScrollReveal>
-              <div className="text-center mb-8">
-                <h2 className="text-2xl sm:text-3xl font-serif font-medium text-foreground tracking-tight" data-testid="text-career-paths-title">
-                  Explore by career path &mdash; not job title
-                </h2>
+        {/* ── METRICS ── */}
+        <section className="border-t border-border/40" data-testid="stats-section">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-20 sm:py-24">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-8 sm:gap-16">
+              <div className="text-center" data-testid="stat-jobs">
+                <div className="text-3xl sm:text-4xl font-serif font-bold text-foreground tracking-tight">
+                  {stats?.totalJobs ? `${stats.totalJobs}+` : "\u2014"}
+                </div>
+                <div className="text-sm text-muted-foreground mt-1">roles mapped</div>
               </div>
-              <div className="flex flex-wrap items-center justify-center gap-2.5" data-testid="career-paths-chips">
-                {careerPaths.map((path) => (
-                  <Badge
-                    key={path}
-                    variant="outline"
-                    className="text-sm px-4 py-1.5 no-default-active-elevate"
-                    data-testid={`chip-career-path-${path.toLowerCase().replace(/[\s\/&]+/g, "-")}`}
-                  >
-                    {path}
-                  </Badge>
-                ))}
+              <div className="text-center" data-testid="stat-companies">
+                <div className="text-3xl sm:text-4xl font-serif font-bold text-foreground tracking-tight">
+                  {stats?.totalCompanies ?? "\u2014"}
+                </div>
+                <div className="text-sm text-muted-foreground mt-1">companies hiring in legal tech</div>
               </div>
-            </ScrollReveal>
-          </div>
-        </section>
-
-        {/* ── WHO THIS IS FOR ── */}
-        <section className="border-t border-border/40 bg-muted/30">
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
-            <ScrollReveal>
-              <p className="text-xs font-semibold text-muted-foreground tracking-[0.22em] uppercase mb-3">
-                Who this is for
-              </p>
-              <h2 className="text-2xl sm:text-3xl font-serif font-medium text-foreground mb-8 tracking-tight">
-                You don't need to be technical. You need to be ready.
-              </h2>
-            </ScrollReveal>
-
-            <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 gap-4" staggerDelay={0.08}>
-              {[
-                {
-                  icon: GraduationCap,
-                  title: "Attorneys rethinking their path",
-                  description: "Your JD is an asset, not a limitation. Product, strategy, and ops roles where legal thinking is the whole point.",
-                },
-                {
-                  icon: Users,
-                  title: "Paralegals and legal ops pros",
-                  description: "You already know what\u2019s broken in legal workflows. These companies are building the fix \u2014 and they need your perspective.",
-                },
-                {
-                  icon: RefreshCw,
-                  title: "Lawyers making a move",
-                  description: "Leaving a firm doesn\u2019t mean leaving law. Your domain expertise is hard to hire for \u2014 the right company knows that.",
-                },
-                {
-                  icon: BookOpen,
-                  title: "Students who see where this is going",
-                  description: "Get into legal tech early. Internships and entry-level roles at companies shaping how law actually works.",
-                },
-              ].map((audience, index) => (
-                <StaggerItem key={audience.title}>
-                  <div
-                    className="flex items-start gap-4 p-4 rounded-md hover-elevate"
-                    data-testid={`audience-card-${index}`}
-                  >
-                    <div className="w-9 h-9 rounded-md bg-background border border-border/60 flex items-center justify-center shrink-0">
-                      <audience.icon className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-foreground mb-1">
-                        {audience.title}
-                      </h3>
-                      <p className="text-sm text-muted-foreground leading-relaxed">
-                        {audience.description}
-                      </p>
-                    </div>
-                  </div>
-                </StaggerItem>
-              ))}
-            </StaggerContainer>
+              <div className="text-center" data-testid="stat-categories">
+                <div className="text-3xl sm:text-4xl font-serif font-bold text-foreground tracking-tight">
+                  {stats?.totalCategories ?? "\u2014"}
+                </div>
+                <div className="text-sm text-muted-foreground mt-1">career paths explained</div>
+              </div>
+            </div>
           </div>
         </section>
 
