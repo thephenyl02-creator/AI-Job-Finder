@@ -1,0 +1,136 @@
+You are working inside my existing AI-Job-Finder codebase (React client + Express server + Drizzle/Postgres). I need you to FIX confusion between “Tailor Resume” and “Resume Rewrite” by making them clearly different features in BOTH UX and naming.
+
+GOAL:
+- “Tailor Resume” = STRATEGY (resume-level guidance)
+- “Rewrite Resume” = EXECUTION (bullet-level rewrite)
+- Users must understand the difference instantly.
+- The UI must enforce the correct sequence:
+  1) Upload resume → see match score + strengths/gaps
+  2) Tailor Resume (strategy recommendations)
+  3) Rewrite Selected Lines (bullet rewrites)
+
+IMPORTANT LINE TO INCLUDE AND HIGHLIGHT:
+“We rewrite for alignment, not exaggeration.”
+This line must appear only in the Rewrite feature UI (not Tailor).
+
+---------------------------------------
+1) UI / COPY CHANGES (Client)
+---------------------------------------
+A) Rename buttons:
+- Replace “Tailor Your Resume for This Role” with:
+  “Resume Strategy for This Role”
+  (or “Improve Resume Alignment (Strategy)” if it fits the UI)
+- Replace “Rewrite resume” wording with:
+  “Rewrite Selected Lines”
+
+B) Enforce sequence:
+- On the Job Details page, do not show ANY Tailor/Rewrite actions until a resume is uploaded and the match result exists.
+- If there is no uploaded resume/match result yet, show only:
+  “Upload a resume to see how well you match this role”
+  [Upload Resume]
+
+C) After upload + match result:
+Show a section called “Improve your application” with two distinct cards:
+
+Card 1: Resume Strategy (free or Pro depending on existing plan logic)
+Title: “Resume Strategy for This Role”
+Description (1–2 lines):
+“Get structured guidance on what to emphasize, reorder, or clarify to fit this role—without rewriting your entire resume.”
+Button: [View Strategy]
+
+Card 2: Rewrite Selected Lines (Pro-only)
+Title: “Rewrite Selected Lines”
+Highlighted trust line directly under title:
+“We rewrite for alignment, not exaggeration.”
+Supporting line:
+“Your experience stays truthful—we only reframe it to match this job.”
+Button: [Rewrite Lines] (Pro gated)
+
+D) Visual separation:
+- Use icons (e.g., Compass for Strategy, Pen/Edit for Rewrite)
+- Strategy card should NOT mention “rewrite”
+- Rewrite card should NOT mention “reorder/emphasize”
+
+---------------------------------------
+2) STRATEGY FEATURE (Server + Client) — NEW ENDPOINT
+---------------------------------------
+Implement “Resume Strategy for This Role” as a separate endpoint from rewrite.
+
+Add endpoint:
+POST /api/resume/strategy-for-job
+Auth required.
+(If you want it Pro-only, reuse existing Pro gating; otherwise allow all logged-in users.)
+
+Request body:
+{
+  jobId: number|string
+}
+
+Response:
+{
+  job: { id, title, company, location },
+  strategy: {
+    topStrengths: string[] (3–6),
+    keyGaps: string[] (3–6),
+    reorderSuggestions: string[] (2–4),
+    emphasisSuggestions: string[] (2–4),
+    addSpecificityPrompts: string[] (2–4),
+    recommendedNextRoles?: string[] (optional)
+  }
+}
+
+How to compute (V1):
+- Use the existing resume data you already store for the user (parsed resume profile), and jobSignal extracted from the job (skills/requirements/description).
+- Produce structured recommendations without rewriting bullets.
+- Keep output short, lawyer-professional, and actionable.
+
+Examples of strategy suggestions:
+- “Move contract lifecycle / agreements work above litigation details for this role.”
+- “Emphasize cross-functional stakeholder coordination and implementation exposure.”
+- “Add specificity: type of agreements, stakeholders, and scope of coordination.”
+- “If you have any tools exposure (Salesforce, Gainsight), add it—only if true.”
+
+Implement getJobSignal(job) reuse from rewrite logic.
+Implement computeStrategy(userResume, jobSignal) as a separate function (no LLM is fine; but you MAY use LLM to summarize into structured JSON as long as it is truth-preserving and avoids inventing experience).
+
+---------------------------------------
+3) REWRITE FEATURE (Existing) — ADJUSTMENTS
+---------------------------------------
+A) Rename route UI labels only; keep backend route as-is if already implemented:
+POST /api/resume/rewrite-for-job
+
+B) Rewrite modal must:
+- Let user paste/select 3–10 bullets
+- Show side-by-side Original vs Suggested
+- Include “why this helps” + matchedTo chips
+- Include highlighted line:
+“We rewrite for alignment, not exaggeration.”
+Only in this modal (not elsewhere).
+
+C) Add rule in prompt:
+“If a bullet already aligns well, return it unchanged and explain why it already works.”
+
+---------------------------------------
+4) CLIENT PAGES TO UPDATE
+---------------------------------------
+- Job Details page: enforce upload-first gating and show the two-card “Improve your application” section only after match results exist.
+- If you already have a Resume Match component, integrate the new “Strategy” and “Rewrite” cards beneath the match output.
+
+---------------------------------------
+5) QA / TEST PLAN
+---------------------------------------
+After implementation, verify:
+1) Logged out user: cannot access strategy/rewrite; prompted to sign in.
+2) Logged in user, no resume: sees only Upload Resume.
+3) After uploading resume: sees match results + Strategy card + Rewrite card.
+4) Non-Pro user: Strategy works (if allowed), Rewrite shows upgrade modal.
+5) Pro user: can run Rewrite; line is highlighted; no invented tools/metrics.
+6) Strategy does not rewrite bullets; rewrite does not talk about reordering.
+
+---------------------------------------
+DELIVERABLES
+---------------------------------------
+- Files changed list
+- New endpoint contract for /api/resume/strategy-for-job
+- Screenshot/description of updated Job Details section layout
+- Example JSON responses for strategy and rewrite
