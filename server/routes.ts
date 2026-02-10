@@ -24,6 +24,9 @@ import {
 } from "./lib/resume-parser";
 import { compareResumeToJob } from "./lib/resume-job-comparison";
 import { batchMatchResume, generateResumeTweaks } from "./lib/resume-matcher";
+import { rewriteBulletsForJob } from "./lib/resume-rewrite";
+import { resumeRewriteRuns } from "@shared/schema";
+import crypto from "crypto";
 import {
   scrapeAllLawFirms,
   scrapeSingleCompany,
@@ -1354,6 +1357,71 @@ Be specific and actionable. Focus on legal tech industry keywords and ATS best p
     } catch (error) {
       console.error("Error generating resume tweaks:", error);
       res.status(500).json({ error: "Failed to generate resume tweaks" });
+    }
+  });
+
+  app.post("/api/resume/rewrite-for-job", isAuthenticated, requirePro, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const userId = user?.id;
+      if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+      const schema = z.object({
+        jobId: z.number(),
+        bullets: z.array(z.string().min(5).max(500)).min(1).max(10),
+      });
+      const parsed = schema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ error: "Invalid input", details: parsed.error.flatten() });
+
+      const { jobId, bullets } = parsed.data;
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const { db } = await import("./db");
+      const { gte, eq, and } = await import("drizzle-orm");
+      const todayRuns = await db.select().from(resumeRewriteRuns)
+        .where(and(eq(resumeRewriteRuns.userId, userId), gte(resumeRewriteRuns.createdAt, today)));
+      if (todayRuns.length >= 5) {
+        return res.status(429).json({ error: "Daily limit reached", message: "Pro users can rewrite up to 5 times per day. Try again tomorrow.", remaining: 0 });
+      }
+
+      const job = await storage.getJob(jobId);
+      if (!job) return res.status(404).json({ error: "Job not found" });
+      if (!job.structuredDescription) return res.status(400).json({ error: "This job does not have structured description data yet" });
+
+      const sd = job.structuredDescription as any;
+      const inputHash = crypto.createHash("md5").update(JSON.stringify({ bullets, jobId })).digest("hex");
+
+      const result = await rewriteBulletsForJob({
+        bullets,
+        jobTitle: job.title,
+        company: job.company,
+        structuredDescription: sd,
+      });
+
+      await db.insert(resumeRewriteRuns).values({
+        userId,
+        jobId,
+        inputHash,
+        outputJson: result,
+        status: "success",
+      });
+
+      const remaining = 5 - todayRuns.length - 1;
+      res.json({ ...result, remaining: Math.max(0, remaining) });
+    } catch (error: any) {
+      console.error("Error in resume rewrite:", error);
+      try {
+        const { db } = await import("./db");
+        const user = req.user as any;
+        await db.insert(resumeRewriteRuns).values({
+          userId: user?.id || "unknown",
+          jobId: req.body?.jobId || 0,
+          status: "error",
+          errorMessage: error?.message || "Unknown error",
+        });
+      } catch (logErr) { /* ignore logging errors */ }
+      res.status(500).json({ error: "Failed to rewrite resume bullets" });
     }
   });
 
