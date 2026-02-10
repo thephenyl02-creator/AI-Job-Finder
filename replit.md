@@ -56,6 +56,7 @@ A freemium SaaS job search platform specifically designed for legal professional
 - **Saved Jobs**: Bookmark jobs for later, with expiry reminders on login for older postings to encourage timely applications.
 - **User Dashboard** (`/dashboard`): Dynamic analytics showing job search activity metrics, daily activity trends, streak tracking, top categories/companies explored, search readiness score, market alignment, career profile, and personalized next-step recommendations.
 - **Admin Analytics** (`/admin/analytics`): Comprehensive admin dashboard with KPIs, engagement metrics, feature adoption, user cohorts, top content, user list, and conversion funnel.
+- **Guided Next Step Widget**: `NextStepCard` component on job detail pages dynamically shows the single best next action based on user state: Sign In (logged out), Upload Resume (no resume), View Alignment Strategy (free with match), Rewrite Selected Lines (Pro with match), or stretch-role messaging (match <35%). Reduces decision fatigue by guiding users through the Browse → Upload → Match → Strategy → Rewrite pipeline.
 - **Legal Pages**: Terms of Service (`/terms`) and Privacy Policy (`/privacy`) with footer links on landing page.
 
 ## Deployment

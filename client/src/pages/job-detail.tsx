@@ -18,6 +18,7 @@ import { decodeHtmlEntities, fixMissingSentenceSpaces, cleanStructuredText, pars
 import { StructuredDescriptionView } from "@/components/structured-description-view";
 import { ResumeRewriteDialog } from "@/components/resume-rewrite-dialog";
 import { ResumeStrategyDialog } from "@/components/resume-strategy-dialog";
+import { NextStepCard } from "@/components/next-step-card";
 import { Link } from "wouter";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -639,7 +640,26 @@ export default function JobDetail() {
     );
   }
 
-  if (!isAuthenticated) return null;
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-12">
+          <NextStepCard
+            isLoggedIn={false}
+            isPro={false}
+            hasMatch={false}
+            matchScore={null}
+            onUploadResume={() => setLocation("/resumes")}
+            onOpenStrategy={() => {}}
+            onOpenRewrite={() => {}}
+            onSignIn={() => setLocation("/auth")}
+            roleCategory={null}
+          />
+        </div>
+      </div>
+    );
+  }
 
   if (!job) {
     return (
@@ -993,6 +1013,33 @@ export default function JobDetail() {
                 </div>
               </div>
             )}
+
+            {(() => {
+              const hasMatch = !!(resumeFit && resumeFit.length > 0);
+              const primaryFit = resumeFit?.find(r => r.isPrimary) || resumeFit?.[0];
+              const primaryScore = primaryFit?.score ?? null;
+              return (
+                <div className="mt-6 pt-6 border-t border-border/40" data-testid="section-next-step">
+                  <NextStepCard
+                    isLoggedIn={isAuthenticated}
+                    isPro={isPro}
+                    hasMatch={hasMatch}
+                    matchScore={primaryScore}
+                    onUploadResume={() => setLocation("/resumes")}
+                    onOpenStrategy={() => setShowStrategyDialog(true)}
+                    onOpenRewrite={() => {
+                      if (isPro) {
+                        setShowRewriteDialog(true);
+                      } else {
+                        setLocation("/pricing");
+                      }
+                    }}
+                    onSignIn={() => setLocation("/auth")}
+                    roleCategory={job?.roleCategory}
+                  />
+                </div>
+              );
+            })()}
 
             {isAuthenticated && resumeFit && resumeFit.length > 0 && (
               <div data-testid="section-improve-application" className="mt-6 pt-6 border-t border-border/40">
