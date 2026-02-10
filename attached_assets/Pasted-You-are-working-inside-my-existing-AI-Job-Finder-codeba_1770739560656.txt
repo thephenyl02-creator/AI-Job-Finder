@@ -1,0 +1,186 @@
+You are working inside my existing AI-Job-Finder codebase (React client + Express server + Drizzle/Postgres). I want you to implement a NEW paid feature: “Resume-to-Job Rewrite Assistant (V1)”.
+
+PRODUCT GOAL (V1):
+Given (1) a selected job posting in our DB and (2) the user’s resume bullets/experience lines, generate suggested rewrites for specific bullets that are:
+- aligned to that job’s responsibilities/qualifications
+- lawyer-friendly tone (credible, not buzzwordy)
+- fact-preserving (must NOT invent experience)
+- include a short “why this helps” explanation mapped to the job requirements
+
+This must feel premium and trustworthy for lawyers.
+
+---------------------------------------
+1) ACCESS CONTROL / PAYWALL
+---------------------------------------
+- This feature should be available only to paid users (Pro).
+- If the user is not Pro, show a paywall modal: “Upgrade to Pro to rewrite your resume for this role.”
+- Use the existing subscription/Stripe gating logic already in the project (do NOT create new billing flows).
+
+---------------------------------------
+2) DATABASE (minimal changes)
+---------------------------------------
+Do NOT store entire rewrites permanently for V1.
+Optionally store:
+- last_used_at timestamp for analytics
+- usage_count for rate limiting
+But it’s OK to keep it stateless if the current codebase already has rate limiting / user plan checks.
+
+If you do store anything:
+Create a lightweight table resume_rewrite_runs:
+- id, user_id, job_id
+- created_at
+- input_hash (text) (to avoid duplicate runs)
+- output_json (jsonb) (optional)
+- status (success|failed)
+- error_message (nullable)
+
+---------------------------------------
+3) SERVER API ENDPOINT
+---------------------------------------
+Add endpoint:
+
+POST /api/resume/rewrite-for-job
+
+Auth required.
+Pro required.
+
+Request body:
+{
+  jobId: number|string,
+  bullets: string[]   // bullets from resume OR selected experience lines
+}
+
+Validations:
+- bullets length 1–12
+- each bullet max 300 chars
+- jobId exists
+- reject empty/whitespace bullets
+
+Response:
+{
+  job: { id, title, company, location },
+  rewrites: [
+    {
+      original: string,
+      suggested: string,
+      why: string,            // 1–2 sentences mapping to job needs
+      matchedTo: string[]     // 1–3 job requirement phrases/skills (best-effort)
+    }
+  ]
+}
+
+---------------------------------------
+4) JOB REQUIREMENTS EXTRACTION (robust fallback)
+---------------------------------------
+Implement getJobSignal(job):
+- Prefer job.skills / job.keySkills / job.categories / structured_description if present.
+- Else parse from job.description/description_formatted:
+  - Extract lines under headings like “Qualifications”, “Requirements”, “What you’ll do”, “Responsibilities”
+  - Extract frequent skill phrases: contract lifecycle, CLM, stakeholder management, implementation, onboarding, workflow, compliance, privacy, regulatory, risk, product, roadmap, metrics, cross-functional, customer success, training, change management, etc.
+Output:
+{
+  roleTitle,
+  company,
+  topSkills: string[] (max 25),
+  topRequirements: string[] (max 12 short phrases),
+  roleFamily: string (e.g., “Legal Operations”, “Legal Product & Innovation”, “Privacy/Compliance”, “Legal Engineering”)
+}
+
+---------------------------------------
+5) BULLET-TO-JOB MATCHING (simple V1)
+---------------------------------------
+Implement matchBulletsToJob(bullets, jobSignal):
+- For each bullet, compute overlap score against jobSignal.topSkills + topRequirements
+- Keep top 3 matched skills/requirements for that bullet (may be empty).
+This will be used to:
+- guide the LLM prompt
+- populate “matchedTo” in the response
+
+Do not over-engineer embeddings for V1 unless they already exist in the codebase.
+
+---------------------------------------
+6) LLM PROMPT (critical: truth-preserving, lawyer tone)
+---------------------------------------
+Create ONE LLM call for all bullets (batch) to reduce cost.
+
+System instruction:
+“You are a resume editor specializing in lawyers transitioning into legal technology roles. You must not invent experience, tools, outcomes, metrics, leadership, or responsibilities that are not implied by the original bullet. Your job is to translate and reframe the bullet using terminology that aligns with the job’s needs while staying truthful. Avoid buzzwords. Keep it concise.”
+
+User prompt:
+Provide:
+- jobSignal (title/company/roleFamily/topSkills/topRequirements)
+- bullets array
+- for each bullet include its matched skill hints (top 1–3)
+
+Ask model to return strict JSON:
+{
+  rewrites: [
+    { original, suggested, why, matchedTo }
+  ]
+}
+
+Rules for “suggested”:
+- 1 sentence, max 28 words
+- keep same factual meaning
+- may add clarifying context ONLY if implied (e.g., “stakeholders” if bullet mentions clients/teams)
+- do NOT add specific tools (Jira, SQL) unless present in the original bullet
+- do NOT add metrics unless present in the original bullet
+
+Rules for “why”:
+- 1–2 sentences
+- explicitly connect to jobSignal requirements (e.g., “This highlights contract lifecycle coordination and cross-functional execution.”)
+
+If the bullet is too vague:
+- keep suggested modest
+- “why” should recommend what detail to add (e.g., “Add the type of agreements and the stakeholders you coordinated with.”)
+
+---------------------------------------
+7) CLIENT UI (React)
+---------------------------------------
+Add a button on each Job Details page:
+[ Rewrite my resume for this role ]
+
+When clicked:
+- If not logged in -> redirect to sign in
+- If not Pro -> show upgrade modal
+- If Pro -> open a drawer/modal:
+  - textarea where user pastes 3–10 resume bullets (one per line)
+  - optional: if resume already stored in profile, provide “Select bullets from my resume” (nice-to-have; skip if hard)
+
+On submit:
+- call POST /api/resume/rewrite-for-job
+- display results in a clean side-by-side layout:
+
+For each bullet:
+Original (small, muted)
+Suggested Rewrite (bold)
+Why this helps (small text)
+Matched To: chips (1–3)
+
+Include a “Copy” button for each suggested bullet.
+
+Add loading states and error handling.
+
+---------------------------------------
+8) QUALITY / SAFETY
+---------------------------------------
+- Rate limit: max 5 runs per day per Pro user (or reuse existing limiter).
+- Log runs with status and error_message for debugging.
+- Never leak secrets; never return raw prompt.
+- Ensure server rejects if job not found.
+
+---------------------------------------
+9) DELIVERABLES
+---------------------------------------
+Implement:
+- server route + controller
+- helper functions getJobSignal(), matchBulletsToJob()
+- client UI on Job Details page (modal/drawer)
+- Pro gating behavior
+- basic tests or at least a manual test plan
+
+After implementation, show me:
+- files changed
+- the new endpoint contract
+- example request + response JSON
+- screenshot/description of the UI flow
