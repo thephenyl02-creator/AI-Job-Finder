@@ -48,6 +48,13 @@ export const jobs = pgTable("jobs", {
   isPublished: boolean("is_published").default(false),
   structuredStatus: varchar("structured_status", { length: 20 }).default("missing"),
   structuredUpdatedAt: timestamp("structured_updated_at"),
+  sourceName: varchar("source_name", { length: 100 }),
+  sourceDomain: varchar("source_domain", { length: 255 }),
+  sourceUrl: varchar("source_url", { length: 1000 }),
+  lastCheckedAt: timestamp("last_checked_at"),
+  jobStatus: varchar("job_status", { length: 20 }).default("open"),
+  closedReason: varchar("closed_reason", { length: 50 }),
+  closedAt: timestamp("closed_at"),
 });
 
 export const jobCategories = pgTable("job_categories", {
@@ -617,3 +624,30 @@ export const resumeRewriteRuns = pgTable("resume_rewrite_runs", {
 });
 
 export type ResumeRewriteRun = typeof resumeRewriteRuns.$inferSelect;
+
+export const REPORT_TYPES = ["broken_link", "duplicate", "wrong_category", "outdated", "spam"] as const;
+export type ReportType = typeof REPORT_TYPES[number];
+
+export const REPORT_STATUSES = ["new", "reviewed", "resolved"] as const;
+export type ReportStatus = typeof REPORT_STATUSES[number];
+
+export const jobReports = pgTable("job_reports", {
+  id: serial("id").primaryKey(),
+  jobId: integer("job_id").notNull(),
+  reporterUserId: varchar("reporter_user_id", { length: 255 }),
+  reportType: varchar("report_type", { length: 50 }).notNull(),
+  details: text("details"),
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`),
+  status: varchar("status", { length: 20 }).notNull().default("new"),
+  adminNotes: text("admin_notes"),
+  resolvedAt: timestamp("resolved_at"),
+});
+
+export const insertJobReportSchema = createInsertSchema(jobReports).omit({
+  id: true,
+  createdAt: true,
+  resolvedAt: true,
+});
+
+export type JobReport = typeof jobReports.$inferSelect;
+export type InsertJobReport = z.infer<typeof insertJobReportSchema>;
