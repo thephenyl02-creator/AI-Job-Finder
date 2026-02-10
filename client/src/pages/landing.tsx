@@ -13,11 +13,12 @@ import {
   GraduationCap,
   ArrowRight,
   FileText,
-  BookOpen,
   RefreshCw,
+  BookOpen,
   Compass,
   MapPin,
   Building2,
+  CheckCircle2,
 } from "lucide-react";
 import {
   ScrollReveal,
@@ -68,6 +69,18 @@ function shortenLocation(location: string): string {
   return location;
 }
 
+const careerPaths = [
+  "Legal Operations",
+  "Privacy & Data",
+  "Legal Product",
+  "Contract Tech",
+  "Compliance / RegTech",
+  "Legal Engineering",
+  "Knowledge / PSL",
+  "Litigation Tech",
+  "AI Adoption",
+];
+
 export default function Landing() {
   usePageTitle();
   const { data: stats } = useQuery<Stats>({
@@ -99,6 +112,11 @@ export default function Landing() {
                 Events
               </Button>
             </Link>
+            <a href="#career-paths">
+              <Button variant="ghost" size="sm" className="text-muted-foreground min-h-[44px] hidden sm:inline-flex" data-testid="link-landing-career-paths">
+                Career Paths
+              </Button>
+            </a>
             <Link href="/pricing">
               <Button variant="ghost" size="sm" className="text-muted-foreground min-h-[44px]" data-testid="link-landing-pricing">
                 Pricing
@@ -113,6 +131,7 @@ export default function Landing() {
       </header>
 
       <main className="pt-16">
+        {/* ── HERO ── */}
         <section className="relative">
           <GradientOrb className="w-[600px] h-[600px] bg-primary/20 -top-48 -right-48" />
           <GradientOrb className="w-[400px] h-[400px] bg-chart-2/20 top-32 -left-32" />
@@ -121,28 +140,28 @@ export default function Landing() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-start">
               <div>
                 <ScrollReveal delay={0.1} direction="none">
-                  <p className="text-xs font-semibold text-muted-foreground tracking-[0.18em] uppercase mb-4" data-testid="text-hero-label">
-                    Legal technology careers &mdash; explained for lawyers
+                  <p className="text-xs font-semibold text-muted-foreground tracking-[0.22em] uppercase mb-4" data-testid="text-hero-label">
+                    For lawyers moving into legal tech & AI
                   </p>
                 </ScrollReveal>
 
                 <ScrollReveal delay={0.2}>
-                  <h1 className="text-4xl sm:text-5xl lg:text-6xl font-semibold text-foreground mb-5 leading-[1.05] tracking-tight max-w-[520px]" data-testid="text-hero-title">
-                    Curated legal tech & AI roles.
+                  <h1 className="text-4xl sm:text-5xl lg:text-6xl font-semibold text-foreground mb-5 leading-[1.05] tracking-tight max-w-[560px]" data-testid="text-hero-title">
+                    The legal tech career layer &mdash; built for lawyers.
                   </h1>
                 </ScrollReveal>
 
                 <ScrollReveal delay={0.35}>
-                  <p className="text-base sm:text-lg text-muted-foreground mb-7 leading-relaxed max-w-[520px]" data-testid="text-hero-subtitle">
-                    Explained for lawyers &mdash; so you can explore, match, and apply with clarity.
+                  <p className="text-base sm:text-lg text-muted-foreground mb-7 leading-relaxed max-w-[560px]" data-testid="text-hero-subtitle">
+                    Curated roles, plain-English role clarity, and a fit check &mdash; so you apply with confidence, not guesses.
                   </p>
                 </ScrollReveal>
 
                 <ScrollReveal delay={0.5}>
-                  <div className="flex flex-col sm:flex-row items-center gap-3 mb-3">
-                    <Button size="lg" asChild className="text-base px-8" data-testid="button-hero-get-started">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-3">
+                    <Button size="lg" asChild className="text-base px-8" data-testid="button-hero-explore">
                       <a href="/auth">
-                        Find Your Next Role
+                        Explore roles
                         <ArrowRight className="ml-2 h-4 w-4" />
                       </a>
                     </Button>
@@ -152,20 +171,19 @@ export default function Landing() {
                       </Button>
                     </Link>
                   </div>
-                  <div className="flex items-center gap-4">
-                    <p className="text-xs text-muted-foreground" data-testid="text-hero-free-note">
-                      Free to browse. No credit card required.
-                    </p>
-                    <a href="/auth" className="text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground" data-testid="link-hero-upload-resume">
-                      Upload Resume
+                  <p className="text-xs text-muted-foreground" data-testid="text-hero-trust">
+                    Free to browse &bull; No credit card required &bull;{" "}
+                    <a href="/auth" className="underline underline-offset-4 hover:text-foreground" data-testid="link-hero-upload-resume">
+                      Upload resume
                     </a>
-                  </div>
+                  </p>
                 </ScrollReveal>
               </div>
 
+              {/* Desktop Live Roles */}
               <ScrollReveal delay={0.4} direction="none">
                 <div className="hidden lg:block" data-testid="hero-job-preview">
-                  <div className="rounded-2xl border border-border/60 bg-background/70 backdrop-blur-sm p-4 shadow-sm">
+                  <div className="rounded-2xl border bg-card p-4 shadow-sm">
                     <div className="flex items-center justify-between gap-2 mb-3">
                       <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Live roles</p>
                       {stats?.totalJobs ? (
@@ -222,8 +240,9 @@ export default function Landing() {
                 </div>
               </ScrollReveal>
 
+              {/* Mobile Live Roles */}
               <ScrollReveal delay={0.4} direction="none">
-                <div className="lg:hidden mt-8" data-testid="hero-job-preview-mobile">
+                <div className="lg:hidden mt-4" data-testid="hero-job-preview-mobile">
                   <div className="flex items-center justify-between gap-2 mb-3">
                     <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Live roles</p>
                     {stats?.totalJobs ? (
@@ -233,7 +252,7 @@ export default function Landing() {
                     ) : null}
                   </div>
                   <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 snap-x snap-mandatory scrollbar-none">
-                    {featuredJobs?.slice(0, 6).map((job, i) => (
+                    {featuredJobs?.slice(0, 4).map((job, i) => (
                       <motion.div
                         key={job.id}
                         initial={{ opacity: 0, x: 12 }}
@@ -268,40 +287,43 @@ export default function Landing() {
                       </div>
                     )}
                   </div>
-                  <p className="text-xs text-muted-foreground text-center mt-2">
-                    Sign in to see all roles and apply
-                  </p>
                 </div>
               </ScrollReveal>
             </div>
-
           </div>
         </section>
 
+        {/* ── GAP SECTION ── */}
         <section className="border-t border-border/40">
           <div className="max-w-5xl mx-auto px-4 sm:px-6 py-12 sm:py-16">
             <ScrollReveal>
               <div className="max-w-2xl">
-                <h2 className="text-2xl sm:text-3xl font-serif font-medium text-foreground mb-3 tracking-tight" data-testid="text-clarity-title">
-                  Not just jobs. Career clarity.
+                <h2 className="text-2xl sm:text-3xl font-serif font-medium text-foreground mb-6 tracking-tight" data-testid="text-gap-title">
+                  Job boards weren't built for this market.
                 </h2>
-                <p className="text-base text-muted-foreground leading-relaxed" data-testid="text-clarity-body">
-                  Legal tech titles change fast. We translate roles into plain language, show what's transferable from legal work, and help you apply with confidence.
+                <ul className="space-y-3 mb-6">
+                  {[
+                    "Legal tech searches return software engineering roles.",
+                    "Legal job boards return traditional associate roles.",
+                    "New roles are real \u2014 but hard to decode.",
+                  ].map((item, i) => (
+                    <li key={i} className="flex items-start gap-3 text-base text-muted-foreground" data-testid={`text-gap-bullet-${i}`}>
+                      <CheckCircle2 className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="text-base font-medium text-foreground" data-testid="text-gap-closing">
+                  We curate the right roles and translate them for lawyers.
                 </p>
               </div>
             </ScrollReveal>
           </div>
         </section>
 
-        <section className="border-t border-border/40 bg-primary/[0.04] dark:bg-primary/[0.08]" data-testid="stats-section">
+        {/* ── METRICS ── */}
+        <section className="border-t border-border/40" data-testid="stats-section">
           <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
-            <div className="flex items-center justify-center gap-2 mb-5">
-              <span className="relative flex h-2.5 w-2.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
-              </span>
-              <span className="text-sm font-medium text-foreground/80" data-testid="stats-live-label">Live Platform Stats</span>
-            </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-8">
               <div className="text-center" data-testid="stat-jobs">
                 <div className="text-3xl sm:text-5xl font-serif font-bold text-foreground tabular-nums tracking-tight">
@@ -311,9 +333,9 @@ export default function Landing() {
                     <span className="text-muted-foreground/40">&mdash;</span>
                   )}
                 </div>
-                <div className="text-xs sm:text-sm text-muted-foreground mt-1.5 font-medium uppercase tracking-wide">Roles Curated</div>
+                <div className="text-xs text-muted-foreground mt-1.5">Roles curated</div>
               </div>
-              <div className="text-center sm:border-x border-border/40" data-testid="stat-companies">
+              <div className="text-center" data-testid="stat-companies">
                 <div className="text-3xl sm:text-5xl font-serif font-bold text-foreground tabular-nums tracking-tight">
                   {stats?.totalCompanies ? (
                     <AnimatedCounter value={stats.totalCompanies} duration={1.6} />
@@ -321,7 +343,7 @@ export default function Landing() {
                     <span className="text-muted-foreground/40">&mdash;</span>
                   )}
                 </div>
-                <div className="text-xs sm:text-sm text-muted-foreground mt-1.5 font-medium uppercase tracking-wide">Companies hiring in legal tech</div>
+                <div className="text-xs text-muted-foreground mt-1.5">Companies</div>
               </div>
               <div className="text-center" data-testid="stat-categories">
                 <div className="text-3xl sm:text-5xl font-serif font-bold text-foreground tabular-nums tracking-tight">
@@ -331,9 +353,9 @@ export default function Landing() {
                     <span className="text-muted-foreground/40">&mdash;</span>
                   )}
                 </div>
-                <div className="text-xs sm:text-sm text-muted-foreground mt-1.5 font-medium uppercase tracking-wide">Career paths explained</div>
+                <div className="text-xs text-muted-foreground mt-1.5">Career paths</div>
               </div>
-              <div className="text-center sm:border-l border-border/40" data-testid="stat-events">
+              <div className="text-center" data-testid="stat-events">
                 <div className="text-3xl sm:text-5xl font-serif font-bold text-foreground tabular-nums tracking-tight">
                   {stats?.upcomingEvents ? (
                     <AnimatedCounter value={stats.upcomingEvents} duration={1} />
@@ -341,45 +363,35 @@ export default function Landing() {
                     <span className="text-muted-foreground/40">&mdash;</span>
                   )}
                 </div>
-                <div className="text-xs sm:text-sm text-muted-foreground mt-1.5 font-medium uppercase tracking-wide">Events & sessions</div>
+                <div className="text-xs text-muted-foreground mt-1.5">Upcoming events</div>
               </div>
             </div>
           </div>
         </section>
 
+        {/* ── 3 OUTCOME CARDS ── */}
         <section className="border-t border-border/40">
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-20 sm:py-28">
-            <ScrollReveal>
-              <p className="text-sm font-medium text-muted-foreground tracking-wide uppercase mb-4">
-                Why this exists
-              </p>
-              <h2 className="text-3xl sm:text-4xl font-serif font-medium text-foreground mb-4 tracking-tight">
-                New job titles every month. No clear path. Sound familiar?
-              </h2>
-              <p className="text-lg text-muted-foreground max-w-2xl mb-12">
-                "Legal Engineer." "CLM Specialist." "Legal Ops Analyst." Three years ago, most of these roles didn't exist. Now they're everywhere &mdash; but good luck finding them on LinkedIn between 500 software engineer postings, or on legal job boards buried under BigLaw associate listings. We built this because neither side gets it.
-              </p>
-            </ScrollReveal>
-
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
             <StaggerContainer className="grid grid-cols-1 md:grid-cols-3 gap-6" staggerDelay={0.15}>
               {[
                 {
                   icon: Search,
-                  title: "Search in plain language",
-                  description: "Search like you'd say it to a friend \u2014 remote, product, privacy, AI, legal ops \u2014 and find roles that actually match lawyers.",
-                  testId: "text-feature-search",
+                  title: "Curated roles",
+                  description: "Only roles that make sense for legal backgrounds \u2014 tagged by career path.",
+                  testId: "text-outcome-curated",
                 },
                 {
                   icon: FileText,
-                  title: "See where you actually fit",
-                  description: "Get a realistic fit score \u2014 what transfers from your legal experience, what's missing, and where to focus next.",
-                  testId: "text-feature-resume",
+                  title: "Role clarity",
+                  description: "What the role actually is, what transfers from legal work, and what matters next.",
+                  testId: "text-outcome-clarity",
                 },
                 {
                   icon: Compass,
-                  title: "Compare before you leap",
-                  description: "Compare roles side by side and see how each one uses your legal background \u2014 so you choose with clarity.",
-                  testId: "text-feature-advisor",
+                  title: "Fit check",
+                  description: "Resume fit score + gaps + realistic tweaks to increase alignment.",
+                  testId: "text-outcome-fit",
+                  pro: true,
                 },
               ].map((feature) => (
                 <StaggerItem key={feature.title}>
@@ -388,9 +400,14 @@ export default function Landing() {
                       <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center text-foreground mb-4">
                         <feature.icon className="h-5 w-5" />
                       </div>
-                      <h3 className="text-lg font-semibold text-foreground mb-2" data-testid={feature.testId}>
-                        {feature.title}
-                      </h3>
+                      <div className="flex items-center gap-2 mb-2">
+                        <h3 className="text-lg font-semibold text-foreground" data-testid={feature.testId}>
+                          {feature.title}
+                        </h3>
+                        {feature.pro && (
+                          <Badge variant="secondary" className="text-[10px]">Pro</Badge>
+                        )}
+                      </div>
                       <p className="text-sm text-muted-foreground leading-relaxed">
                         {feature.description}
                       </p>
@@ -402,36 +419,41 @@ export default function Landing() {
           </div>
         </section>
 
-        <section className="border-t border-border/40">
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-12 sm:py-16">
+        {/* ── CAREER PATHS ── */}
+        <section id="career-paths" className="border-t border-border/40 scroll-mt-20">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
             <ScrollReveal>
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-6 rounded-md bg-muted/40 border border-border/40">
-                <p className="text-base text-foreground font-medium text-center sm:text-left" data-testid="text-mid-cta">
-                  Ready to see what's out there? It takes 30 seconds.
-                </p>
-                <Button asChild className="shrink-0" data-testid="button-mid-cta">
-                  <a href="/auth">
-                    Browse Roles
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </a>
-                </Button>
+              <div className="text-center mb-8">
+                <h2 className="text-2xl sm:text-3xl font-serif font-medium text-foreground tracking-tight" data-testid="text-career-paths-title">
+                  Explore by career path &mdash; not job title
+                </h2>
+              </div>
+              <div className="flex flex-wrap items-center justify-center gap-2.5" data-testid="career-paths-chips">
+                {careerPaths.map((path) => (
+                  <Badge
+                    key={path}
+                    variant="outline"
+                    className="text-sm px-4 py-1.5 no-default-active-elevate"
+                    data-testid={`chip-career-path-${path.toLowerCase().replace(/[\s\/&]+/g, "-")}`}
+                  >
+                    {path}
+                  </Badge>
+                ))}
               </div>
             </ScrollReveal>
           </div>
         </section>
 
+        {/* ── WHO THIS IS FOR ── */}
         <section className="border-t border-border/40 bg-muted/30">
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-20 sm:py-28">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
             <ScrollReveal>
-              <p className="text-sm font-medium text-muted-foreground tracking-wide uppercase mb-4">
+              <p className="text-xs font-semibold text-muted-foreground tracking-[0.22em] uppercase mb-3">
                 Who this is for
               </p>
-              <h2 className="text-3xl sm:text-4xl font-serif font-medium text-foreground mb-4 tracking-tight">
+              <h2 className="text-2xl sm:text-3xl font-serif font-medium text-foreground mb-8 tracking-tight">
                 You don't need to be technical. You need to be ready.
               </h2>
-              <p className="text-lg text-muted-foreground max-w-2xl mb-12">
-                Every week, roles appear that didn't exist a year ago. They're built for people with legal backgrounds who are curious enough to make a move.
-              </p>
             </ScrollReveal>
 
             <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 gap-4" staggerDelay={0.08}>
@@ -444,17 +466,17 @@ export default function Landing() {
                 {
                   icon: Users,
                   title: "Paralegals and legal ops pros",
-                  description: "You already know what's broken in legal workflows. These companies are building the fix &mdash; and they need your perspective.",
+                  description: "You already know what\u2019s broken in legal workflows. These companies are building the fix \u2014 and they need your perspective.",
                 },
                 {
                   icon: RefreshCw,
                   title: "Lawyers making a move",
-                  description: "Leaving a firm doesn't mean leaving law. Your domain expertise is hard to hire for &mdash; the right company knows that.",
+                  description: "Leaving a firm doesn\u2019t mean leaving law. Your domain expertise is hard to hire for \u2014 the right company knows that.",
                 },
                 {
                   icon: BookOpen,
                   title: "Students who see where this is going",
-                  description: "Get into legal tech early. Internships and entry-level roles at companies that are shaping how law actually works.",
+                  description: "Get into legal tech early. Internships and entry-level roles at companies shaping how law actually works.",
                 },
               ].map((audience, index) => (
                 <StaggerItem key={audience.title}>
@@ -480,34 +502,29 @@ export default function Landing() {
           </div>
         </section>
 
+        {/* ── FINAL CTA ── */}
         <section className="border-t border-border/40">
           <div className="max-w-5xl mx-auto px-4 sm:px-6 py-20 sm:py-28">
             <ScrollReveal>
               <div className="max-w-2xl mx-auto text-center">
-                <div className="flex items-center justify-center gap-3 mb-6">
-                  <Badge variant="secondary" className="text-xs font-medium">Free to browse</Badge>
-                  <Badge variant="outline" className="text-xs font-medium">Pro from $5/mo</Badge>
-                </div>
-                <h2 className="text-3xl sm:text-4xl font-serif font-medium text-foreground mb-4 tracking-tight">
-                  Roles are being posted right now.
-                  <br />
-                  Don't find out about them later.
+                <h2 className="text-3xl sm:text-4xl font-serif font-medium text-foreground mb-4 tracking-tight" data-testid="text-final-cta-title">
+                  Stop guessing. Start applying with clarity.
                 </h2>
-                <p className="text-lg text-muted-foreground mb-8 max-w-lg mx-auto">
-                  Browse and apply for free. Go Pro for resume matching, career comparisons, and alerts the moment a role fits your profile.
+                <p className="text-base text-muted-foreground mb-8 max-w-lg mx-auto">
+                  Browse roles for free. Go Pro for resume matching, fit checks, and job alerts the moment a role fits your profile.
                 </p>
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-                  <Button size="lg" asChild className="text-base px-10" data-testid="button-cta-final">
+                  <Button size="lg" asChild className="text-base px-10" data-testid="button-cta-explore">
                     <a href="/auth">
-                      Find Your Next Role
+                      Explore roles
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </a>
                   </Button>
-                  <Link href="/pricing">
-                    <Button size="lg" variant="outline" className="text-base" data-testid="button-cta-pricing">
-                      See Plans & Pricing
-                    </Button>
-                  </Link>
+                  <Button size="lg" variant="outline" asChild className="text-base" data-testid="button-cta-upload">
+                    <a href="/auth">
+                      Upload resume
+                    </a>
+                  </Button>
                 </div>
               </div>
             </ScrollReveal>
