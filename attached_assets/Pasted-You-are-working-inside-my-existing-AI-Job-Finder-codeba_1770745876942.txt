@@ -1,0 +1,105 @@
+You are working inside my existing AI-Job-Finder codebase (React client + Express server). I want you to add a “Guided Next Step” widget that removes user confusion by showing the single best next action depending on the user’s state.
+
+GOAL:
+On the Job Details page, show a small premium-looking component called “Next Step” (or “Your Next Step”) that changes dynamically based on:
+- Logged in vs logged out
+- Resume uploaded / match results exist vs not
+- Pro vs Free
+
+This widget must reduce decision fatigue and guide the user through:
+Browse → Upload resume → See match → Improve application (Strategy) → Rewrite (Pro)
+
+---------------------------------------
+1) WHERE TO SHOW IT
+---------------------------------------
+Add the widget on the Job Details page, near the resume/match area, above “Improve your application”.
+
+---------------------------------------
+2) USER STATES + EXACT BEHAVIOR
+---------------------------------------
+State A: Logged out
+Title: “Your Next Step”
+Message: “Sign in to see your fit for this role and get lawyer-friendly guidance.”
+Primary button: [Sign in]
+Secondary link: “Browse roles without signing in” (if browsing is allowed)
+
+State B: Logged in, no resume uploaded / no match results yet
+Title: “Your Next Step”
+Message: “Upload your resume to see your fit score for this role.”
+Primary button: [Upload Resume]
+Helper text: “Takes ~30 seconds.”
+
+State C: Logged in, resume uploaded + match exists, Free user
+Title: “Your Next Step”
+Message: “You’ve seen your fit. Next, improve your application.”
+Primary button: [View Resume Strategy] (opens Strategy modal)
+Secondary button: [Rewrite Selected Lines] (shows upgrade modal)
+Microcopy under rewrite: “Pro feature — we rewrite for alignment, not exaggeration.”
+
+State D: Logged in, resume uploaded + match exists, Pro user
+Title: “Your Next Step”
+Message: “Improve your strongest bullets for this role.”
+Primary button: [Rewrite Selected Lines]
+Secondary button: [View Resume Strategy]
+Microcopy under rewrite: “We rewrite for alignment, not exaggeration.”
+
+State E (Optional): If match score is very low (<35%)
+Message changes to: “This role is a stretch right now. Start with Strategy to identify the fastest improvements.”
+Primary: [View Resume Strategy]
+Secondary: [Explore similar roles] (link to browse with same career path)
+
+---------------------------------------
+3) DATA / INPUTS
+---------------------------------------
+The widget needs:
+- auth state
+- subscription/pro state
+- whether match results exist for this job
+- match score if available
+
+Do not add new backend endpoints if these already exist in the client state.
+If needed, add a lightweight GET endpoint to fetch the current user subscription status (but reuse existing plan logic).
+
+---------------------------------------
+4) UI REQUIREMENTS (premium + minimal)
+---------------------------------------
+- Use a small card with:
+  - Title
+  - One sentence message
+  - Primary CTA button
+  - Optional secondary CTA link/button
+  - Small microcopy under rewrite CTA (only when applicable)
+
+Keep it visually calm:
+- white background
+- subtle border
+- spacing
+- consistent typography with existing design
+
+---------------------------------------
+5) IMPLEMENTATION DETAILS
+---------------------------------------
+- Create a reusable component: <NextStepCard />
+- Place it in JobDetails component near the resume section
+- It should accept props like:
+  { isLoggedIn, isPro, hasMatch, matchScore, onUploadResume, onOpenStrategy, onOpenRewrite, onSignIn }
+
+- Make sure it does NOT duplicate the existing buttons; it should trigger the same handlers/modals you already have.
+
+---------------------------------------
+6) QA CHECKLIST
+---------------------------------------
+Verify each state:
+1) Logged out: only Sign in CTA.
+2) Logged in no resume: Upload Resume CTA.
+3) Logged in with match + Free: Strategy CTA primary, Rewrite triggers upgrade modal.
+4) Logged in with match + Pro: Rewrite CTA primary, Strategy secondary.
+5) If score <35: shows “stretch role” messaging and nudges Strategy.
+
+---------------------------------------
+DELIVERABLES
+---------------------------------------
+After implementing, show:
+- files changed
+- screenshot/description of the Job Details area showing the widget
+- explanation of how you detect state (auth, match, Pro)
