@@ -1,0 +1,51 @@
+Update ONLY the landing page UI in client/src/pages/landing.tsx to look more premium. Do NOT change routes, auth, API calls, database, or business logic. Keep the same sections and content, but fix typography, spacing, and the Live Roles panel so it doesn’t look awkward.
+
+GOALS:
+- Hero should look modern, balanced, and not overly tall.
+- Headline should not wrap into too many lines.
+- Live Roles panel should feel like a clean “preview” card.
+- Reduce repetitive “Why this fits lawyers →” clutter.
+
+CHANGES (implement all):
+
+1) HERO LAYOUT & TYPOGRAPHY
+- Constrain hero text width so the headline wraps to ~3–4 lines maximum.
+- Reduce headline size and line height:
+  - Use responsive classes like:
+    text-4xl sm:text-5xl lg:text-6xl
+    leading-[1.02] or leading-tight
+- If the headline currently uses a heavy serif font, switch the hero headline to the default sans font (or apply a lighter weight). Keep it elegant, not “newspaper”.
+- Increase spacing consistency:
+  - Add max-w-[560px] (or similar) to the left hero content.
+  - Reduce excessive vertical padding so the hero fits better on one screen (e.g., py-12 instead of py-20).
+
+2) BUTTON ROW CLEANUP
+- Make both CTAs same height and aligned.
+- Place “Upload Resume” as a subtle link BELOW the buttons, not floating to the right.
+  Example styling: text-sm text-muted-foreground hover:text-foreground underline-offset-4 hover:underline
+
+3) LIVE ROLES PANEL (RIGHT SIDE)
+- Wrap the live roles list in a container that looks like a panel:
+  - add rounded-xl border bg-card shadow-sm
+  - add padding p-4
+- Ensure cards inside have consistent padding and are visually separated (space-y-3).
+- Remove “Why this fits lawyers →” from EACH job card.
+  Instead:
+  - Add one subtle helper line under the “Live roles” header:
+    “Open any role to see why it fits lawyers →”
+  Keep the job cards clean.
+
+4) HEADER ROW OF LIVE ROLES
+- Align “LIVE ROLES” and “170+ open” in one line.
+- Make “170+ open” a small badge/pill (text-xs px-2 py-1 rounded-full border).
+
+5) BACKGROUND NOISE
+- If there is a dotted/grid background behind the hero, reduce its opacity significantly or remove it on the landing page only. The hero background should be clean white/neutral.
+
+6) RESPONSIVENESS
+- On mobile, stack columns with hero text first, then Live Roles panel.
+- Ensure no overflow or weird wrapping.
+
+DELIVERABLE:
+- Confirm the exact class changes you made.
+- No other file changes besides client/src/pages/landing.tsx.
