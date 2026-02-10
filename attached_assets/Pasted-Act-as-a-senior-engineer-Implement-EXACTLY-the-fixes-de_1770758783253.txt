@@ -1,0 +1,302 @@
+Act as a senior engineer. Implement EXACTLY the fixes described below. Do not change any other files besides the ones listed. Do not refactor, do not rename components, do not change DB schema, do not add dependencies.
+
+We are fixing 6 bugs (and optionally bug 7 if easy). Follow the instructions literally.
+
+============================================================
+BUG 1 (CRITICAL): Job descriptions render differently in admin vs user view
+============================================================
+
+--- File: server/lib/scheduled-scraper.ts ---
+
+CHANGE 1A: Find this line:
+import { isDescriptionFlat } from './description-cleaner';
+
+Replace with:
+import { isDescriptionFlat } from './description-cleaner';
+import { extractStructuredDescription } from './description-extractor';
+
+CHANGE 1B: Find this exact block inside the Phase 4 categorization loop (inside the batch.map callback, right after the updateData object is created):
+
+                  legalRelevanceScore: result.legalRelevanceScore,
+                  reviewStatus: result.reviewStatus,
+                };
+                if (result.reviewStatus === "rejected") {
+
+Replace with:
+
+                  legalRelevanceScore: result.legalRelevanceScore,
+                  reviewStatus: result.reviewStatus,
+                };
+
+                // Extract structured description for consistent rendering
+                if (job.description && !job.structuredDescription) {
+                  try {
+                    const structured = await extractStructuredDescription(job.description, job.company, job.title);
+                    if (structured) {
+                      updateData.structuredDescription = structured;
+                    }
+                  } catch (extractErr: any) {
+                    logWarn('AI', `Structured extraction failed for job ${job.id}: ${extractErr.message?.slice(0, 80)}`);
+                  }
+                }
+
+                if (result.reviewStatus === "rejected") {
+
+CHANGE 1C: Find this exact block (between Phase 4.5 description formatting and Phase 5 alert matching):
+
+    } catch (err: any) {
+      logError('FORMAT', 'Description formatting phase failed', { error: err.message });
+      errors.push(`Formatting phase: ${err.message}`);
+    }
+
+    // === PHASE 5: Alert matching for new jobs ===
+
+Replace with:
+
+    } catch (err: any) {
+      logError('FORMAT', 'Description formatting phase failed', { error: err.message });
+      errors.push(`Formatting phase: ${err.message}`);
+    }
+
+    // === PHASE 4.6: Structured description backfill for existing jobs ===
+    logInfo('PHASE', '--- Phase 4.6: Structured Description Backfill ---');
+    try {
+      const allActiveForStructured = await storage.getActiveJobs();
+      const needsStructured = allActiveForStructured.filter(j =>
+        j.description && j.description.length > 100 && !j.structuredDescription
+      );
+
+      if (needsStructured.length > 0) {
+        logInfo('AI', `Extracting structured descriptions for ${needsStructured.length} jobs...`);
+        let structuredCount = 0;
+        const structBatchSize = 3;
+        for (let i = 0; i < needsStructured.length; i += structBatchSize) {
+          const batch = needsStructured.slice(i, i + structBatchSize);
+          await Promise.all(
+            batch.map(async (job) => {
+              try {
+                const structured = await extractStructuredDescription(job.description, job.company, job.title);
+                if (structured) {
+                  await storage.updateJob(job.id, { structuredDescription: structured } as any);
+                  structuredCount++;
+                }
+              } catch (err: any) {
+                logWarn('AI', `Structured extraction failed for job ${job.id}: ${err.message?.slice(0, 80)}`);
+              }
+            })
+          );
+          if (i + structBatchSize < needsStructured.length) {
+            await new Promise((r) => setTimeout(r, 500));
+          }
+        }
+        logSuccess('AI', `Extracted structured descriptions for ${structuredCount}/${needsStructured.length} jobs`);
+      } else {
+        logInfo('AI', 'All jobs already have structured descriptions');
+      }
+    } catch (err: any) {
+      logError('AI', 'Structured description backfill failed', { error: err.message });
+      errors.push(`Structured backfill: ${err.message}`);
+    }
+
+    // === PHASE 5: Alert matching for new jobs ===
+
+============================================================
+--- File: client/src/pages/job-detail.tsx ---
+============================================================
+
+CHANGE 1D: Find the import line:
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
+
+Replace with:
+import { useState, useRef, useEffect, useMemo } from "react";
+
+CHANGE 1E: Delete everything from this line:
+const BULLET_PATTERN = /^(?:[-•*]\s|(?:\d+)[.)]\s)/;
+through to the end of the cleanDescription function. Replace with:
+
+// === Clean text pipeline (matches admin's cleanAdminText exactly) ===
+function cleanDescription(text: string): string {
+  let cleaned = decodeHtmlEntities(text);
+  if (/<[a-z][^>]*>/i.test(cleaned)) {
+    cleaned = cleaned.replace(/<br\s*\/?>/gi, '\n');
+    cleaned = cleaned.replace(/<\/(?:p|div|h[1-6]|li|tr|section|article)>/gi, '\n');
+    cleaned = cleaned.replace(/<(?:p|div|h[1-6]|ul|ol|table|tbody|thead|section|article)(?:\s[^>]*)?>/gi, '\n');
+    cleaned = cleaned.replace(/<li(?:\s[^>]*)?>/gi, '- ');
+    cleaned = cleaned.replace(/<[^>]+>/g, '');
+  }
+  cleaned = cleaned.replace(/\u00A0/g, ' ');
+  cleaned = cleaned.replace(/ {2,}/g, ' ');
+  cleaned = cleaned.replace(/\n{3,}/g, '\n\n');
+  cleaned = cleaned.replace(/^[ \t]+/gm, '');
+  cleaned = fixMissingSentenceSpaces(cleaned);
+  return cleaned.trim();
+}
+
+// === Heading detection (matches admin's headingRe exactly) ===
+const HEADING_RE = /^(?:About|What|Who|Responsibilities|Qualifications|Requirements|Skills|Benefits|Perks|Compensation|Getting|In this|How you|Why|Our|The|Your|Key|Core|Preferred|Required|Nice|Education|Experience|Pluses?|Overview|Summary|Position|Role|Minimum|Additional|Essential|Desired|Duties|Mission|Values|Culture|Team|Company|Description|Expectations|Opportunity)\b/i;
+
+CHANGE 1F: Delete everything from:
+interface DescriptionSection {
+through to the closing "}" of the DescriptionContent function.
+Replace ALL that with the provided new DescriptionContent implementation:
+
+function DescriptionContent({ text, testId, compact, isPro }: { text?: string | null; testId: string; compact?: boolean; isPro?: boolean }) {
+  if (!text) return null;
+
+  const cleanedText = useMemo(() => cleanDescription(text), [text]);
+  const lines = useMemo(() => cleanedText.split('\n').filter(l => l.trim()), [cleanedText]);
+
+  const activeCategories = useMemo(() => {
+    if (isPro) return new Set(Object.keys(HIGHLIGHT_CATEGORIES) as HighlightCategory[]);
+    return new Set<HighlightCategory>();
+  }, [isPro]);
+
+  if (compact) {
+    return (
+      <div className="space-y-2" data-testid={testId}>
+        {lines.slice(0, 12).map((line, i) => {
+          const trimmed = line.trim();
+          const isBullet = /^[-•*]\s/.test(trimmed) || /^\d+[.)]\s/.test(trimmed);
+          const isHead = (HEADING_RE.test(trimmed) && trimmed.length < 80) || (trimmed.endsWith(':') && trimmed.length < 80) || (trimmed === trimmed.toUpperCase() && trimmed.length > 3 && trimmed.length < 80 && /[A-Z]/.test(trimmed));
+
+          if (isHead) {
+            return <p key={i} className="font-medium text-foreground text-sm pt-2 first:pt-0">{trimmed}</p>;
+          }
+          if (isBullet) {
+            const content = trimmed.replace(/^[-•*]\s+|^\d+[.)]\s+/, '');
+            return (
+              <div key={i} className="flex gap-2 pl-1 text-sm">
+                <span className="shrink-0 mt-[0.45rem] w-1.5 h-1.5 rounded-full bg-foreground/25" />
+                <span className="text-foreground/90">{content}</span>
+              </div>
+            );
+          }
+          return <p key={i} className="text-sm text-foreground/90">{trimmed}</p>;
+        })}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-1.5" data-testid={testId}>
+      {lines.map((line, i) => {
+        const trimmed = line.trim();
+        if (!trimmed) return null;
+        const isBullet = /^[-•*]\s/.test(trimmed) || /^\d+[.)]\s/.test(trimmed);
+        const isHead = (HEADING_RE.test(trimmed) && trimmed.length < 80) || (trimmed.endsWith(':') && trimmed.length < 80) || (trimmed === trimmed.toUpperCase() && trimmed.length > 3 && trimmed.length < 80 && /[A-Z]/.test(trimmed));
+
+        const renderContent = (content: string) => {
+          return renderHighlightedContent(content, activeCategories);
+        };
+
+        if (isHead) {
+          return (
+            <h3 key={i} className="text-sm font-semibold text-muted-foreground uppercase tracking-wider pt-4 first:pt-0 pb-1">
+              {trimmed.replace(/:$/, '')}
+            </h3>
+          );
+        }
+        if (isBullet) {
+          const content = trimmed.replace(/^[-•*]\s+|^\d+[.)]\s+/, '');
+          return (
+            <li key={i} className="flex gap-3 text-[0.925rem] text-foreground/80 leading-[1.7] pl-1" data-testid={`bullet-${i}`}>
+              <span className="shrink-0 mt-[0.65rem] w-[5px] h-[5px] rounded-full bg-primary/40" />
+              <span>{renderContent(content)}</span>
+            </li>
+          );
+        }
+        return (
+          <p key={i} className="text-[0.925rem] text-foreground/80 leading-[1.7]" data-testid={`para-${i}`}>
+            {renderContent(trimmed)}
+          </p>
+        );
+      })}
+    </div>
+  );
+}
+
+CHANGE 6 (from bug list): Find:
+  }, [jobId, job?.id]);
+Replace with:
+  }, [jobId, job]);
+
+============================================================
+BUG 2: Alert matcher misses remote jobs when locationType='remote'
+============================================================
+
+--- File: server/lib/alert-matcher.ts ---
+
+Find:
+  if (alert.isRemoteOnly && !job.isRemote) {
+    return false;
+  }
+
+Replace with:
+  if (alert.isRemoteOnly) {
+    const isRemoteJob = job.isRemote || job.locationType === 'remote';
+    if (!isRemoteJob) return false;
+  }
+
+Also find this in the notification message:
+${job.isRemote ? " (Remote)" : ""}
+
+Replace with:
+${(job.isRemote || job.locationType === 'remote') ? " (Remote)" : job.locationType === 'hybrid' ? " (Hybrid)" : ""}
+
+============================================================
+BUG 3: Scraper never sets locationType
+============================================================
+
+--- File: server/lib/scheduled-scraper.ts ---
+
+In scrapeGreenhouse jobs.push block, find:
+        isRemote: (job.location?.name || '').toLowerCase().includes('remote'),
+        description: cleanDescription,
+
+Replace with:
+        isRemote: (job.location?.name || '').toLowerCase().includes('remote'),
+        locationType: (job.location?.name || '').toLowerCase().includes('remote') ? 'remote' : (job.location?.name || '').toLowerCase().includes('hybrid') ? 'hybrid' : 'onsite',
+        description: cleanDescription,
+
+In scrapeLever jobs.push block, find:
+        isRemote: (job.categories?.location || '').toLowerCase().includes('remote'),
+
+Replace with:
+        isRemote: (job.categories?.location || '').toLowerCase().includes('remote'),
+        locationType: (job.categories?.location || '').toLowerCase().includes('remote') ? 'remote' : (job.categories?.location || '').toLowerCase().includes('hybrid') ? 'hybrid' : 'onsite',
+
+============================================================
+BUG 4: React Query staleTime is Infinity
+============================================================
+
+--- File: client/src/lib/queryClient.ts ---
+
+Find:
+      staleTime: Infinity,
+
+Replace with:
+      staleTime: 5 * 60 * 1000,
+
+============================================================
+BUG 5: Silent error swallowing on resume delete
+============================================================
+
+--- File: client/src/pages/jobs.tsx ---
+
+Find:
+    } catch {}
+
+Replace with:
+    } catch (err) {
+      console.error("Failed to remove resume:", err);
+    }
+
+============================================================
+AFTER ALL CHANGES
+============================================================
+
+1) Run the app and ensure no TS errors.
+2) Go to /admin/scraper and click "Run Now".
+3) Confirm Phase 4.6 runs and backfills structuredDescription.
+4) Open the same job in admin and user view and confirm descriptions match.
+5) Do not modify any other files.
