@@ -46,6 +46,7 @@ Rules:
 - Mirror keywords and skills from the job posting where the candidate's experience genuinely applies.
 - Use strong action verbs and quantify impact where the original bullet implies it.
 - Keep each bullet concise (1-2 lines).
+- If a bullet already aligns well with the role, return it unchanged and explain why it already works.
 - If a bullet has no meaningful connection to the role, still improve its clarity but note limited relevance.
 - Use legal tech industry language that an ATS system would recognize.`;
 

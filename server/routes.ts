@@ -1425,6 +1425,58 @@ Be specific and actionable. Focus on legal tech industry keywords and ATS best p
     }
   });
 
+  app.post("/api/resume/strategy-for-job", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const userId = user?.id;
+      if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+      const schema = z.object({
+        jobId: z.number(),
+      });
+      const parsed = schema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ error: "Invalid input", details: parsed.error.flatten() });
+
+      const { jobId } = parsed.data;
+
+      const job = await storage.getJob(jobId);
+      if (!job) return res.status(404).json({ error: "Job not found" });
+      if (!job.structuredDescription) return res.status(400).json({ error: "This job does not have structured description data yet" });
+
+      const userResumes = await storage.getUserResumes(userId);
+      const primaryResume = userResumes.find((r: any) => r.isPrimary) || userResumes[0];
+      if (!primaryResume || !primaryResume.extractedData) {
+        return res.status(400).json({ error: "No parsed resume found. Please upload a resume first." });
+      }
+
+      const { computeStrategy } = await import("./lib/resume-strategy");
+
+      const sd = job.structuredDescription as any;
+      const resumeData = primaryResume.extractedData as any;
+
+      const strategy = await computeStrategy({
+        jobId,
+        jobTitle: job.title,
+        company: job.company,
+        structuredDescription: sd,
+        resumeData,
+      });
+
+      res.json({
+        job: {
+          id: job.id,
+          title: job.title,
+          company: job.company,
+          location: job.location,
+        },
+        strategy,
+      });
+    } catch (error: any) {
+      console.error("Error computing resume strategy:", error);
+      res.status(500).json({ error: "Failed to compute resume strategy" });
+    }
+  });
+
   // Compare resume to job (like iPhone comparison)
   app.post("/api/compare/:jobId", isAuthenticated, async (req, res) => {
     try {

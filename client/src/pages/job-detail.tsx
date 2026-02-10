@@ -17,6 +17,7 @@ import type { ResumeExtractedData } from "@shared/models/auth";
 import { decodeHtmlEntities, fixMissingSentenceSpaces, cleanStructuredText, parseStructuredDescription } from "@/lib/structured-description";
 import { StructuredDescriptionView } from "@/components/structured-description-view";
 import { ResumeRewriteDialog } from "@/components/resume-rewrite-dialog";
+import { ResumeStrategyDialog } from "@/components/resume-strategy-dialog";
 import { Link } from "wouter";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -51,6 +52,7 @@ import {
   Crown,
   Lock,
   PenLine,
+  Compass,
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 
@@ -474,6 +476,7 @@ export default function JobDetail() {
   const [showStickyBar, setShowStickyBar] = useState(false);
   const [showApplyNudge, setShowApplyNudge] = useState(false);
   const [showRewriteDialog, setShowRewriteDialog] = useState(false);
+  const [showStrategyDialog, setShowStrategyDialog] = useState(false);
 
   const { data: job, isLoading } = useQuery<Job>({
     queryKey: [`/api/jobs/${jobId}`],
@@ -797,31 +800,6 @@ export default function JobDetail() {
               <Bookmark className={`h-4 w-4 ${jobIsSaved ? "fill-current" : ""}`} />
               {jobIsSaved ? "Saved" : "Save"}
             </Button>
-            {isPro ? (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowRewriteDialog(true)}
-                className="gap-1.5"
-                data-testid="button-rewrite-bullets"
-              >
-                <PenLine className="h-4 w-4" />
-                Rewrite Resume
-              </Button>
-            ) : isAuthenticated ? (
-              <Link href="/pricing">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-1.5 text-muted-foreground"
-                  data-testid="button-rewrite-locked"
-                >
-                  <Lock className="h-3.5 w-3.5" />
-                  Rewrite Resume
-                  <Badge variant="secondary" className="text-[10px] ml-1">Pro</Badge>
-                </Button>
-              </Link>
-            ) : null}
           </div>
 
           <AnimatePresence>
@@ -996,7 +974,7 @@ export default function JobDetail() {
               </div>
             )}
 
-            {!resumeFit && userResumes.length === 0 && job?.keySkills && job.keySkills.length > 0 && (
+            {isAuthenticated && userResumes.length === 0 && job?.keySkills && job.keySkills.length > 0 && (
               <div data-testid="section-resume-cta" className="mt-6 pt-6 border-t border-border/40">
                 <div className="rounded-md border border-dashed border-border/50 p-4 text-center">
                   <Upload className="h-5 w-5 text-muted-foreground mx-auto mb-2" />
@@ -1009,18 +987,78 @@ export default function JobDetail() {
               </div>
             )}
 
-            <div className="border-t border-border/40 mt-7 pt-5">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setLocation(`/resume-builder?jobId=${job.id}`)}
-                data-testid="button-optimize-resume"
-                className="gap-1.5"
-              >
-                <FileText className="h-4 w-4" />
-                Tailor Your Resume for This Role
-              </Button>
-            </div>
+            {isAuthenticated && resumeFit && resumeFit.length > 0 && (
+              <div data-testid="section-improve-application" className="mt-6 pt-6 border-t border-border/40">
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Improve Your Application</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <Card data-testid="card-strategy">
+                    <CardContent className="p-4 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <div className="p-1.5 rounded-md bg-blue-50 dark:bg-blue-900/20">
+                          <Compass className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                        </div>
+                        <h4 className="text-sm font-semibold text-foreground">Resume Strategy for This Role</h4>
+                      </div>
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        Get structured guidance on what to emphasize, reorder, or clarify to fit this role — without rewriting your entire resume.
+                      </p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5 w-full"
+                        onClick={() => setShowStrategyDialog(true)}
+                        data-testid="button-view-strategy"
+                      >
+                        <Compass className="h-3.5 w-3.5" />
+                        View Strategy
+                      </Button>
+                    </CardContent>
+                  </Card>
+
+                  <Card data-testid="card-rewrite-lines">
+                    <CardContent className="p-4 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <div className="p-1.5 rounded-md bg-violet-50 dark:bg-violet-900/20">
+                          <PenLine className="h-4 w-4 text-violet-600 dark:text-violet-400" />
+                        </div>
+                        <h4 className="text-sm font-semibold text-foreground">Rewrite Selected Lines</h4>
+                      </div>
+                      <p className="text-[11px] font-medium text-foreground/70" data-testid="text-trust-line-card">
+                        We rewrite for alignment, not exaggeration.
+                      </p>
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        Your experience stays truthful — we only reframe it to match this job.
+                      </p>
+                      {isPro ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-1.5 w-full"
+                          onClick={() => setShowRewriteDialog(true)}
+                          data-testid="button-rewrite-lines"
+                        >
+                          <PenLine className="h-3.5 w-3.5" />
+                          Rewrite Lines
+                        </Button>
+                      ) : (
+                        <Link href="/pricing">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="gap-1.5 w-full text-muted-foreground"
+                            data-testid="button-rewrite-locked"
+                          >
+                            <Lock className="h-3.5 w-3.5" />
+                            Rewrite Lines
+                            <Badge variant="secondary" className="text-[10px] ml-1">Pro</Badge>
+                          </Button>
+                        </Link>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -1139,6 +1177,16 @@ export default function JobDetail() {
         <ResumeRewriteDialog
           open={showRewriteDialog}
           onOpenChange={setShowRewriteDialog}
+          jobId={job.id}
+          jobTitle={job.title}
+          company={job.company}
+        />
+      )}
+
+      {job && (
+        <ResumeStrategyDialog
+          open={showStrategyDialog}
+          onOpenChange={setShowStrategyDialog}
           jobId={job.id}
           jobTitle={job.title}
           company={job.company}

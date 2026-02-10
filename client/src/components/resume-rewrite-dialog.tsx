@@ -17,7 +17,7 @@ import {
   Loader2,
   Copy,
   Check,
-  Sparkles,
+  PenLine,
   ArrowRight,
   Lightbulb,
   Plus,
@@ -124,14 +124,17 @@ export function ResumeRewriteDialog({
       <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto" data-testid="dialog-resume-rewrite">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2" data-testid="text-rewrite-title">
-            <Sparkles className="h-5 w-5" />
-            Rewrite Bullets for This Role
+            <PenLine className="h-5 w-5" />
+            Rewrite Selected Lines
           </DialogTitle>
           <DialogDescription data-testid="text-rewrite-description">
-            Paste your resume bullet points below and get AI-powered rewrites tailored for{" "}
+            Paste your resume bullet points below and get rewrites tailored for{" "}
             <span className="font-medium text-foreground">{jobTitle}</span> at{" "}
             <span className="font-medium text-foreground">{company}</span>.
           </DialogDescription>
+          <p className="text-sm font-medium text-foreground/80 mt-1" data-testid="text-trust-line">
+            We rewrite for alignment, not exaggeration.
+          </p>
         </DialogHeader>
 
         {!result ? (
@@ -186,8 +189,8 @@ export function ResumeRewriteDialog({
                   </>
                 ) : (
                   <>
-                    <Sparkles className="h-4 w-4 mr-2" />
-                    Rewrite for This Role
+                    <PenLine className="h-4 w-4 mr-2" />
+                    Rewrite Selected Lines
                   </>
                 )}
               </Button>
@@ -200,7 +203,7 @@ export function ResumeRewriteDialog({
             )}
 
             <p className="text-xs text-muted-foreground">
-              Your experience stays truthful — we only rephrase to better match this role's language and keywords.
+              Your experience stays truthful — we only reframe it to match this job.
             </p>
           </div>
         ) : (

@@ -95,13 +95,19 @@ A freemium SaaS job search platform specifically designed for legal professional
 - **Deep Analysis (Pro)**: Pro users can click "Deep Analysis" to get AI-powered career analysis including overall strategy, best fit now/long-term/biggest shift recommendations, transition difficulty, pros/cons, transferable skills, and resume fit scoring.
 - **Career Advisor**: The standalone `/career-advisor` page has been removed. Its API endpoint (`/api/career-advisor/compare`) is reused by the unified comparison flow.
 
-### Resume Rewrite Assistant (Pro)
-- **Purpose**: AI-powered bullet point rewriting that tailors existing resume experience to match a specific job posting's language and keywords, while preserving truthful experience.
-- **Backend**: `server/lib/resume-rewrite.ts` extracts job signals (summary, responsibilities, skills, qualifications) from structured descriptions and sends them with user bullets to GPT-4o-mini.
+### Resume Strategy (All Users)
+- **Purpose**: AI-powered structured recommendations analyzing a user's resume against a specific job posting. Provides strategic guidance on what to emphasize, reorder, and add specificity — without rewriting any content.
+- **Backend**: `server/lib/resume-strategy.ts` uses `computeStrategy()` with GPT-4o-mini to generate topStrengths, keyGaps, reorderSuggestions, emphasisSuggestions, and addSpecificityPrompts.
+- **API Endpoint**: `POST /api/resume/strategy-for-job` with auth gating, primary resume lookup, and job structured description validation.
+- **Frontend**: `ResumeStrategyDialog` component accessible from the "Improve your application" section on job detail page. Shows 5 categorized sections with icons and numbered items.
+
+### Rewrite Selected Lines (Pro)
+- **Purpose**: AI-powered bullet point rewriting that reframes existing resume experience to match a specific job posting's language and keywords, while preserving truthful experience. Trust line: "We rewrite for alignment, not exaggeration."
+- **Backend**: `server/lib/resume-rewrite.ts` extracts job signals from structured descriptions and sends them with user bullets to GPT-4o-mini. Preserves already-aligned bullets unchanged with explanation.
 - **API Endpoint**: `POST /api/resume/rewrite-for-job` with Pro gating, Zod validation (1-10 bullets, 5-500 chars each), 5/day rate limit per user.
 - **Tracking**: `resume_rewrite_runs` table logs every run with userId, jobId, input hash, output JSON, status, and error messages.
-- **Frontend**: `ResumeRewriteDialog` component accessible from job detail page. Shows original vs rewritten bullets with matched keywords, improvement notes, suggested skills, and overall tips. Includes copy-to-clipboard for individual and all bullets.
-- **Gating**: Pro users see "Rewrite Resume" button; free users see locked version linking to pricing page.
+- **Frontend**: `ResumeRewriteDialog` component accessible from the "Improve your application" section on job detail page. Shows original vs rewritten bullets with matched keywords, improvement notes, suggested skills, and overall tips. Includes copy-to-clipboard and trust line.
+- **UX Flow**: Job detail page shows two-card "Improve your application" section only after resume upload + match results exist. Strategy card (Compass icon) and Rewrite card (PenLine icon, Pro-gated) are visually distinct with separate messaging. Upload CTA shown for users without resumes.
 
 ### Events Autopilot
 - **Event Discovery Pipeline**: `server/lib/event-scraper.ts` uses OpenAI to discover real legal tech events from 5 global regions: North America, Europe, Asia-Pacific, Global Virtual, and Middle East/Africa/Latin America.
