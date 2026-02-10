@@ -1,0 +1,114 @@
+You are working inside my existing AI-Job-Finder codebase (React client + Express server + Drizzle/Postgres). I need you to eliminate feature overlap and make the product’s “Career Advisor”, “Resume Match”, “Resume Strategy”, and “Rewrite” clearly distinct in BOTH behavior and UI.
+
+NON-NEGOTIABLE PRODUCT RULE:
+Each feature must answer ONLY one question:
+
+1) Career Advisor (Career Path Advisor) = “Where should I go next?” (6–24 month horizon)
+2) Resume Match = “How well do I fit THIS job?” (job-specific analysis)
+3) Resume Strategy (Alignment Strategy) = “What should I change/emphasize for THIS job?” (resume-level guidance for the job)
+4) Rewrite Selected Lines = “How should this bullet sound for THIS job?” (bullet-level text rewrite)
+
+No feature should output the same type of content as another feature.
+
+---------------------------------------
+A) REQUIRED UI CHANGES (Client)
+---------------------------------------
+1) Rename “Career Advisor” everywhere in UI to:
+   “Career Path Advisor”
+   Subtitle: “Direction for your next 6–24 months (not job-specific edits).”
+
+2) On Job Details pages:
+   - Only show Resume Match first.
+   - Do NOT show Career Path Advisor content on job pages.
+   - After resume match results are available, show a section “Improve your application” with two distinct cards:
+     Card 1: “Alignment Strategy” (resume-level guidance)
+     Card 2: “Rewrite Selected Lines” (Pro-only, bullet rewrites)
+   - Include and highlight the line ONLY inside Rewrite UI:
+     “We rewrite for alignment, not exaggeration.”
+
+3) Career Path Advisor page must NOT include:
+   - Resume bullet rewrites
+   - Job-specific instructions like “move this bullet up for this role”
+   - “Match score for job X”
+   It must remain career-level guidance only.
+
+4) Add clear microcopy on each feature page:
+   - Career Path Advisor: “Career direction and transition steps.”
+   - Resume Match: “Job-specific fit analysis.”
+   - Alignment Strategy: “How to position your resume for this job (no rewrites).”
+   - Rewrite Selected Lines: “Bullet rewrites aligned to this job.”
+
+---------------------------------------
+B) REQUIRED BACKEND CHANGES (Server)
+---------------------------------------
+1) Separate endpoints and ensure they do not call each other:
+   - Career Path Advisor endpoint(s) may use resume profile + taxonomy but must not accept jobId.
+   - Resume Match must require jobId and may produce strengths/gaps only for that job.
+   - Alignment Strategy must require jobId and produce only structural/emphasis guidance (no rewritten bullets).
+   - Rewrite endpoint must require jobId + bullets and produce only rewrites for provided bullets.
+
+2) Enforce this with validations:
+   - Career Path Advisor endpoint rejects any request containing jobId.
+   - Rewrite endpoint rejects requests without bullets.
+   - Alignment Strategy endpoint must return structured “strategy” JSON and must not return rewritten text.
+
+---------------------------------------
+C) CAREER PATH ADVISOR OUTPUT SPEC (to remove overlap)
+---------------------------------------
+Career Path Advisor should output ONLY:
+- recommendedPaths: 2–4 career paths (e.g., Legal Ops, Legal Product, Privacy/Compliance, Implementation/CS)
+- whyThesePaths: short explanation per path
+- transitionSteps: 3–6 steps over 6–24 months (skills/projects/exposure)
+- suggestedSteppingStoneRoles: 3–6 titles
+- learningPlan: 3–5 practical items (non-salesy)
+- confidenceNotes: honesty about what’s missing (no job-specific edits)
+
+It must NOT mention:
+- “Rewrite this bullet”
+- “Move experience section above…”
+- “Your match score is…”
+
+---------------------------------------
+D) ALIGNMENT STRATEGY OUTPUT SPEC (job-specific but no rewriting)
+---------------------------------------
+Alignment Strategy for jobId outputs ONLY:
+- emphasize: 3–6 themes to highlight
+- reorder: 2–4 reorder suggestions (what to move higher/lower)
+- addSpecificity: 3–5 prompts to add details (e.g., agreements types, stakeholders, scope)
+- risks: 2–3 credibility warnings (“don’t claim X unless true”)
+- nextBestRoleIfNotFit: optional (one sentence)
+
+It must NOT output rewritten bullet text.
+
+---------------------------------------
+E) REWRITE SELECTED LINES OUTPUT SPEC (bullet-only)
+---------------------------------------
+Rewrite endpoint outputs ONLY:
+- original bullet
+- suggested bullet (truth-preserving)
+- why this helps (mapped to job requirements)
+- matchedTo skills/requirements chips
+Include rule:
+“If original bullet already aligns, return it unchanged and say why it already works.”
+
+Include and highlight line in the Rewrite UI:
+“We rewrite for alignment, not exaggeration.”
+
+---------------------------------------
+F) IMPLEMENTATION TASKS
+---------------------------------------
+1) Audit the current Career Advisor page and API usage.
+2) Rename UI labels and adjust routing so Career Advisor is not accessible from job pages.
+3) Create/modify API endpoints to enforce separation rules (reject jobId in career advisor).
+4) Update Job Details page layout to show:
+   Upload Resume -> Resume Match -> Alignment Strategy -> Rewrite Selected Lines
+5) Add basic QA checks and ensure no TypeScript errors.
+
+---------------------------------------
+G) DELIVERABLES
+---------------------------------------
+After changes, show:
+- Files changed
+- Updated routes/pages structure
+- Example JSON outputs for each feature showing they are distinct
+- Confirmation that Career Path Advisor does not accept jobId and cannot overlap with job-specific features
