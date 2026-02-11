@@ -467,6 +467,47 @@ export function isLegalTechRole(title: string, companyType?: string): boolean {
   ];
   if (rejectPatterns.some(p => p.test(t))) return false;
 
+  const traditionalPracticeReject = [
+    /\bfamily law\b/i,
+    /\bimmigration (attorney|lawyer|counsel|coordinator)\b/i,
+    /\bpersonal injury\b/i,
+    /\breal estate\b.*\b(attorney|lawyer|associate|counsel)\b/i,
+    /\b(attorney|lawyer|associate|counsel)\b.*\breal estate\b/i,
+    /\bcriminal (defense|law)\b/i,
+    /\bpublic defender\b/i,
+    /\bprosecutor\b/i,
+    /\bestate planning\b/i,
+    /\bbankruptcy (attorney|lawyer|counsel)\b/i,
+    /\bdivorce (attorney|lawyer|counsel)\b/i,
+    /\bprobate (attorney|lawyer|counsel)\b/i,
+    /\bconveyancing\b/i,
+    /\btenant rights\b/i,
+    /\bhousing (staff )?(attorney|lawyer)\b/i,
+    /\bdomestic violence\b/i,
+    /\bdisability advocacy\b/i,
+    /\bright to counsel\b/i,
+    /\bhomeowner defense\b/i,
+    /\bgovernment benefits unit\b/i,
+    /\bveterans justice\b/i,
+    /\bimmigrant justice\b/i,
+    /\bneighborhood stabilization\b/i,
+    /\bforeclosure prevention\b/i,
+    /\bvoting rights\b/i,
+    /\bnational security project\b/i,
+    /\bwomen'?s rights project\b/i,
+    /\bstate supreme court initiative\b/i,
+    /\bexperienced lawyers?\b/i,
+    /\bjunior associate\b.*\b(real estate|litigation|corporate|tax|regulatory)\b/i,
+    /\bsenior associate\b.*\b(real estate|litigation|corporate|tax)\b/i,
+    /\bstaff attorney\b/i,
+    /\bsupervising attorney\b/i,
+    /\blaw graduate\b/i,
+    /\blegal externship\b/i,
+    /\bdeputy director\b/i,
+    /\btrademark attorney\b/i,
+  ];
+  if (traditionalPracticeReject.some(p => p.test(t))) return false;
+
   const hardExclude = [
     'software engineer', 'backend engineer', 'frontend engineer',
     'full-stack engineer', 'full stack engineer', 'fullstack engineer',
@@ -479,6 +520,7 @@ export function isLegalTechRole(title: string, companyType?: string): boolean {
     'mechanical engineer', 'spacecraft', 'avionics', 'gnc engineer',
     'remote sensing engineer', 'telecommunications engineer',
     'qa engineer', 'test engineer', 'quality engineer', 'sdet',
+    'software quality assurance',
     'ux designer', 'ui designer', 'product designer', 'graphic designer',
     'brand designer', 'visual designer', 'web designer',
     'it administrator', 'system administrator', 'it engineer',
@@ -497,65 +539,76 @@ export function isLegalTechRole(title: string, companyType?: string): boolean {
     'commodity manager', 'supply chain',
     'global workplace lead', 'reward manager',
     'engineering manager', 'engineering operations',
+    'forward deployed engineer', 'research scientist',
+    'certification content', 'customer trust lead',
+    'head of security risk', 'insider risk investigator',
+    'immigration coordinator', 'european tax lead',
+    'international indirect tax', 'roc analyst',
+    'senior investment associate', 'investment associate',
+    'business systems analyst', 'security workforce',
+    'regional state and local affairs',
+    'chief of staff',
   ];
   if (hardExclude.some(k => t.includes(k))) return false;
 
-  const strongInclude = [
-    'attorney', 'lawyer', 'counsel', 'legal director',
+  const legalTechInclude = [
     'legal engineer', 'legal associate', 'legal analyst',
     'legal operations', 'legal ops', 'legal project',
     'legal innovation', 'legal technology', 'legaltech',
-    'paralegal', 'legal secretary', 'legal assistant',
-    'compliance', 'regulatory', 'policy',
+    'compliance', 'regulatory',
     'contract manager', 'contract analyst', 'contract specialist', 'clm',
-    'ediscovery', 'e-discovery', 'litigation support',
+    'ediscovery', 'e-discovery', 'litigation support', 'litigation technology',
+    'knowledge management', 'practice technology',
+    'legal writer', 'legal content',
+    'privacy', 'data protection', 'gdpr', 'ccpa',
+    'chief legal',
+  ];
+  if (legalTechInclude.some(k => t.includes(k))) return true;
+
+  const techSignals = [
+    'technology', 'tech', 'innovation', 'automation', 'digital',
+    'platform', 'product', 'software', 'ai ', 'data', 'analytics',
+    'implementation', 'solutions', 'saas', 'workflow',
+  ];
+  const hasTechSignal = techSignals.some(k => t.includes(k));
+
+  const legalSignals = [
+    'attorney', 'lawyer', 'counsel', 'legal director',
+    'paralegal', 'legal secretary', 'legal assistant',
     'ip specialist', 'brand protection', 'trademark',
     'patent', 'intellectual property',
-    'knowledge management', 'practice technology',
-    'legal writer', 'legal content', 'editorial manager',
-    'deal desk', 'commercial operations',
-    'tax manager', 'tax director', 'tax counsel',
-    'investment manager', 'investment associate',
-    'risk', 'governance', 'audit',
-    'privacy', 'data protection', 'gdpr', 'ccpa',
-    'government affairs', 'public policy', 'legislative',
-    'threat intelligence', 'investigations',
-    'chief legal', 'deputy director', 'deputy project director',
+    'governance', 'audit', 'risk',
+    'government affairs', 'public policy', 'legislative', 'policy',
+    'tax counsel',
   ];
-  if (strongInclude.some(k => t.includes(k))) return true;
+  const hasLegalSignal = legalSignals.some(k => t.includes(k));
 
-  const lawyerFriendly = [
-    'customer success', 'customer enablement', 'customer onboarding',
-    'engagement manager', 'engagement associate',
-    'implementation', 'solutions consultant', 'solutions architect',
-    'product manager', 'product lead', 'product owner',
-    'product operations', 'program manager',
-    'enablement manager', 'enablement specialist', 'enablement director',
-    'account executive', 'account manager',
-    'gtm manager', 'gtm director', 'gtm team lead',
-    'business development manager', 'business development director',
-    'chief of staff', 'content strategy', 'content lead',
-    'technical delivery', 'delivery manager',
-    'field enablement', 'sales engineer',
-    'senior program manager',
-  ];
-  if (lawyerFriendly.some(k => t.includes(k))) return true;
+  if (hasLegalSignal && hasTechSignal) return true;
 
   const isLegalTechCompany = companyType === 'startup' || companyType === 'tech-legal';
+
   if (isLegalTechCompany) {
+    if (hasLegalSignal) return true;
+
     const legalTechCompanyRoles = [
-      'product marketing', 'marketing manager', 'marketing director',
-      'sales manager', 'sales director', 'sales operations',
-      'revenue operations', 'revops',
+      'customer success', 'customer enablement', 'customer onboarding',
+      'engagement manager', 'engagement associate',
+      'implementation', 'solutions consultant', 'solutions architect',
+      'product manager', 'product lead', 'product owner',
+      'product operations', 'program manager',
+      'enablement manager', 'enablement specialist', 'enablement director',
+      'account manager',
+      'content strategy', 'content lead',
+      'technical delivery', 'delivery manager',
+      'senior program manager',
       'professional services', 'training manager', 'training specialist',
-      'onboarding', 'support manager', 'support engineer',
+      'onboarding', 'support manager',
       'technical writer', 'documentation',
       'data analyst', 'business analyst', 'analytics',
       'partnerships', 'partner manager', 'alliances',
       'pre-sales', 'presales', 'solution engineer',
       'customer operations', 'client services', 'client success',
-      'director of operations', 'vp of operations',
-      'head of', 'vice president', 'chief',
+      'editorial manager',
     ];
     if (legalTechCompanyRoles.some(k => t.includes(k))) return true;
   }

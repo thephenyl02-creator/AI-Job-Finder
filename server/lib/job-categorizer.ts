@@ -30,34 +30,63 @@ export async function categorizeJob(
     .map(([cat, data]) => `${cat}:\n${data.subcategories.map(s => `  - ${s}`).join('\n')}`)
     .join('\n\n');
 
-  const prompt = `You are a strict gatekeeper for "Legal Tech Careers" — a platform EXCLUSIVELY for lawyers and paralegals seeking careers in legal technology.
+  const prompt = `You are a strict gatekeeper for "Legal Tech Careers" — a platform EXCLUSIVELY for lawyers and paralegals seeking careers in LEGAL TECHNOLOGY (not traditional legal practice).
 
-YOUR AUDIENCE: Practicing lawyers, law graduates, and paralegals who want to transition into or advance within legal tech. Every job shown must be one they would credibly pursue.
+CRITICAL DISTINCTION — LEGAL TECH vs TRADITIONAL PRACTICE:
+- LEGAL TECH = Building, implementing, managing, selling, or consulting on TECHNOLOGY that serves the legal industry. The role must have a TECHNOLOGY component.
+- TRADITIONAL PRACTICE = Practicing law (litigation, family law, criminal defense, immigration, real estate, tenant rights, civil liberties advocacy). These NEVER belong on the platform, even if they require a JD.
+- The question is NOT "does this job require legal expertise?" — the question is "does this job sit at the INTERSECTION of law and technology?"
+
+YOUR AUDIENCE: Lawyers and paralegals who want to TRANSITION FROM traditional practice INTO legal technology roles. They already know how to practice law — they want jobs where they apply legal knowledge to build, improve, or deliver technology-enabled legal services.
 
 Job Title: ${title}
 Company: ${company}
 Description: ${description.substring(0, 2000)}
 
-=== STEP 1: LEGAL RELEVANCE SCORING (1-10) — BE RUTHLESSLY STRICT ===
+=== STEP 1: LEGAL TECH RELEVANCE SCORING (1-10) — BE RUTHLESSLY STRICT ===
 
-Ask yourself: "Would a lawyer or paralegal want this job? Does it require or meaningfully benefit from legal training?"
+Ask: "Does this role sit at the intersection of LAW and TECHNOLOGY? Would a lawyer TRANSITIONING INTO tech want this job?"
 
-SCORE 9-10: Legal knowledge is REQUIRED. The role cannot be performed without legal expertise.
-Examples: Legal Engineer, Product Counsel, Privacy Attorney, eDiscovery Counsel, Compliance Counsel, Legal Operations Manager, Contracts Counsel, Legal Director, Staff Attorney, Trademark Attorney, Immigration Attorney, ISDA Negotiator.
+SCORE 9-10: Legal expertise + technology are BOTH central. The role builds, manages, or delivers legal technology.
+YES examples: Legal Engineer (builds legal workflow automation), Product Counsel at a tech company (advises on tech product legal issues), eDiscovery Manager (uses litigation technology), Legal Operations Manager (implements legal tech tools), Privacy Engineer, Compliance Technology Lead, CLM Implementation Specialist, AI Safety Counsel at a tech company, Legal AI Product Manager.
+NO examples at this tier: Staff Attorney (traditional practice), Immigration Attorney, Family Law Attorney, Trademark Attorney at a law firm, Criminal Defense Lawyer — these require legal expertise but have NO technology component.
 
-SCORE 7-8: Legal knowledge is STRONGLY PREFERRED. The work directly involves legal processes, legal data, or serving legal professionals.
-Examples: Legal Product Manager, Contract Automation Specialist, Legal Solutions Director, Legal AI Product Manager, CLM Implementation Specialist, Engagement Manager at a legal tech company (if they work directly with lawyers on legal workflows), GRC Analyst.
+SCORE 7-8: Strong legal tech intersection. Legal knowledge directly enhances work with legal technology, legal data, or legal process optimization.
+Examples: Legal Product Manager at a legal tech company, Contract Automation Specialist, Legal Solutions Director, Engagement Manager designing legal tech workflows for clients, GRC Analyst implementing compliance technology, Legal Data Scientist, Contracts Counsel at a legal tech company (if role involves the company's tech product).
 
-SCORE 5-6: Legal domain knowledge is USEFUL. The role is at a legal tech company and understanding legal concepts helps, but a non-lawyer could also do it.
-Examples: Product Manager at a legal tech company (generic product role), Legal Content Strategist, Professional Services at a legal tech vendor.
+SCORE 5-6: Moderate legal tech connection. Role is at a legal tech company and understanding legal domain helps, but technology component is indirect.
+Examples: Product Manager at a legal tech company (generic product work), Customer Success Manager at a legal tech vendor (helping legal users adopt the product), Professional Services Consultant at a legal tech vendor.
 
-SCORE 3-4: GENERIC BUSINESS/TECH ROLE at a legal tech company. Legal knowledge provides minimal advantage. These should NOT be published.
-Examples: Account Executive, Sales Engineer, Marketing Manager, Software Engineer (generic), Customer Success Manager (generic), HR, Finance, Billing, GTM, Revenue Ops, Data Migration Engineer, Technical Support.
+SCORE 3-4: Weak connection. Generic business/tech role at a legal tech company OR legal role with no technology component.
+Examples: Account Executive, Sales Engineer, Marketing Manager, generic Software Engineer, HR, Finance, Billing, Revenue Ops. Also: Paralegal (traditional), Staff Attorney at a nonprofit, any attorney role focused on traditional practice.
 
-SCORE 1-2: No legal connection whatsoever.
+SCORE 1-2: No legal tech connection whatsoever.
 
-HARD REJECT LIST — If the title matches any of these patterns, score 1-3 regardless of company:
-Account Executive, SDR, BDR, Sales Representative, Sales Engineer, Sales Enablement, GTM Manager, Marketing Manager, Content Marketing, Demand Generation, Billing Analyst, Finance Manager, HR Manager, Recruiter, Talent Acquisition, Revenue Operations, Deal Desk, Proposal Specialist, Technical Support Engineer, Customer Support Representative, Data Migration Engineer, DevOps, SRE, Backend Engineer (generic), Frontend Engineer (generic), UI/UX Designer (generic), Technical Account Manager, Chief of Staff, Executive Assistant, Office Manager.
+=== TRADITIONAL PRACTICE — ALWAYS SCORE 1-3 (HARD REJECT) ===
+These are traditional legal practice roles. They require legal expertise but have ZERO technology component. ALWAYS score 1-3 regardless of company:
+- Staff Attorney (at any organization — nonprofits, ACLU, legal aid, law firms)
+- Family Law Attorney, Immigration Attorney, Personal Injury Attorney, Trademark Attorney (at a law firm or legal services org)
+- Criminal Defense Attorney, Public Defender, Prosecutor
+- Real Estate Attorney, Estate Planning Attorney, Bankruptcy Attorney
+- Housing/Tenant Rights Attorney, Disability Advocacy Attorney, Domestic Violence Unit Attorney
+- Junior Associate / Senior Associate at a law firm (in traditional practice areas: litigation, corporate, real estate, tax, family, immigration)
+- Supervising Attorney at a legal aid organization
+- Legal Director at a civil liberties or advocacy organization
+- Any role at a legal aid nonprofit (e.g., Legal Services NYC) unless it explicitly involves technology implementation
+- "Experienced Lawyers" or generic lawyer recruitment postings
+
+=== GENERAL TECH / NON-LEGAL ROLES — ALWAYS SCORE 1-3 (HARD REJECT) ===
+These are general technology or business roles at companies that are NOT legal tech companies. Even if the company touches legal topics, these roles have no legal component:
+- Forward Deployed Engineer, Research Scientist, ML Engineer at a general AI company (e.g., Anthropic, OpenAI)
+- Business Systems Analyst, Security Risk Lead, Immigration Coordinator at a general tech company
+- Tax Lead, European Tax Lead at a non-legal-tech company
+- Investment Associate, Private Equity Associate at a litigation finance company
+- Head of Security Risk, Insider Risk Investigator at a general tech company
+- Product Operations Manager at a general AI company (unless specifically for legal products)
+- Certification Content Architect, Customer Trust Lead at a general tech company
+
+=== OTHER HARD REJECTS — SCORE 1-3 ===
+Account Executive, SDR, BDR, Sales Representative, Sales Engineer, Sales Enablement, GTM Manager, Marketing Manager, Content Marketing, Demand Generation, Billing Analyst, Finance Manager, HR Manager, Recruiter, Talent Acquisition, Revenue Operations, Deal Desk, Proposal Specialist, Technical Support Engineer, Customer Support Representative, Data Migration Engineer, DevOps, SRE, Backend Engineer (generic), Frontend Engineer (generic), UI/UX Designer (generic), Technical Account Manager, Chief of Staff, Executive Assistant, Office Manager, ROC Analyst, Software QA Analyst (generic).
 
 === STEP 2: CATEGORIZATION ===
 
@@ -67,30 +96,30 @@ ${taxonomyText}
 
 CATEGORIZATION GUIDANCE:
 - "Legal Engineering": For Legal Engineers who build/configure legal tech products using legal expertise. The role title typically contains "Legal Engineer" or involves designing legal workflows/automation.
-- "Legal Operations": For legal ops managers, legal project managers, process improvement, legal spend management, legal vendor management, legal tech implementation.
-- "Compliance & Privacy": For compliance counsel, privacy counsel, GRC analysts, trade compliance, regulatory tech roles, data privacy officers.
-- "Contract Management": For contracts counsel, contracts managers, CLM specialists, contract analysts, ISDA negotiators, deal specialists working with legal agreements.
-- "Litigation & eDiscovery": For eDiscovery project managers, litigation tech specialists, appellate specialists, case management, litigation analytics.
-- "Legal AI & Analytics": For AI product managers focused on legal AI, AI solutions engineers with legal domain, legal data scientists, AI safety counsel.
-- "Legal Product Management": For product managers/directors/leads at legal tech companies where the role requires understanding legal workflows and legal user needs.
-- "In-House Counsel": For attorneys, counsel, legal directors, staff attorneys working at legal tech or tech companies. These are practicing lawyers IN tech companies.
-- "Legal Consulting & Advisory": For consultants helping firms adopt legal tech, legal strategy advisors, legal innovation consultants, client-facing advisory roles requiring legal expertise.
+- "Legal Operations": For legal ops managers, legal project managers, process improvement, legal spend management, legal vendor management, legal tech implementation. Must involve TECHNOLOGY — not just managing a legal team.
+- "Compliance & Privacy": For compliance counsel, privacy counsel, GRC analysts, trade compliance, regulatory TECHNOLOGY roles, data privacy officers. Must involve compliance/privacy TECHNOLOGY or tech company context.
+- "Contract Management": For contracts counsel, contracts managers, CLM specialists, contract analysts, ISDA negotiators working with CONTRACT TECHNOLOGY or at legal tech companies.
+- "Litigation & eDiscovery": For eDiscovery project managers, litigation TECHNOLOGY specialists, case management TECHNOLOGY, litigation analytics.
+- "Legal AI & Analytics": For AI product managers focused on LEGAL AI specifically, AI solutions engineers with legal domain, legal data scientists. General AI roles at non-legal companies do NOT qualify.
+- "Legal Product Management": For product managers/directors/leads at LEGAL TECH companies where the role requires understanding legal workflows and legal user needs.
+- "In-House Counsel": ONLY for attorneys/counsel working at LEGAL TECH or TECH companies where the role involves advising on the company's technology products. Traditional practice attorneys at law firms, nonprofits, or advocacy orgs do NOT qualify.
+- "Legal Consulting & Advisory": For consultants helping firms adopt LEGAL TECHNOLOGY, legal innovation consultants, client-facing advisory roles at legal tech companies.
 - "Knowledge Management": For legal knowledge managers, knowledge counsel, legal research engineers, legal taxonomy/ontology specialists, editorial managers in legal publishing.
-- "Policy & Access to Justice": For legal policy advisors, court tech advisors, access to justice roles, digital justice, legal aid technology.
-- "Intellectual Property & Innovation": For trademark attorneys, IP specialists, patent technology, IP legal specialists working at the intersection of IP law and technology.
-- "Legal Sales & Client Solutions": ONLY for business development roles that EXPLICITLY require a JD, legal background, or deep legal expertise. Generic sales roles at legal tech companies do NOT qualify. Examples: Engagement Manager who designs legal workflows for clients, Legal Solutions Consultant.
+- "Policy & Access to Justice": For legal policy advisors working on TECHNOLOGY policy, court TECHNOLOGY advisors, digital justice, legal aid TECHNOLOGY roles. Traditional policy/advocacy roles do NOT qualify.
+- "Intellectual Property & Innovation": For IP specialists working at the intersection of IP law and TECHNOLOGY. Traditional trademark/patent attorneys at law firms do NOT qualify.
+- "Legal Sales & Client Solutions": ONLY for business development roles that EXPLICITLY require a JD, legal background, or deep legal expertise AND involve selling LEGAL TECHNOLOGY. Generic sales roles do NOT qualify.
 
 === STEP 3: EXTRACTION ===
 
 Extract:
 - Seniority level: Exactly one of: Intern, Fellowship, Entry, Mid, Senior, Lead, Director, VP
-  Priority rules: Intern/Fellowship from title → VP → Director → Lead/Principal → Senior/Sr./Staff → Associate/Junior/Entry → check description for years → default Mid
+  Priority rules: Intern/Fellowship from title -> VP -> Director -> Lead/Principal -> Senior/Sr./Staff -> Associate/Junior/Entry -> check description for years -> default Mid
 - Key skills (5-8 most important)
 - Experience range: experienceMin/experienceMax from posting. null if not stated.
 - Salary: salaryMin/salaryMax in annual USD. null if not stated.
 - Remote: isRemote true if remote/hybrid mentioned.
 - Employment type: full-time/part-time/contract/temporary/internship
-- Summary: 3 sentences focused on what a LAWYER would find compelling about this role
+- Summary: 3 sentences focused on what a LAWYER TRANSITIONING INTO TECH would find compelling about this role
 - Match keywords: 5-10 search terms
 - aiResponsibilities: 4-8 bullet points of what you'll DO
 - aiQualifications: 4-8 REQUIRED qualifications
@@ -117,8 +146,11 @@ Return ONLY valid JSON:
 }
 
 CRITICAL RULES:
-- legalRelevanceScore MUST be strict. When in doubt, score LOWER. Platform credibility depends on this.
+- legalRelevanceScore measures LEGAL TECHNOLOGY relevance, NOT just legal expertise. A Family Law Attorney scores 1-2, not 9-10.
+- Traditional legal practice roles MUST score 1-3 regardless of company prestige.
+- General tech/business roles at non-legal-tech companies MUST score 1-3.
 - Generic business roles at legal tech companies MUST score 3 or below.
+- When in doubt, score LOWER. Platform credibility depends on showing ONLY legal tech jobs.
 - experienceMin/experienceMax: null if not stated.
 - salaryMin/salaryMax: null if not stated.`;
 

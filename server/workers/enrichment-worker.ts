@@ -105,10 +105,111 @@ const HARD_REJECT_TITLE_PATTERNS = [
   /\bstrategic account executive\b/i,
   /\bUS-?\s*General\b/i,
   /\bSKYE TEST\b/i,
+
+  /\bstaff attorney\b/i,
+  /\bsupervising attorney\b/i,
+  /\bfamily law\b/i,
+  /\bimmigration (attorney|lawyer|counsel|coordinator)\b/i,
+  /\bpersonal injury\b/i,
+  /\breal estate\b.*\b(attorney|lawyer|associate|counsel)\b/i,
+  /\b(attorney|lawyer|associate|counsel)\b.*\breal estate\b/i,
+  /\bcriminal (defense|law)\b/i,
+  /\bpublic defender\b/i,
+  /\bprosecutor\b/i,
+  /\bestate planning\b/i,
+  /\bbankruptcy (attorney|lawyer|counsel)\b/i,
+  /\bdivorce (attorney|lawyer|counsel)\b/i,
+  /\bprobate (attorney|lawyer|counsel)\b/i,
+  /\btenant rights\b/i,
+  /\bhousing (staff )?(attorney|lawyer)\b/i,
+  /\bdomestic violence\b/i,
+  /\bdisability advocacy\b/i,
+  /\bright to counsel\b/i,
+  /\bhomeowner defense\b/i,
+  /\bgovernment benefits unit\b/i,
+  /\bveterans justice\b/i,
+  /\bimmigrant justice\b/i,
+  /\bvoting rights\b/i,
+  /\bnational security project\b/i,
+  /\bwomen'?s rights project\b/i,
+  /\bstate supreme court initiative\b/i,
+  /\bexperienced lawyers?\b/i,
+  /\blaw graduate\b/i,
+  /\blegal externship\b/i,
+  /\btrademark attorney\b/i,
+  /\bdeputy director\b/i,
+  /\bforward deployed engineer\b/i,
+  /\bresearch scientist\b/i,
+  /\bcertification content\b/i,
+  /\bcustomer trust lead\b/i,
+  /\bhead of security risk\b/i,
+  /\binsider risk investigator\b/i,
+  /\bimmigration coordinator\b/i,
+  /\beuropean tax lead\b/i,
+  /\binternational indirect tax\b/i,
+  /\broc analyst\b/i,
+  /\bsenior investment associate\b/i,
+  /\bbusiness systems analyst\b/i,
+  /\bsecurity workforce\b/i,
+  /\bregional state and local affairs\b/i,
+  /\bsoftware quality assurance\b/i,
+  /\bclinical counsel\b/i,
+  /\bthreat intelligence\b/i,
+  /\bgift planning\b/i,
+  /\bdisability rights program\b/i,
+  /\bresponsible scaling policy\b/i,
+  /\bai\/ml software engineer\b/i,
+  /^paralegal$/i,
+  /^account manager$/i,
+  /\bfreelance attorney\b/i,
+  /\bask a lawyer\b/i,
+  /^chief of staff$/i,
+  /\bdirector of tax\b/i,
+  /^gtm (director|team lead)\b/i,
+  /\bdeal desk\b/i,
 ];
 
 function shouldHardReject(title: string): boolean {
   return HARD_REJECT_TITLE_PATTERNS.some(pattern => pattern.test(title));
+}
+
+const NON_LEGAL_TECH_COMPANIES: Record<string, 'general-ai' | 'legal-aid' | 'advocacy'> = {
+  'Anthropic': 'general-ai',
+  'OpenAI': 'general-ai',
+  'Legal Services NYC': 'legal-aid',
+  'Legal Aid Society': 'legal-aid',
+  'ACLU': 'advocacy',
+};
+
+const LEGAL_TITLE_SIGNALS_FOR_GENERAL_COMPANIES = [
+  /\bcounsel\b/i, /\blegal\b/i, /\bprivacy\b/i, /\bcompliance\b/i,
+  /\bregulatory\b/i, /\bgovernment affairs\b/i,
+  /\btrust\s*&?\s*safety\b/i, /\bai safety\b/i,
+];
+
+const TECH_IMPLEMENTATION_TITLE_SIGNALS = [
+  /\btechnology\b/i, /\btech\b/i, /\bsoftware\b/i, /\bplatform\b/i,
+  /\bproduct manager\b/i, /\bengineering\b/i, /\bdata\b/i, /\bsystems\b/i,
+  /\bdigital\b/i, /\bimplementation\b/i, /\bautomation\b/i,
+];
+
+function shouldRejectByCompany(title: string, company: string): boolean {
+  const companyType = NON_LEGAL_TECH_COMPANIES[company];
+  if (!companyType) return false;
+
+  if (companyType === 'legal-aid' || companyType === 'advocacy') {
+    const hasTechSignal = TECH_IMPLEMENTATION_TITLE_SIGNALS.some(p => p.test(title));
+    return !hasTechSignal;
+  }
+
+  if (companyType === 'general-ai') {
+    const hasLegalSignal = LEGAL_TITLE_SIGNALS_FOR_GENERAL_COMPANIES.some(p => p.test(title));
+    if (!hasLegalSignal) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 interface EnrichmentResult {
@@ -156,6 +257,16 @@ async function enrichJob(job: Job): Promise<void> {
     await storage.updateJobWorkerFields(job.id, {
       pipelineStatus: 'rejected',
       reviewReasonCode: 'IRRELEVANT_TITLE',
+      lastEnrichedAt: new Date(),
+    });
+    return;
+  }
+
+  if (shouldRejectByCompany(job.title, job.company)) {
+    console.log(`[Enrichment] Company-rejecting "${job.title}" at ${job.company} - non-legal-tech company without legal signal`);
+    await storage.updateJobWorkerFields(job.id, {
+      pipelineStatus: 'rejected',
+      reviewReasonCode: 'NON_LEGAL_TECH_COMPANY',
       lastEnrichedAt: new Date(),
     });
     return;
@@ -261,7 +372,14 @@ async function enrichJob(job: Job): Promise<void> {
       enrichedData.pipelineStatus = 'rejected';
       enrichedData.reviewReasonCode = 'LOW_RELEVANCE';
     } else if (relevanceConfidence >= 60 && enrichedData.roleCategory && structuredComplete && relevanceScore >= 6 && qualityScore >= 80) {
-      enrichedData.pipelineStatus = 'ready';
+      const existingDuplicate = await storage.findLiveJobByTitleAndCompany(job.title, job.company, job.id);
+      if (existingDuplicate) {
+        enrichedData.pipelineStatus = 'rejected';
+        enrichedData.reviewReasonCode = 'DUPLICATE_JOB';
+        console.log(`[Enrichment] Duplicate detected: "${job.title}" at ${job.company} (existing live job #${existingDuplicate.id})`);
+      } else {
+        enrichedData.pipelineStatus = 'ready';
+      }
     } else {
       enrichedData.pipelineStatus = 'ready';
       if (!enrichedData.roleCategory) {
@@ -334,6 +452,59 @@ async function runEnrichmentBatch(): Promise<EnrichmentResult> {
   return result;
 }
 
+async function runLiveJobAudit(): Promise<{ audited: number; flagged: number }> {
+  let audited = 0;
+  let flagged = 0;
+
+  try {
+    const liveJobs = await storage.getLiveJobs();
+    console.log(`[Audit] Checking ${liveJobs.length} live jobs against updated filters...`);
+
+    for (const job of liveJobs) {
+      audited++;
+
+      if (shouldHardReject(job.title)) {
+        console.log(`[Audit] Flagging "${job.title}" at ${job.company} - matched hard reject title pattern`);
+        await storage.updateJobWorkerFields(job.id, {
+          pipelineStatus: 'rejected',
+          reviewReasonCode: 'AUDIT_TITLE_REJECT',
+        });
+        flagged++;
+        continue;
+      }
+
+      if (shouldRejectByCompany(job.title, job.company)) {
+        console.log(`[Audit] Flagging "${job.title}" at ${job.company} - non-legal-tech company`);
+        await storage.updateJobWorkerFields(job.id, {
+          pipelineStatus: 'rejected',
+          reviewReasonCode: 'AUDIT_COMPANY_REJECT',
+        });
+        flagged++;
+        continue;
+      }
+
+      const duplicate = await storage.findLiveJobByTitleAndCompany(job.title, job.company, job.id);
+      if (duplicate && duplicate.id < job.id) {
+        console.log(`[Audit] Flagging duplicate "${job.title}" at ${job.company} (keeping #${duplicate.id}, rejecting #${job.id})`);
+        await storage.updateJobWorkerFields(job.id, {
+          pipelineStatus: 'rejected',
+          reviewReasonCode: 'AUDIT_DUPLICATE',
+        });
+        flagged++;
+      }
+    }
+
+    console.log(`[Audit] Done: ${audited} audited, ${flagged} flagged for removal`);
+  } catch (err: any) {
+    console.error('[Audit] Failed:', err.message);
+  }
+
+  return { audited, flagged };
+}
+
+const AUDIT_INTERVAL_MS = 6 * 60 * 60 * 1000;
+let auditIntervalId: NodeJS.Timeout | null = null;
+
 export function startEnrichmentWorker() {
   if (intervalId) return;
   console.log('[Enrichment] Starting enrichment worker (every 2 minutes)');
@@ -345,12 +516,27 @@ export function startEnrichmentWorker() {
   intervalId = setInterval(() => {
     runEnrichmentBatch().catch(console.error);
   }, ENRICHMENT_INTERVAL_MS);
+
+  if (!auditIntervalId) {
+    setTimeout(() => {
+      runLiveJobAudit().catch(console.error);
+    }, 60000);
+
+    auditIntervalId = setInterval(() => {
+      runLiveJobAudit().catch(console.error);
+    }, AUDIT_INTERVAL_MS);
+    console.log('[Audit] Starting live job audit worker (every 6 hours)');
+  }
 }
 
 export function stopEnrichmentWorker() {
   if (intervalId) {
     clearInterval(intervalId);
     intervalId = null;
+  }
+  if (auditIntervalId) {
+    clearInterval(auditIntervalId);
+    auditIntervalId = null;
   }
 }
 
