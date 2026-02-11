@@ -153,9 +153,8 @@ function isStructuredDescriptionComplete(sd: any): boolean {
 async function enrichJob(job: Job): Promise<void> {
   if (shouldHardReject(job.title)) {
     console.log(`[Enrichment] Hard-rejecting "${job.title}" at ${job.company} - irrelevant title pattern`);
-    await storage.updateJobPipeline(job.id, {
+    await storage.updateJobWorkerFields(job.id, {
       pipelineStatus: 'rejected',
-      isPublished: false,
       reviewReasonCode: 'IRRELEVANT_TITLE',
       lastEnrichedAt: new Date(),
     });
@@ -167,7 +166,7 @@ async function enrichJob(job: Job): Promise<void> {
   };
 
   try {
-    await storage.updateJobPipeline(job.id, { pipelineStatus: 'enriching' });
+    await storage.updateJobWorkerFields(job.id, { pipelineStatus: 'enriching' });
 
     if (!job.jobHash) {
       enrichedData.jobHash = generateJobHash(
@@ -260,14 +259,11 @@ async function enrichJob(job: Job): Promise<void> {
 
     if (catResult?.reviewStatus === 'rejected' || relevanceConfidence < 40) {
       enrichedData.pipelineStatus = 'rejected';
-      enrichedData.isPublished = false;
       enrichedData.reviewReasonCode = 'LOW_RELEVANCE';
     } else if (relevanceConfidence >= 60 && enrichedData.roleCategory && structuredComplete && relevanceScore >= 6 && qualityScore >= 80) {
       enrichedData.pipelineStatus = 'ready';
-      enrichedData.isPublished = true;
     } else {
       enrichedData.pipelineStatus = 'ready';
-      enrichedData.isPublished = false;
       if (!enrichedData.roleCategory) {
         enrichedData.reviewReasonCode = 'MISSING_CATEGORY';
       } else if (!structuredComplete) {
@@ -281,10 +277,10 @@ async function enrichJob(job: Job): Promise<void> {
       }
     }
 
-    await storage.updateJobPipeline(job.id, enrichedData);
+    await storage.updateJobWorkerFields(job.id, enrichedData);
   } catch (err: any) {
     console.error(`[Enrichment] Failed to enrich job ${job.id}: ${err.message}`);
-    await storage.updateJobPipeline(job.id, {
+    await storage.updateJobWorkerFields(job.id, {
       pipelineStatus: 'raw',
       reviewReasonCode: 'MANUAL_REVIEW',
     });
@@ -315,7 +311,7 @@ async function runEnrichmentBatch(): Promise<EnrichmentResult> {
         if (batchResult.status === 'fulfilled') {
           result.processed++;
           const updatedJob = await storage.getJob(batch[j].id);
-          if (updatedJob?.isPublished) result.published++;
+          if (updatedJob?.pipelineStatus === 'ready') result.published++;
           else if (updatedJob?.pipelineStatus === 'rejected') result.rejected++;
           else result.needsReview++;
         } else {

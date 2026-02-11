@@ -140,6 +140,7 @@ export interface IStorage {
   // Pipeline / Enrichment
   getJobsForEnrichment(limit?: number): Promise<Job[]>;
   updateJobPipeline(id: number, data: Record<string, any>): Promise<Job | undefined>;
+  updateJobWorkerFields(id: number, data: Record<string, any>): Promise<Job | undefined>;
   getJobsByPipelineStatus(status: string): Promise<Job[]>;
   getStalePublishedJobs(days: number): Promise<Job[]>;
   getPublishedJobsForLinkCheck(): Promise<Job[]>;
@@ -361,7 +362,12 @@ class DatabaseStorage implements IStorage {
   async publishJob(id: number): Promise<Job | undefined> {
     const [updated] = await db
       .update(jobs)
-      .set({ isPublished: true })
+      .set({
+        isPublished: true,
+        isActive: true,
+        pipelineStatus: 'ready',
+        jobStatus: 'open',
+      })
       .where(eq(jobs.id, id))
       .returning();
     return updated;
@@ -2696,6 +2702,32 @@ class DatabaseStorage implements IStorage {
     const [updated] = await db
       .update(jobs)
       .set(data)
+      .where(eq(jobs.id, id))
+      .returning();
+    return updated;
+  }
+
+  async updateJobWorkerFields(id: number, data: Record<string, any>): Promise<Job | undefined> {
+    const WORKER_SAFE_KEYS = new Set([
+      'pipelineStatus', 'structuredDescription', 'structuredStatus', 'structuredUpdatedAt',
+      'qualityScore', 'relevanceConfidence', 'reviewReasonCode', 'reviewStatusNote',
+      'lastSeenAt', 'lastCheckedAt', 'lastEnrichedAt', 'applyUrlStatus',
+      'roleCategory', 'roleSubcategory', 'roleFocus', 'seniorityLevel',
+      'legalRelevanceScore', 'legalRelevanceReasoning', 'aiSummary',
+      'cleanedDescription', 'experienceMin', 'experienceMax',
+      'salaryMin', 'salaryMax', 'salaryCurrency',
+      'jobStatus', 'isActive',
+    ]);
+    const safeData: Record<string, any> = {};
+    for (const [key, val] of Object.entries(data)) {
+      if (WORKER_SAFE_KEYS.has(key)) {
+        safeData[key] = val;
+      }
+    }
+    if (Object.keys(safeData).length === 0) return undefined;
+    const [updated] = await db
+      .update(jobs)
+      .set(safeData)
       .where(eq(jobs.id, id))
       .returning();
     return updated;

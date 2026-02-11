@@ -2515,112 +2515,53 @@ Provide 2-4 recommended paths. Be specific to this candidate's actual experience
         return res.json({
           jobId,
           publiclyVisible: false,
-          reasons: ["NOT_FOUND"],
+          notLiveReasons: ["NOT_FOUND"],
           recommendedFixes: ["This job ID does not exist in the database."],
           checks: {
             exists: false, isPublished: false, isActive: false,
-            status: null, expiresAt: null, isExpired: false,
-            structuredDescriptionPresent: false, structuredDescriptionValid: false,
-            structuredFieldsMissing: [], source: null,
+            pipelineStatus: null, jobStatus: null,
+            source: null,
           },
-          publicEndpointWouldReturn404: true,
-          publicRule: "isPublished && isActive && structuredDescriptionValid",
+          publicRule: "isPublished && isActive && pipelineStatus==='ready' && jobStatus==='open'",
           now,
         });
       }
 
-      const reasons: string[] = [];
+      const { isJobLive, getNotLiveReasons } = await import('./lib/job-visibility');
+      const live = isJobLive(job);
+      const notLiveReasons = live ? [] : getNotLiveReasons(job);
       const recommendedFixes: string[] = [];
 
-      if (!job.isPublished) {
-        reasons.push("NOT_PUBLISHED");
-        recommendedFixes.push("Publish this job from Admin (Approve \u2192 Publish).");
+      if (notLiveReasons.includes('NOT_PUBLISHED')) {
+        recommendedFixes.push("Use Publish button to set this job live.");
       }
-      if (!job.isActive) {
-        reasons.push("INACTIVE");
-        recommendedFixes.push("Set isActive=true or re-activate this job.");
+      if (notLiveReasons.includes('INACTIVE')) {
+        recommendedFixes.push("Job is inactive. Publishing will also set isActive=true.");
       }
-
-      let sdParsed: any = null;
-      let sdPresent = false;
-      let sdValid = false;
-      const sdFieldsMissing: string[] = [];
-
-      if (job.structuredDescription) {
-        try {
-          sdParsed = typeof job.structuredDescription === "string"
-            ? JSON.parse(job.structuredDescription)
-            : job.structuredDescription;
-          sdPresent = true;
-        } catch {
-          sdPresent = false;
-          reasons.push("INVALID_STRUCTURED_DESCRIPTION");
-          recommendedFixes.push("Structured description is corrupted JSON. Regenerate it.");
-        }
+      if (notLiveReasons.includes('PIPELINE_NOT_READY')) {
+        recommendedFixes.push(`Pipeline status is '${job.pipelineStatus}'. Publishing will set it to 'ready', or use repair-visibility.`);
       }
-
-      if (!sdPresent) {
-        if (!reasons.includes("INVALID_STRUCTURED_DESCRIPTION")) {
-          reasons.push("MISSING_STRUCTURED_DESCRIPTION");
-          recommendedFixes.push("Generate a structured description from the Admin Standardization Queue.");
-        }
-      } else {
-        const requiredFields: { key: string; type: "string" | "array"; minLength?: number }[] = [
-          { key: "summary", type: "string" },
-          { key: "aboutCompany", type: "string" },
-          { key: "responsibilities", type: "array", minLength: 4 },
-          { key: "minimumQualifications", type: "array", minLength: 3 },
-          { key: "skillsRequired", type: "array", minLength: 6 },
-          { key: "seniority", type: "string" },
-          { key: "legalTechCategory", type: "string" },
-        ];
-
-        for (const field of requiredFields) {
-          const val = sdParsed[field.key];
-          if (field.type === "string") {
-            if (!val || (typeof val === "string" && val.trim().length === 0)) {
-              sdFieldsMissing.push(field.key);
-            }
-          } else if (field.type === "array") {
-            if (!Array.isArray(val) || val.length < (field.minLength || 1)) {
-              sdFieldsMissing.push(`${field.key} (need ${field.minLength || 1}+, have ${Array.isArray(val) ? val.length : 0})`);
-            }
-          }
-        }
-
-        if (sdParsed.summary && typeof sdParsed.summary === "string" && sdParsed.summary.length > 350) {
-          sdFieldsMissing.push("summary (exceeds 350 chars)");
-        }
-
-        sdValid = sdFieldsMissing.length === 0;
-        if (!sdValid) {
-          reasons.push("MISSING_STRUCTURED_FIELDS");
-          recommendedFixes.push(`Regenerate structured description or edit missing fields: ${sdFieldsMissing.join(", ")}.`);
-        }
+      if (notLiveReasons.includes('JOB_NOT_OPEN')) {
+        recommendedFixes.push(`Job status is '${job.jobStatus}'. Publishing will set it to 'open'. Check reviewReasonCode: ${job.reviewReasonCode || 'none'}.`);
       }
-
-      const publiclyVisible = !!job.isPublished && !!job.isActive && (sdPresent && sdValid);
-      const publicEndpointWouldReturn404 = !job.isPublished || !job.isActive;
 
       res.json({
         jobId,
-        publiclyVisible,
-        reasons,
+        publiclyVisible: live,
+        isPublished: !!job.isPublished,
+        isLive: live,
+        notLiveReasons,
         recommendedFixes,
         checks: {
           exists: true,
           isPublished: !!job.isPublished,
           isActive: !!job.isActive,
-          status: job.structuredStatus || null,
-          expiresAt: null,
-          isExpired: false,
-          structuredDescriptionPresent: sdPresent,
-          structuredDescriptionValid: sdValid,
-          structuredFieldsMissing: sdFieldsMissing,
+          pipelineStatus: job.pipelineStatus || null,
+          jobStatus: job.jobStatus || null,
+          reviewReasonCode: job.reviewReasonCode || null,
           source: job.source || null,
         },
-        publicEndpointWouldReturn404,
-        publicRule: "isPublished && isActive && structuredDescriptionValid",
+        publicRule: "isPublished && isActive && pipelineStatus==='ready' && jobStatus==='open'",
         now,
       });
     } catch (error) {
@@ -5850,6 +5791,64 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
       res.json({ completed: prefs?.onboardingCompleted || false });
     } catch (error) {
       res.json({ completed: false });
+    }
+  });
+
+  app.post("/api/admin/jobs/repair-visibility", isAuthenticated, async (req: any, res) => {
+    if (!(await isAdminCheck(req))) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    try {
+      const { isJobLive } = await import('./lib/job-visibility');
+      const allPublished = await storage.getJobsByPipelineStatus('published');
+      const notLive = allPublished.filter(j => j.isPublished && !isJobLive(j));
+      const updatedIds: number[] = [];
+      for (const job of notLive) {
+        await storage.updateJobPipeline(job.id, {
+          isActive: true,
+          pipelineStatus: 'ready',
+          jobStatus: 'open',
+        });
+        updatedIds.push(job.id);
+      }
+      const allReady = await storage.getJobsByPipelineStatus('ready');
+      const readyNotLive = allReady.filter(j => j.isPublished && !isJobLive(j));
+      for (const job of readyNotLive) {
+        if (!updatedIds.includes(job.id)) {
+          await storage.updateJobPipeline(job.id, {
+            isActive: true,
+            pipelineStatus: 'ready',
+            jobStatus: 'open',
+          });
+          updatedIds.push(job.id);
+        }
+      }
+      res.json({ updatedCount: updatedIds.length, updatedIds });
+    } catch (error) {
+      console.error("Error repairing visibility:", error);
+      res.status(500).json({ error: "Failed to repair visibility" });
+    }
+  });
+
+  app.get("/api/health/db", async (_req, res) => {
+    try {
+      const dbUrl = process.env.DATABASE_URL || '';
+      let dbHost = 'unknown';
+      let dbName = 'unknown';
+      try {
+        const url = new URL(dbUrl);
+        dbHost = url.hostname;
+        dbName = url.pathname.replace('/', '');
+      } catch {}
+      res.json({
+        env: process.env.NODE_ENV || 'development',
+        dbHost,
+        dbName,
+        serverTime: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error("Health check error:", error);
+      res.status(500).json({ error: "Health check failed" });
     }
   });
 

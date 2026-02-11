@@ -93,21 +93,19 @@ function QualityChecklist({ sd }: { sd: StructuredDescription | null }) {
 interface DiagnosticsResult {
   jobId: number;
   publiclyVisible: boolean;
-  reasons: string[];
+  isPublished: boolean;
+  isLive: boolean;
+  notLiveReasons: string[];
   recommendedFixes: string[];
   checks: {
     exists: boolean;
     isPublished: boolean;
     isActive: boolean;
-    status: string | null;
-    expiresAt: string | null;
-    isExpired: boolean;
-    structuredDescriptionPresent: boolean;
-    structuredDescriptionValid: boolean;
-    structuredFieldsMissing: string[];
+    pipelineStatus: string | null;
+    jobStatus: string | null;
+    reviewReasonCode: string | null;
     source: string | null;
   };
-  publicEndpointWouldReturn404: boolean;
   publicRule: string;
   now: string;
 }
@@ -175,14 +173,14 @@ function DiagnosticsModal({ jobId, jobTitle, open, onClose }: { jobId: number; j
 
             <div className="space-y-3">
               <div>
-                <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">Checks</h4>
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">Visibility Checks</h4>
                 <div className="space-y-1" data-testid="diagnostics-checks">
                   {[
                     { label: "Exists in DB", pass: data.checks.exists },
-                    { label: "Published", pass: data.checks.isPublished },
-                    { label: "Active", pass: data.checks.isActive },
-                    { label: "Structured Description Present", pass: data.checks.structuredDescriptionPresent },
-                    { label: "Structured Description Valid", pass: data.checks.structuredDescriptionValid },
+                    { label: "Published (isPublished)", pass: data.checks.isPublished },
+                    { label: "Active (isActive)", pass: data.checks.isActive },
+                    { label: "Pipeline Ready", pass: data.checks.pipelineStatus === 'ready' },
+                    { label: "Job Open", pass: data.checks.jobStatus === 'open' },
                   ].map((c) => (
                     <div key={c.label} className="flex items-center gap-2 text-xs">
                       {c.pass ? (
@@ -193,10 +191,22 @@ function DiagnosticsModal({ jobId, jobTitle, open, onClose }: { jobId: number; j
                       <span className={c.pass ? "text-muted-foreground" : "text-foreground"}>{c.label}</span>
                     </div>
                   ))}
-                  {data.checks.status && (
+                  {data.checks.pipelineStatus && data.checks.pipelineStatus !== 'ready' && (
                     <div className="flex items-center gap-2 text-xs">
                       <Info className="h-3 w-3 text-muted-foreground shrink-0" />
-                      <span className="text-muted-foreground">Status: {data.checks.status}</span>
+                      <span className="text-muted-foreground">Pipeline: {data.checks.pipelineStatus}</span>
+                    </div>
+                  )}
+                  {data.checks.jobStatus && data.checks.jobStatus !== 'open' && (
+                    <div className="flex items-center gap-2 text-xs">
+                      <Info className="h-3 w-3 text-muted-foreground shrink-0" />
+                      <span className="text-muted-foreground">Job Status: {data.checks.jobStatus}</span>
+                    </div>
+                  )}
+                  {data.checks.reviewReasonCode && (
+                    <div className="flex items-center gap-2 text-xs">
+                      <AlertTriangle className="h-3 w-3 text-amber-500 shrink-0" />
+                      <span className="text-muted-foreground">Review Reason: {data.checks.reviewReasonCode}</span>
                     </div>
                   )}
                   {data.checks.source && (
@@ -208,25 +218,11 @@ function DiagnosticsModal({ jobId, jobTitle, open, onClose }: { jobId: number; j
                 </div>
               </div>
 
-              {data.checks.structuredFieldsMissing.length > 0 && (
+              {data.notLiveReasons.length > 0 && (
                 <div>
-                  <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">Missing Fields</h4>
-                  <div className="space-y-0.5" data-testid="diagnostics-missing-fields">
-                    {data.checks.structuredFieldsMissing.map((f, i) => (
-                      <div key={i} className="flex items-center gap-2 text-xs">
-                        <AlertTriangle className="h-3 w-3 text-amber-500 shrink-0" />
-                        <span>{f}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {data.reasons.length > 0 && (
-                <div>
-                  <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">Reasons Not Visible</h4>
+                  <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">Reasons Not Live</h4>
                   <div className="space-y-0.5" data-testid="diagnostics-reasons">
-                    {data.reasons.map((r, i) => (
+                    {data.notLiveReasons.map((r, i) => (
                       <div key={i} className="text-xs font-mono bg-muted/50 rounded px-2 py-1">{r}</div>
                     ))}
                   </div>
@@ -247,8 +243,8 @@ function DiagnosticsModal({ jobId, jobTitle, open, onClose }: { jobId: number; j
                 </div>
               )}
 
-              {data.reasons.length === 0 && (
-                <p className="text-xs text-green-600 dark:text-green-400">This job passes all visibility checks.</p>
+              {data.notLiveReasons.length === 0 && (
+                <p className="text-xs text-green-600 dark:text-green-400">This job is live and visible to all users.</p>
               )}
 
               <div className="pt-2 border-t border-border/30 flex items-center justify-between gap-2 flex-wrap">
@@ -332,7 +328,15 @@ function JobQueueRow({ job, onRefreshQueue }: { job: Job; onRefreshQueue: () => 
           <div className="flex items-center gap-2 mb-1 flex-wrap">
             <span className="text-sm font-medium text-foreground truncate max-w-[300px]" data-testid={`text-queue-title-${job.id}`}>{job.title}</span>
             <StatusBadge status={status} />
-            {job.isPublished && <Badge variant="outline" className="text-[10px]">Published</Badge>}
+            {job.isPublished && (() => {
+              const live = job.isPublished && job.isActive && job.pipelineStatus === 'ready' && job.jobStatus === 'open';
+              if (live) return <Badge variant="outline" className="text-[10px] border-emerald-500 text-emerald-600" data-testid={`badge-live-${job.id}`}>Live</Badge>;
+              const reasons: string[] = [];
+              if (!job.isActive) reasons.push('inactive');
+              if (job.pipelineStatus !== 'ready') reasons.push(`pipeline: ${job.pipelineStatus}`);
+              if (job.jobStatus !== 'open') reasons.push(`status: ${job.jobStatus}`);
+              return <Badge variant="outline" className="text-[10px] border-amber-500 text-amber-600" title={reasons.join(', ')} data-testid={`badge-not-live-${job.id}`}>Not Live</Badge>;
+            })()}
           </div>
           <p className="text-xs text-muted-foreground">{job.company} {job.location ? `\u2022 ${job.location}` : ""}</p>
         </div>

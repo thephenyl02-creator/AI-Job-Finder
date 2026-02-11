@@ -245,8 +245,8 @@ function PipelineStatsCard() {
   const stages = [
     { label: "Raw", count: stats.raw, color: "bg-amber-500", desc: "Awaiting enrichment" },
     { label: "Enriching", count: stats.enriching, color: "bg-blue-500", desc: "Being processed" },
-    { label: "Published", count: stats.published, color: "bg-emerald-500", desc: "Live on site" },
-    { label: "Ready", count: stats.ready, color: "bg-teal-500", desc: "Passed gate, not published" },
+    { label: "Live", count: stats.published, color: "bg-emerald-500", desc: "Published + all flags set" },
+    { label: "Ready", count: stats.ready, color: "bg-teal-500", desc: "Passed gate, awaiting publish" },
     { label: "Rejected", count: stats.rejected, color: "bg-red-500", desc: "Failed quality gate" },
   ];
 

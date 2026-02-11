@@ -40,13 +40,13 @@ async function runStaleJobCleanup(): Promise<number> {
   console.log(`[Reliability] Found ${staleJobs.length} stale published jobs (not seen in ${STALENESS_DAYS}+ days)`);
 
   for (const job of staleJobs) {
-    await storage.updateJobPipeline(job.id, {
-      isPublished: false,
+    await storage.updateJobWorkerFields(job.id, {
+      jobStatus: 'closed',
       reviewReasonCode: 'STALE_LISTING',
     });
   }
 
-  console.log(`[Reliability] Unpublished ${staleJobs.length} stale jobs`);
+  console.log(`[Reliability] Closed ${staleJobs.length} stale jobs (jobStatus='closed')`);
   return staleJobs.length;
 }
 
@@ -69,15 +69,15 @@ async function runApplyLinkValidation(): Promise<{ checked: number; broken: numb
 
     for (const { job, ok } of results) {
       if (!ok) {
-        await storage.updateJobPipeline(job.id, {
-          isPublished: false,
+        await storage.updateJobWorkerFields(job.id, {
+          jobStatus: 'closed',
           reviewReasonCode: 'BROKEN_APPLY_LINK',
           lastCheckedAt: new Date(),
         });
         broken++;
-        console.log(`[Reliability] Broken apply link: job ${job.id} "${job.title}" -> ${job.applyUrl}`);
+        console.log(`[Reliability] Broken apply link, closing job ${job.id} "${job.title}" -> ${job.applyUrl}`);
       } else {
-        await storage.updateJobPipeline(job.id, {
+        await storage.updateJobWorkerFields(job.id, {
           lastCheckedAt: new Date(),
         });
       }

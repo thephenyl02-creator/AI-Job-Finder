@@ -353,6 +353,8 @@ export default function Jobs() {
     queryKey: ["/api/jobs", jobsQueryParams],
     queryFn: () => fetch(`/api/jobs?${jobsQueryParams}`).then(r => r.json()),
     placeholderData: (prev) => prev,
+    refetchOnWindowFocus: true,
+    staleTime: 30000,
   });
   const allJobs = jobsResponse?.jobs ?? [];
   const totalJobCount = jobsResponse?.total ?? 0;
