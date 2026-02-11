@@ -1,0 +1,385 @@
+Product Goal
+
+Build a curated, premium legal-tech careers platform that automatically ingests jobs at scale while ensuring only structured, relevant, trustworthy roles are visible to users. The system must eliminate manual job posting and maintain editorial quality through automated filtering and a lightweight review workflow.
+
+The system must prioritize:
+
+Fast ingestion
+Strict publishing
+Low manual effort
+High trust
+
+1️⃣ CORE PRODUCT MODEL (NON-NEGOTIABLE)
+Two-Layer Inventory
+Layer 1 — RAW Inventory (Hidden)
+
+All scraped/imported jobs go here immediately.
+
+Users NEVER see:
+
+raw jobs
+
+incomplete jobs
+
+unstructured jobs
+
+Layer 2 — CURATED Inventory (Visible)
+
+Only jobs that pass the trust gate become visible.
+
+Trust Gate Rule
+
+A job is public ONLY IF:
+
+isPublished = true
+AND jobStatus = 'ready'
+AND primaryCategory exists
+AND structuredDescription.summary exists
+AND experience exists
+AND applyUrl valid
+
+
+Otherwise:
+
+queued for review OR
+
+rejected automatically
+
+2️⃣ SCHEMA ADDITIONS (ESSENTIAL ONLY)
+
+Add fields to jobs table:
+
+Processing
+jobStatus: "raw" | "enriching" | "ready" | "rejected"
+qualityScore: number
+relevanceConfidence: number
+reviewReasonCode: enum
+
+Experience (critical for lawyers)
+experienceMin: number | null
+experienceMax: number | null
+experienceText: string | null
+seniorityLevel: string | null
+
+Categorization
+primaryCategory: string
+secondaryTags: string[]
+careerTrack: string
+
+Deduplication
+jobHash: unique
+
+Reliability timestamps (IMPORTANT GUARDRAIL)
+firstSeenAt
+lastSeenAt
+lastEnrichedAt
+
+3️⃣ INGESTION LAYER (FAST & SIMPLE)
+
+All scrapers must:
+
+✅ fetch job data
+✅ normalize fields
+✅ generate jobHash
+✅ insert/update job
+✅ set:
+
+jobStatus = 'raw'
+isPublished = false
+
+
+Scrapers MUST NOT:
+
+categorize
+
+extract experience
+
+generate summaries
+
+run AI enrichment
+
+Goal:
+ingestion must never block.
+
+Deduplication Rules
+
+jobHash =
+
+normalized(company + title + location + applyUrl)
+
+
+If exists:
+
+update lastSeenAt
+
+update rawDescription if changed
+
+4️⃣ ENRICHMENT WORKER (INTELLIGENCE LAYER)
+
+Create background worker:
+
+server/workers/enrichmentWorker.ts
+
+
+Runs every 5 minutes.
+
+Process jobs where:
+
+jobStatus = 'raw'
+LIMIT 25
+
+
+Steps per job:
+
+4.1 Clean description
+
+Use existing cleaner.
+
+4.2 Extract structured sections
+
+Generate:
+
+summary
+
+responsibilities
+
+minimum qualifications
+
+preferred qualifications
+
+skills
+
+4.3 Extract Years of Experience (MANDATORY)
+
+Create:
+
+experience-extractor.ts
+
+
+Detect:
+
+X years
+
+X+ years
+
+X–Y years
+
+PQE patterns
+
+Output:
+
+experienceMin
+experienceMax
+experienceText
+confidence
+
+
+If none found:
+
+experienceText = "Not specified"
+mark for review
+
+4.4 Categorization
+
+Assign ONE primaryCategory only using taxonomy.
+
+Borderline roles require AI classification.
+
+Output:
+
+primaryCategory
+secondaryTags
+relevanceConfidence
+careerTrack
+
+4.5 Seniority determination
+
+Based on experience:
+
+0–2 Entry
+3–5 Mid
+6–8 Senior
+9–12 Lead
+12+ Director+
+
+4.6 Generate Premium Signal
+
+Generate:
+
+whyThisFitsLawyers
+
+
+One concise sentence explaining transition relevance.
+
+4.7 Quality Score + Publishing Decision
+
+Compute qualityScore based on:
+
+relevanceConfidence
+
+category exists
+
+summary exists
+
+experience exists
+
+applyUrl valid
+
+Rules:
+
+qualityScore >= 85 AND relevanceConfidence >= 0.8
+→ jobStatus='ready'
+→ isPublished=true
+
+
+Else if relevant but incomplete:
+
+jobStatus='ready'
+isPublished=false
+reviewReasonCode set
+
+
+Else:
+
+jobStatus='rejected'
+
+5️⃣ RELIABILITY GUARDRAILS (CRITICAL)
+5.1 Dead Job Cleanup
+
+Daily worker:
+
+check published jobs
+
+if lastSeenAt older than 30 days
+→ unpublish automatically
+
+5.2 Apply Link Validation
+
+Check published jobs periodically.
+If broken:
+
+isPublished=false
+reviewReasonCode="BROKEN_APPLY_LINK"
+
+5.3 Re-enrichment Trigger
+
+If rawDescription changes:
+
+jobStatus='raw'
+
+6️⃣ PUBLIC API RULES (PERFORMANCE + TRUST)
+List endpoint
+GET /api/jobs
+
+
+Must:
+
+paginate
+
+return only ready + published jobs
+
+Return only lightweight fields:
+
+id
+
+title
+
+company
+
+location
+
+primaryCategory
+
+experienceText
+
+seniorityLevel
+
+summary
+
+whyThisFitsLawyers
+
+postedDate
+
+Detail endpoint
+
+Returns full structured job.
+
+7️⃣ FRONTEND PREMIUM EXPERIENCE
+
+Job cards show:
+
+title
+
+company + location
+
+primary category badge
+
+experience required (prominent)
+
+seniority
+
+short summary
+
+whyThisFitsLawyers
+
+source badge
+
+Replace:
+
+Latest Jobs
+
+
+with:
+
+Recently Curated Roles
+
+8️⃣ ADMIN REVIEW QUEUE (TIME SAVER)
+
+Admin views:
+
+RAW
+
+ENRICHING
+
+READY (unpublished)
+
+PUBLISHED
+
+REJECTED
+
+Admin actions:
+
+approve
+
+edit category
+
+edit experience
+
+re-run enrichment
+
+Goal:
+10–15 minutes daily maintenance max.
+
+✅ ACCEPTANCE CRITERIA
+
+Scrapers ingest jobs even if enrichment fails.
+
+Users never see raw jobs.
+
+All visible jobs show experience + category.
+
+Platform remains fast at 10k jobs.
+
+Manual posting no longer required.
+
+Platform feels curated and intentional.
+
+Final Product Rule
+
+This is not a job board.
+
+This is a curated intelligence layer for lawyers entering legal tech and AI.
+
+Ingest broadly.
+Publish narrowly.
+Explain clearly.
