@@ -1,0 +1,75 @@
+You are an expert full-stack engineer + product leader. Update my Replit app (React client + Express server) so that users can browse and view job postings WITHOUT creating an account. Login should appear ONLY when the user takes a high-intent action (Save job, Upload resume for Match %, Create alerts, Track application, or Admin actions).
+
+PRODUCT RULES (must follow)
+1) Public first: Anyone can access:
+   - Landing page (/)
+   - Job browse page (/jobs) with search + filters
+   - Job detail page (/jobs/:id) with the FULL job description visible
+   - External “Apply” link remains visible and clickable without login
+2) Login only on intent: Require login ONLY for:
+   - Save/Shortlist job
+   - Upload resume → see match score + gap analysis
+   - Job alerts (email notifications)
+   - Application tracking (status/notes)
+   - Admin CRUD (create/edit/delete jobs)
+
+IMPLEMENTATION REQUIREMENTS
+
+A) CLIENT ROUTING + LAYOUTS (React)
+1) Split routing into two layouts:
+   - PublicLayout: NO auth dependency, simple header, renders public routes
+   - AppLayout (AuthenticatedLayout): requires auth, contains sidebar/dashboard UI
+2) Public routes (must not be wrapped in any auth guard):
+   - /, /jobs, /jobs/:id, /login
+3) Protected routes (must require auth):
+   - /dashboard, /saved, /alerts, /resume, /admin and any admin subroutes
+4) Ensure public routes do NOT accidentally inherit an authenticated sidebar or any component that redirects when logged out.
+
+B) JOB DETAIL PAGE BEHAVIOR (Critical)
+1) Job content must always render for logged-out users:
+   - title, company, location, full description, requirements, etc.
+2) Add high-intent CTAs on job detail:
+   - “Save job”
+   - “Upload resume → See match %”
+   - “Get alerts like this”
+   - “Track application”
+3) If user is logged out and clicks any CTA:
+   - Trigger login modal if it exists; otherwise redirect to /login
+   - Preserve the return URL so after login the user returns to the SAME job page
+   - Show message: “Create a free account to save jobs, see match %, get alerts, and track applications.”
+4) After login, automatically complete the intended action (or re-open the action UI).
+
+C) SERVER API AUTH (Express)
+1) These endpoints MUST be PUBLIC (no requireAuth middleware):
+   - GET /api/jobs
+   - GET /api/jobs/:id
+2) These endpoints MUST be PROTECTED (requireAuth middleware):
+   - POST /api/jobs (admin create)
+   - PUT /api/jobs/:id (admin update)
+   - DELETE /api/jobs/:id (admin delete)
+   - POST /api/jobs/:id/save
+   - POST /api/resume/match
+   - POST /api/alerts/subscribe
+   - POST /api/applications/track
+3) If you don’t have requireAuth middleware, create it. It should return 401 JSON if no logged-in user/session is present.
+
+D) DATA FETCHING RELIABILITY (Fix “0 jobs / Loading…” issues)
+1) Normalize the jobs fetcher so it works whether the API returns:
+   - an array, OR
+   - an object like { jobs: [...] }
+2) If the app uses cookie sessions, ensure fetch includes credentials:
+   - fetch(url, { credentials: "include" })
+3) Add minimal error handling so the Jobs page shows an error state if the fetch fails.
+
+E) DELIVERABLES
+1) Implement all changes directly in the codebase.
+2) Confirm logged-out users can:
+   - open /jobs and see the list
+   - open /jobs/:id and see full details
+   - click “Apply” without login
+   - click Save/Match/Alerts/Track and be prompted to login
+3) Output a short summary listing:
+   - files changed
+   - why each change was made
+
+Proceed now and do not ask me questions—make reasonable assumptions and implement the best-practice solution.

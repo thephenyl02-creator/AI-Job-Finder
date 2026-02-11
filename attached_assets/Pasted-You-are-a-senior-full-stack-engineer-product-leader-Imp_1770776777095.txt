@@ -1,0 +1,66 @@
+You are a senior full-stack engineer + product leader. Implement a high-conversion Job Detail page in my Replit app (React client + Express API) with a 3-button layout. Job content must remain public; login is only required for personalization actions.
+
+GOAL (Product Rules)
+1) Anyone (logged out) can browse /jobs and view /jobs/:id including FULL job description.
+2) “Apply” must NOT require login if it links to an external employer site.
+3) Login is required ONLY for:
+   - Save Job
+   - Upload Resume → Match %
+   - Job Alerts
+   - Track Application
+   - Admin actions
+
+IMPLEMENT ON JOB DETAIL PAGE (client)
+File: client/src/pages/job-detail.tsx (or equivalent job detail component)
+
+A) Add a 3-button row directly under the job title/company section:
+
+1) PRIMARY (no login):
+   Button label: "Apply on Company Website"
+   - Uses job.applyUrl (or equivalent field) and opens in a new tab (target="_blank", rel="noopener noreferrer")
+   - Always visible for logged-out users
+   - If applyUrl is missing, disable button and show “Apply link unavailable”.
+
+2) SECONDARY (login required):
+   Button label: "Upload Resume → See Match %"
+   - If user is logged in: open resume upload/match flow (call POST /api/resume/match or existing endpoint)
+   - If user is logged out: prompt login (open existing login modal; if none exists, navigate to /login)
+   - Preserve return URL so the user returns to the same job page after login
+
+3) TERTIARY (login required):
+   Button label: "Save Job"
+   - If logged in: call POST /api/jobs/:id/save (or existing saved-job endpoint)
+   - If logged out: prompt login with return URL
+
+B) Post-Apply conversion nudge:
+After the user clicks the Apply button, show a small toast/banner on the job page:
+Text: "Applied? Track this application and get reminders."
+Button: "Track Application"
+- If logged in: call POST /api/applications/track (or existing endpoint) with jobId and applyUrl
+- If logged out: prompt login (same return URL behavior)
+
+C) UX copy for login prompt (use consistently):
+"Create a free account to save jobs, see your match %, get alerts, and track applications."
+
+D) Responsive layout:
+- On desktop: show the 3 buttons in one row
+- On mobile: stack buttons vertically with spacing
+
+SERVER REQUIREMENTS (Express)
+1) Ensure these endpoints are PUBLIC (no auth):
+   - GET /api/jobs
+   - GET /api/jobs/:id
+2) Ensure these endpoints are AUTH-PROTECTED:
+   - POST /api/jobs/:id/save
+   - POST /api/resume/match
+   - POST /api/alerts/subscribe
+   - POST /api/applications/track
+
+RELIABILITY CHECKS
+- Job detail fetch must work logged out.
+- Match/Save/Track must trigger login when logged out, then return to the same job page.
+- Apply must always work without login.
+
+DELIVERABLE
+Implement the UI changes and any missing endpoints/middleware wiring needed. List the exact files you changed.
+Proceed now without asking me questions; make reasonable assumptions based on existing code patterns.
