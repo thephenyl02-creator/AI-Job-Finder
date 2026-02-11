@@ -1,0 +1,147 @@
+You are working inside my existing Replit repo (Node/Express + Drizzle + React). I have a recurring bug: Admin changes (publish/unpublish/edits) often don’t show on the user side; jobs appear/disappear randomly. Fix ALL root causes permanently, not just one symptom.
+
+========================
+CORE FACTS (from repo)
+========================
+1) Public job feed is filtered in `server/storage.ts` (getPublishedJobs + paginated):
+Publicly visible jobs MUST satisfy ALL:
+- isPublished = true
+- isActive = true
+- pipelineStatus = 'ready'
+- jobStatus = 'open'
+
+2) Admin “Publish” currently only sets isPublished=true (storage.publishJob), causing mismatch: admin says published but user feed hides it.
+
+3) Workers override admin decisions:
+- `server/workers/enrichment-worker.ts` sets isPublished true/false based on quality/relevance/confidence.
+- `server/workers/reliability-worker.ts` sets isPublished=false when stale (45+ days) or apply link fails HEAD check.
+This causes the “randomness” and repeated mismatch.
+
+4) Diagnostics endpoint `/api/diagnostics/jobs/:id` currently uses an outdated visibility rule (isPublished && isActive && structuredDescriptionValid) which does NOT match the actual public feed rule.
+
+5) `updateJobPipeline(id, data)` is a “god update” that blindly writes fields; workers can overwrite admin state.
+
+========================
+GOALS (NON-NEGOTIABLE)
+========================
+A) Single source of truth for “LIVE ON SITE” and it must match the public feed rule:
+LIVE = isPublished && isActive && pipelineStatus==='ready' && jobStatus==='open'
+This exact logic must be reused for:
+- public feed expectations
+- diagnostics
+- admin UI badges (Published vs Live)
+
+B) Publishing must be deterministic:
+- When admin clicks Publish, the job must become LIVE immediately (unless it’s missing required data; but in this repo we already know the public feed is driven by flags, so publishing must set those flags).
+- No background worker may silently unpublish an admin-published job.
+
+C) Workers may still set quality/reliability info, but MUST NOT change isPublished.
+To hide a job due to stale/broken link, workers should use a visibility blocker like:
+- jobStatus='closed' OR isActive=false
+and store reason in reviewReasonCode / reliability notes.
+Publishing remains an admin decision.
+
+D) Make admin UI stop lying:
+- “Published” badge = isPublished flag only
+- “Live” badge = full LIVE rule
+If published but not live, show “Not Live” with reason.
+
+E) Add 2 admin utilities:
+1) POST /api/admin/jobs/repair-visibility (admin-only)
+   - Fixes any job where isPublished=true but not LIVE by setting:
+     isActive=true, pipelineStatus='ready', jobStatus='open'
+   - DO NOT publish jobs that are not already published.
+   - Return updatedCount and list of job IDs updated.
+
+2) GET /api/health/db (public or admin-only is fine)
+   - Returns environment + database identity info so we can detect preview vs deployed DB mismatch:
+     { env, dbHostOrName, schemaVersionOrMigrationInfo if available, now }
+
+========================
+REQUIRED IMPLEMENTATION STEPS
+========================
+
+(1) Create shared helper for LIVE rule:
+Create `server/lib/job-visibility.ts`:
+- export function isJobLive(job): boolean using exactly:
+  job.isPublished && job.isActive && job.pipelineStatus==='ready' && job.jobStatus==='open'
+- export function getNotLiveReasons(job): string[] returning reason codes:
+  NOT_PUBLISHED, INACTIVE, PIPELINE_NOT_READY, JOB_NOT_OPEN
+
+(2) Fix publish/unpublish to align with public feed:
+Edit `server/storage.ts`:
+- publishJob(id) MUST set:
+  isPublished=true, isActive=true, pipelineStatus='ready', jobStatus='open'
+- unpublishJob(id) sets isPublished=false (leave other fields as-is).
+
+(3) Lock down worker writes (prevent overwrites forever):
+Edit `server/storage.ts` updateJobPipeline (or create a new worker-safe update):
+- Ensure workers cannot write admin-owned fields:
+  BLOCK workers from setting isPublished.
+  Ideally also block them from changing jobStatus unless explicitly intended by reliability worker.
+Implementation approach:
+- Create `updateJobWorkerFields(id, data)` that whitelists keys (e.g. structuredDescription, structuredStatus, pipelineStatus, qualityScore, relevanceConfidence, reviewReasonCode, lastSeenAt, applyUrlStatus, etc.).
+- Replace worker calls to updateJobPipeline with updateJobWorkerFields.
+- Keep updateJobPipeline for admin updates if needed, but do NOT let workers use it.
+
+(4) Remove isPublished mutation from enrichment worker:
+Edit `server/workers/enrichment-worker.ts`:
+- Delete / do not set `enrichedData.isPublished`.
+- Worker can still set pipelineStatus, structured fields, qualityScore, reviewReasonCode, etc.
+- If worker thinks job is low quality, it may set:
+  pipelineStatus='rejected' or keep it 'raw', but it must not unpublish.
+Public feed already filters by pipelineStatus='ready' so rejected/raw won't show anyway unless admin forces it live.
+
+(5) Replace reliability worker “unpublish” with “visibility blocker”:
+Edit `server/workers/reliability-worker.ts`:
+- Remove any `.set({ isPublished: false })` behavior.
+- Instead:
+  - If apply link broken: set jobStatus='closed' (or isActive=false) and reviewReasonCode='BROKEN_APPLY_LINK'
+  - If stale 45+ days: set jobStatus='closed' (or isActive=false) and reviewReasonCode='STALE_LISTING'
+- Do NOT touch isPublished.
+
+(6) Fix diagnostics to match the actual LIVE rule:
+Edit `server/routes.ts` diagnostics endpoint:
+- Import isJobLive + getNotLiveReasons from server/lib/job-visibility
+- Compute:
+  publiclyVisible = isJobLive(job)
+- publicRule string must state the exact rule:
+  "isPublished && isActive && pipelineStatus==='ready' && jobStatus==='open'"
+- Return notLiveReasons + recommendedFixes (e.g. “use Publish to set active/ready/open”).
+- Include current values of each gating field in checks payload.
+
+(7) Fix admin UI to show Published vs Live clearly:
+Edit `client/src/pages/admin.tsx` and `client/src/components/admin-standardization-queue.tsx`:
+- Add local helper isLive(job) using same rule.
+- Badge behavior:
+  - If job.isPublished: show “Published”
+  - If isLive(job): show “Live”
+  - If job.isPublished && !isLive(job): show “Not Live” + tooltip or inline reason list from gating fields.
+- Update any label “Published = Live on site” to be accurate, or add a separate tab/count for Live.
+
+(8) Fix user-side cache confusion:
+In user jobs page (likely `client/src/pages/jobs.tsx`):
+- Ensure jobs refetches reasonably:
+  set `refetchOnWindowFocus: true`
+  and/or lower staleTime
+- After admin publish/unpublish actions, invalidate /api/jobs query if both admin and user share same SPA session (optional).
+
+(9) Add new endpoints:
+- POST /api/admin/jobs/repair-visibility (admin-only)
+  - Query jobs where isPublished=true but NOT live.
+  - Update each to: isActive=true, pipelineStatus='ready', jobStatus='open'
+  - Return updatedCount and ids.
+- GET /api/health/db
+  - return env variables that are safe, plus database identity info from connection if possible (host/db name), and current server time.
+
+========================
+ACCEPTANCE TESTS (MUST PASS)
+========================
+1) Admin publish a job -> job appears in GET /api/jobs immediately.
+2) Enrichment worker runs -> does NOT change publish state.
+3) Reliability worker runs -> does NOT change publish state; it can close jobs but not unpublish.
+4) Diagnostics endpoint explains exactly why a job is not live with clear reason codes.
+5) Admin UI never lies: Published flag and Live state are shown separately and correctly.
+6) /api/health/db helps detect preview vs deployed DB mismatch.
+
+Implement all changes cleanly. Ensure TypeScript compiles and app boots without errors. Do not remove existing fields; only add helper + endpoints + safe refactors.
