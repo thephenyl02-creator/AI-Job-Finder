@@ -122,12 +122,7 @@ export default function Events() {
   useEffect(() => { track({ eventType: "page_view", pagePath: "/events" }); }, []);
 
   const { data: events, isLoading } = useQuery<Event[]>({
-    queryKey: ["/api/events", "upcoming=true"],
-    queryFn: async () => {
-      const res = await fetch("/api/events?upcoming=true", { credentials: "include" });
-      if (!res.ok) throw new Error("Failed to fetch events");
-      return res.json();
-    },
+    queryKey: ["/api/events"],
   });
 
   return (
@@ -163,15 +158,23 @@ export default function Events() {
             <ScrollReveal>
               <div className="flex flex-col items-center justify-center py-20 text-center" data-testid="empty-state">
                 <Calendar className="h-12 w-12 text-muted-foreground/40 mb-4" />
-                <h3 className="text-lg font-medium text-foreground mb-1">No upcoming events</h3>
+                <h3 className="text-lg font-medium text-foreground mb-1">No events yet</h3>
                 <p className="text-sm text-muted-foreground">
                   Check back soon for new legal tech events and conferences.
                 </p>
               </div>
             </ScrollReveal>
-          ) : (
+          ) : (() => {
+            const now = new Date();
+            const upcomingEvents = events.filter(e => new Date(e.startDate) >= now);
+            const pastEvents = events.filter(e => new Date(e.startDate) < now);
+            const allSorted = [...upcomingEvents, ...pastEvents];
+            const displayEvents = isPro ? allSorted : allSorted.slice(0, 2);
+            const gatedCount = allSorted.length - 2;
+
+            return (
             <div className="space-y-4">
-              {(isPro ? events : events.slice(0, 2)).map((event, index) => {
+              {displayEvents.map((event, index) => {
                 const AttendanceIcon = ATTENDANCE_ICONS[event.attendanceType] || Globe;
                 const topics = event.topics || [];
                 const displayTopics = topics.slice(0, 4);
@@ -281,7 +284,7 @@ export default function Events() {
                   </ScrollReveal>
                 );
               })}
-              {!isPro && events.length > 2 && (
+              {!isPro && gatedCount > 0 && (
                 <Card className="relative overflow-visible" data-testid="card-events-pro-gate">
                   <CardContent className="pt-8 pb-8">
                     <div className="text-center">
@@ -289,7 +292,7 @@ export default function Events() {
                         <Lock className="h-6 w-6 text-primary" />
                       </div>
                       <h2 className="text-lg font-medium text-foreground mb-2">
-                        {events.length - 2} more events available
+                        {gatedCount} more event{gatedCount !== 1 ? "s" : ""} available
                       </h2>
                       <p className="text-sm text-muted-foreground max-w-md mx-auto mb-5">
                         Unlock the full events calendar with conferences, workshops, and networking opportunities curated for legal tech professionals.
@@ -307,7 +310,8 @@ export default function Events() {
                 </Card>
               )}
             </div>
-          )}
+            );
+          })()}
         </div>
       </main>
 
