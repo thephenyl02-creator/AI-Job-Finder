@@ -413,15 +413,7 @@ export default function Jobs() {
     .map(([key, val]) => ({ key, display: val.display, count: val.count }));
 
   useEffect(() => {
-    if (!hasAutoExpanded && allJobs.length > 0 && expandedCategories.size === 0 && !searchResults) {
-      const counts = Object.entries(JOB_TAXONOMY).map(([cat]) => ({
-        cat,
-        count: allJobs.filter(j => j.roleCategory === cat).length,
-      }));
-      const largest = counts.sort((a, b) => b.count - a.count)[0];
-      if (largest && largest.count > 0) {
-        setExpandedCategories(new Set([largest.cat]));
-      }
+    if (!hasAutoExpanded && allJobs.length > 0 && !searchResults) {
       setHasAutoExpanded(true);
     }
   }, [allJobs, hasAutoExpanded, searchResults]);
