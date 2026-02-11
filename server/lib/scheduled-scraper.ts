@@ -2,18 +2,35 @@ import axios from 'axios';
 import { storage } from '../storage';
 import type { InsertJob, Job } from '../../shared/schema';
 import { logInfo, logWarn, logError, logSuccess, cleanupOldLogs } from './logger';
-import { stripHtml, isRelevantRole } from './html-utils';
-import { categorizeJob } from './job-categorizer';
 import { matchNewJobsAgainstAlerts } from './alert-matcher';
-import { formatFlatDescription } from './description-formatter';
-import { isDescriptionFlat } from './description-cleaner';
-import { extractStructuredDescription } from './description-extractor';
+import { scrapeAllLawFirms, isLegalTechRole, transformToJobSchema } from './law-firm-scraper';
+import { LAW_FIRMS_AND_COMPANIES } from './law-firms-list';
 
-const SCRAPE_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 hours
-const LINK_CHECK_TIMEOUT = 10000; // 10 seconds for each request
-const VALIDATION_DELAY_MS = 10000; // 10 seconds between validations
+const SCRAPE_INTERVAL_MS = 12 * 60 * 60 * 1000; // 12 hours
+const LINK_CHECK_TIMEOUT = 10000;
+const VALIDATION_DELAY_MS = 10000;
+const MAX_NEW_JOBS_PER_RUN = 500;
 
-// Validation state for background processing
+interface ScrapeState {
+  isRunning: boolean;
+  startedAt: Date | null;
+  triggeredBy: string | null;
+  currentCompany: string | null;
+  companiesProcessed: number;
+  companiesTotal: number;
+  jobsFound: number;
+}
+
+const scrapeState: ScrapeState = {
+  isRunning: false,
+  startedAt: null,
+  triggeredBy: null,
+  currentCompany: null,
+  companiesProcessed: 0,
+  companiesTotal: 0,
+  jobsFound: 0,
+};
+
 interface ValidationState {
   isRunning: boolean;
   currentIndex: number;
@@ -38,110 +55,19 @@ const validationState: ValidationState = {
   abortController: null,
 };
 
-const GREENHOUSE_SOURCES = [
-  { name: 'Everlaw', id: 'everlaw', type: 'legaltech' },
-  { name: 'NetDocuments', id: 'netdocuments', type: 'legaltech' },
-  { name: 'Mitratech', id: 'mitratech', type: 'legaltech' },
-  { name: 'Brightflag', id: 'brightflag', type: 'legaltech' },
-  { name: 'Rocket Lawyer', id: 'rocketlawyer', type: 'legaltech' },
-  { name: 'Gibson Dunn', id: 'gibsondunn', type: 'lawfirm' },
-  { name: 'Legal Services NYC', id: 'legalservicesnyc', type: 'legalaid' },
-  { name: 'Axiom', id: 'axiom', type: 'legaltech' },
-  { name: 'Anthropic', id: 'anthropic', type: 'general' },
-  { name: 'OneTrust', id: 'onetrust', type: 'legaltech' },
-  { name: 'Notion', id: 'notion', type: 'general' },
-];
-
-const LEVER_SOURCES = [
-  { name: 'Factor', id: 'factor' },
-];
-
-async function scrapeGreenhouse(name: string, id: string, orgType: string): Promise<InsertJob[]> {
-  const jobs: InsertJob[] = [];
-  
-  try {
-    const url = `https://boards-api.greenhouse.io/v1/boards/${id}/jobs?content=true`;
-    const res = await axios.get(url, { timeout: 15000 });
-    
-    for (const job of res.data.jobs || []) {
-      const isRelevant = isRelevantRole(job.title || '', job.content || '', orgType);
-      
-      if (!isRelevant) continue;
-      
-      const cleanDescription = stripHtml(job.content || '');
-      
-      let roleCategory = 'Legal Tech Startup Roles';
-      if (orgType === 'lawfirm') roleCategory = 'Law Firm Tech & Innovation';
-      if (orgType === 'legalaid') roleCategory = 'Legal AI Jobs';
-      
-      jobs.push({
-        title: job.title || 'Untitled',
-        company: name,
-        companyLogo: `https://logo.clearbit.com/${name.toLowerCase().replace(/[^a-z]/g, '')}.com`,
-        location: job.location?.name || 'Remote',
-        isRemote: (job.location?.name || '').toLowerCase().includes('remote'),
-        locationType: (job.location?.name || '').toLowerCase().includes('remote') ? 'remote' : (job.location?.name || '').toLowerCase().includes('hybrid') ? 'hybrid' : 'onsite',
-        description: cleanDescription,
-        applyUrl: job.absolute_url || '',
-        externalId: `gh_${id}_${job.id}`,
-        source: 'greenhouse',
-        roleCategory,
-      });
-    }
-    
-    logInfo('SCRAPE', `${name}: Found ${res.data.jobs?.length || 0} jobs, ${jobs.length} relevant`);
-  } catch (error: any) {
-    logError('SCRAPE', `${name}: Failed to scrape`, { error: error.message });
-  }
-  
-  return jobs;
+export function getScrapeStatus(): ScrapeState & { schedulerActive: boolean; nextRunAt: Date | null } {
+  return {
+    ...scrapeState,
+    schedulerActive: schedulerInterval !== null,
+    nextRunAt: schedulerInterval && scrapeState.startedAt
+      ? new Date(scrapeState.startedAt.getTime() + SCRAPE_INTERVAL_MS)
+      : schedulerInterval
+        ? new Date(Date.now() + SCRAPE_INTERVAL_MS)
+        : null,
+  };
 }
 
-async function scrapeLever(name: string, id: string): Promise<InsertJob[]> {
-  const jobs: InsertJob[] = [];
-  
-  try {
-    const url = `https://api.lever.co/v0/postings/${id}`;
-    const res = await axios.get(url, { timeout: 15000 });
-    
-    for (const job of res.data || []) {
-      if (!isRelevantRole(job.text || '', job.descriptionPlain || '')) continue;
-      
-      const descHtml = job.description || '';
-      const descPlain = job.descriptionPlain || '';
-      const cleanDesc = descHtml ? stripHtml(descHtml) : descPlain;
-      
-      jobs.push({
-        title: job.text || 'Untitled',
-        company: name,
-        companyLogo: `https://logo.clearbit.com/${name.toLowerCase().replace(/[^a-z]/g, '')}.com`,
-        location: job.categories?.location || 'Remote',
-        isRemote: (job.categories?.location || '').toLowerCase().includes('remote'),
-        locationType: (job.categories?.location || '').toLowerCase().includes('remote') ? 'remote' : (job.categories?.location || '').toLowerCase().includes('hybrid') ? 'hybrid' : 'onsite',
-        description: cleanDesc,
-        applyUrl: job.hostedUrl || '',
-        externalId: `lever_${id}_${job.id}`,
-        source: 'lever',
-        roleCategory: 'Legal Tech Startup Roles',
-      });
-    }
-    
-    logInfo('SCRAPE', `${name}: Found ${res.data?.length || 0} jobs, ${jobs.length} relevant`);
-  } catch (error: any) {
-    logError('SCRAPE', `${name}: Failed to scrape`, { error: error.message });
-  }
-  
-  return jobs;
-}
-
-// Get current validation status
-export function getValidationStatus(): {
-  isRunning: boolean;
-  progress: { current: number; total: number };
-  stats: { valid: number; broken: number };
-  startedAt: Date | null;
-  lastCheckedAt: Date | null;
-} {
+export function getValidationStatus() {
   return {
     isRunning: validationState.isRunning,
     progress: {
@@ -157,52 +83,36 @@ export function getValidationStatus(): {
   };
 }
 
-// Check a single job link
 async function checkSingleJobLink(job: Job): Promise<boolean> {
   try {
-    // Try HEAD request first
     const response = await axios.head(job.applyUrl, {
       timeout: LINK_CHECK_TIMEOUT,
       maxRedirects: 5,
       validateStatus: (status) => status < 500,
     });
-
-    if (response.status >= 400) {
-      return false; // Broken
-    }
-    return true; // Valid
+    if (response.status >= 400) return false;
+    return true;
   } catch (error: any) {
-    // Treat timeouts as valid (server might be slow but reachable)
-    if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') {
-      return true;
-    }
-    
-    // Some servers block HEAD requests, try GET as fallback
+    if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') return true;
     try {
       const getResponse = await axios.get(job.applyUrl, {
         timeout: LINK_CHECK_TIMEOUT,
         maxRedirects: 5,
         validateStatus: (status) => status < 500,
-        headers: { 'Range': 'bytes=0-0' }, // Request minimal data
+        headers: { 'Range': 'bytes=0-0' },
       });
-      
-      if (getResponse.status >= 400) {
-        return false;
-      }
+      if (getResponse.status >= 400) return false;
       return true;
     } catch {
-      // If both fail, mark as broken
       return false;
     }
   }
 }
 
-// Sleep helper
 function delay(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-// Start continuous background validation
 export async function startContinuousValidation(): Promise<void> {
   if (validationState.isRunning) {
     logWarn('VALIDATE', 'Validation already in progress');
@@ -210,13 +120,11 @@ export async function startContinuousValidation(): Promise<void> {
   }
 
   const jobs = await storage.getActiveJobs();
-  
   if (jobs.length === 0) {
     logInfo('VALIDATE', 'No jobs to validate');
     return;
   }
 
-  // Reset state
   validationState.isRunning = true;
   validationState.currentIndex = 0;
   validationState.totalJobs = jobs.length;
@@ -229,9 +137,7 @@ export async function startContinuousValidation(): Promise<void> {
 
   logInfo('VALIDATE', `Starting continuous validation for ${jobs.length} jobs (10s interval)`);
 
-  // Process jobs one at a time
   for (let i = 0; i < jobs.length; i++) {
-    // Check if validation was stopped
     if (!validationState.isRunning) {
       logInfo('VALIDATE', 'Validation stopped by user');
       break;
@@ -249,37 +155,31 @@ export async function startContinuousValidation(): Promise<void> {
       } else {
         validationState.brokenCount++;
         validationState.brokenIds.push(job.id);
-        
         logWarn('VALIDATE', `Broken link found: ${job.company} - ${job.title}`, {
           jobId: job.id,
           url: job.applyUrl,
           progress: `${i + 1}/${jobs.length}`,
         });
-
-        // Deactivate the job with broken link
         await storage.updateJob(job.id, { isActive: false });
         logInfo('VALIDATE', `Deactivated job ${job.id} due to broken link`);
       }
 
-      // Log progress every 10 jobs
       if ((i + 1) % 10 === 0) {
         logInfo('VALIDATE', `Progress: ${i + 1}/${jobs.length}`, {
           valid: validationState.validCount,
           broken: validationState.brokenCount,
         });
       }
-
     } catch (error: any) {
       logError('VALIDATE', `Error checking job ${job.id}`, { error: error.message });
     }
 
-    // Wait between checks (except for last job)
     if (i < jobs.length - 1 && validationState.isRunning) {
       await delay(VALIDATION_DELAY_MS);
     }
   }
 
-  const duration = validationState.startedAt 
+  const duration = validationState.startedAt
     ? Math.round((Date.now() - validationState.startedAt.getTime()) / 1000)
     : 0;
 
@@ -294,7 +194,6 @@ export async function startContinuousValidation(): Promise<void> {
   validationState.isRunning = false;
 }
 
-// Stop ongoing validation
 export function stopContinuousValidation(): void {
   if (validationState.isRunning) {
     validationState.isRunning = false;
@@ -302,18 +201,15 @@ export function stopContinuousValidation(): void {
   }
 }
 
-// Legacy function for quick sampling (used in scheduled scrape for quick check)
 export async function validateJobLinks(jobs: Job[]): Promise<{ valid: number; broken: number; brokenIds: number[] }> {
   logInfo('VALIDATE', `Quick validation check for ${Math.min(10, jobs.length)} jobs`);
-  
+
   let valid = 0;
   let broken = 0;
   const brokenIds: number[] = [];
-  
-  // Quick sample of just 10 jobs for scheduled runs
+
   for (const job of jobs.slice(0, 10)) {
     const isValid = await checkSingleJobLink(job);
-    
     if (isValid) {
       valid++;
     } else {
@@ -321,14 +217,19 @@ export async function validateJobLinks(jobs: Job[]): Promise<{ valid: number; br
       brokenIds.push(job.id);
       logWarn('VALIDATE', `Broken: ${job.company} - ${job.title}`, { jobId: job.id });
     }
-    
-    // Small delay between checks
     await delay(1000);
   }
-  
+
   logInfo('VALIDATE', `Quick validation complete`, { valid, broken });
-  
   return { valid, broken, brokenIds };
+}
+
+function isValidJob(job: InsertJob): boolean {
+  if (!job.title || job.title.trim().length < 3) return false;
+  if (!job.company || job.company.trim().length < 2) return false;
+  if (!job.applyUrl || (!job.applyUrl.startsWith('http') && job.applyUrl !== '#')) return false;
+  if (!job.externalId) return false;
+  return true;
 }
 
 export async function runScheduledScrape(triggeredBy: string = 'scheduler'): Promise<{
@@ -336,21 +237,40 @@ export async function runScheduledScrape(triggeredBy: string = 'scheduler'): Pro
   updatedJobs: number;
   totalJobs: number;
   brokenLinks: number;
-  categorized: number;
   alertsTriggered: number;
   sources: { name: string; count: number }[];
+  companiesScraped: number;
+  companiesFailed: number;
+  jobsValidated: number;
+  jobsRejectedValidation: number;
 }> {
+  if (scrapeState.isRunning) {
+    logWarn('SCHEDULER', `Scrape already running (started at ${scrapeState.startedAt?.toISOString()}, triggered by ${scrapeState.triggeredBy})`);
+    return {
+      newJobs: 0, updatedJobs: 0, totalJobs: 0, brokenLinks: 0,
+      alertsTriggered: 0, sources: [], companiesScraped: 0,
+      companiesFailed: 0, jobsValidated: 0, jobsRejectedValidation: 0,
+    };
+  }
+
+  scrapeState.isRunning = true;
+  scrapeState.startedAt = new Date();
+  scrapeState.triggeredBy = triggeredBy;
+  scrapeState.companiesProcessed = 0;
+  scrapeState.companiesTotal = LAW_FIRMS_AND_COMPANIES.length;
+  scrapeState.jobsFound = 0;
+
   const startTime = Date.now();
   const errors: string[] = [];
-  
+
   logInfo('SCHEDULER', '========================================');
-  logInfo('SCHEDULER', 'Starting AUTOPILOT job scrape');
+  logInfo('SCHEDULER', `Starting FULL PIPELINE scrape (${LAW_FIRMS_AND_COMPANIES.length} companies)`);
   logInfo('SCHEDULER', `Time: ${new Date().toISOString()}`);
   logInfo('SCHEDULER', `Triggered by: ${triggeredBy}`);
   logInfo('SCHEDULER', '========================================');
-  
+
   cleanupOldLogs();
-  
+
   let scrapeRunId: number | null = null;
   try {
     const scrapeRun = await storage.createScrapeRun({
@@ -361,303 +281,97 @@ export async function runScheduledScrape(triggeredBy: string = 'scheduler'): Pro
   } catch (err: any) {
     logWarn('SCHEDULER', `Failed to create scrape run record: ${err.message}`);
   }
-  
-  const allJobs: InsertJob[] = [];
-  const sources: { name: string; count: number }[] = [];
-  const successfulSources: string[] = [];
-  let totalSourcesSucceeded = 0;
-  let totalSourcesFailed = 0;
+
   let inserted = 0;
   let updated = 0;
   let newJobs: Job[] = [];
-  let staleDeactivated = 0;
-  let categorizedCount = 0;
   let alertsTriggered = 0;
   let brokenLinks = 0;
   let totalActiveJobs = 0;
-  
+  let jobsValidated = 0;
+  let jobsRejectedValidation = 0;
+  const sources: { name: string; count: number }[] = [];
+  const successfulSourceTypes = new Set<string>();
+  let companiesSucceeded = 0;
+  let companiesFailed = 0;
+
   try {
-    // === PHASE 1: Scrape all sources with retry ===
-    logInfo('PHASE', '--- Phase 1: Scraping sources ---');
-    
-    logInfo('SCRAPE', `Scraping ${GREENHOUSE_SOURCES.length} Greenhouse sources...`);
-    const greenhouseResults = await Promise.allSettled(
-      GREENHOUSE_SOURCES.map(s => scrapeGreenhouse(s.name, s.id, s.type))
-    );
-    
-    let greenhouseSuccessCount = 0;
-    const failedGreenhouseSources: typeof GREENHOUSE_SOURCES = [];
-    for (let i = 0; i < greenhouseResults.length; i++) {
-      const result = greenhouseResults[i];
-      const source = GREENHOUSE_SOURCES[i];
-      if (result.status === 'fulfilled') {
-        allJobs.push(...result.value);
-        sources.push({ name: source.name, count: result.value.length });
-        greenhouseSuccessCount++;
+    logInfo('PHASE', `--- Phase 1: Scraping ${LAW_FIRMS_AND_COMPANIES.length} companies ---`);
+
+    const { jobs: scrapedJobs, stats: scrapeStats } = await scrapeAllLawFirms();
+
+    const companiesAttempted = new Set(scrapeStats.map(s => s.company));
+    for (const stat of scrapeStats) {
+      sources.push({ name: stat.company, count: stat.filtered });
+      companiesSucceeded++;
+    }
+    companiesFailed = LAW_FIRMS_AND_COMPANIES.length - companiesAttempted.size;
+
+    scrapeState.companiesProcessed = LAW_FIRMS_AND_COMPANIES.length;
+    scrapeState.jobsFound = scrapedJobs.length;
+
+    logInfo('SCRAPE', `Scraping complete: ${scrapedJobs.length} jobs from ${companiesSucceeded} companies (${companiesFailed} failed)`);
+
+    for (const firm of LAW_FIRMS_AND_COMPANIES) {
+      const firmStat = scrapeStats.find(s => s.company === firm.name);
+      if (firmStat && (firmStat.found > 0 || firmStat.filtered > 0)) {
+        if (firm.greenhouseId) successfulSourceTypes.add('greenhouse');
+        else if (firm.leverPostingsUrl) successfulSourceTypes.add('lever');
+        else if (firm.ashbyUrl) successfulSourceTypes.add('ashby');
+        else if (firm.workday) successfulSourceTypes.add('workday');
+      }
+    }
+
+    logInfo('PHASE', '--- Phase 2: Validation & Save ---');
+
+    const validJobs: InsertJob[] = [];
+    for (const job of scrapedJobs) {
+      if (isValidJob(job)) {
+        validJobs.push(job);
       } else {
-        failedGreenhouseSources.push(source);
-        errors.push(`Greenhouse ${source.name}: ${result.reason?.message || 'Unknown error'}`);
+        jobsRejectedValidation++;
       }
     }
-    
-    if (failedGreenhouseSources.length > 0) {
-      logWarn('RETRY', `Retrying ${failedGreenhouseSources.length} failed Greenhouse sources...`);
-      const retryResults = await Promise.allSettled(
-        failedGreenhouseSources.map(s => scrapeGreenhouse(s.name, s.id, s.type))
-      );
-      for (let i = 0; i < retryResults.length; i++) {
-        const result = retryResults[i];
-        const source = failedGreenhouseSources[i];
-        if (result.status === 'fulfilled') {
-          allJobs.push(...result.value);
-          sources.push({ name: source.name, count: result.value.length });
-          greenhouseSuccessCount++;
-          logSuccess('RETRY', `Retry succeeded for ${source.name}`);
-        } else {
-          sources.push({ name: source.name, count: 0 });
-          totalSourcesFailed++;
-          logError('RETRY', `Retry failed for ${source.name}`, { error: result.reason?.message });
-        }
-      }
+    jobsValidated = validJobs.length;
+
+    if (jobsRejectedValidation > 0) {
+      logWarn('VALIDATE', `Rejected ${jobsRejectedValidation} jobs with missing required fields`);
     }
-    totalSourcesSucceeded += greenhouseSuccessCount;
-    if (greenhouseSuccessCount >= GREENHOUSE_SOURCES.length * 0.5) {
-      successfulSources.push('greenhouse');
+
+    const capHit = validJobs.length > MAX_NEW_JOBS_PER_RUN;
+    const jobsToSave = capHit ? validJobs.slice(0, MAX_NEW_JOBS_PER_RUN) : validJobs;
+    if (capHit) {
+      logWarn('CAP', `Capped at ${MAX_NEW_JOBS_PER_RUN} jobs (${validJobs.length} available) to prevent flooding`);
     }
-    
-    logInfo('SCRAPE', `Scraping ${LEVER_SOURCES.length} Lever sources...`);
-    const leverResults = await Promise.allSettled(
-      LEVER_SOURCES.map(s => scrapeLever(s.name, s.id))
-    );
-    
-    let leverSuccessCount = 0;
-    const failedLeverSources: typeof LEVER_SOURCES = [];
-    for (let i = 0; i < leverResults.length; i++) {
-      const result = leverResults[i];
-      const source = LEVER_SOURCES[i];
-      if (result.status === 'fulfilled') {
-        allJobs.push(...result.value);
-        sources.push({ name: source.name, count: result.value.length });
-        leverSuccessCount++;
-      } else {
-        failedLeverSources.push(source);
-        errors.push(`Lever ${source.name}: ${result.reason?.message || 'Unknown error'}`);
-      }
-    }
-    
-    if (failedLeverSources.length > 0) {
-      logWarn('RETRY', `Retrying ${failedLeverSources.length} failed Lever sources...`);
-      const retryResults = await Promise.allSettled(
-        failedLeverSources.map(s => scrapeLever(s.name, s.id))
-      );
-      for (let i = 0; i < retryResults.length; i++) {
-        const result = retryResults[i];
-        const source = failedLeverSources[i];
-        if (result.status === 'fulfilled') {
-          allJobs.push(...result.value);
-          sources.push({ name: source.name, count: result.value.length });
-          leverSuccessCount++;
-          logSuccess('RETRY', `Retry succeeded for ${source.name}`);
-        } else {
-          sources.push({ name: source.name, count: 0 });
-          totalSourcesFailed++;
-          logError('RETRY', `Retry failed for ${source.name}`, { error: result.reason?.message });
-        }
-      }
-    }
-    totalSourcesSucceeded += leverSuccessCount;
-    if (leverSuccessCount >= LEVER_SOURCES.length * 0.5) {
-      successfulSources.push('lever');
-    }
-    
-    logInfo('SCRAPE', `Total jobs collected: ${allJobs.length} from ${totalSourcesSucceeded} sources`);
-    
-    // === PHASE 2: Save to database ===
-    logInfo('PHASE', '--- Phase 2: Saving to database ---');
-    
-    if (allJobs.length > 0) {
-      const result = await storage.bulkUpsertJobs(allJobs);
+
+    if (jobsToSave.length > 0) {
+      logInfo('DATABASE', `Saving ${jobsToSave.length} validated jobs...`);
+      const result = await storage.bulkUpsertJobs(jobsToSave);
       inserted = result.inserted;
       updated = result.updated;
       newJobs = result.newJobs;
       logSuccess('DATABASE', `Jobs saved`, { inserted, updated, newJobs: newJobs.length });
     }
-    
-    // === PHASE 3: Stale job detection ===
+
     logInfo('PHASE', '--- Phase 3: Stale job detection ---');
-    
-    if (successfulSources.length > 0) {
-      const scrapedExternalIds = new Set(allJobs.map(j => j.externalId).filter(Boolean) as string[]);
+
+    const successfulSources = Array.from(successfulSourceTypes);
+    if (capHit) {
+      logWarn('STALE', 'Skipping stale detection: job cap was hit, external ID set is incomplete');
+    } else if (successfulSources.length > 0 && companiesSucceeded >= LAW_FIRMS_AND_COMPANIES.length * 0.3) {
+      const scrapedExternalIds = new Set(validJobs.map(j => j.externalId).filter(Boolean) as string[]);
       if (scrapedExternalIds.size > 0) {
-        staleDeactivated = await storage.deactivateStaleJobs(scrapedExternalIds, successfulSources);
+        const staleDeactivated = await storage.deactivateStaleJobs(scrapedExternalIds, successfulSources);
         if (staleDeactivated > 0) {
           logInfo('STALE', `Deactivated ${staleDeactivated} stale jobs from sources: ${successfulSources.join(', ')}`);
         }
       }
-    }
-    
-    // === PHASE 4: AI Categorization of uncategorized jobs ===
-    logInfo('PHASE', '--- Phase 4: AI Categorization ---');
-    
-    try {
-      const activeJobs = await storage.getActiveJobs();
-      const needsScoring = activeJobs.filter(j => !j.roleCategory || j.roleCategory === '' || j.legalRelevanceScore === null || j.legalRelevanceScore === undefined);
-      
-      if (needsScoring.length > 0) {
-        logInfo('AI', `Categorizing & scoring ${needsScoring.length} jobs for legal relevance...`);
-        let rejectedCount = 0;
-        let needsReviewCount = 0;
-        const batchSize = 5;
-        for (let i = 0; i < needsScoring.length; i += batchSize) {
-          const batch = needsScoring.slice(i, i + batchSize);
-          await Promise.all(
-            batch.map(async (job) => {
-              try {
-                const result = await categorizeJob(job.title, job.description, job.company);
-                const updateData: any = {
-                  roleCategory: result.category,
-                  roleSubcategory: result.subcategory,
-                  seniorityLevel: result.seniorityLevel,
-                  keySkills: result.keySkills,
-                  aiSummary: result.aiSummary,
-                  matchKeywords: result.matchKeywords,
-                  aiResponsibilities: result.aiResponsibilities || null,
-                  aiQualifications: result.aiQualifications || null,
-                  aiNiceToHaves: result.aiNiceToHaves || null,
-                  legalRelevanceScore: result.legalRelevanceScore,
-                  reviewStatus: result.reviewStatus,
-                };
-                if (job.description && !job.structuredDescription) {
-                  try {
-                    const structured = await extractStructuredDescription(job.description, job.company, job.title);
-                    if (structured) {
-                      updateData.structuredDescription = structured;
-                    }
-                  } catch (extractErr: any) {
-                    logWarn('AI', `Structured extraction failed for job ${job.id}: ${extractErr.message?.slice(0, 80)}`);
-                  }
-                }
-                if (result.reviewStatus === "rejected") {
-                  updateData.isActive = false;
-                  rejectedCount++;
-                  logInfo('AI', `REJECTED (score ${result.legalRelevanceScore}): ${job.title} at ${job.company}`);
-                } else if (result.reviewStatus === "needs_review") {
-                  needsReviewCount++;
-                  logInfo('AI', `NEEDS REVIEW (score ${result.legalRelevanceScore}): ${job.title} at ${job.company}`);
-                }
-                await storage.updateJob(job.id, updateData);
-                categorizedCount++;
-              } catch (err: any) {
-                errors.push(`Categorize job ${job.id}: ${err.message}`);
-              }
-            })
-          );
-          if (i + batchSize < needsScoring.length) {
-            await new Promise((r) => setTimeout(r, 500));
-          }
-        }
-        logSuccess('AI', `Categorized ${categorizedCount}/${needsScoring.length} jobs — ${rejectedCount} rejected, ${needsReviewCount} need review`);
-      } else {
-        logInfo('AI', 'All active jobs already categorized and scored');
-      }
-    } catch (err: any) {
-      logError('AI', 'Categorization phase failed', { error: err.message });
-      errors.push(`Categorization phase: ${err.message}`);
-    }
-    
-    // === PHASE 4.5: AI Description Formatting for flat-text jobs ===
-    logInfo('PHASE', '--- Phase 4.5: Description Formatting ---');
-
-    try {
-      const allActiveJobs = await storage.getActiveJobs();
-      const needsFormatting = allActiveJobs.filter(j =>
-        j.description &&
-        !j.descriptionFormatted &&
-        isDescriptionFlat(j.description)
-      );
-
-      if (needsFormatting.length > 0) {
-        logInfo('FORMAT', `Formatting ${needsFormatting.length} flat-text descriptions with AI...`);
-        let formattedCount = 0;
-        const formatBatchSize = 3;
-        for (let i = 0; i < needsFormatting.length; i += formatBatchSize) {
-          const batch = needsFormatting.slice(i, i + formatBatchSize);
-          await Promise.all(
-            batch.map(async (job) => {
-              try {
-                const formatted = await formatFlatDescription(job.description);
-                if (formatted !== job.description) {
-                  await storage.updateJob(job.id, {
-                    description: formatted,
-                    descriptionFormatted: true,
-                  } as any);
-                  formattedCount++;
-                } else {
-                  await storage.updateJob(job.id, {
-                    descriptionFormatted: true,
-                  } as any);
-                }
-              } catch (err: any) {
-                errors.push(`Format job ${job.id}: ${err.message}`);
-              }
-            })
-          );
-          if (i + formatBatchSize < needsFormatting.length) {
-            await new Promise((r) => setTimeout(r, 500));
-          }
-        }
-        logSuccess('FORMAT', `Formatted ${formattedCount}/${needsFormatting.length} flat-text descriptions`);
-      } else {
-        logInfo('FORMAT', 'All descriptions already formatted');
-      }
-    } catch (err: any) {
-      logError('FORMAT', 'Description formatting phase failed', { error: err.message });
-      errors.push(`Formatting phase: ${err.message}`);
+    } else {
+      logWarn('STALE', `Skipping stale detection: only ${companiesSucceeded}/${LAW_FIRMS_AND_COMPANIES.length} companies succeeded (need 30%+)`);
     }
 
-    // === PHASE 4.6: Structured description backfill for existing jobs ===
-    logInfo('PHASE', '--- Phase 4.6: Structured Description Backfill ---');
-    try {
-      const allActiveForStructured = await storage.getActiveJobs();
-      const needsStructured = allActiveForStructured.filter(j =>
-        j.description && j.description.length > 100 && !j.structuredDescription
-      );
+    logInfo('PHASE', '--- Phase 4: Alert matching ---');
 
-      if (needsStructured.length > 0) {
-        logInfo('AI', `Extracting structured descriptions for ${needsStructured.length} jobs...`);
-        let structuredCount = 0;
-        const structBatchSize = 3;
-        for (let i = 0; i < needsStructured.length; i += structBatchSize) {
-          const batch = needsStructured.slice(i, i + structBatchSize);
-          await Promise.all(
-            batch.map(async (job) => {
-              try {
-                const structured = await extractStructuredDescription(job.description, job.company, job.title);
-                if (structured) {
-                  await storage.updateJob(job.id, { structuredDescription: structured } as any);
-                  structuredCount++;
-                }
-              } catch (err: any) {
-                logWarn('AI', `Structured extraction failed for job ${job.id}: ${err.message?.slice(0, 80)}`);
-              }
-            })
-          );
-          if (i + structBatchSize < needsStructured.length) {
-            await new Promise((r) => setTimeout(r, 500));
-          }
-        }
-        logSuccess('AI', `Extracted structured descriptions for ${structuredCount}/${needsStructured.length} jobs`);
-      } else {
-        logInfo('AI', 'All jobs already have structured descriptions');
-      }
-    } catch (err: any) {
-      logError('AI', 'Structured description backfill failed', { error: err.message });
-      errors.push(`Structured backfill: ${err.message}`);
-    }
-
-    // === PHASE 5: Alert matching for new jobs ===
-    logInfo('PHASE', '--- Phase 5: Job alert matching ---');
-    
     if (newJobs.length > 0) {
       try {
         alertsTriggered = await matchNewJobsAgainstAlerts(newJobs);
@@ -673,175 +387,93 @@ export async function runScheduledScrape(triggeredBy: string = 'scheduler'): Pro
     } else {
       logInfo('ALERTS', 'No new jobs to match against alerts');
     }
-    
-    // === PHASE 6: Description enrichment (re-fetch short descriptions) ===
-    logInfo('PHASE', '--- Phase 6: Description enrichment ---');
-    let descriptionsEnriched = 0;
-    try {
-      descriptionsEnriched = await enrichShortDescriptions();
-      if (descriptionsEnriched > 0) {
-        logSuccess('ENRICH', `Enriched ${descriptionsEnriched} jobs with full descriptions`);
-      } else {
-        logInfo('ENRICH', 'All jobs have adequate descriptions');
-      }
-    } catch (err: any) {
-      logError('ENRICH', 'Description enrichment failed', { error: err.message });
-      errors.push(`Description enrichment: ${err.message}`);
-    }
-    
-    // === PHASE 7: Link validation (sample) ===
-    logInfo('PHASE', '--- Phase 7: Link validation ---');
-    
+
+    logInfo('PHASE', '--- Phase 5: Link validation (sample) ---');
+
     try {
       const allActiveJobs = await storage.getActiveJobs();
       totalActiveJobs = allActiveJobs.length;
-      logInfo('VALIDATE', `Validating ${Math.min(50, allActiveJobs.length)} job links (sample)...`);
+      logInfo('VALIDATE', `Validating ${Math.min(10, allActiveJobs.length)} job links (sample)...`);
       const linkResults = await validateJobLinks(allActiveJobs);
       brokenLinks = linkResults.broken;
+
+      for (const brokenId of linkResults.brokenIds) {
+        await storage.updateJob(brokenId, { isActive: false });
+      }
+      if (brokenLinks > 0) {
+        logWarn('VALIDATE', `Deactivated ${brokenLinks} jobs with broken links`);
+      }
     } catch (err: any) {
       logError('VALIDATE', 'Link validation failed', { error: err.message });
       errors.push(`Link validation: ${err.message}`);
     }
-    
+
   } catch (fatalError: any) {
     logError('SCHEDULER', 'FATAL: Autopilot scrape crashed', { error: fatalError.message });
     errors.push(`Fatal: ${fatalError.message}`);
   } finally {
-    // === PHASE 8: Record run results (always runs) ===
     const durationMs = Date.now() - startTime;
     const duration = (durationMs / 1000).toFixed(1);
-    
+
     const hasFatalError = errors.some(e => e.startsWith('Fatal:'));
     const status = hasFatalError ? 'failed' : (errors.length > 0 ? 'completed_with_errors' : 'completed');
-    
+
     if (scrapeRunId) {
       try {
         await storage.updateScrapeRun(scrapeRunId, {
           completedAt: new Date(),
           durationMs,
           status,
-          totalFound: allJobs.length,
+          totalFound: scrapeState.jobsFound,
           inserted,
           updated,
-          staleDeactivated,
-          categorized: categorizedCount,
+          staleDeactivated: 0,
+          categorized: 0,
           alertsTriggered,
           brokenLinks,
-          sourcesSucceeded: totalSourcesSucceeded,
-          sourcesFailed: totalSourcesFailed,
-          sourceDetails: sources,
+          sourcesSucceeded: companiesSucceeded,
+          sourcesFailed: companiesFailed,
+          sourceDetails: sources.filter(s => s.count > 0),
           errors: errors.length > 0 ? errors : null,
         });
       } catch (updateErr: any) {
         logError('SCHEDULER', `Failed to update scrape run record: ${updateErr.message}`);
       }
     }
-    
+
     logInfo('SCHEDULER', '========================================');
-    logSuccess('SCHEDULER', `AUTOPILOT scrape ${status}`, {
+    logSuccess('SCHEDULER', `FULL PIPELINE scrape ${status}`, {
       duration: `${duration}s`,
+      companiesScraped: companiesSucceeded,
+      companiesFailed,
+      jobsFound: scrapeState.jobsFound,
+      jobsValidated,
+      jobsRejectedValidation,
       newJobs: inserted,
       updatedJobs: updated,
-      staleDeactivated,
-      categorized: categorizedCount,
       alertsTriggered,
-      totalJobs: totalActiveJobs,
+      totalActiveJobs,
       brokenLinks,
       errors: errors.length,
     });
     logInfo('SCHEDULER', '========================================');
+
+    scrapeState.isRunning = false;
+    scrapeState.currentCompany = null;
   }
-  
+
   return {
     newJobs: inserted,
     updatedJobs: updated,
     totalJobs: totalActiveJobs,
     brokenLinks,
-    categorized: categorizedCount,
     alertsTriggered,
-    sources,
+    sources: sources.filter(s => s.count > 0),
+    companiesScraped: companiesSucceeded,
+    companiesFailed,
+    jobsValidated,
+    jobsRejectedValidation,
   };
-}
-
-const SHORT_DESCRIPTION_THRESHOLD = 500;
-
-export async function enrichShortDescriptions(): Promise<number> {
-  const allActive = await storage.getActiveJobs();
-  const shortJobs = allActive.filter(j => 
-    j.applyUrl && (j.description || '').length < SHORT_DESCRIPTION_THRESHOLD
-  );
-  
-  if (shortJobs.length === 0) return 0;
-  
-  logInfo('ENRICH', `Found ${shortJobs.length} jobs with short descriptions (<${SHORT_DESCRIPTION_THRESHOLD} chars)`);
-  
-  let enriched = 0;
-  
-  for (const job of shortJobs) {
-    try {
-      const url = job.applyUrl!;
-      
-      const ghMatch = url.match(/(?:boards|job-boards)\.greenhouse\.io\/([\w-]+)\/jobs\/(\d+)/);
-      if (ghMatch) {
-        const [, boardSlug, jobId] = ghMatch;
-        const apiUrl = `https://boards-api.greenhouse.io/v1/boards/${boardSlug}/jobs/${jobId}?content=true`;
-        const res = await axios.get(apiUrl, { 
-          headers: { 'User-Agent': 'Mozilla/5.0 (compatible; LegalTechCareersBot/1.0)' },
-          timeout: 10000 
-        });
-        const content = res.data?.content;
-        if (content) {
-          const fullDescription = stripHtml(content);
-          if (fullDescription.length > (job.description || '').length) {
-            const realTitle = res.data?.title || job.title;
-            const realLocation = res.data?.location?.name || job.location;
-            await storage.updateJob(job.id, { 
-              description: fullDescription,
-              title: realTitle,
-              location: realLocation,
-              source: job.source || 'greenhouse',
-              externalId: job.externalId || `gh_${boardSlug}_${jobId}`,
-            });
-            enriched++;
-            logInfo('ENRICH', `[${job.id}] ${job.company} - ${realTitle}: +${fullDescription.length - (job.description || '').length} chars from Greenhouse API`);
-          }
-        }
-        await new Promise(r => setTimeout(r, 200));
-        continue;
-      }
-      
-      const leverMatch = url.match(/jobs\.lever\.co\/([^/]+)\/([a-f0-9-]+)/i);
-      if (leverMatch) {
-        const [, companySlug, jobId] = leverMatch;
-        const apiUrl = `https://api.lever.co/v0/postings/${companySlug}/${jobId}`;
-        const res = await axios.get(apiUrl, {
-          headers: { 'User-Agent': 'Mozilla/5.0 (compatible; LegalTechCareersBot/1.0)' },
-          timeout: 10000
-        });
-        const descHtml = res.data?.description || '';
-        const fullDescription = descHtml ? stripHtml(descHtml) : '';
-        if (fullDescription.length > (job.description || '').length) {
-          const realTitle = res.data?.text || job.title;
-          await storage.updateJob(job.id, { 
-            description: fullDescription,
-            title: realTitle,
-            source: job.source || 'lever',
-            externalId: job.externalId || `lever_${jobId}`,
-          });
-          enriched++;
-          logInfo('ENRICH', `[${job.id}] ${job.company} - ${realTitle}: +${fullDescription.length - (job.description || '').length} chars from Lever API`);
-        }
-        await new Promise(r => setTimeout(r, 200));
-        continue;
-      }
-      
-      logInfo('ENRICH', `[${job.id}] ${job.company} - ${job.title}: No Greenhouse/Lever API pattern in URL: ${url.slice(0, 80)}`);
-    } catch (err: any) {
-      logWarn('ENRICH', `[${job.id}] ${job.company} - ${job.title}: Failed - ${err.message?.slice(0, 80)}`);
-    }
-  }
-  
-  return enriched;
 }
 
 let schedulerInterval: NodeJS.Timeout | null = null;
@@ -851,10 +483,10 @@ export function startScheduler(): void {
     logWarn('SCHEDULER', 'Scheduler already running');
     return;
   }
-  
-  logInfo('SCHEDULER', `Scheduler started - will run every 24 hours`);
+
+  logInfo('SCHEDULER', `Scheduler started - will run every 12 hours`);
   logInfo('SCHEDULER', `Next run at: ${new Date(Date.now() + SCRAPE_INTERVAL_MS).toISOString()}`);
-  
+
   schedulerInterval = setInterval(async () => {
     try {
       await runScheduledScrape();
@@ -874,4 +506,9 @@ export function stopScheduler(): void {
 
 export function isSchedulerRunning(): boolean {
   return schedulerInterval !== null;
+}
+
+export async function enrichShortDescriptions(): Promise<number> {
+  logInfo('ENRICH', 'enrichShortDescriptions is now handled by the enrichment worker');
+  return 0;
 }
