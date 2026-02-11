@@ -511,6 +511,8 @@ export const events = pgTable("events", {
   source: varchar("source", { length: 50 }),
   viewCount: integer("view_count").default(0),
   registrationClickCount: integer("registration_click_count").default(0),
+  linkStatus: varchar("link_status", { length: 20 }).default("unchecked"),
+  linkLastChecked: timestamp("link_last_checked"),
   createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`),
 });
 
@@ -518,6 +520,8 @@ export const insertEventSchema = createInsertSchema(events).omit({
   id: true,
   viewCount: true,
   registrationClickCount: true,
+  linkStatus: true,
+  linkLastChecked: true,
   createdAt: true,
 });
 

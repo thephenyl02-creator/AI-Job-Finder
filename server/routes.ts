@@ -621,47 +621,10 @@ Return ONLY the JSON object, no other text.`;
       const user = req.user as any;
       if (!(await storage.isUserAdmin(user?.id))) return res.status(403).json({ error: "Admin access required" });
 
-      const allEvents = await storage.getAllEventsAdmin();
-      const activeEvents = allEvents.filter(e => e.isActive);
-      const results: { id: number; title: string; url: string; status: number; ok: boolean }[] = [];
-
-      const https = await import('https');
-      const http = await import('http');
-      const { URL } = await import('url');
-
-      const checkUrl = (url: string): Promise<{ status: number; ok: boolean }> => {
-        return new Promise((resolve) => {
-          try {
-            const parsed = new URL(url);
-            const mod = parsed.protocol === 'https:' ? https : http;
-            const req = mod.request(parsed, { method: 'GET', timeout: 12000, headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' } }, (r) => {
-              r.resume();
-              if (r.statusCode && r.statusCode >= 300 && r.statusCode < 400 && r.headers.location) {
-                resolve({ status: r.statusCode, ok: true });
-              } else {
-                resolve({ status: r.statusCode || 0, ok: (r.statusCode || 0) < 400 });
-              }
-            });
-            req.on('error', () => resolve({ status: 0, ok: false }));
-            req.on('timeout', () => { req.destroy(); resolve({ status: 0, ok: false }); });
-            req.end();
-          } catch {
-            resolve({ status: 0, ok: false });
-          }
-        });
-      };
-
-      for (let i = 0; i < activeEvents.length; i += 5) {
-        const batch = activeEvents.slice(i, i + 5);
-        const checks = await Promise.all(batch.map(async (evt) => {
-          const r = await checkUrl(evt.registrationUrl);
-          return { id: evt.id, title: evt.title, url: evt.registrationUrl, ...r };
-        }));
-        results.push(...checks);
-      }
-
-      const broken = results.filter(r => !r.ok && r.status !== 403);
-      res.json({ total: results.length, broken: broken.length, results });
+      const { runEventLinkValidationNow, getEventLinkValidationStatus } = await import("./lib/event-link-validator");
+      const result = await runEventLinkValidationNow();
+      const status = getEventLinkValidationStatus();
+      res.json({ ...result, validatorStatus: status });
     } catch (error) {
       console.error("Error validating links:", error);
       res.status(500).json({ error: "Failed to validate links" });

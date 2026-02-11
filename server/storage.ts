@@ -91,6 +91,8 @@ export interface IStorage {
   createEvent(event: InsertEvent): Promise<Event>;
   updateEvent(id: number, data: Partial<InsertEvent>): Promise<Event | undefined>;
   deleteEvent(id: number): Promise<void>;
+  updateEventLinkStatus(id: number, status: string): Promise<void>;
+  getEventsNeedingLinkCheck(maxAgeHours?: number): Promise<Event[]>;
   upsertEventByExternalId(event: InsertEvent): Promise<{ event: Event; isNew: boolean }>;
   bulkUpsertEvents(eventsList: InsertEvent[]): Promise<{ inserted: number; updated: number }>;
   getFeaturedEvents(limit?: number): Promise<Event[]>;
@@ -2030,7 +2032,10 @@ class DatabaseStorage implements IStorage {
   }
 
   async getEvents(filters?: { eventType?: string; attendanceType?: string; isFree?: boolean; topic?: string; upcoming?: boolean }): Promise<Event[]> {
-    const conditions: any[] = [eq(events.isActive, true)];
+    const conditions: any[] = [
+      eq(events.isActive, true),
+      sql`(${events.linkStatus} IS NULL OR ${events.linkStatus} != 'broken')`,
+    ];
 
     if (filters?.eventType) {
       conditions.push(eq(events.eventType, filters.eventType));
@@ -2079,6 +2084,27 @@ class DatabaseStorage implements IStorage {
 
   async deleteEvent(id: number): Promise<void> {
     await db.delete(events).where(eq(events.id, id));
+  }
+
+  async updateEventLinkStatus(id: number, status: string): Promise<void> {
+    await db.update(events).set({
+      linkStatus: status,
+      linkLastChecked: new Date(),
+    } as any).where(eq(events.id, id));
+  }
+
+  async getEventsNeedingLinkCheck(maxAgeHours: number = 24): Promise<Event[]> {
+    const cutoff = new Date(Date.now() - maxAgeHours * 60 * 60 * 1000);
+    return db
+      .select()
+      .from(events)
+      .where(
+        and(
+          eq(events.isActive, true),
+          sql`(${events.linkLastChecked} IS NULL OR ${events.linkLastChecked} < ${cutoff})`
+        )
+      )
+      .orderBy(events.linkLastChecked);
   }
 
   async upsertEventByExternalId(event: InsertEvent): Promise<{ event: Event; isNew: boolean }> {

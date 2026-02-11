@@ -102,6 +102,9 @@ export default function AdminEvents() {
   const activeEvents = allEvents.filter(e => e.isActive);
   const upcomingEvents = allEvents.filter(e => e.isActive && new Date(e.startDate) >= now);
   const pastInactive = allEvents.filter(e => !e.isActive);
+  const verifiedLinks = activeEvents.filter(e => e.linkStatus === "verified").length;
+  const brokenLinks = activeEvents.filter(e => e.linkStatus === "broken").length;
+  const uncheckedLinks = activeEvents.filter(e => !e.linkStatus || e.linkStatus === "unchecked").length;
 
   const filteredEvents = allEvents
     .filter(e => {
@@ -111,6 +114,8 @@ export default function AdminEvents() {
       }
       if (statusFilter === "active" && !e.isActive) return false;
       if (statusFilter === "inactive" && e.isActive) return false;
+      if (statusFilter === "broken" && e.linkStatus !== "broken") return false;
+      if (statusFilter === "verified" && e.linkStatus !== "verified") return false;
       if (typeFilter !== "all" && e.eventType !== typeFilter) return false;
       return true;
     })
@@ -350,7 +355,7 @@ export default function AdminEvents() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             <Card data-testid="card-total-events">
               <CardContent className="pt-4 pb-3 px-4">
                 <div className="flex items-center gap-2 mb-1">
@@ -391,6 +396,20 @@ export default function AdminEvents() {
                 <p className="text-xs text-muted-foreground">inactive events</p>
               </CardContent>
             </Card>
+            <Card data-testid="card-link-health">
+              <CardContent className="pt-4 pb-3 px-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <LinkIcon className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground font-medium">Link Health</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-lg font-bold text-emerald-600" data-testid="text-verified-links">{verifiedLinks}</span>
+                  {brokenLinks > 0 && <span className="text-sm font-bold text-red-500" data-testid="text-broken-links">/ {brokenLinks} bad</span>}
+                  {uncheckedLinks > 0 && <span className="text-xs text-muted-foreground">/ {uncheckedLinks} pending</span>}
+                </div>
+                <p className="text-xs text-muted-foreground">verified links</p>
+              </CardContent>
+            </Card>
           </div>
 
           <div className="flex items-center gap-3 flex-wrap">
@@ -412,6 +431,8 @@ export default function AdminEvents() {
                 <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="active">Active</SelectItem>
                 <SelectItem value="inactive">Inactive</SelectItem>
+                <SelectItem value="broken">Broken Links</SelectItem>
+                <SelectItem value="verified">Verified Links</SelectItem>
               </SelectContent>
             </Select>
             <Select value={typeFilter} onValueChange={setTypeFilter}>
@@ -445,7 +466,7 @@ export default function AdminEvents() {
               ) : (
                 <ScrollArea className="h-[500px]">
                   <div className="space-y-1">
-                    <div className="grid grid-cols-[80px_1fr_120px_90px_100px_100px_80px_60px_100px] gap-2 px-2 py-1 text-xs font-medium text-muted-foreground border-b">
+                    <div className="grid grid-cols-[80px_1fr_120px_90px_100px_100px_80px_80px_100px] gap-2 px-2 py-1 text-xs font-medium text-muted-foreground border-b">
                       <span>Status</span>
                       <span>Title</span>
                       <span>Organizer</span>
@@ -453,13 +474,13 @@ export default function AdminEvents() {
                       <span>Date</span>
                       <span>Location</span>
                       <span>Attend.</span>
-                      <span>URL</span>
+                      <span>Link</span>
                       <span>Actions</span>
                     </div>
                     {filteredEvents.map((event) => (
                       <div
                         key={event.id}
-                        className="grid grid-cols-[80px_1fr_120px_90px_100px_100px_80px_60px_100px] gap-2 px-2 py-2 text-sm border-b border-border/50 hover-elevate rounded cursor-pointer items-center"
+                        className="grid grid-cols-[80px_1fr_120px_90px_100px_100px_80px_80px_100px] gap-2 px-2 py-2 text-sm border-b border-border/50 hover-elevate rounded cursor-pointer items-center"
                         onClick={() => openEditDialog(event)}
                         data-testid={`row-event-${event.id}`}
                       >
@@ -490,10 +511,23 @@ export default function AdminEvents() {
                         <span className="text-xs" data-testid={`text-attendance-${event.id}`}>
                           {ATTENDANCE_TYPE_LABELS[event.attendanceType] || event.attendanceType}
                         </span>
-                        <span onClick={(e) => e.stopPropagation()}>
+                        <span className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                          {event.linkStatus === "verified" ? (
+                            <Badge variant="secondary" className="text-xs no-default-hover-elevate no-default-active-elevate bg-emerald-500/10 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400" data-testid={`badge-link-verified-${event.id}`}>
+                              <CheckCircle className="w-3 h-3 mr-0.5" />OK
+                            </Badge>
+                          ) : event.linkStatus === "broken" ? (
+                            <Badge variant="secondary" className="text-xs no-default-hover-elevate no-default-active-elevate bg-red-500/10 text-red-700 dark:bg-red-500/20 dark:text-red-400" data-testid={`badge-link-broken-${event.id}`}>
+                              <AlertTriangle className="w-3 h-3 mr-0.5" />Bad
+                            </Badge>
+                          ) : (
+                            <Badge variant="secondary" className="text-xs no-default-hover-elevate no-default-active-elevate" data-testid={`badge-link-unchecked-${event.id}`}>
+                              <Clock className="w-3 h-3 mr-0.5" />?
+                            </Badge>
+                          )}
                           {event.registrationUrl && (
                             <a href={event.registrationUrl} target="_blank" rel="noopener noreferrer" data-testid={`link-url-${event.id}`}>
-                              <ExternalLink className="w-4 h-4 text-muted-foreground" />
+                              <ExternalLink className="w-3 h-3 text-muted-foreground" />
                             </a>
                           )}
                         </span>
