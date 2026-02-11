@@ -288,6 +288,98 @@ export async function scrapeAshby(ashbyUrl: string, companyName: string): Promis
   }
 }
 
+export async function scrapeWorkday(
+  config: { company: string; instance: string; site: string },
+  companyName: string
+): Promise<ScrapedJob[]> {
+  const baseUrl = `https://${config.company}.${config.instance}.myworkdayjobs.com`;
+  const apiUrl = `${baseUrl}/wday/cxs/${config.company}/${config.site}/jobs`;
+  const allJobs: ScrapedJob[] = [];
+  const pageSize = 20;
+  let offset = 0;
+  let total = 0;
+
+  try {
+    do {
+      const response = await axios.post(
+        apiUrl,
+        {
+          appliedFacets: {},
+          limit: pageSize,
+          offset,
+          searchText: '',
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          },
+          timeout: 20000,
+        }
+      );
+
+      const data = response.data;
+      total = data.total || 0;
+      const postings = data.jobPostings || [];
+
+      for (const posting of postings) {
+        const externalPath = posting.externalPath || '';
+        const applyUrl = externalPath ? `${baseUrl}${externalPath}` : '';
+        const jobId = externalPath.split('/').pop() || `${offset}_${postings.indexOf(posting)}`;
+        const locationText = posting.locationsText || (posting.bulletFields || []).find((f: string) => /,/.test(f)) || 'Not specified';
+        const locationType = detectLocationType(locationText + ' ' + (posting.title || ''));
+
+        let description = posting.title || '';
+        try {
+          const detailUrl = `${baseUrl}/wday/cxs/${config.company}/${config.site}${externalPath}`;
+          const detailResp = await axios.get(detailUrl, {
+            headers: {
+              'Accept': 'application/json',
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            },
+            timeout: 15000,
+          });
+          const detail = detailResp.data;
+          if (detail.jobPostingInfo) {
+            description = detail.jobPostingInfo.jobDescription || detail.jobPostingInfo.externalDescription || description;
+          }
+        } catch {
+          // detail fetch failed, use listing data only
+        }
+
+        const salary = parseSalaryFromText(description);
+
+        allJobs.push({
+          title: posting.title || '',
+          company: companyName,
+          location: locationText,
+          description,
+          applyUrl,
+          postedDate: posting.postedOn || new Date().toISOString(),
+          source: 'workday',
+          externalId: `wd_${config.company}_${jobId}`,
+          salaryMin: salary.min,
+          salaryMax: salary.max,
+          locationType,
+          department: (posting.bulletFields || [])[1] || undefined,
+        });
+      }
+
+      offset += pageSize;
+      if (postings.length > 0) {
+        await delay(1500);
+      }
+    } while (offset < total && offset < 200);
+
+    return allJobs;
+  } catch (error: any) {
+    const statusCode = error.response?.status || 'unknown';
+    console.error(`Workday error for ${companyName} (status: ${statusCode}):`, error.message);
+    return [];
+  }
+}
+
 export async function scrapeGenericCareerPage(url: string, companyName: string, selectors?: LawFirmConfig['selectors']): Promise<ScrapedJob[]> {
   try {
     const response = await axios.get(url, {
@@ -621,6 +713,8 @@ export async function scrapeAllLawFirms(): Promise<{
         scrapedJobs = await scrapeLever(firm.leverPostingsUrl, firm.name);
       } else if (firm.ashbyUrl) {
         scrapedJobs = await scrapeAshby(firm.ashbyUrl, firm.name);
+      } else if (firm.workday) {
+        scrapedJobs = await scrapeWorkday(firm.workday, firm.name);
       } else {
         scrapedJobs = await scrapeGenericCareerPage(firm.careerUrl, firm.name, firm.selectors);
       }
@@ -670,6 +764,8 @@ export async function scrapeSingleCompany(companyName: string): Promise<InsertJo
     scrapedJobs = await scrapeLever(firm.leverPostingsUrl, firm.name);
   } else if (firm.ashbyUrl) {
     scrapedJobs = await scrapeAshby(firm.ashbyUrl, firm.name);
+  } else if (firm.workday) {
+    scrapedJobs = await scrapeWorkday(firm.workday, firm.name);
   } else {
     scrapedJobs = await scrapeGenericCareerPage(firm.careerUrl, firm.name, firm.selectors);
   }
@@ -705,6 +801,8 @@ export async function scrapeAllLawFirmsWithAI(
         scrapedJobs = await scrapeLever(firm.leverPostingsUrl, firm.name);
       } else if (firm.ashbyUrl) {
         scrapedJobs = await scrapeAshby(firm.ashbyUrl, firm.name);
+      } else if (firm.workday) {
+        scrapedJobs = await scrapeWorkday(firm.workday, firm.name);
       } else {
         scrapedJobs = await scrapeGenericCareerPage(firm.careerUrl, firm.name, firm.selectors);
       }

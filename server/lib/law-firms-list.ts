@@ -5,6 +5,11 @@ export interface LawFirmConfig {
   greenhouseId?: string;
   leverPostingsUrl?: string;
   ashbyUrl?: string;
+  workday?: {
+    company: string;
+    instance: string;
+    site: string;
+  };
   selectors?: {
     jobList?: string;
     title?: string;
@@ -95,7 +100,8 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   },
   {
     name: 'LexisNexis',
-    careerUrl: 'https://www.lexisnexis.com/en-us/about-us/careers.page',
+    careerUrl: 'https://relx.wd3.myworkdayjobs.com/LexisNexisLegal',
+    workday: { company: 'relx', instance: 'wd3', site: 'LexisNexisLegal' },
     type: 'company',
   },
   {
@@ -256,7 +262,7 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   // ===================
   {
     name: 'Kirkland & Ellis',
-    careerUrl: 'https://www.kirkland.com/careers',
+    careerUrl: 'https://staffjobsus.kirkland.com/',
     type: 'biglaw',
   },
   {
