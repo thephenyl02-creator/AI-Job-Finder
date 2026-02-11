@@ -356,7 +356,7 @@ export async function registerRoutes(
   app.get("/api/jobs", async (req, res) => {
     try {
       const page = Math.max(1, parseInt(String(req.query.page || '1')));
-      const limit = Math.min(50, Math.max(1, parseInt(String(req.query.limit || '24'))));
+      const limit = Math.min(500, Math.max(1, parseInt(String(req.query.limit || '24'))));
       const filters: { category?: string; location?: string; search?: string; seniority?: string } = {};
       if (req.query.category) filters.category = String(req.query.category);
       if (req.query.location) filters.location = String(req.query.location);

@@ -323,7 +323,7 @@ export default function Jobs() {
 
   const { data: jobsResponse, isLoading: jobsLoading } = useQuery<{ jobs: Job[]; total: number; page: number; totalPages: number }>({
     queryKey: ["/api/jobs"],
-    queryFn: () => fetch("/api/jobs?limit=50&page=1").then(r => r.json()),
+    queryFn: () => fetch("/api/jobs?limit=500&page=1").then(r => r.json()),
   });
   const allJobs = jobsResponse?.jobs ?? [];
   const totalJobCount = jobsResponse?.total ?? 0;
