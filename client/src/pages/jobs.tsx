@@ -241,6 +241,11 @@ export default function Jobs() {
 
   const handleSmartSearch = useCallback(() => {
     if (!smartQuery.trim()) return;
+    if (!isAuthenticated) {
+      toast({ title: "Sign in to use smart search." });
+      setLocation("/auth");
+      return;
+    }
     if (canUseGuidedSearch) {
       setGuidedStep("refining");
       setAnalysis(null);
@@ -254,9 +259,14 @@ export default function Jobs() {
 
   const handleQuickSearch = useCallback(() => {
     if (!smartQuery.trim()) return;
+    if (!isAuthenticated) {
+      toast({ title: "Sign in to use smart search." });
+      setLocation("/auth");
+      return;
+    }
     setGuidedStep("idle");
     searchMutation.mutate(smartQuery);
-  }, [smartQuery]);
+  }, [smartQuery, isAuthenticated]);
 
   const handleSubmitAnswers = useCallback(() => {
     if (!analysis) return;
@@ -313,7 +323,6 @@ export default function Jobs() {
 
   const { data: allJobs = [], isLoading: jobsLoading } = useQuery<Job[]>({
     queryKey: ["/api/jobs"],
-    enabled: isAuthenticated,
   });
 
   const { data: resumeData } = useQuery<{ hasResume: boolean; filename?: string; extractedData?: ResumeExtractedData }>({
@@ -384,7 +393,6 @@ export default function Jobs() {
 
   const { data: locationsData = [] } = useQuery<{ location: string; count: number }[]>({
     queryKey: ["/api/jobs/locations"],
-    enabled: isAuthenticated,
   });
 
   const normalizeLocation = (loc: string) => {
@@ -443,10 +451,6 @@ export default function Jobs() {
         </motion.div>
       </div>
     );
-  }
-
-  if (!isAuthenticated) {
-    return null;
   }
 
   const formatSalaryRange = (min?: number | null, max?: number | null) => {
@@ -1107,6 +1111,7 @@ export default function Jobs() {
                 compareIds={compareIds}
                 onToggleCompare={toggleCompare}
                 maxCompare={MAX_COMPARE}
+                isAuthenticated={isAuthenticated}
               />
             ) : (
               <>
@@ -1126,6 +1131,7 @@ export default function Jobs() {
                       compareIds={compareIds}
                       onToggleCompare={toggleCompare}
                       maxCompare={MAX_COMPARE}
+                      isAuthenticated={isAuthenticated}
                     />
                   );
                 })}
@@ -1142,6 +1148,7 @@ export default function Jobs() {
                     compareIds={compareIds}
                     onToggleCompare={toggleCompare}
                     maxCompare={MAX_COMPARE}
+                    isAuthenticated={isAuthenticated}
                   />
                 )}
               </>
@@ -1152,7 +1159,7 @@ export default function Jobs() {
       </main>
 
       <AnimatePresence>
-        {compareIds.size > 0 && !showCompare && (
+        {isAuthenticated && compareIds.size > 0 && !showCompare && (
           <motion.div
             initial={{ y: 80, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
@@ -1234,6 +1241,7 @@ function CategorySection({
   compareIds,
   onToggleCompare,
   maxCompare,
+  isAuthenticated,
 }: {
   category: string;
   jobs: (Job | JobWithScore)[];
@@ -1246,7 +1254,10 @@ function CategorySection({
   compareIds: Set<number>;
   onToggleCompare: (jobId: number) => void;
   maxCompare: number;
+  isAuthenticated: boolean;
 }) {
+  const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const Icon = getCategoryIcon(taxonomy.icon);
 
   const formatSalaryRange = (min?: number | null, max?: number | null) => {
@@ -1347,6 +1358,11 @@ function CategorySection({
                                   }`}
                                   onClick={(e) => {
                                     e.stopPropagation();
+                                    if (!isAuthenticated) {
+                                      toast({ title: "Sign in to compare roles side-by-side." });
+                                      setLocation("/auth");
+                                      return;
+                                    }
                                     if (canSelect || isSelected) onToggleCompare(job.id);
                                   }}
                                   data-testid={`checkbox-compare-${job.id}`}

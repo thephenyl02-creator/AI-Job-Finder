@@ -912,6 +912,19 @@ export default function JobDetail() {
                 {jobIsSaved ? "Saved" : "Save"}
               </Button>
             )}
+            {!isAuthenticated && (
+              <Link href="/auth">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 text-muted-foreground"
+                  data-testid="button-save-signin"
+                >
+                  <Bookmark className="h-4 w-4" />
+                  Save
+                </Button>
+              </Link>
+            )}
           </div>
 
           <AnimatePresence>
@@ -1114,6 +1127,39 @@ export default function JobDetail() {
               );
             })()}
 
+            {!isAuthenticated && (
+              <div className="mt-6 pt-6 border-t border-border/40" data-testid="section-conversion-block">
+                <Card>
+                  <CardContent className="p-5 sm:p-6 text-center">
+                    <div className="flex justify-center mb-3">
+                      <div className="p-2 rounded-lg bg-primary/10">
+                        <Target className="h-5 w-5 text-primary" />
+                      </div>
+                    </div>
+                    <h3 className="text-base font-serif font-medium text-foreground mb-1.5">
+                      See how this role fits your background
+                    </h3>
+                    <p className="text-sm text-muted-foreground mb-4 max-w-md mx-auto">
+                      Get a fit score, transferable skills, missing gaps, and realistic resume tweaks.
+                    </p>
+                    <div className="flex items-center justify-center gap-3 flex-wrap">
+                      <Link href="/auth">
+                        <Button className="gap-1.5" data-testid="button-conversion-upload">
+                          <Upload className="h-4 w-4" />
+                          Upload resume
+                        </Button>
+                      </Link>
+                      <Link href="/auth">
+                        <Button variant="ghost" size="sm" className="text-muted-foreground" data-testid="button-conversion-signin">
+                          Sign in
+                        </Button>
+                      </Link>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
             {isAuthenticated && resumeFit && resumeFit.length > 0 && (
               <div data-testid="section-improve-application" className="mt-6 pt-6 border-t border-border/40">
                 <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Improve Your Application</h3>
@@ -1285,6 +1331,18 @@ export default function JobDetail() {
                     <Bookmark className={`h-4 w-4 ${jobIsSaved ? "fill-current" : ""}`} />
                     <span className="hidden sm:inline">{jobIsSaved ? "Saved" : "Save"}</span>
                   </Button>
+                )}
+                {!isAuthenticated && (
+                  <Link href="/auth">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1.5 text-muted-foreground"
+                      data-testid="button-save-sticky-signin"
+                    >
+                      <Bookmark className="h-4 w-4" />
+                    </Button>
+                  </Link>
                 )}
                 <Button
                   onClick={handleApplyClick}

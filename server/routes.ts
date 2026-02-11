@@ -353,7 +353,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/jobs", isAuthenticated, async (req, res) => {
+  app.get("/api/jobs", async (req, res) => {
     try {
       const jobs = await storage.getActiveJobs();
       res.json(jobs);
@@ -363,7 +363,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/jobs/locations", isAuthenticated, async (req, res) => {
+  app.get("/api/jobs/locations", async (req, res) => {
     try {
       const allJobs = await storage.getActiveJobs();
       const locationMap: Record<string, number> = {};

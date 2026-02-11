@@ -155,7 +155,7 @@ export default function Landing() {
                 <ScrollReveal delay={0.5}>
                   <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-3">
                     <Button size="lg" asChild className="text-base px-8" data-testid="button-hero-explore">
-                      <a href="/auth">
+                      <a href="/jobs">
                         Explore roles
                         <ArrowRight className="ml-2 h-4 w-4" />
                       </a>
@@ -427,7 +427,7 @@ export default function Landing() {
                 </p>
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
                   <Button size="lg" asChild className="text-base px-10" data-testid="button-cta-explore">
-                    <a href="/auth">
+                    <a href="/jobs">
                       Explore roles
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </a>
@@ -452,7 +452,7 @@ export default function Landing() {
               <ul className="space-y-1">
                 <li>
                   <Button variant="ghost" size="sm" asChild className="text-muted-foreground justify-start px-0 text-sm font-normal min-h-[36px]">
-                    <a href="/auth" data-testid="footer-link-browse">Browse Jobs</a>
+                    <a href="/jobs" data-testid="footer-link-browse">Browse Jobs</a>
                   </Button>
                 </li>
                 <li>
