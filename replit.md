@@ -47,6 +47,8 @@ Legal Tech Careers is a freemium SaaS job search platform designed for legal pro
 - **Pipeline Statuses**: `raw` (newly scraped) → `enriching` (being processed) → `ready` (passed quality gate) or `rejected` (failed quality gate)
 - **Batch Scrapers**: Greenhouse API, Lever API, Ashby API, Workday CXS API, and generic HTML career page scrapers
 - **Workday CXS Scraper**: Uses public POST `{company}.{instance}.myworkdayjobs.com/wday/cxs/{company}/{site}/jobs` with pagination and individual job detail fetching for full descriptions. Config via `workday` field in `LawFirmConfig`.
+- **Global Coverage**: 200+ companies across US, UK, Europe, Asia-Pacific, Canada, Middle East, Africa, and Latin America including legal AI startups, established legal tech companies, AmLaw 200 firms, Magic Circle firms, major international firms, and ALSPs
+- **ATS Coverage**: 20 Greenhouse, 8 Lever, 3 Ashby, 3 Workday CXS (Thomson Reuters, Wolters Kluwer, LexisNexis), rest use generic career page scraping
 - **Enrichment Worker** (every 5 min): Processes 25 raw jobs - cleans descriptions, extracts experience requirements, categorizes with AI, computes quality scores, auto-publishes jobs scoring 80+ with 50+ relevance confidence
 - **Reliability Worker** (every 6 hours): Validates apply links for published jobs, unpublishes broken links and stale jobs (45+ days unseen)
 - **Trust Gate**: Public API only shows jobs with `pipelineStatus='ready'`, `isPublished=true`, `jobStatus='open'`, `isActive=true`
