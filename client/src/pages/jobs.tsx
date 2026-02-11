@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { motion, AnimatePresence } from "framer-motion";
 import { ScrollReveal } from "@/components/animations";
 import { useToast } from "@/hooks/use-toast";
@@ -25,8 +26,6 @@ import {
   ArrowUp,
   MapPin,
   Building2,
-  ChevronRight,
-  ChevronDown,
   Brain,
   Lightbulb,
   BookOpen,
@@ -41,7 +40,6 @@ import {
   Microscope,
   Sparkles,
   X,
-  Layers,
   Target,
   Loader2,
   DollarSign,
@@ -137,8 +135,7 @@ export default function Jobs() {
   const JOBS_PER_PAGE = 20;
   const [searchResults, setSearchResults] = useState<JobWithScore[] | null>(null);
   const [searchQuery, setSearchQuery] = useState<string | null>(null);
-  const [showFilters, setShowFilters] = useState(false);
-  const [locationSearch, setLocationSearch] = useState("");
+  const [sortBy, setSortBy] = useState<string>("newest");
 
   const [smartQuery, setSmartQuery] = useState("");
   const [guidedStep, setGuidedStep] = useState<GuidedStep>("idle");
@@ -347,8 +344,9 @@ export default function Jobs() {
       params.set("location", selectedLocation);
     }
     if (debouncedFilterText) params.set("search", debouncedFilterText);
+    if (sortBy !== "newest") params.set("sort", sortBy);
     return params.toString();
-  }, [currentPage, selectedCategory, selectedLevel, selectedLocation, debouncedFilterText]);
+  }, [currentPage, selectedCategory, selectedLevel, selectedLocation, debouncedFilterText, sortBy]);
 
   const { data: jobsResponse, isLoading: jobsLoading } = useQuery<{ jobs: Job[]; total: number; page: number; totalPages: number }>({
     queryKey: ["/api/jobs", jobsQueryParams],
@@ -430,26 +428,6 @@ export default function Jobs() {
     }
   };
 
-  const { data: locationsData = [] } = useQuery<{ location: string; count: number }[]>({
-    queryKey: ["/api/jobs/locations"],
-  });
-
-  const normalizeLocation = (loc: string) => {
-    const lower = loc.toLowerCase();
-    const city = lower.split(",")[0].trim();
-    return city;
-  };
-
-  const locationGroups = locationsData.reduce((acc, item) => {
-    const city = normalizeLocation(item.location);
-    if (!acc[city]) acc[city] = { display: item.location.split(",")[0].trim(), count: 0 };
-    acc[city].count += item.count;
-    return acc;
-  }, {} as Record<string, { display: string; count: number }>);
-
-  const uniqueLocations = Object.entries(locationGroups)
-    .sort((a, b) => b[1].count - a[1].count)
-    .map(([key, val]) => ({ key, display: val.display, count: val.count }));
 
 
   if (authLoading) {
@@ -748,237 +726,86 @@ export default function Jobs() {
           </Card>
         )}
 
-        {(() => {
-          const activeFilterCount = (selectedCategory !== "all" ? 1 : 0) + (selectedLevel !== "all" ? 1 : 0) + (selectedLocation !== "all" ? 1 : 0);
-          return (
-            <>
-              <div className="flex items-center gap-2 mb-4 flex-wrap">
-                <div className="flex items-center gap-2 flex-1 min-w-0 max-w-sm">
-                  <Search className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <Input
-                    placeholder="Filter by keyword, company, or location..."
-                    value={filterText}
-                    onChange={(e) => setFilterText(e.target.value)}
-                    className="min-h-[44px]"
-                    data-testid="input-filter"
-                  />
-                </div>
-                <Button
-                  variant={showFilters || activeFilterCount > 0 ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setShowFilters(!showFilters)}
-                  className="gap-1.5"
-                  data-testid="button-toggle-filters"
-                >
-                  <Layers className="h-3.5 w-3.5" />
-                  Filters
-                  {activeFilterCount > 0 && (
-                    <Badge variant="secondary" className="text-[10px] ml-0.5">{activeFilterCount}</Badge>
-                  )}
-                  {showFilters ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-                </Button>
-              </div>
-
-              {activeFilterCount > 0 && (
-                <div className="flex items-center gap-1.5 mb-4 flex-wrap" data-testid="active-filter-chips">
-                  <span className="text-xs text-muted-foreground mr-1">Active:</span>
-                  {selectedCategory !== "all" && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => { setSelectedCategory("all"); track({ eventType: "filter_change", metadata: { filterType: "category", value: "all" } }); }}
-                      className="gap-1 text-xs h-7"
-                      data-testid="button-clear-category"
-                    >
-                      <Layers className="h-3 w-3" />
-                      {selectedCategory}
-                      <X className="h-3 w-3" />
-                    </Button>
-                  )}
-                  {selectedLevel !== "all" && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => { setSelectedLevel("all"); track({ eventType: "filter_change", metadata: { filterType: "level", value: "all" } }); }}
-                      className="gap-1 text-xs h-7"
-                      data-testid="button-clear-level"
-                    >
-                      <Briefcase className="h-3 w-3" />
-                      {SENIORITY_LEVELS.find(l => l.value === selectedLevel)?.label}
-                      <X className="h-3 w-3" />
-                    </Button>
-                  )}
-                  {selectedLocation !== "all" && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => { setSelectedLocation("all"); track({ eventType: "filter_change", metadata: { filterType: "location", value: "all" } }); }}
-                      className="gap-1 text-xs h-7"
-                      data-testid="button-clear-location"
-                    >
-                      <MapPin className="h-3 w-3" />
-                      {selectedLocation === "remote" ? "Remote" : selectedLocation === "hybrid" ? "Hybrid" : selectedLocation === "onsite" ? "On-site" : uniqueLocations.find(l => l.key === selectedLocation)?.display || selectedLocation}
-                      <X className="h-3 w-3" />
-                    </Button>
-                  )}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => { setSelectedCategory("all"); setSelectedLevel("all"); setSelectedLocation("all"); }}
-                    className="text-xs text-muted-foreground h-7"
-                    data-testid="button-clear-all-filters-top"
-                  >
-                    Clear all
-                  </Button>
-                </div>
-              )}
-
-              <AnimatePresence>
-                {showFilters && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    exit={{ opacity: 0, height: 0 }}
-                    transition={{ duration: 0.2 }}
-                    className="mb-4"
-                  >
-                    <Card data-testid="card-filter-panel">
-                      <CardContent className="p-4 space-y-5">
-                        <div>
-                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Experience Level</p>
-                          <div className="flex flex-wrap gap-1.5">
-                            {SENIORITY_LEVELS.map((level) => (
-                              <Button
-                                key={level.value}
-                                variant={selectedLevel === level.value ? "default" : "outline"}
-                                size="sm"
-                                onClick={() => { setSelectedLevel(level.value); track({ eventType: "filter_change", metadata: { filterType: "level", value: level.value } }); }}
-                                data-testid={`button-level-${level.value}`}
-                              >
-                                {level.label}
-                              </Button>
-                            ))}
-                          </div>
-                        </div>
-
-                        <div>
-                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Category</p>
-                          <div className="flex flex-wrap gap-1.5">
-                            <Button
-                              variant={selectedCategory === "all" ? "default" : "outline"}
-                              size="sm"
-                              onClick={() => { setSelectedCategory("all"); track({ eventType: "filter_change", metadata: { filterType: "category", value: "all" } }); }}
-                              data-testid="button-category-all"
-                            >
-                              All Categories
-                            </Button>
-                            {Object.entries(JOB_TAXONOMY).map(([category, data]) => {
-                              const count = statsData?.categoryCounts?.[category] ?? 0;
-                              const Icon = getCategoryIcon(data.icon);
-                              return (
-                                <Button
-                                  key={category}
-                                  variant={selectedCategory === category ? "default" : "outline"}
-                                  size="sm"
-                                  onClick={() => {
-                                    setSelectedCategory(category);
-                                    setCurrentPage(1);
-                                    track({ eventType: "filter_change", metadata: { filterType: "category", value: category } });
-                                  }}
-                                  disabled={count === 0}
-                                  className={`gap-1 ${count === 0 ? "opacity-40" : ""}`}
-                                  data-testid={`button-category-${category.replace(/\s+/g, '-').toLowerCase()}`}
-                                >
-                                  <Icon className="h-3.5 w-3.5" />
-                                  {data.shortName}
-                                  <Badge variant="secondary" className="text-[10px] ml-0.5">{count}</Badge>
-                                </Button>
-                              );
-                            })}
-                          </div>
-                        </div>
-
-                        <div>
-                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Location</p>
-                          <div className="flex flex-wrap gap-1.5 mb-2">
-                            <Button
-                              variant={selectedLocation === "all" ? "default" : "outline"}
-                              size="sm"
-                              onClick={() => { setSelectedLocation("all"); track({ eventType: "filter_change", metadata: { filterType: "location", value: "all" } }); }}
-                              data-testid="button-location-all"
-                            >
-                              All Locations
-                            </Button>
-                            <Button
-                              variant={selectedLocation === "remote" ? "default" : "outline"}
-                              size="sm"
-                              onClick={() => { setSelectedLocation("remote"); setCurrentPage(1); track({ eventType: "filter_change", metadata: { filterType: "location", value: "remote" } }); }}
-                              data-testid="button-location-remote"
-                            >
-                              Remote
-                            </Button>
-                            <Button
-                              variant={selectedLocation === "hybrid" ? "default" : "outline"}
-                              size="sm"
-                              onClick={() => { setSelectedLocation("hybrid"); setCurrentPage(1); track({ eventType: "filter_change", metadata: { filterType: "location", value: "hybrid" } }); }}
-                              data-testid="button-location-hybrid"
-                            >
-                              Hybrid
-                            </Button>
-                            <Button
-                              variant={selectedLocation === "onsite" ? "default" : "outline"}
-                              size="sm"
-                              onClick={() => { setSelectedLocation("onsite"); setCurrentPage(1); track({ eventType: "filter_change", metadata: { filterType: "location", value: "onsite" } }); }}
-                              data-testid="button-location-onsite"
-                            >
-                              On-site
-                            </Button>
-                          </div>
-                          {uniqueLocations.length > 0 && (
-                            <div>
-                              <div className="mb-1.5">
-                                <Input
-                                  placeholder="Search cities..."
-                                  value={locationSearch}
-                                  onChange={(e) => setLocationSearch(e.target.value)}
-                                  className="h-8 text-sm max-w-xs"
-                                  data-testid="input-location-search"
-                                />
-                              </div>
-                              <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto">
-                                {uniqueLocations
-                                  .filter(l => locationSearch === "" || l.display.toLowerCase().includes(locationSearch.toLowerCase()))
-                                  .slice(0, locationSearch ? undefined : 12)
-                                  .map((loc) => (
-                                    <Button
-                                      key={loc.key}
-                                      variant={selectedLocation === loc.key ? "default" : "ghost"}
-                                      size="sm"
-                                      onClick={() => { setSelectedLocation(loc.key); track({ eventType: "filter_change", metadata: { filterType: "location", value: loc.key } }); }}
-                                      className="gap-1 text-xs h-7"
-                                      data-testid={`button-location-${loc.key}`}
-                                    >
-                                      {loc.display}
-                                      <Badge variant="secondary" className="text-[10px]">{loc.count}</Badge>
-                                    </Button>
-                                  ))}
-                                {!locationSearch && uniqueLocations.length > 12 && (
-                                  <span className="text-xs text-muted-foreground self-center ml-1">
-                                    +{uniqueLocations.length - 12} more (type to search)
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </>
-          );
-        })()}
+        <div className="flex items-center gap-2 mb-4 flex-wrap" data-testid="filter-bar">
+          <div className="flex items-center gap-2 flex-1 min-w-0 max-w-xs">
+            <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+            <Input
+              placeholder="Filter by keyword..."
+              value={filterText}
+              onChange={(e) => setFilterText(e.target.value)}
+              data-testid="input-filter"
+            />
+          </div>
+          <Select value={selectedCategory} onValueChange={(val) => { setSelectedCategory(val); setCurrentPage(1); track({ eventType: "filter_change", metadata: { filterType: "category", value: val } }); }}>
+            <SelectTrigger className="w-auto min-w-[140px] max-w-[200px]" data-testid="select-category">
+              <SelectValue placeholder="Category" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all" data-testid="select-category-all">All Categories</SelectItem>
+              {Object.entries(JOB_TAXONOMY)
+                .sort((a, b) => (statsData?.categoryCounts?.[b[0]] ?? 0) - (statsData?.categoryCounts?.[a[0]] ?? 0))
+                .filter(([cat]) => (statsData?.categoryCounts?.[cat] ?? 0) > 0)
+                .map(([category]) => (
+                  <SelectItem key={category} value={category} data-testid={`select-category-${category.replace(/\s+/g, '-').toLowerCase()}`}>
+                    {category}
+                  </SelectItem>
+                ))}
+            </SelectContent>
+          </Select>
+          <Select value={selectedLevel} onValueChange={(val) => { setSelectedLevel(val); setCurrentPage(1); track({ eventType: "filter_change", metadata: { filterType: "level", value: val } }); }}>
+            <SelectTrigger className="w-auto min-w-[120px] max-w-[160px]" data-testid="select-level">
+              <SelectValue placeholder="Level" />
+            </SelectTrigger>
+            <SelectContent>
+              {SENIORITY_LEVELS.map((level) => (
+                <SelectItem key={level.value} value={level.value} data-testid={`select-level-${level.value}`}>
+                  {level.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <div className="flex items-center gap-1" data-testid="location-type-pills">
+            {[
+              { value: "all", label: "All" },
+              { value: "remote", label: "Remote" },
+              { value: "hybrid", label: "Hybrid" },
+              { value: "onsite", label: "On-site" },
+            ].map((loc) => (
+              <Button
+                key={loc.value}
+                variant={selectedLocation === loc.value ? "default" : "ghost"}
+                size="sm"
+                onClick={() => { setSelectedLocation(loc.value); setCurrentPage(1); track({ eventType: "filter_change", metadata: { filterType: "location", value: loc.value } }); }}
+                data-testid={`button-location-${loc.value}`}
+              >
+                {loc.label}
+              </Button>
+            ))}
+          </div>
+          <Select value={sortBy} onValueChange={(val) => { setSortBy(val); setCurrentPage(1); }}>
+            <SelectTrigger className="w-auto min-w-[120px] max-w-[160px]" data-testid="select-sort">
+              <ArrowUpDown className="h-3 w-3 mr-1 shrink-0" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="newest" data-testid="select-sort-newest">Newest First</SelectItem>
+              <SelectItem value="salary" data-testid="select-sort-salary">Salary (High)</SelectItem>
+              <SelectItem value="company" data-testid="select-sort-company">Company A-Z</SelectItem>
+            </SelectContent>
+          </Select>
+          {(selectedCategory !== "all" || selectedLevel !== "all" || selectedLocation !== "all" || filterText) && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => { setSelectedCategory("all"); setSelectedLevel("all"); setSelectedLocation("all"); setFilterText(""); }}
+              className="text-xs text-muted-foreground gap-1"
+              data-testid="button-clear-all-filters"
+            >
+              <X className="h-3 w-3" />
+              Clear
+            </Button>
+          )}
+        </div>
 
         {jobsLoading && !jobsResponse ? (
           <div className="grid gap-3" data-testid="skeleton-jobs">

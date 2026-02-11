@@ -1,6 +1,6 @@
 import { db } from "./db";
 import { jobs, users, userPreferences, jobCategories, jobSubmissions, jobAlerts, notifications, resumes, builtResumes, userActivities, userPersonas, savedJobs, jobApplications, events, scrapeRuns, jobReports, type Job, type InsertJob, type User, type UserPreferences, type InsertUserPreferences, type ResumeExtractedData, type JobCategory, type JobSubmission, type InsertJobSubmission, type JobAlert, type InsertJobAlert, type Notification, type InsertNotification, type Resume, type InsertResume, type BuiltResume, type InsertBuiltResume, type UserActivity, type InsertUserActivity, type UserPersona, type InsertUserPersona, type SavedJob, type InsertSavedJob, type JobApplication, type InsertJobApplication, type JobApplicationWithJob, type Event, type InsertEvent, type ScrapeRun, type InsertScrapeRun, type JobReport, type InsertJobReport, JOB_TAXONOMY } from "@shared/schema";
-import { eq, desc, and, sql, inArray, lt, gte, count } from "drizzle-orm";
+import { eq, desc, asc, and, sql, inArray, lt, gte, count } from "drizzle-orm";
 import { cleanJobDescription } from "./lib/description-cleaner";
 import { deriveSourceInfo } from "./lib/url-utils";
 import { generateJobHash } from "./lib/job-hash";
@@ -21,7 +21,7 @@ export interface IStorage {
   trackJobView(jobId: number): Promise<void>;
   trackApplyClick(jobId: number): Promise<void>;
   getPublishedJobs(): Promise<Job[]>;
-  getPublishedJobsPaginated(page: number, limit: number, filters?: { category?: string; location?: string; locationType?: string; search?: string; seniority?: string }): Promise<{ jobs: Job[]; total: number; page: number; totalPages: number }>;
+  getPublishedJobsPaginated(page: number, limit: number, filters?: { category?: string; location?: string; locationType?: string; search?: string; seniority?: string; sort?: string }): Promise<{ jobs: Job[]; total: number; page: number; totalPages: number }>;
   getJobsForStandardization(status?: string): Promise<Job[]>;
   publishJob(id: number): Promise<Job | undefined>;
   unpublishJob(id: number): Promise<Job | undefined>;
@@ -246,7 +246,7 @@ class DatabaseStorage implements IStorage {
   async getPublishedJobsPaginated(
     page: number = 1,
     limit: number = 20,
-    filters?: { category?: string; location?: string; locationType?: string; search?: string; seniority?: string }
+    filters?: { category?: string; location?: string; locationType?: string; search?: string; seniority?: string; sort?: string }
   ): Promise<{ jobs: Job[]; total: number; page: number; totalPages: number }> {
     const conditions: any[] = [
       eq(jobs.isActive, true),
@@ -297,6 +297,20 @@ class DatabaseStorage implements IStorage {
     const totalPages = Math.ceil(total / limit);
     const offset = (page - 1) * limit;
 
+    let orderByClause;
+    switch (filters?.sort) {
+      case 'salary':
+        orderByClause = [sql`${jobs.salaryMax} DESC NULLS LAST`, sql`${jobs.salaryMin} DESC NULLS LAST`, desc(jobs.postedDate)];
+        break;
+      case 'company':
+        orderByClause = [asc(jobs.company), desc(jobs.postedDate)];
+        break;
+      case 'newest':
+      default:
+        orderByClause = [desc(jobs.postedDate)];
+        break;
+    }
+
     const results = await db
       .select({
         id: jobs.id,
@@ -318,10 +332,14 @@ class DatabaseStorage implements IStorage {
         jobStatus: jobs.jobStatus,
         lastSeenAt: jobs.lastSeenAt,
         experienceText: jobs.experienceText,
+        aiSummary: jobs.aiSummary,
+        keySkills: jobs.keySkills,
+        legalRelevanceScore: jobs.legalRelevanceScore,
+        companyLogo: jobs.companyLogo,
       })
       .from(jobs)
       .where(whereClause)
-      .orderBy(desc(jobs.postedDate))
+      .orderBy(...orderByClause)
       .limit(limit)
       .offset(offset);
 

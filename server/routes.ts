@@ -357,12 +357,15 @@ export async function registerRoutes(
     try {
       const page = Math.max(1, parseInt(String(req.query.page || '1')));
       const limit = Math.min(100, Math.max(1, parseInt(String(req.query.limit || '20'))));
-      const filters: { category?: string; location?: string; locationType?: string; search?: string; seniority?: string } = {};
+      const filters: { category?: string; location?: string; locationType?: string; search?: string; seniority?: string; sort?: string } = {};
       if (req.query.category) filters.category = String(req.query.category);
       if (req.query.location) filters.location = String(req.query.location);
       if (req.query.locationType) filters.locationType = String(req.query.locationType);
       if (req.query.search) filters.search = String(req.query.search);
       if (req.query.seniority) filters.seniority = String(req.query.seniority);
+      if (req.query.sort && ['newest', 'salary', 'company'].includes(String(req.query.sort))) {
+        filters.sort = String(req.query.sort);
+      }
 
       const result = await storage.getPublishedJobsPaginated(page, limit, filters);
       res.json(result);
