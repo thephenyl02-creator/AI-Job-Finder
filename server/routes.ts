@@ -112,6 +112,10 @@ async function requirePro(req: any, res: any, next: any) {
   if (!userId) {
     return res.status(401).json({ error: "Unauthorized" });
   }
+  const isAdmin = await storage.isUserAdmin(userId);
+  if (isAdmin) {
+    return next();
+  }
   const subData = await storage.getUserSubscription(userId);
   if (subData?.subscriptionTier === "pro" && subData?.subscriptionStatus === "active") {
     return next();
@@ -905,8 +909,9 @@ Only include jobs with a score above 40. Sort by score descending.`;
       const FREE_GUIDED_LIMIT = 7;
 
       if (userId) {
+        const userIsAdmin = await storage.isUserAdmin(userId);
         const subData = await storage.getUserSubscription(userId);
-        const isPro = subData?.subscriptionTier === "pro" && subData?.subscriptionStatus === "active";
+        const isPro = userIsAdmin || (subData?.subscriptionTier === "pro" && subData?.subscriptionStatus === "active");
         if (!isPro) {
           const guidedCount = await storage.getGuidedSearchCount(userId);
           if (guidedCount >= FREE_GUIDED_LIMIT) {
@@ -1714,8 +1719,9 @@ Provide 2-4 recommended paths. Be specific to this candidate's actual experience
       const parsedData = await parseResumeWithAI(resumeText);
 
       const existing = await storage.getUserResumes(userId);
+      const userIsAdmin = await storage.isUserAdmin(userId);
       const subData = await storage.getUserSubscription(userId);
-      const isProUser = subData?.subscriptionTier === "pro" && subData?.subscriptionStatus === "active";
+      const isProUser = userIsAdmin || (subData?.subscriptionTier === "pro" && subData?.subscriptionStatus === "active");
       const maxResumes = isProUser ? 5 : 1;
       if (existing.length >= maxResumes) {
         if (!isProUser) {
@@ -1902,6 +1908,50 @@ Provide 2-4 recommended paths. Be specific to this candidate's actual experience
   app.get("/api/auth/is-admin", isAuthenticated, async (req, res) => {
     const adminStatus = await isAdminCheck(req);
     res.json({ isAdmin: adminStatus });
+  });
+
+  app.post("/api/admin/users/:id/toggle-admin", isAuthenticated, async (req, res) => {
+    if (!(await isAdminCheck(req))) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    try {
+      const targetUserId = req.params.id;
+      const currentUser = req.user as any;
+      if (targetUserId === currentUser.id) {
+        return res.status(400).json({ error: "Cannot change your own admin status" });
+      }
+      const isCurrentlyAdmin = await storage.isUserAdmin(targetUserId);
+      await storage.setUserAdmin(targetUserId, !isCurrentlyAdmin);
+      res.json({ success: true, isAdmin: !isCurrentlyAdmin });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/admin/users/:id/toggle-pro", isAuthenticated, async (req, res) => {
+    if (!(await isAdminCheck(req))) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    try {
+      const targetUserId = req.params.id;
+      const subData = await storage.getUserSubscription(targetUserId);
+      const isPro = subData?.subscriptionTier === "pro" && subData?.subscriptionStatus === "active";
+      if (isPro) {
+        await storage.updateUserSubscription(targetUserId, {
+          subscriptionTier: "free",
+          subscriptionStatus: "inactive",
+        });
+      } else {
+        await storage.updateUserSubscription(targetUserId, {
+          subscriptionTier: "pro",
+          subscriptionStatus: "active",
+        });
+      }
+      const newSub = await storage.getUserSubscription(targetUserId);
+      res.json({ success: true, tier: newSub?.subscriptionTier || "free", status: newSub?.subscriptionStatus || "inactive" });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
   });
 
   // Admin: Get list of companies that can be scraped
@@ -3830,8 +3880,9 @@ Provide 2-4 recommended paths. Be specific to this candidate's actual experience
       const userId = req.user!.id;
       const days = parseInt(req.query.days as string) || 30;
       const data = await storage.getUserDashboard(userId, Math.min(days, 90));
+      const dashAdminCheck = await storage.isUserAdmin(userId);
       const subData = await storage.getUserSubscription(userId);
-      const isPro = subData?.subscriptionTier === "pro" && subData?.subscriptionStatus === "active";
+      const isPro = dashAdminCheck || (subData?.subscriptionTier === "pro" && subData?.subscriptionStatus === "active");
       res.json({ ...data, isPro });
     } catch (error) {
       console.error("Error fetching user dashboard:", error);
@@ -3842,8 +3893,9 @@ Provide 2-4 recommended paths. Be specific to this candidate's actual experience
   app.get("/api/usage/limits", isAuthenticated, async (req, res) => {
     try {
       const userId = req.user!.id;
+      const userIsAdmin = await storage.isUserAdmin(userId);
       const subData = await storage.getUserSubscription(userId);
-      const isPro = subData?.subscriptionTier === "pro" && subData?.subscriptionStatus === "active";
+      const isPro = userIsAdmin || (subData?.subscriptionTier === "pro" && subData?.subscriptionStatus === "active");
       const dailyChatCount = await storage.getDailyAssistantChatCount(userId);
       const savedJobCount = await storage.getSavedJobCount(userId);
       const guidedSearchCount = await storage.getGuidedSearchCount(userId);
@@ -4547,8 +4599,9 @@ After your analysis, list 2-4 key data points you referenced as "Sources" - each
         return res.status(400).json({ error: "Please provide a message." });
       }
 
+      const chatAdminCheck = await storage.isUserAdmin(userId);
       const subData = await storage.getUserSubscription(userId);
-      const isPro = subData?.subscriptionTier === "pro" && subData?.subscriptionStatus === "active";
+      const isPro = chatAdminCheck || (subData?.subscriptionTier === "pro" && subData?.subscriptionStatus === "active");
       const FREE_DAILY_CHAT_LIMIT = 3;
       if (!isPro) {
         const dailyCount = await storage.getDailyAssistantChatCount(userId);
@@ -5185,6 +5238,11 @@ ${matchDetails}`;
         return res.status(401).json({ error: "Unauthorized" });
       }
 
+      const isAdmin = await storage.isUserAdmin(userId);
+      if (isAdmin) {
+        return res.json({ tier: "pro", status: "active", currentPeriodEnd: null, adminOverride: true });
+      }
+
       const subData = await storage.getUserSubscription(userId);
       if (!subData) {
         return res.json({ tier: "free", status: "inactive" });
@@ -5666,8 +5724,9 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
     const jobId = parseInt(req.params.jobId);
     if (isNaN(jobId)) return res.status(400).json({ error: "Invalid job ID" });
     try {
+      const savedAdminCheck = await storage.isUserAdmin(userId);
       const subData = await storage.getUserSubscription(userId);
-      const isPro = subData?.subscriptionTier === "pro" && subData?.subscriptionStatus === "active";
+      const isPro = savedAdminCheck || (subData?.subscriptionTier === "pro" && subData?.subscriptionStatus === "active");
       if (!isPro) {
         const savedCount = await storage.getSavedJobCount(userId);
         if (savedCount >= 5) {

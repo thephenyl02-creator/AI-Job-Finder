@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   LogOut, BarChart3, Bell, FileText, Crown, Search,
-  Bookmark, LayoutDashboard, Menu, Calendar, Settings, PenLine
+  Bookmark, LayoutDashboard, Menu, Calendar, Settings, PenLine, Activity
 } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { Link, useLocation } from "wouter";
@@ -270,10 +270,35 @@ export function Header() {
                   {isAdmin && (
                     <>
                       <DropdownMenuSeparator />
+                      <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">Admin</DropdownMenuLabel>
                       <DropdownMenuItem asChild>
                         <Link href="/admin" className="cursor-pointer" data-testid="link-admin">
                           <Settings className="mr-2 h-4 w-4" />
-                          <span>Admin</span>
+                          <span>Job Management</span>
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href="/admin/scraper" className="cursor-pointer" data-testid="link-admin-scraper">
+                          <Activity className="mr-2 h-4 w-4" />
+                          <span>Scraper</span>
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href="/admin/analytics" className="cursor-pointer" data-testid="link-admin-analytics">
+                          <BarChart3 className="mr-2 h-4 w-4" />
+                          <span>Analytics</span>
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href="/admin/events" className="cursor-pointer" data-testid="link-admin-events">
+                          <Calendar className="mr-2 h-4 w-4" />
+                          <span>Events</span>
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href="/admin/reports" className="cursor-pointer" data-testid="link-admin-reports">
+                          <Bell className="mr-2 h-4 w-4" />
+                          <span>Reports</span>
                         </Link>
                       </DropdownMenuItem>
                     </>

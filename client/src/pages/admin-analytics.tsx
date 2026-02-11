@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { usePageTitle } from "@/hooks/use-page-title";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
@@ -13,9 +13,11 @@ import { Link } from "wouter";
 import {
   ArrowLeft, Users, Briefcase, TrendingUp, Search, Eye, MousePointerClick,
   FileText, Bookmark, Bell, BarChart3, Activity, Crown, ArrowUpRight,
-  Loader2, ShieldX, Filter, ChevronDown, ChevronUp, ExternalLink
+  Loader2, ShieldX, Filter, ChevronDown, ChevronUp, ExternalLink, Shield
 } from "lucide-react";
 import { Header } from "@/components/header";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 interface KpiData {
   totalUsers: number;
@@ -76,6 +78,7 @@ interface UserAnalytics {
   lastName: string | null;
   subscriptionTier: string | null;
   subscriptionStatus: string | null;
+  isAdmin: boolean;
   createdAt: string | null;
   lastActiveAt: string | null;
   totalJobViews: number;
@@ -208,6 +211,36 @@ export default function AdminAnalyticsPage() {
     queryKey: ["/api/admin/analytics/funnel"],
     enabled: isAdmin,
     refetchInterval: 30000,
+  });
+
+  const { toast } = useToast();
+  const { user } = useAuth();
+
+  const toggleAdminMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      await apiRequest("POST", `/api/admin/users/${userId}/toggle-admin`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/analytics/users"] });
+      toast({ title: "Admin status updated" });
+    },
+    onError: (err: any) => {
+      toast({ title: "Failed to update admin status", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const toggleProMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      await apiRequest("POST", `/api/admin/users/${userId}/toggle-pro`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/analytics/users"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/analytics/kpis"] });
+      toast({ title: "Subscription tier updated" });
+    },
+    onError: (err: any) => {
+      toast({ title: "Failed to update tier", description: err.message, variant: "destructive" });
+    },
   });
 
   useEffect(() => {
@@ -777,6 +810,7 @@ export default function AdminAnalyticsPage() {
                           <th className="text-right py-2 px-2 font-medium text-muted-foreground cursor-pointer select-none" onClick={() => toggleSort("lastActive")}>
                             <span className="flex items-center justify-end gap-1">Last Active <SortIcon col="lastActive" /></span>
                           </th>
+                          <th className="text-right py-2 px-2 font-medium text-muted-foreground">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -791,9 +825,16 @@ export default function AdminAnalyticsPage() {
                               </div>
                             </td>
                             <td className="py-2 px-2">
-                              <Badge variant={u.subscriptionTier === "pro" ? "default" : "secondary"} className="text-xs capitalize">
-                                {u.subscriptionTier || "free"}
-                              </Badge>
+                              <div className="flex items-center gap-1 flex-wrap">
+                                <Badge variant={u.subscriptionTier === "pro" ? "default" : "secondary"} className="text-xs capitalize">
+                                  {u.subscriptionTier || "free"}
+                                </Badge>
+                                {u.isAdmin && (
+                                  <Badge variant="outline" className="text-xs">
+                                    <Shield className="h-3 w-3 mr-0.5" />Admin
+                                  </Badge>
+                                )}
+                              </div>
                             </td>
                             <td className="text-right py-2 px-1 tabular-nums">{u.totalPageViews}</td>
                             <td className="text-right py-2 px-1 tabular-nums">{u.totalSearches}</td>
@@ -802,6 +843,40 @@ export default function AdminAnalyticsPage() {
                             <td className="text-right py-2 px-1 tabular-nums">{u.savedJobsCount}</td>
                             <td className="text-right py-2 px-1 tabular-nums">{u.resumeCount}</td>
                             <td className="text-right py-2 px-2 text-xs text-muted-foreground whitespace-nowrap">{formatDate(u.lastActiveAt)}</td>
+                            <td className="text-right py-2 px-2">
+                              {u.id !== user?.id && (
+                                <div className="flex items-center justify-end gap-1">
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        size="icon"
+                                        variant={u.subscriptionTier === "pro" ? "default" : "ghost"}
+                                        onClick={() => toggleProMutation.mutate(u.id)}
+                                        disabled={toggleProMutation.isPending}
+                                        data-testid={`button-toggle-pro-${u.id}`}
+                                      >
+                                        <Crown className="h-3.5 w-3.5" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>{u.subscriptionTier === "pro" ? "Revoke Pro" : "Grant Pro"}</TooltipContent>
+                                  </Tooltip>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        size="icon"
+                                        variant={u.isAdmin ? "default" : "ghost"}
+                                        onClick={() => toggleAdminMutation.mutate(u.id)}
+                                        disabled={toggleAdminMutation.isPending}
+                                        data-testid={`button-toggle-admin-${u.id}`}
+                                      >
+                                        <Shield className="h-3.5 w-3.5" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>{u.isAdmin ? "Revoke Admin" : "Grant Admin"}</TooltipContent>
+                                  </Tooltip>
+                                </div>
+                              )}
+                            </td>
                           </tr>
                         ))}
                       </tbody>

@@ -215,6 +215,80 @@ interface AdminJobsResponse {
   totalPages: number;
 }
 
+interface PipelineStats {
+  raw: number;
+  enriching: number;
+  ready: number;
+  rejected: number;
+  published: number;
+}
+
+function PipelineStatsCard() {
+  const { data: stats, isLoading } = useQuery<PipelineStats>({
+    queryKey: ["/api/admin/pipeline-stats"],
+    refetchInterval: 30000,
+  });
+
+  if (isLoading) {
+    return (
+      <Card data-testid="section-pipeline-stats">
+        <CardContent className="py-8 flex items-center justify-center">
+          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!stats) return null;
+
+  const total = stats.raw + stats.enriching + stats.ready + stats.rejected + stats.published;
+  const stages = [
+    { label: "Raw", count: stats.raw, color: "bg-amber-500", desc: "Awaiting enrichment" },
+    { label: "Enriching", count: stats.enriching, color: "bg-blue-500", desc: "Being processed" },
+    { label: "Published", count: stats.published, color: "bg-emerald-500", desc: "Live on site" },
+    { label: "Ready", count: stats.ready, color: "bg-teal-500", desc: "Passed gate, not published" },
+    { label: "Rejected", count: stats.rejected, color: "bg-red-500", desc: "Failed quality gate" },
+  ];
+
+  return (
+    <Card data-testid="section-pipeline-stats">
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <Activity className="h-4 w-4" />
+          Pipeline Health
+        </CardTitle>
+        <CardDescription>{total} total active jobs in pipeline</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          <div className="flex h-3 rounded-md overflow-hidden">
+            {stages.filter(s => s.count > 0).map((s) => (
+              <div
+                key={s.label}
+                className={`${s.color} transition-all`}
+                style={{ width: `${(s.count / total) * 100}%` }}
+                title={`${s.label}: ${s.count}`}
+              />
+            ))}
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+            {stages.map((s) => (
+              <div key={s.label} className="text-center p-2 border rounded-md" data-testid={`stat-pipeline-${s.label.toLowerCase()}`}>
+                <div className="flex items-center justify-center gap-1.5 mb-1">
+                  <div className={`w-2.5 h-2.5 rounded-full ${s.color}`} />
+                  <span className="text-xs text-muted-foreground">{s.label}</span>
+                </div>
+                <p className="text-lg font-semibold tabular-nums">{s.count}</p>
+                <p className="text-[10px] text-muted-foreground">{s.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function AdminPage() {
   usePageTitle("Admin Dashboard");
   const { toast } = useToast();
@@ -858,6 +932,7 @@ export default function AdminPage() {
 
       <main className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto space-y-6">
+          <PipelineStatsCard />
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">

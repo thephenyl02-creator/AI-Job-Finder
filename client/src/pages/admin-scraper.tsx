@@ -53,7 +53,7 @@ function StatusBadge({ status }: { status: string }) {
 export default function AdminScraper() {
   usePageTitle("Scraper Dashboard");
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, isAdmin, isLoading: authLoading } = useAuth();
 
   const { data: monitoring } = useQuery<{
     scheduler: { running: boolean; nextRun: string };
@@ -62,11 +62,13 @@ export default function AdminScraper() {
   }>({
     queryKey: ['/api/admin/monitoring'],
     refetchInterval: 15000,
+    enabled: isAdmin,
   });
 
   const { data: runs = [], isLoading: runsLoading } = useQuery<ScrapeRun[]>({
     queryKey: ['/api/admin/scraper/runs'],
     refetchInterval: 10000,
+    enabled: isAdmin,
   });
 
   const schedulerAction = useMutation({
@@ -84,6 +86,32 @@ export default function AdminScraper() {
     },
   });
 
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (!isAdmin) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center space-y-4">
+              <div className="mx-auto w-12 h-12 bg-destructive/10 rounded-full flex items-center justify-center">
+                <XCircle className="h-6 w-6 text-destructive" />
+              </div>
+              <h2 className="text-xl font-semibold">Access Denied</h2>
+              <p className="text-muted-foreground">Admin access required.</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   const latestRun = runs[0];
   const completedRuns = runs.filter(r => r.status !== 'running');
   const totalJobsInserted = completedRuns.reduce((sum, r) => sum + (r.inserted || 0), 0);
@@ -95,8 +123,6 @@ export default function AdminScraper() {
   const avgDuration = completedRuns.length > 0
     ? Math.round(completedRuns.reduce((sum, r) => sum + (r.durationMs || 0), 0) / completedRuns.length)
     : 0;
-
-  if (!user) return null;
 
   return (
     <div className="min-h-screen bg-background">

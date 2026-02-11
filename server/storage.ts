@@ -1682,6 +1682,7 @@ class DatabaseStorage implements IStorage {
     lastName: string | null;
     subscriptionTier: string | null;
     subscriptionStatus: string | null;
+    isAdmin: boolean;
     createdAt: Date | null;
     lastActiveAt: string | null;
     totalJobViews: number;
@@ -1698,6 +1699,7 @@ class DatabaseStorage implements IStorage {
       lastName: users.lastName,
       subscriptionTier: users.subscriptionTier,
       subscriptionStatus: users.subscriptionStatus,
+      isAdmin: users.isAdmin,
       createdAt: users.createdAt,
     }).from(users).orderBy(desc(users.createdAt));
 
@@ -1748,6 +1750,7 @@ class DatabaseStorage implements IStorage {
         lastName: u.lastName,
         subscriptionTier: u.subscriptionTier,
         subscriptionStatus: u.subscriptionStatus,
+        isAdmin: u.isAdmin ?? false,
         createdAt: u.createdAt,
         lastActiveAt: activity.lastActive,
         totalJobViews: activity.jobViews,
