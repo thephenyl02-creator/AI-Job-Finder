@@ -48,8 +48,8 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
     type: 'startup',
   },
   {
-    name: 'Leya',
-    careerUrl: 'https://www.leya.ai/careers',
+    name: 'Legora',
+    careerUrl: 'https://www.legora.com/careers',
     type: 'startup',
   },
   {
