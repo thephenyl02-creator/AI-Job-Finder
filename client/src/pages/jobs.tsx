@@ -126,7 +126,8 @@ export default function Jobs() {
   const searchString = useSearch();
   const urlParams = new URLSearchParams(searchString);
   const levelParam = urlParams.get("level");
-  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const categoryParam = urlParams.get("category");
+  const [selectedCategory, setSelectedCategory] = useState<string>(categoryParam || "all");
   const [selectedLevel, setSelectedLevel] = useState<string>(levelParam && ["student", "entry", "mid", "senior"].includes(levelParam) ? levelParam : "all");
   const [selectedLocation, setSelectedLocation] = useState<string>("all");
   const [filterText, setFilterText] = useState("");
@@ -726,85 +727,104 @@ export default function Jobs() {
           </Card>
         )}
 
-        <div className="flex items-center gap-2 mb-4 flex-wrap" data-testid="filter-bar">
-          <div className="flex items-center gap-2 flex-1 min-w-0 max-w-xs">
-            <Search className="h-4 w-4 text-muted-foreground shrink-0" />
-            <Input
-              placeholder="Filter by keyword..."
-              value={filterText}
-              onChange={(e) => setFilterText(e.target.value)}
-              data-testid="input-filter"
-            />
+        <div className="space-y-2 mb-4" data-testid="filter-bar">
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+              <Input
+                placeholder="Filter by keyword..."
+                value={filterText}
+                onChange={(e) => setFilterText(e.target.value)}
+                className="max-w-xs"
+                data-testid="input-filter"
+              />
+            </div>
+            <div className="hidden sm:flex items-center gap-1" data-testid="location-type-pills">
+              {[
+                { value: "all", label: "All" },
+                { value: "remote", label: "Remote" },
+                { value: "hybrid", label: "Hybrid" },
+                { value: "onsite", label: "On-site" },
+              ].map((loc) => (
+                <Button
+                  key={loc.value}
+                  variant={selectedLocation === loc.value ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => { setSelectedLocation(loc.value); setCurrentPage(1); track({ eventType: "filter_change", metadata: { filterType: "location", value: loc.value } }); }}
+                  data-testid={`button-location-${loc.value}`}
+                >
+                  {loc.label}
+                </Button>
+              ))}
+            </div>
           </div>
-          <Select value={selectedCategory} onValueChange={(val) => { setSelectedCategory(val); setCurrentPage(1); track({ eventType: "filter_change", metadata: { filterType: "category", value: val } }); }}>
-            <SelectTrigger className="w-auto min-w-[140px] max-w-[200px]" data-testid="select-category">
-              <SelectValue placeholder="Category" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all" data-testid="select-category-all">All Categories</SelectItem>
-              {Object.entries(JOB_TAXONOMY)
-                .sort((a, b) => (statsData?.categoryCounts?.[b[0]] ?? 0) - (statsData?.categoryCounts?.[a[0]] ?? 0))
-                .filter(([cat]) => (statsData?.categoryCounts?.[cat] ?? 0) > 0)
-                .map(([category]) => (
-                  <SelectItem key={category} value={category} data-testid={`select-category-${category.replace(/\s+/g, '-').toLowerCase()}`}>
-                    {category}
+          <div className="flex items-center gap-2 flex-wrap">
+            <Select value={selectedCategory} onValueChange={(val) => { setSelectedCategory(val); setCurrentPage(1); track({ eventType: "filter_change", metadata: { filterType: "category", value: val } }); }}>
+              <SelectTrigger className="w-auto min-w-[130px] max-w-[200px]" data-testid="select-category">
+                <SelectValue placeholder="Category" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all" data-testid="select-category-all">All Categories</SelectItem>
+                {Object.entries(JOB_TAXONOMY)
+                  .sort((a, b) => (statsData?.categoryCounts?.[b[0]] ?? 0) - (statsData?.categoryCounts?.[a[0]] ?? 0))
+                  .filter(([cat]) => (statsData?.categoryCounts?.[cat] ?? 0) > 0)
+                  .map(([category]) => (
+                    <SelectItem key={category} value={category} data-testid={`select-category-${category.replace(/\s+/g, '-').toLowerCase()}`}>
+                      {category}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+            <Select value={selectedLevel} onValueChange={(val) => { setSelectedLevel(val); setCurrentPage(1); track({ eventType: "filter_change", metadata: { filterType: "level", value: val } }); }}>
+              <SelectTrigger className="w-auto min-w-[100px] max-w-[140px]" data-testid="select-level">
+                <SelectValue placeholder="Level" />
+              </SelectTrigger>
+              <SelectContent>
+                {SENIORITY_LEVELS.map((level) => (
+                  <SelectItem key={level.value} value={level.value} data-testid={`select-level-${level.value}`}>
+                    {level.label}
                   </SelectItem>
                 ))}
-            </SelectContent>
-          </Select>
-          <Select value={selectedLevel} onValueChange={(val) => { setSelectedLevel(val); setCurrentPage(1); track({ eventType: "filter_change", metadata: { filterType: "level", value: val } }); }}>
-            <SelectTrigger className="w-auto min-w-[120px] max-w-[160px]" data-testid="select-level">
-              <SelectValue placeholder="Level" />
-            </SelectTrigger>
-            <SelectContent>
-              {SENIORITY_LEVELS.map((level) => (
-                <SelectItem key={level.value} value={level.value} data-testid={`select-level-${level.value}`}>
-                  {level.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <div className="flex items-center gap-1" data-testid="location-type-pills">
-            {[
-              { value: "all", label: "All" },
-              { value: "remote", label: "Remote" },
-              { value: "hybrid", label: "Hybrid" },
-              { value: "onsite", label: "On-site" },
-            ].map((loc) => (
+              </SelectContent>
+            </Select>
+            <div className="sm:hidden">
+              <Select value={selectedLocation} onValueChange={(val) => { setSelectedLocation(val); setCurrentPage(1); track({ eventType: "filter_change", metadata: { filterType: "location", value: val } }); }}>
+                <SelectTrigger className="w-auto min-w-[100px]" data-testid="select-location-mobile">
+                  <MapPin className="h-3 w-3 mr-1 shrink-0" />
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all" data-testid="select-location-mobile-all">All Locations</SelectItem>
+                  <SelectItem value="remote" data-testid="select-location-mobile-remote">Remote</SelectItem>
+                  <SelectItem value="hybrid" data-testid="select-location-mobile-hybrid">Hybrid</SelectItem>
+                  <SelectItem value="onsite" data-testid="select-location-mobile-onsite">On-site</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Select value={sortBy} onValueChange={(val) => { setSortBy(val); setCurrentPage(1); }}>
+              <SelectTrigger className="w-auto min-w-[110px] max-w-[150px]" data-testid="select-sort">
+                <ArrowUpDown className="h-3 w-3 mr-1 shrink-0" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="newest" data-testid="select-sort-newest">Newest First</SelectItem>
+                <SelectItem value="salary" data-testid="select-sort-salary">Salary (High)</SelectItem>
+                <SelectItem value="company" data-testid="select-sort-company">Company A-Z</SelectItem>
+              </SelectContent>
+            </Select>
+            {(selectedCategory !== "all" || selectedLevel !== "all" || selectedLocation !== "all" || filterText) && (
               <Button
-                key={loc.value}
-                variant={selectedLocation === loc.value ? "default" : "ghost"}
+                variant="ghost"
                 size="sm"
-                onClick={() => { setSelectedLocation(loc.value); setCurrentPage(1); track({ eventType: "filter_change", metadata: { filterType: "location", value: loc.value } }); }}
-                data-testid={`button-location-${loc.value}`}
+                onClick={() => { setSelectedCategory("all"); setSelectedLevel("all"); setSelectedLocation("all"); setFilterText(""); }}
+                className="text-xs text-muted-foreground gap-1"
+                data-testid="button-clear-all-filters"
               >
-                {loc.label}
+                <X className="h-3 w-3" />
+                Clear
               </Button>
-            ))}
+            )}
           </div>
-          <Select value={sortBy} onValueChange={(val) => { setSortBy(val); setCurrentPage(1); }}>
-            <SelectTrigger className="w-auto min-w-[120px] max-w-[160px]" data-testid="select-sort">
-              <ArrowUpDown className="h-3 w-3 mr-1 shrink-0" />
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="newest" data-testid="select-sort-newest">Newest First</SelectItem>
-              <SelectItem value="salary" data-testid="select-sort-salary">Salary (High)</SelectItem>
-              <SelectItem value="company" data-testid="select-sort-company">Company A-Z</SelectItem>
-            </SelectContent>
-          </Select>
-          {(selectedCategory !== "all" || selectedLevel !== "all" || selectedLocation !== "all" || filterText) && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => { setSelectedCategory("all"); setSelectedLevel("all"); setSelectedLocation("all"); setFilterText(""); }}
-              className="text-xs text-muted-foreground gap-1"
-              data-testid="button-clear-all-filters"
-            >
-              <X className="h-3 w-3" />
-              Clear
-            </Button>
-          )}
         </div>
 
         {jobsLoading && !jobsResponse ? (
@@ -966,12 +986,16 @@ export default function Jobs() {
                             {locType === "remote" ? "Remote" : locType === "hybrid" ? "Hybrid" : "On-site"}
                           </Badge>
                         )}
-                        {salaryDisplay && (
+                        {salaryDisplay ? (
                           <span className="flex items-center gap-1 text-green-600 dark:text-green-400">
                             <DollarSign className="h-3 w-3 shrink-0" />
                             <span data-testid={`text-salary-${job.id}`}>{salaryDisplay}</span>
                           </span>
-                        )}
+                        ) : sortBy === "salary" ? (
+                          <span className="text-xs text-muted-foreground/60 italic" data-testid={`text-no-salary-${job.id}`}>
+                            Salary not listed
+                          </span>
+                        ) : null}
                       </div>
                       <div className="flex flex-wrap items-center gap-1.5 mt-2">
                         {taxonomy && CategoryIcon && (

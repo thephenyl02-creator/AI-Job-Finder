@@ -64,16 +64,16 @@ function shortenLocation(location: string): string {
   return location;
 }
 
-const careerPaths = [
-  "Legal Operations",
-  "Privacy & Data",
-  "Legal Product",
-  "Contract Tech",
-  "Compliance / RegTech",
-  "Legal Engineering",
-  "Knowledge / PSL",
-  "Litigation Tech",
-  "AI Adoption",
+const careerPaths: { label: string; category: string }[] = [
+  { label: "Legal Operations", category: "Legal Operations" },
+  { label: "Compliance & Privacy", category: "Compliance & Privacy" },
+  { label: "Legal Product", category: "Legal Product Management" },
+  { label: "In-House Counsel", category: "In-House Counsel" },
+  { label: "Contract Management", category: "Contract Management" },
+  { label: "Legal Engineering", category: "Legal Engineering" },
+  { label: "Legal Consulting", category: "Legal Consulting & Advisory" },
+  { label: "Legal Sales", category: "Legal Sales & Client Solutions" },
+  { label: "Legal AI & Analytics", category: "Legal AI & Analytics" },
 ];
 
 export default function Landing() {
@@ -324,14 +324,15 @@ export default function Landing() {
               </div>
               <div className="flex flex-wrap items-center justify-center gap-2.5" data-testid="career-paths-chips">
                 {careerPaths.map((path) => (
-                  <Badge
-                    key={path}
-                    variant="outline"
-                    className="text-sm px-4 py-1.5 no-default-active-elevate"
-                    data-testid={`chip-career-path-${path.toLowerCase().replace(/[\s\/&]+/g, "-")}`}
-                  >
-                    {path}
-                  </Badge>
+                  <Link key={path.category} href={`/jobs?category=${encodeURIComponent(path.category)}`}>
+                    <Badge
+                      variant="outline"
+                      className="text-sm px-4 py-1.5 cursor-pointer"
+                      data-testid={`chip-career-path-${path.label.toLowerCase().replace(/[\s\/&]+/g, "-")}`}
+                    >
+                      {path.label}
+                    </Badge>
+                  </Link>
                 ))}
               </div>
             </ScrollReveal>

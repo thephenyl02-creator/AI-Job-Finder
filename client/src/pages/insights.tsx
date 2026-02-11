@@ -31,6 +31,7 @@ import {
   Loader2,
   Crown,
   Lock,
+  DollarSign,
 } from "lucide-react";
 
 interface MarketAnalytics {
@@ -47,6 +48,10 @@ interface MarketAnalytics {
     onsitePercentage: number;
     avgSalaryMin: number | null;
     avgSalaryMax: number | null;
+    medianSalaryMin: number | null;
+    medianSalaryMax: number | null;
+    jobsWithSalary: number;
+    jobsWithoutSalary: number;
     totalViews: number;
     totalApplyClicks: number;
   };
@@ -60,6 +65,7 @@ interface MarketAnalytics {
     mid: number;
     senior: number;
     expert: number;
+    unspecified: number;
   };
 }
 
@@ -551,6 +557,48 @@ export default function Insights() {
           />
         </div>
 
+        {(overview.medianSalaryMin || overview.medianSalaryMax) && (
+          <Card className="mb-10">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-base font-medium flex items-center gap-2">
+                <DollarSign className="h-4 w-4 text-muted-foreground" />
+                Salary Overview
+              </CardTitle>
+            </CardHeader>
+            <CardContent data-testid="section-salary-overview">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="rounded-md bg-muted/40 p-4">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Median Range</p>
+                  <p className="text-lg font-semibold text-foreground tabular-nums" data-testid="text-median-salary">
+                    {overview.medianSalaryMin ? `$${Math.round(overview.medianSalaryMin / 1000)}K` : "N/A"}
+                    {" \u2013 "}
+                    {overview.medianSalaryMax ? `$${Math.round(overview.medianSalaryMax / 1000)}K` : "N/A"}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Midpoint of reported salaries</p>
+                </div>
+                <div className="rounded-md bg-muted/40 p-4">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Average Range</p>
+                  <p className="text-lg font-semibold text-foreground tabular-nums" data-testid="text-avg-salary">
+                    {overview.avgSalaryMin ? `$${Math.round(overview.avgSalaryMin / 1000)}K` : "N/A"}
+                    {" \u2013 "}
+                    {overview.avgSalaryMax ? `$${Math.round(overview.avgSalaryMax / 1000)}K` : "N/A"}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Mean of reported salaries</p>
+                </div>
+                <div className="rounded-md bg-muted/40 p-4">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Salary Transparency</p>
+                  <p className="text-lg font-semibold text-foreground tabular-nums" data-testid="text-salary-coverage">
+                    {overview.jobsWithSalary} of {overview.totalJobs}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {overview.totalJobs > 0 ? Math.round((overview.jobsWithSalary / overview.totalJobs) * 100) : 0}% of listings include salary
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         <div className="grid md:grid-cols-2 gap-6 mb-6">
           <Card>
             <CardHeader className="pb-4">
@@ -623,6 +671,11 @@ export default function Insights() {
                     <p className="text-xs text-muted-foreground">10+ years</p>
                   </div>
                 </div>
+                {experienceRanges.unspecified > 0 && (
+                  <p className="text-xs text-muted-foreground mt-2">
+                    {experienceRanges.unspecified} {experienceRanges.unspecified === 1 ? "job doesn't" : "jobs don't"} specify experience requirements
+                  </p>
+                )}
               </div>
             </CardContent>
           </Card>

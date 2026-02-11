@@ -4279,14 +4279,27 @@ Return a JSON response with this exact structure:
       const onsiteJobs = allJobs.filter((j) => j.locationType === 'onsite' || (!j.locationType && !j.isRemote)).length;
       const hybridOrOnsite = totalJobs - remoteJobs;
 
-      const jobsWithSalaryMin = allJobs.filter((j) => j.salaryMin && j.salaryMin > 0);
-      const jobsWithSalaryMax = allJobs.filter((j) => j.salaryMax && j.salaryMax > 0);
+      const MAX_REASONABLE_SALARY = 400000;
+      const jobsWithSalaryMin = allJobs.filter((j) => j.salaryMin && j.salaryMin > 0 && j.salaryMin <= MAX_REASONABLE_SALARY);
+      const jobsWithSalaryMax = allJobs.filter((j) => j.salaryMax && j.salaryMax > 0 && j.salaryMax <= MAX_REASONABLE_SALARY);
+
+      const median = (arr: number[]) => {
+        if (arr.length === 0) return null;
+        const sorted = [...arr].sort((a, b) => a - b);
+        const mid = Math.floor(sorted.length / 2);
+        return sorted.length % 2 !== 0 ? sorted[mid] : Math.round((sorted[mid - 1] + sorted[mid]) / 2);
+      };
+
+      const medianSalaryMin = median(jobsWithSalaryMin.map(j => j.salaryMin!));
+      const medianSalaryMax = median(jobsWithSalaryMax.map(j => j.salaryMax!));
       const avgSalaryMin = jobsWithSalaryMin.length > 0
         ? Math.round(jobsWithSalaryMin.reduce((s, j) => s + j.salaryMin!, 0) / jobsWithSalaryMin.length)
         : null;
       const avgSalaryMax = jobsWithSalaryMax.length > 0
         ? Math.round(jobsWithSalaryMax.reduce((s, j) => s + j.salaryMax!, 0) / jobsWithSalaryMax.length)
         : null;
+      const jobsWithSalary = jobsWithSalaryMin.length;
+      const jobsWithoutSalary = totalJobs - allJobs.filter((j) => (j.salaryMin && j.salaryMin > 0) || (j.salaryMax && j.salaryMax > 0)).length;
 
       const categoryMap: Record<string, number> = {};
       const seniorityMap: Record<string, number> = {};
@@ -4338,11 +4351,13 @@ Return a JSON response with this exact structure:
         .sort((a, b) => b.count - a.count)
         .slice(0, 10);
 
+      const jobsWithExperience = allJobs.filter((j) => j.experienceMin != null && j.experienceMin >= 0);
       const experienceRanges = {
-        entry: allJobs.filter((j) => (j.experienceMin || 0) <= 2).length,
-        mid: allJobs.filter((j) => (j.experienceMin || 0) >= 3 && (j.experienceMin || 0) <= 5).length,
-        senior: allJobs.filter((j) => (j.experienceMin || 0) >= 6 && (j.experienceMin || 0) <= 9).length,
-        expert: allJobs.filter((j) => (j.experienceMin || 0) >= 10).length,
+        entry: jobsWithExperience.filter((j) => j.experienceMin! <= 2).length,
+        mid: jobsWithExperience.filter((j) => j.experienceMin! >= 3 && j.experienceMin! <= 5).length,
+        senior: jobsWithExperience.filter((j) => j.experienceMin! >= 6 && j.experienceMin! <= 9).length,
+        expert: jobsWithExperience.filter((j) => j.experienceMin! >= 10).length,
+        unspecified: allJobs.length - jobsWithExperience.length,
       };
 
       res.json({
@@ -4359,6 +4374,10 @@ Return a JSON response with this exact structure:
           onsitePercentage: Math.round((onsiteJobs / totalJobs) * 100),
           avgSalaryMin,
           avgSalaryMax,
+          medianSalaryMin,
+          medianSalaryMax,
+          jobsWithSalary,
+          jobsWithoutSalary,
           totalViews,
           totalApplyClicks,
         },
