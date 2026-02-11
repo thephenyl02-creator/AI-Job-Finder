@@ -137,8 +137,6 @@ export default function Jobs() {
   const JOBS_PER_PAGE = 20;
   const [searchResults, setSearchResults] = useState<JobWithScore[] | null>(null);
   const [searchQuery, setSearchQuery] = useState<string | null>(null);
-  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
-  const [hasAutoExpanded, setHasAutoExpanded] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [locationSearch, setLocationSearch] = useState("");
 
@@ -453,23 +451,6 @@ export default function Jobs() {
     .sort((a, b) => b[1].count - a[1].count)
     .map(([key, val]) => ({ key, display: val.display, count: val.count }));
 
-  useEffect(() => {
-    if (!hasAutoExpanded && allJobs.length > 0 && !searchResults) {
-      setHasAutoExpanded(true);
-    }
-  }, [allJobs, hasAutoExpanded, searchResults]);
-
-  const toggleCategory = (category: string) => {
-    setExpandedCategories(prev => {
-      const next = new Set(prev);
-      if (next.has(category)) {
-        next.delete(category);
-      } else {
-        next.add(category);
-      }
-      return next;
-    });
-  };
 
   if (authLoading) {
     return (
@@ -501,19 +482,6 @@ export default function Jobs() {
   };
 
   const filteredJobs = searchResults || allJobs;
-
-  const jobsByCategory = Object.entries(JOB_TAXONOMY).reduce((acc, [category]) => {
-    acc[category] = filteredJobs.filter(job => job.roleCategory === category);
-    return acc;
-  }, {} as Record<string, (Job | JobWithScore)[]>);
-
-  const uncategorizedJobs = filteredJobs.filter(job => 
-    !job.roleCategory || !Object.keys(JOB_TAXONOMY).includes(job.roleCategory)
-  );
-
-  const categoriesWithJobs = Object.entries(jobsByCategory)
-    .filter(([_, jobs]) => jobs.length > 0)
-    .sort((a, b) => b[1].length - a[1].length);
 
   const getCategoryIcon = (iconName: string) => {
     const IconComponent = CATEGORY_ICONS[iconName] || Brain;
@@ -914,7 +882,7 @@ export default function Jobs() {
                                   size="sm"
                                   onClick={() => {
                                     setSelectedCategory(category);
-                                    setExpandedCategories(new Set([category]));
+                                    setCurrentPage(1);
                                     track({ eventType: "filter_change", metadata: { filterType: "category", value: category } });
                                   }}
                                   disabled={count === 0}
@@ -944,32 +912,26 @@ export default function Jobs() {
                             <Button
                               variant={selectedLocation === "remote" ? "default" : "outline"}
                               size="sm"
-                              onClick={() => { setSelectedLocation("remote"); track({ eventType: "filter_change", metadata: { filterType: "location", value: "remote" } }); }}
-                              className="gap-1"
+                              onClick={() => { setSelectedLocation("remote"); setCurrentPage(1); track({ eventType: "filter_change", metadata: { filterType: "location", value: "remote" } }); }}
                               data-testid="button-location-remote"
                             >
                               Remote
-                              <Badge variant="secondary" className="text-[10px]">{allJobs.filter(j => j.locationType === 'remote' || (!j.locationType && j.isRemote)).length}</Badge>
                             </Button>
                             <Button
                               variant={selectedLocation === "hybrid" ? "default" : "outline"}
                               size="sm"
-                              onClick={() => { setSelectedLocation("hybrid"); track({ eventType: "filter_change", metadata: { filterType: "location", value: "hybrid" } }); }}
-                              className="gap-1"
+                              onClick={() => { setSelectedLocation("hybrid"); setCurrentPage(1); track({ eventType: "filter_change", metadata: { filterType: "location", value: "hybrid" } }); }}
                               data-testid="button-location-hybrid"
                             >
                               Hybrid
-                              <Badge variant="secondary" className="text-[10px]">{allJobs.filter(j => j.locationType === 'hybrid').length}</Badge>
                             </Button>
                             <Button
                               variant={selectedLocation === "onsite" ? "default" : "outline"}
                               size="sm"
-                              onClick={() => { setSelectedLocation("onsite"); track({ eventType: "filter_change", metadata: { filterType: "location", value: "onsite" } }); }}
-                              className="gap-1"
+                              onClick={() => { setSelectedLocation("onsite"); setCurrentPage(1); track({ eventType: "filter_change", metadata: { filterType: "location", value: "onsite" } }); }}
                               data-testid="button-location-onsite"
                             >
                               On-site
-                              <Badge variant="secondary" className="text-[10px]">{allJobs.filter(j => j.locationType === 'onsite').length}</Badge>
                             </Button>
                           </div>
                           {uniqueLocations.length > 0 && (
@@ -1019,24 +981,27 @@ export default function Jobs() {
         })()}
 
         {jobsLoading && !jobsResponse ? (
-          <div className="space-y-4" data-testid="skeleton-jobs">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <Card key={i} className="overflow-visible">
-                <CardContent className="p-4">
-                  <div className="flex items-start gap-3">
-                    <div className="h-10 w-10 rounded-md bg-muted animate-pulse shrink-0" />
-                    <div className="flex-1 space-y-2">
+          <div className="grid gap-3" data-testid="skeleton-jobs">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="p-3 sm:p-4 rounded-lg border bg-card">
+                <div className="flex gap-3">
+                  <div className="h-5 w-5 rounded bg-muted animate-pulse shrink-0 mt-0.5" />
+                  <div className="flex-1 space-y-2">
+                    <div className="flex items-start justify-between gap-2">
                       <div className="h-4 w-3/5 bg-muted animate-pulse rounded" />
-                      <div className="h-3 w-2/5 bg-muted animate-pulse rounded" />
-                      <div className="flex gap-2 mt-2">
-                        <div className="h-5 w-16 bg-muted animate-pulse rounded-full" />
-                        <div className="h-5 w-20 bg-muted animate-pulse rounded-full" />
-                        <div className="h-5 w-14 bg-muted animate-pulse rounded-full" />
-                      </div>
+                      <div className="h-3 w-12 bg-muted animate-pulse rounded" />
+                    </div>
+                    <div className="flex gap-2">
+                      <div className="h-3 w-24 bg-muted animate-pulse rounded" />
+                      <div className="h-3 w-28 bg-muted animate-pulse rounded" />
+                    </div>
+                    <div className="flex gap-1.5">
+                      <div className="h-5 w-20 bg-muted animate-pulse rounded-full" />
+                      <div className="h-5 w-14 bg-muted animate-pulse rounded-full" />
                     </div>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             ))}
           </div>
         ) : filteredJobs.length === 0 ? (
@@ -1103,62 +1068,141 @@ export default function Jobs() {
             </Card>
           </motion.div>
         ) : (
-          <div className="space-y-4">
-            {selectedCategory !== "all" ? (
-              <CategorySection
-                category={selectedCategory}
-                jobs={filteredJobs}
-                taxonomy={JOB_TAXONOMY[selectedCategory as keyof typeof JOB_TAXONOMY]}
-                expanded={true}
-                onToggle={() => {}}
-                searchResults={searchResults}
-                getCategoryIcon={getCategoryIcon}
-                onJobClick={(id) => setLocation(`/jobs/${id}`)}
-                compareIds={compareIds}
-                onToggleCompare={toggleCompare}
-                maxCompare={MAX_COMPARE}
-                isAuthenticated={isAuthenticated}
-              />
-            ) : (
-              <>
-                {categoriesWithJobs.map(([category, jobs]) => {
-                  const taxonomy = JOB_TAXONOMY[category as keyof typeof JOB_TAXONOMY];
-                  return (
-                    <CategorySection
-                      key={category}
-                      category={category}
-                      jobs={jobs}
-                      taxonomy={taxonomy}
-                      expanded={expandedCategories.has(category)}
-                      onToggle={() => toggleCategory(category)}
-                      searchResults={searchResults}
-                      getCategoryIcon={getCategoryIcon}
-                      onJobClick={(id) => setLocation(`/jobs/${id}`)}
-                      compareIds={compareIds}
-                      onToggleCompare={toggleCompare}
-                      maxCompare={MAX_COMPARE}
-                      isAuthenticated={isAuthenticated}
-                    />
-                  );
-                })}
-                {uncategorizedJobs.length > 0 && (
-                  <CategorySection
-                    category="Other"
-                    jobs={uncategorizedJobs}
-                    taxonomy={{ icon: "Sparkles", shortName: "Other", description: "Uncategorized jobs", subcategories: [] }}
-                    expanded={expandedCategories.has("Other")}
-                    onToggle={() => toggleCategory("Other")}
-                    searchResults={searchResults}
-                    getCategoryIcon={getCategoryIcon}
-                    onJobClick={(id) => setLocation(`/jobs/${id}`)}
-                    compareIds={compareIds}
-                    onToggleCompare={toggleCompare}
-                    maxCompare={MAX_COMPARE}
-                    isAuthenticated={isAuthenticated}
-                  />
-                )}
-              </>
-            )}
+          <div className="grid gap-3">
+            {filteredJobs.map((job) => {
+              const salaryDisplay = formatSalaryRange(job.salaryMin, job.salaryMax);
+              const locType = job.locationType || (job.isRemote ? "remote" : null);
+              const postedAgo = job.postedDate ? (() => {
+                const days = Math.floor((Date.now() - new Date(job.postedDate).getTime()) / 86400000);
+                if (days === 0) return "Today";
+                if (days === 1) return "1d ago";
+                if (days < 7) return `${days}d ago`;
+                if (days < 30) return `${Math.floor(days / 7)}w ago`;
+                return `${Math.floor(days / 30)}mo ago`;
+              })() : null;
+              const isSelected = compareIds.has(job.id);
+              const canSelect = isSelected || compareIds.size < MAX_COMPARE;
+              const taxonomy = job.roleCategory ? JOB_TAXONOMY[job.roleCategory as keyof typeof JOB_TAXONOMY] : null;
+              const CategoryIcon = taxonomy ? getCategoryIcon(taxonomy.icon) : null;
+              return (
+                <div
+                  key={job.id}
+                  className={`p-3 sm:p-4 rounded-lg border bg-card hover-elevate transition-colors cursor-pointer ${isSelected ? "ring-1 ring-primary/40" : ""}`}
+                  data-testid={`card-job-${job.id}`}
+                  onClick={() => setLocation(`/jobs/${job.id}`)}
+                >
+                  <div className="flex gap-2 sm:gap-3">
+                    <button
+                      className={`shrink-0 mt-0.5 w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+                        isSelected
+                          ? "bg-primary border-primary text-primary-foreground"
+                          : canSelect
+                          ? "border-muted-foreground/30 hover:border-primary/50"
+                          : "border-muted-foreground/10 opacity-40 cursor-not-allowed"
+                      }`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (!isAuthenticated) {
+                          toast({ title: "Create a free account to compare jobs." });
+                          setLocation("/auth?returnTo=/jobs");
+                          return;
+                        }
+                        if (canSelect || isSelected) toggleCompare(job.id);
+                      }}
+                      data-testid={`checkbox-compare-${job.id}`}
+                      aria-label={isSelected ? "Remove from comparison" : "Add to comparison"}
+                    >
+                      {isSelected && <Check className="h-3 w-3" />}
+                    </button>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-2 flex-wrap">
+                        <h3 className="font-medium text-foreground text-sm sm:text-base leading-snug" data-testid={`text-job-title-${job.id}`}>
+                          {cleanStructuredText(job.title)}
+                        </h3>
+                        {postedAgo && (
+                          <span className="text-xs text-muted-foreground shrink-0 mt-0.5" data-testid={`text-posted-${job.id}`}>
+                            {postedAgo}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-x-2 sm:gap-x-3 gap-y-1 mt-1 text-xs sm:text-sm text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <Building2 className="h-3 w-3 shrink-0" />
+                          <span data-testid={`text-job-company-${job.id}`}>{cleanStructuredText(job.company)}</span>
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <MapPin className="h-3 w-3 shrink-0" />
+                          <span data-testid={`text-job-location-${job.id}`}>{job.location ? cleanStructuredText(job.location) : "Not specified"}</span>
+                        </span>
+                        {locType && (
+                          <Badge variant="outline" className="text-xs" data-testid={`badge-loc-type-${job.id}`}>
+                            {locType === "remote" ? "Remote" : locType === "hybrid" ? "Hybrid" : "On-site"}
+                          </Badge>
+                        )}
+                        {salaryDisplay && (
+                          <span className="flex items-center gap-1 text-green-600 dark:text-green-400">
+                            <DollarSign className="h-3 w-3 shrink-0" />
+                            <span data-testid={`text-salary-${job.id}`}>{salaryDisplay}</span>
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                        {taxonomy && CategoryIcon && (
+                          <Badge variant="secondary" className="text-[10px] gap-1" data-testid={`badge-category-${job.id}`}>
+                            <CategoryIcon className="h-2.5 w-2.5" />
+                            {taxonomy.shortName}
+                          </Badge>
+                        )}
+                        {job.seniorityLevel && (
+                          <Badge variant="outline" className="text-[10px]">
+                            {job.seniorityLevel}
+                          </Badge>
+                        )}
+                        {job.legalRelevanceScore && job.legalRelevanceScore >= 8 && (
+                          <Badge
+                            variant="secondary"
+                            className={`text-[10px] gap-0.5 ${
+                              job.legalRelevanceScore >= 9
+                                ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400"
+                                : "bg-sky-100 dark:bg-sky-900/30 text-sky-700 dark:text-sky-400"
+                            }`}
+                            data-testid={`badge-legal-fit-${job.id}`}
+                          >
+                            <Scale className="h-2.5 w-2.5" />
+                            {job.legalRelevanceScore >= 9 ? "JD Preferred" : "Legal Background Valued"}
+                          </Badge>
+                        )}
+                        {searchResults && "matchScore" in job && (job as JobWithScore).matchScore && (
+                          <Badge
+                            variant={(job as JobWithScore).matchScore! >= 80 ? "default" : "secondary"}
+                            data-testid={`badge-match-${job.id}`}
+                          >
+                            {(job as JobWithScore).matchScore}% match
+                          </Badge>
+                        )}
+                      </div>
+                      {job.aiSummary && (
+                        <p className="text-xs text-muted-foreground mt-2 line-clamp-2">
+                          {cleanStructuredText(job.aiSummary)}
+                        </p>
+                      )}
+                      {job.keySkills && job.keySkills.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {job.keySkills.slice(0, 4).map((skill, si) => (
+                            <Badge key={si} variant="outline" className="text-[10px]" data-testid={`badge-skill-${job.id}-${si}`}>
+                              {cleanStructuredText(skill)}
+                            </Badge>
+                          ))}
+                          {job.keySkills.length > 4 && (
+                            <span className="text-[10px] text-muted-foreground self-center">+{job.keySkills.length - 4}</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
 
@@ -1263,238 +1307,6 @@ export default function Jobs() {
   );
 }
 
-function CategorySection({
-  category,
-  jobs,
-  taxonomy,
-  expanded,
-  onToggle,
-  searchResults,
-  getCategoryIcon,
-  onJobClick,
-  compareIds,
-  onToggleCompare,
-  maxCompare,
-  isAuthenticated,
-}: {
-  category: string;
-  jobs: (Job | JobWithScore)[];
-  taxonomy: { icon: string; shortName: string; description: string; subcategories: readonly string[] };
-  expanded: boolean;
-  onToggle: () => void;
-  searchResults: JobWithScore[] | null;
-  getCategoryIcon: (icon: string) => typeof Brain;
-  onJobClick: (jobId: number) => void;
-  compareIds: Set<number>;
-  onToggleCompare: (jobId: number) => void;
-  maxCompare: number;
-  isAuthenticated: boolean;
-}) {
-  const { toast } = useToast();
-  const [, setLocation] = useLocation();
-  const Icon = getCategoryIcon(taxonomy.icon);
-
-  const formatSalaryRange = (min?: number | null, max?: number | null) => {
-    if (!min && !max) return null;
-    const fmt = (n: number) => {
-      if (n >= 1000) {
-        const k = n / 1000;
-        return k % 1 === 0 ? `$${k.toFixed(0)}K` : `$${k.toFixed(1)}K`;
-      }
-      return `$${n}`;
-    };
-    if (min && max) return `${fmt(min)} \u2013 ${fmt(max)}`;
-    if (min) return `${fmt(min)}+`;
-    return `Up to ${fmt(max!)}`;
-  };
-
-  const jobsBySubcategory = jobs.reduce((acc, job) => {
-    const sub = job.roleSubcategory || "Other";
-    if (!acc[sub]) acc[sub] = [];
-    acc[sub].push(job);
-    return acc;
-  }, {} as Record<string, (Job | JobWithScore)[]>);
-
-  return (
-    <Card className="overflow-hidden">
-      <button
-        onClick={onToggle}
-        className="w-full text-left min-h-[44px]"
-        data-testid={`button-toggle-${category.replace(/\s+/g, '-').toLowerCase()}`}
-      >
-        <CardHeader className="flex flex-row items-center gap-2 sm:gap-3 py-3 sm:py-4 hover:bg-muted/30 transition-colors">
-          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-md bg-muted flex items-center justify-center shrink-0">
-            <Icon className="h-4 w-4 sm:h-5 sm:w-5 text-foreground" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="font-semibold text-foreground text-sm sm:text-base">{category}</h3>
-              <Badge variant="secondary">{jobs.length}</Badge>
-            </div>
-            <p className="text-xs sm:text-sm text-muted-foreground truncate">{taxonomy.description}</p>
-          </div>
-          {expanded ? (
-            <ChevronDown className="h-5 w-5 text-muted-foreground shrink-0" />
-          ) : (
-            <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
-          )}
-        </CardHeader>
-      </button>
-
-      <AnimatePresence>
-        {expanded && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.3, ease: "easeInOut" }}
-            className="overflow-hidden"
-          >
-            <CardContent className="pt-0 pb-4">
-              <div className="space-y-6">
-                {Object.entries(jobsBySubcategory)
-                  .sort((a, b) => b[1].length - a[1].length)
-                  .map(([subcategory, subJobs]) => (
-                    <div key={subcategory} data-testid={`subcategory-${subcategory.replace(/\s+/g, '-').toLowerCase()}`}>
-                      <div className="flex items-center gap-3 mb-3 px-1 pb-2 border-b border-border">
-                        <h4 className="text-sm font-semibold text-foreground">{subcategory}</h4>
-                        <Badge variant="outline" className="text-xs">{subJobs.length}</Badge>
-                      </div>
-                      <div className="grid gap-2">
-                        {subJobs.map((job) => {
-                          const salaryDisplay = formatSalaryRange(job.salaryMin, job.salaryMax);
-                          const locType = job.locationType || (job.isRemote ? "remote" : null);
-                          const postedAgo = job.postedDate ? (() => {
-                            const days = Math.floor((Date.now() - new Date(job.postedDate).getTime()) / 86400000);
-                            if (days === 0) return "Today";
-                            if (days === 1) return "1d ago";
-                            if (days < 7) return `${days}d ago`;
-                            if (days < 30) return `${Math.floor(days / 7)}w ago`;
-                            return `${Math.floor(days / 30)}mo ago`;
-                          })() : null;
-                          const isSelected = compareIds.has(job.id);
-                          const canSelect = isSelected || compareIds.size < maxCompare;
-                          return (
-                            <div
-                              key={job.id}
-                              className={`p-3 rounded-lg border bg-card hover-elevate transition-colors cursor-pointer ${isSelected ? "ring-1 ring-primary/40" : ""}`}
-                              data-testid={`card-job-${job.id}`}
-                              onClick={() => onJobClick(job.id)}
-                            >
-                              <div className="flex gap-2">
-                                <button
-                                  className={`shrink-0 mt-0.5 w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
-                                    isSelected
-                                      ? "bg-primary border-primary text-primary-foreground"
-                                      : canSelect
-                                      ? "border-muted-foreground/30 hover:border-primary/50"
-                                      : "border-muted-foreground/10 opacity-40 cursor-not-allowed"
-                                  }`}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    if (!isAuthenticated) {
-                                      toast({ title: "Create a free account to save jobs, see your match %, get alerts, and track applications." });
-                                      setLocation("/auth?returnTo=/jobs");
-                                      return;
-                                    }
-                                    if (canSelect || isSelected) onToggleCompare(job.id);
-                                  }}
-                                  data-testid={`checkbox-compare-${job.id}`}
-                                  aria-label={isSelected ? "Remove from comparison" : "Add to comparison"}
-                                >
-                                  {isSelected && <Check className="h-3 w-3" />}
-                                </button>
-                              <div className="min-w-0 flex-1">
-                                <h4 className="font-medium text-foreground text-sm sm:text-base" data-testid={`text-job-title-${job.id}`}>
-                                  {cleanStructuredText(job.title)}
-                                </h4>
-                                <div className="flex flex-wrap items-center gap-x-2 sm:gap-x-3 gap-y-1 mt-1 text-xs sm:text-sm text-muted-foreground">
-                                  <span className="flex items-center gap-1">
-                                    <Building2 className="h-3 w-3 shrink-0" />
-                                    <span data-testid={`text-job-company-${job.id}`}>{cleanStructuredText(job.company)}</span>
-                                  </span>
-                                  <span className="flex items-center gap-1">
-                                    <MapPin className="h-3 w-3 shrink-0" />
-                                    <span data-testid={`text-job-location-${job.id}`}>{job.location ? cleanStructuredText(job.location) : "Not specified"}</span>
-                                  </span>
-                                  {locType && (
-                                    <Badge variant="outline" className="text-xs" data-testid={`badge-loc-type-${job.id}`}>
-                                      {locType === "remote" ? "Remote" : locType === "hybrid" ? "Hybrid" : "On-site"}
-                                    </Badge>
-                                  )}
-                                  {salaryDisplay && (
-                                    <span className="flex items-center gap-1 text-green-600 dark:text-green-400">
-                                      <DollarSign className="h-3 w-3 shrink-0" />
-                                      <span data-testid={`text-salary-${job.id}`}>{salaryDisplay}</span>
-                                    </span>
-                                  )}
-                                  {job.seniorityLevel && (
-                                    <Badge variant="outline" className="text-xs">
-                                      {job.seniorityLevel}
-                                    </Badge>
-                                  )}
-                                  {postedAgo && (
-                                    <span className="flex items-center gap-1">
-                                      <Clock className="h-3 w-3 shrink-0" />
-                                      <span data-testid={`text-posted-${job.id}`}>{postedAgo}</span>
-                                    </span>
-                                  )}
-                                  {searchResults && "matchScore" in job && (job as JobWithScore).matchScore && (
-                                    <Badge 
-                                      variant={(job as JobWithScore).matchScore! >= 80 ? "default" : "secondary"}
-                                      data-testid={`badge-match-${job.id}`}
-                                    >
-                                      {(job as JobWithScore).matchScore}% match
-                                    </Badge>
-                                  )}
-                                </div>
-                                {job.aiSummary && (
-                                  <p className="text-xs sm:text-sm text-muted-foreground mt-2 line-clamp-2">
-                                    {cleanStructuredText(job.aiSummary)}
-                                  </p>
-                                )}
-                                {((job.keySkills && job.keySkills.length > 0) || (job.legalRelevanceScore && job.legalRelevanceScore >= 8)) && (
-                                  <div className="flex flex-wrap gap-1 mt-2">
-                                    {job.legalRelevanceScore && job.legalRelevanceScore >= 8 && (
-                                      <Badge
-                                        variant="secondary"
-                                        className={`text-[10px] gap-0.5 ${
-                                          job.legalRelevanceScore >= 9
-                                            ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400"
-                                            : "bg-sky-100 dark:bg-sky-900/30 text-sky-700 dark:text-sky-400"
-                                        }`}
-                                        data-testid={`badge-legal-fit-${job.id}`}
-                                      >
-                                        <Scale className="h-2.5 w-2.5" />
-                                        {job.legalRelevanceScore >= 9 ? "JD Preferred" : "Legal Background Valued"}
-                                      </Badge>
-                                    )}
-                                    {job.keySkills && job.keySkills.slice(0, 4).map((skill, si) => (
-                                      <Badge key={si} variant="outline" className="text-[10px]" data-testid={`badge-skill-${job.id}-${si}`}>
-                                        {cleanStructuredText(skill)}
-                                      </Badge>
-                                    ))}
-                                    {job.keySkills && job.keySkills.length > 4 && (
-                                      <span className="text-[10px] text-muted-foreground self-center">+{job.keySkills.length - 4}</span>
-                                    )}
-                                  </div>
-                                )}
-                              </div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))}
-              </div>
-            </CardContent>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </Card>
-  );
-}
 
 interface ComparisonAIResult {
   jobs: Array<{
