@@ -526,15 +526,25 @@ class DatabaseStorage implements IStorage {
   async deactivateStaleJobs(scrapedExternalIds: Set<string>, sources: string[]): Promise<number> {
     if (scrapedExternalIds.size === 0 || sources.length === 0) return 0;
 
-    const activeJobs = await db.select({ id: jobs.id, externalId: jobs.externalId, source: jobs.source, pipelineStatus: jobs.pipelineStatus })
+    const activeJobs = await db.select({
+      id: jobs.id,
+      externalId: jobs.externalId,
+      source: jobs.source,
+      pipelineStatus: jobs.pipelineStatus,
+      isPublished: jobs.isPublished,
+      lastEnrichedAt: jobs.lastEnrichedAt,
+    })
       .from(jobs)
       .where(eq(jobs.isActive, true));
+
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
     let deactivated = 0;
     for (const job of activeJobs) {
       if (!job.externalId || !job.source) continue;
       if (!sources.includes(job.source)) continue;
       if (job.pipelineStatus === 'raw') continue;
+      if (job.isPublished && job.lastEnrichedAt && job.lastEnrichedAt > twentyFourHoursAgo) continue;
       if (!scrapedExternalIds.has(job.externalId)) {
         await db.update(jobs)
           .set({ isActive: false })

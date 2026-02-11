@@ -5,6 +5,48 @@ import { categorizeJob } from '../lib/job-categorizer';
 import { cleanJobDescription } from '../lib/description-cleaner';
 import { generateJobHash } from '../lib/job-hash';
 import type { Job } from '@shared/schema';
+import axios from 'axios';
+
+async function fetchJobPageContent(url: string): Promise<string | null> {
+  try {
+    const response = await axios.get(url, {
+      timeout: 10000,
+      maxRedirects: 5,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      },
+      responseType: 'text',
+    });
+
+    if (typeof response.data !== 'string') return null;
+
+    let text = response.data
+      .replace(/<script[\s\S]*?<\/script>/gi, '')
+      .replace(/<style[\s\S]*?<\/style>/gi, '')
+      .replace(/<nav[\s\S]*?<\/nav>/gi, '')
+      .replace(/<footer[\s\S]*?<\/footer>/gi, '')
+      .replace(/<header[\s\S]*?<\/header>/gi, '')
+      .replace(/<[^>]+>/g, '\n')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/&nbsp;/g, ' ')
+      .replace(/\n{3,}/g, '\n\n')
+      .replace(/[ \t]+/g, ' ')
+      .trim();
+
+    if (text.length > 15000) {
+      text = text.substring(0, 15000);
+    }
+
+    return text.length > 100 ? text : null;
+  } catch {
+    return null;
+  }
+}
 
 const ENRICHMENT_INTERVAL_MS = 2 * 60 * 1000;
 const BATCH_SIZE = 50;
@@ -83,10 +125,12 @@ function computeQualityScore(job: Job, enrichedData: Record<string, any>): numbe
   if (enrichedData.roleCategory) score += 20;
   if (enrichedData.structuredDescription) {
     const sd = enrichedData.structuredDescription as any;
-    if (sd.summary && sd.summary.length > 20) score += 20;
-    if (sd.responsibilities?.length > 0) score += 10;
-    if (sd.minimumQualifications?.length > 0) score += 5;
-    if (sd.skillsRequired?.length > 0) score += 5;
+    if (sd.summary && sd.summary.length > 20) score += 10;
+    if (sd.aboutCompany && sd.aboutCompany.length > 20) score += 5;
+    if (sd.responsibilities?.length >= 3) score += 15;
+    else if (sd.responsibilities?.length > 0) score += 5;
+    if (sd.minimumQualifications?.length >= 2) score += 5;
+    if (sd.skillsRequired?.length >= 3) score += 5;
   }
   if (enrichedData.experienceMin !== null && enrichedData.experienceMin !== undefined) score += 15;
   if (job.applyUrl && job.applyUrl.startsWith('http')) score += 10;
@@ -95,6 +139,15 @@ function computeQualityScore(job: Job, enrichedData: Record<string, any>): numbe
   if (enrichedData.legalRelevanceScore && enrichedData.legalRelevanceScore >= 5) score += 5;
 
   return Math.min(100, score);
+}
+
+function isStructuredDescriptionComplete(sd: any): boolean {
+  if (!sd) return false;
+  const hasAboutCompany = sd.aboutCompany && sd.aboutCompany.length > 20;
+  const hasResponsibilities = sd.responsibilities?.length >= 3;
+  const hasQualifications = sd.minimumQualifications?.length >= 2;
+  const hasSkills = sd.skillsRequired?.length >= 3;
+  return hasAboutCompany && hasResponsibilities && hasQualifications && hasSkills;
 }
 
 async function enrichJob(job: Job): Promise<void> {
@@ -163,9 +216,27 @@ async function enrichJob(job: Job): Promise<void> {
       console.log(`[Enrichment] AI categorization failed for job ${job.id}: ${err.message?.slice(0, 80)}`);
     }
 
-    if (!job.structuredDescription) {
+    const existingSD = job.structuredDescription as any;
+    const needsStructuredExtraction = !existingSD || !isStructuredDescriptionComplete(existingSD);
+
+    if (needsStructuredExtraction) {
       try {
-        const structured = await extractStructuredDescription(job.description, job.company, job.title);
+        let descForExtraction = job.description || '';
+
+        if (descForExtraction.length < 200 && job.applyUrl && job.applyUrl.startsWith('http')) {
+          try {
+            const fetchedContent = await fetchJobPageContent(job.applyUrl);
+            if (fetchedContent && fetchedContent.length > descForExtraction.length) {
+              descForExtraction = fetchedContent;
+              enrichedData.description = fetchedContent;
+              enrichedData.descriptionFormatted = true;
+            }
+          } catch (fetchErr: any) {
+            console.log(`[Enrichment] Failed to fetch job page for job ${job.id}: ${fetchErr.message?.slice(0, 60)}`);
+          }
+        }
+
+        const structured = await extractStructuredDescription(descForExtraction, job.company, job.title);
         if (structured) {
           enrichedData.structuredDescription = structured;
           enrichedData.structuredStatus = 'generated';
@@ -184,11 +255,14 @@ async function enrichJob(job: Job): Promise<void> {
     enrichedData.relevanceConfidence = relevanceConfidence;
     enrichedData.lastEnrichedAt = new Date();
 
+    const structuredComplete = isStructuredDescriptionComplete(enrichedData.structuredDescription || job.structuredDescription);
+    const relevanceScore = enrichedData.legalRelevanceScore || 0;
+
     if (catResult?.reviewStatus === 'rejected' || relevanceConfidence < 40) {
       enrichedData.pipelineStatus = 'rejected';
       enrichedData.isPublished = false;
       enrichedData.reviewReasonCode = 'LOW_RELEVANCE';
-    } else if (relevanceConfidence >= 45 && enrichedData.roleCategory) {
+    } else if (relevanceConfidence >= 60 && enrichedData.roleCategory && structuredComplete && relevanceScore >= 6 && qualityScore >= 80) {
       enrichedData.pipelineStatus = 'ready';
       enrichedData.isPublished = true;
     } else {
@@ -196,8 +270,10 @@ async function enrichJob(job: Job): Promise<void> {
       enrichedData.isPublished = false;
       if (!enrichedData.roleCategory) {
         enrichedData.reviewReasonCode = 'MISSING_CATEGORY';
-      } else if (!enrichedData.experienceMin && enrichedData.experienceText === 'Not specified') {
-        enrichedData.reviewReasonCode = 'MISSING_EXPERIENCE';
+      } else if (!structuredComplete) {
+        enrichedData.reviewReasonCode = 'INCOMPLETE_DESCRIPTION';
+      } else if (relevanceScore < 6) {
+        enrichedData.reviewReasonCode = 'LOW_RELEVANCE_SCORE';
       } else if (qualityScore < 80) {
         enrichedData.reviewReasonCode = 'LOW_QUALITY_SCORE';
       } else {
