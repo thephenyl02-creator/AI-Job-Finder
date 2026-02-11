@@ -9,6 +9,7 @@ declare module "express-session" {
   interface SessionData {
     userId: string;
     oauthState?: string;
+    oauthReturnTo?: string;
   }
 }
 
@@ -126,6 +127,10 @@ export async function setupAuth(app: Express) {
 
     const state = generateState();
     req.session.oauthState = state;
+    const returnTo = req.query.returnTo as string | undefined;
+    if (returnTo && returnTo.startsWith("/") && !returnTo.startsWith("//")) {
+      req.session.oauthReturnTo = returnTo;
+    }
 
     const redirectUri = `${getBaseUrl(req)}/api/auth/google/callback`;
 
@@ -235,9 +240,12 @@ export async function setupAuth(app: Express) {
       }
 
       req.session.userId = user.id;
+      const rawRedirect = req.session.oauthReturnTo || "/";
+      delete req.session.oauthReturnTo;
+      const redirectTo = rawRedirect.startsWith("/") && !rawRedirect.startsWith("//") ? rawRedirect : "/";
 
       req.session.save(() => {
-        res.redirect("/");
+        res.redirect(redirectTo);
       });
     } catch (error) {
       console.error("Google OAuth callback error:", error);

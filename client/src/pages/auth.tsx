@@ -67,11 +67,14 @@ export default function Auth() {
     }
   }, [search, toast]);
 
+  const rawReturnTo = new URLSearchParams(search).get("returnTo") || "/";
+  const returnTo = rawReturnTo.startsWith("/") && !rawReturnTo.startsWith("//") ? rawReturnTo : "/";
+
   useEffect(() => {
     if (isAuthenticated && view !== "reset") {
-      setLocation("/");
+      setLocation(returnTo);
     }
-  }, [isAuthenticated, view, setLocation]);
+  }, [isAuthenticated, view, setLocation, returnTo]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -86,7 +89,7 @@ export default function Auth() {
         }
         await register({ email, password, firstName: firstName || undefined, lastName: lastName || undefined });
       }
-      setLocation("/");
+      setLocation(returnTo);
     } catch (err: any) {
       const message = err?.message || "Something went wrong";
       let displayMessage = message;
@@ -101,7 +104,10 @@ export default function Auth() {
   };
 
   const handleGoogleLogin = () => {
-    window.location.href = "/api/auth/google";
+    const googleUrl = returnTo && returnTo !== "/" 
+      ? `/api/auth/google?returnTo=${encodeURIComponent(returnTo)}`
+      : "/api/auth/google";
+    window.location.href = googleUrl;
   };
 
   const forgotMutation = useMutation({

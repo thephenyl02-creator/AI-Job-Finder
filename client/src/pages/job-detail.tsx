@@ -505,6 +505,7 @@ export default function JobDetail() {
   const [showReportDialog, setShowReportDialog] = useState(false);
   const [reportType, setReportType] = useState<string>("broken_link");
   const [reportDetails, setReportDetails] = useState("");
+  const authReturnUrl = `/auth?returnTo=${encodeURIComponent(`/jobs/${jobId}`)}`;
 
   const { data: publicJob, isLoading: publicLoading } = useQuery<Job>({
     queryKey: ['/api/public/jobs', jobId],
@@ -890,38 +891,59 @@ export default function JobDetail() {
             </Button>
           </div>
 
-          <div className="flex items-center gap-2 mt-4">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 mt-4">
             <Button
               onClick={handleApplyClick}
               className="gap-2"
+              disabled={!job?.applyUrl}
               data-testid="button-apply-top"
             >
               <ExternalLink className="h-4 w-4" />
-              Apply Now
+              {job?.applyUrl ? "Apply on Company Website" : "Apply link unavailable"}
             </Button>
-            {isAuthenticated && (
+            {isAuthenticated ? (
+              <Link href="/resumes">
+                <Button
+                  variant="outline"
+                  className="gap-1.5 w-full sm:w-auto"
+                  data-testid="button-resume-match"
+                >
+                  <Upload className="h-4 w-4" />
+                  Upload Resume &mdash; See Match %
+                </Button>
+              </Link>
+            ) : (
+              <Link href={authReturnUrl}>
+                <Button
+                  variant="outline"
+                  className="gap-1.5 w-full sm:w-auto"
+                  data-testid="button-resume-match-signin"
+                >
+                  <Upload className="h-4 w-4" />
+                  Upload Resume &mdash; See Match %
+                </Button>
+              </Link>
+            )}
+            {isAuthenticated ? (
               <Button
                 variant="outline"
-                size="sm"
                 onClick={() => saveJobMutation.mutate()}
                 disabled={saveJobMutation.isPending}
                 data-testid="button-save-job-detail"
                 className={`gap-1.5 ${jobIsSaved ? "text-primary" : ""}`}
               >
                 <Bookmark className={`h-4 w-4 ${jobIsSaved ? "fill-current" : ""}`} />
-                {jobIsSaved ? "Saved" : "Save"}
+                {jobIsSaved ? "Saved" : "Save Job"}
               </Button>
-            )}
-            {!isAuthenticated && (
-              <Link href="/auth">
+            ) : (
+              <Link href={authReturnUrl}>
                 <Button
                   variant="outline"
-                  size="sm"
-                  className="gap-1.5 text-muted-foreground"
+                  className="gap-1.5 w-full sm:w-auto text-muted-foreground"
                   data-testid="button-save-signin"
                 >
                   <Bookmark className="h-4 w-4" />
-                  Save
+                  Save Job
                 </Button>
               </Link>
             )}
@@ -943,17 +965,26 @@ export default function JobDetail() {
                       <Target className="h-3.5 w-3.5 text-primary" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-foreground">Stand out from other applicants</p>
+                      <p className="text-sm font-medium text-foreground">Applied? Track this application and get reminders.</p>
                       <p className="text-xs text-muted-foreground mt-0.5">
-                        Pro members can match their resume to this role and get personalized tips to improve their chances.
+                        Create a free account to save jobs, see your match %, get alerts, and track applications.
                       </p>
                       <div className="flex items-center gap-2 mt-2 flex-wrap">
-                        <Link href="/pricing">
-                          <Button size="sm" className="gap-1.5 text-xs" data-testid="button-apply-nudge-upgrade">
-                            <Crown className="h-3 w-3" />
-                            Upgrade to Pro — $5/mo
-                          </Button>
-                        </Link>
+                        {isAuthenticated ? (
+                          <Link href="/dashboard">
+                            <Button size="sm" className="gap-1.5 text-xs" data-testid="button-apply-nudge-track">
+                              <Target className="h-3 w-3" />
+                              Track Application
+                            </Button>
+                          </Link>
+                        ) : (
+                          <Link href={authReturnUrl}>
+                            <Button size="sm" className="gap-1.5 text-xs" data-testid="button-apply-nudge-track">
+                              <Target className="h-3 w-3" />
+                              Track Application
+                            </Button>
+                          </Link>
+                        )}
                         <Button
                           variant="ghost"
                           size="sm"
@@ -1120,7 +1151,7 @@ export default function JobDetail() {
                         setLocation("/pricing");
                       }
                     }}
-                    onSignIn={() => setLocation("/auth")}
+                    onSignIn={() => setLocation(authReturnUrl)}
                     roleCategory={job?.roleCategory}
                   />
                 </div>
@@ -1140,16 +1171,16 @@ export default function JobDetail() {
                       See how this role fits your background
                     </h3>
                     <p className="text-sm text-muted-foreground mb-4 max-w-md mx-auto">
-                      Get a fit score, transferable skills, missing gaps, and realistic resume tweaks.
+                      Create a free account to save jobs, see your match %, get alerts, and track applications.
                     </p>
                     <div className="flex items-center justify-center gap-3 flex-wrap">
-                      <Link href="/auth">
+                      <Link href={authReturnUrl}>
                         <Button className="gap-1.5" data-testid="button-conversion-upload">
                           <Upload className="h-4 w-4" />
                           Upload resume
                         </Button>
                       </Link>
-                      <Link href="/auth">
+                      <Link href={authReturnUrl}>
                         <Button variant="ghost" size="sm" className="text-muted-foreground" data-testid="button-conversion-signin">
                           Sign in
                         </Button>
@@ -1333,7 +1364,7 @@ export default function JobDetail() {
                   </Button>
                 )}
                 {!isAuthenticated && (
-                  <Link href="/auth">
+                  <Link href={authReturnUrl}>
                     <Button
                       variant="outline"
                       size="sm"

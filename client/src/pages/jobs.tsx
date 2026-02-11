@@ -242,8 +242,8 @@ export default function Jobs() {
   const handleSmartSearch = useCallback(() => {
     if (!smartQuery.trim()) return;
     if (!isAuthenticated) {
-      toast({ title: "Sign in to use smart search." });
-      setLocation("/auth");
+      toast({ title: "Create a free account to save jobs, see your match %, get alerts, and track applications." });
+      setLocation("/auth?returnTo=/jobs");
       return;
     }
     if (canUseGuidedSearch) {
@@ -260,8 +260,8 @@ export default function Jobs() {
   const handleQuickSearch = useCallback(() => {
     if (!smartQuery.trim()) return;
     if (!isAuthenticated) {
-      toast({ title: "Sign in to use smart search." });
-      setLocation("/auth");
+      toast({ title: "Create a free account to save jobs, see your match %, get alerts, and track applications." });
+      setLocation("/auth?returnTo=/jobs");
       return;
     }
     setGuidedStep("idle");
@@ -1351,8 +1351,8 @@ function CategorySection({
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     if (!isAuthenticated) {
-                                      toast({ title: "Sign in to compare roles side-by-side." });
-                                      setLocation("/auth");
+                                      toast({ title: "Create a free account to save jobs, see your match %, get alerts, and track applications." });
+                                      setLocation("/auth?returnTo=/jobs");
                                       return;
                                     }
                                     if (canSelect || isSelected) onToggleCompare(job.id);
