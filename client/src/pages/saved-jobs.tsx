@@ -480,11 +480,11 @@ export default function SavedJobs() {
                           </div>
                         </div>
 
-                        <div className="flex flex-wrap items-center gap-3 mt-2 text-xs text-muted-foreground">
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 mt-2 text-xs text-muted-foreground">
                           {sj.job.location && (
-                            <span className="flex items-center gap-1">
-                              <MapPin className="h-3 w-3" />
-                              {sj.job.location}
+                            <span className="flex items-center gap-1 min-w-0 max-w-[200px] sm:max-w-none">
+                              <MapPin className="h-3 w-3 shrink-0" />
+                              <span className="truncate">{sj.job.location}</span>
                             </span>
                           )}
                           {(sj.job.locationType || sj.job.isRemote) && (

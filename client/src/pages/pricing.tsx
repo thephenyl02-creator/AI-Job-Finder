@@ -258,7 +258,7 @@ export default function Pricing() {
         </div>
 
         {stats && (
-          <div className="flex items-center justify-center gap-6 sm:gap-10 mb-8 flex-wrap" data-testid="section-social-proof">
+          <div className="flex items-center justify-center gap-4 sm:gap-10 mb-8 flex-wrap" data-testid="section-social-proof">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Briefcase className="h-4 w-4 shrink-0" />
               <span><span className="font-semibold text-foreground">{stats.totalJobs}+</span> active roles</span>
@@ -438,7 +438,7 @@ export default function Pricing() {
           </Card>
         </div>
 
-        <div className="flex items-center justify-center gap-6 sm:gap-10 mt-8 flex-wrap" data-testid="section-trust-signals">
+        <div className="flex items-center justify-center gap-4 sm:gap-10 mt-8 flex-wrap" data-testid="section-trust-signals">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <Shield className="h-3.5 w-3.5 shrink-0" />
             <span>Cancel anytime, no questions asked</span>

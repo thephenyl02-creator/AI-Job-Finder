@@ -126,7 +126,7 @@ export default function CareerPathAdvisor() {
                 </p>
               </div>
             </div>
-            <p className="text-sm text-muted-foreground mt-2 ml-[3.25rem]">
+            <p className="text-sm text-muted-foreground mt-2 sm:ml-[3.25rem]">
               Direction for your next 6–24 months (not job-specific edits).
             </p>
           </div>
