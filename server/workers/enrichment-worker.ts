@@ -6,8 +6,8 @@ import { cleanJobDescription } from '../lib/description-cleaner';
 import { generateJobHash } from '../lib/job-hash';
 import type { Job } from '@shared/schema';
 
-const ENRICHMENT_INTERVAL_MS = 5 * 60 * 1000;
-const BATCH_SIZE = 25;
+const ENRICHMENT_INTERVAL_MS = 2 * 60 * 1000;
+const BATCH_SIZE = 50;
 let intervalId: NodeJS.Timeout | null = null;
 let isRunning = false;
 
@@ -264,7 +264,7 @@ async function runEnrichmentBatch(): Promise<EnrichmentResult> {
 
 export function startEnrichmentWorker() {
   if (intervalId) return;
-  console.log('[Enrichment] Starting enrichment worker (every 5 minutes)');
+  console.log('[Enrichment] Starting enrichment worker (every 2 minutes)');
 
   setTimeout(() => {
     runEnrichmentBatch().catch(console.error);
