@@ -25,49 +25,41 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   {
     name: 'Harvey AI',
     careerUrl: 'https://www.harvey.ai/careers',
-    greenhouseId: 'harvey',
     type: 'startup',
   },
   {
     name: 'EvenUp',
     careerUrl: 'https://www.evenuplaw.com/careers',
-    greenhouseId: 'evenuplaw',
     type: 'startup',
   },
   {
     name: 'Spellbook',
     careerUrl: 'https://www.spellbook.legal/careers',
-    leverPostingsUrl: 'https://jobs.lever.co/spellbook',
     type: 'startup',
   },
   {
     name: 'Luminance',
     careerUrl: 'https://www.luminance.com/careers/',
-    greenhouseId: 'luminance',
     type: 'startup',
   },
   {
     name: 'Darrow',
     careerUrl: 'https://www.darrow.ai/careers',
-    greenhouseId: 'darrow',
     type: 'startup',
   },
   {
     name: 'Leya',
     careerUrl: 'https://www.leya.ai/careers',
-    ashbyUrl: 'https://api.ashbyhq.com/posting-api/job-board/leya',
     type: 'startup',
   },
   {
     name: 'Atrium (Legal AI)',
     careerUrl: 'https://www.atrium.ai/careers',
-    greenhouseId: 'atrium',
     type: 'startup',
   },
   {
     name: 'Responsiv',
     careerUrl: 'https://responsiv.ai/careers',
-    leverPostingsUrl: 'https://jobs.lever.co/responsiv',
     type: 'startup',
   },
   {
@@ -137,7 +129,6 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   {
     name: 'Henchman',
     careerUrl: 'https://www.henchman.io/careers',
-    greenhouseId: 'henchman',
     type: 'startup',
   },
   {
@@ -148,7 +139,6 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   {
     name: 'Gavel',
     careerUrl: 'https://www.gavel.io/careers',
-    greenhouseId: 'gavel',
     type: 'startup',
   },
   {
@@ -260,7 +250,6 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   {
     name: 'Clio',
     careerUrl: 'https://www.clio.com/company/careers/',
-    greenhouseId: 'clio',
     type: 'company',
   },
   {
@@ -300,7 +289,6 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   {
     name: 'Ironclad',
     careerUrl: 'https://ironcladapp.com/careers/',
-    greenhouseId: 'ironcladapp',
     type: 'company',
   },
   {
@@ -388,7 +376,6 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   {
     name: 'Relativity',
     careerUrl: 'https://www.relativity.com/careers/',
-    leverPostingsUrl: 'https://jobs.lever.co/relativity',
     type: 'company',
   },
   {
@@ -540,7 +527,6 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   {
     name: 'White & Case',
     careerUrl: 'https://www.whitecase.com/careers',
-    greenhouseId: 'whitecase',
     type: 'biglaw',
   },
   {
