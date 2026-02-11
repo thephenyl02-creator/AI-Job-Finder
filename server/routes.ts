@@ -5776,7 +5776,7 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
   });
 
   // Similar Jobs
-  app.get("/api/jobs/:id/similar", isAuthenticated, async (req: any, res) => {
+  app.get("/api/jobs/:id/similar", async (req: any, res) => {
     const jobId = parseInt(req.params.id);
     if (isNaN(jobId)) return res.status(400).json({ error: "Invalid job ID" });
     try {

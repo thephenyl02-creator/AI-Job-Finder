@@ -627,7 +627,7 @@ export default function JobDetail() {
       if (!res.ok) return [];
       return res.json();
     },
-    enabled: isAuthenticated && !!jobId,
+    enabled: !!jobId,
   });
 
 
@@ -1272,7 +1272,7 @@ export default function JobDetail() {
           </div>
         )}
 
-        {isAuthenticated && similarJobs.length > 0 && (
+        {similarJobs.length > 0 && (
           <div className="mb-8" data-testid="section-similar-jobs">
             <h2 className="text-lg font-serif font-medium text-foreground mb-4 tracking-tight">Similar Roles</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
