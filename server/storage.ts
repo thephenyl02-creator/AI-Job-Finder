@@ -21,7 +21,7 @@ export interface IStorage {
   trackJobView(jobId: number): Promise<void>;
   trackApplyClick(jobId: number): Promise<void>;
   getPublishedJobs(): Promise<Job[]>;
-  getPublishedJobsPaginated(page: number, limit: number, filters?: { category?: string; location?: string; search?: string; seniority?: string }): Promise<{ jobs: Job[]; total: number; page: number; totalPages: number }>;
+  getPublishedJobsPaginated(page: number, limit: number, filters?: { category?: string; location?: string; locationType?: string; search?: string; seniority?: string }): Promise<{ jobs: Job[]; total: number; page: number; totalPages: number }>;
   getJobsForStandardization(status?: string): Promise<Job[]>;
   publishJob(id: number): Promise<Job | undefined>;
   unpublishJob(id: number): Promise<Job | undefined>;
@@ -245,8 +245,8 @@ class DatabaseStorage implements IStorage {
 
   async getPublishedJobsPaginated(
     page: number = 1,
-    limit: number = 24,
-    filters?: { category?: string; location?: string; search?: string; seniority?: string }
+    limit: number = 20,
+    filters?: { category?: string; location?: string; locationType?: string; search?: string; seniority?: string }
   ): Promise<{ jobs: Job[]; total: number; page: number; totalPages: number }> {
     const conditions: any[] = [
       eq(jobs.isActive, true),
@@ -259,9 +259,31 @@ class DatabaseStorage implements IStorage {
       conditions.push(eq(jobs.roleCategory, filters.category));
     }
     if (filters?.seniority) {
-      conditions.push(eq(jobs.seniorityLevel, filters.seniority));
+      const seniorityMap: Record<string, string[]> = {
+        student: ['Intern', 'Fellowship'],
+        entry: ['Entry', 'Junior', 'Associate'],
+        mid: ['Mid'],
+        senior: ['Senior', 'Lead', 'Director', 'VP', 'Principal', 'Staff'],
+      };
+      const patterns = seniorityMap[filters.seniority];
+      if (patterns) {
+        const orClauses = patterns.map(p => {
+          const term = '%' + p.toLowerCase() + '%';
+          return sql`(lower(${jobs.seniorityLevel}) LIKE ${term} OR lower(${jobs.title}) LIKE ${term})`;
+        });
+        conditions.push(sql`(${sql.join(orClauses, sql` OR `)})`);
+      }
     }
-    if (filters?.location) {
+    if (filters?.locationType) {
+      if (filters.locationType === 'remote') {
+        conditions.push(sql`(${jobs.locationType} = 'remote' OR ${jobs.isRemote} = true OR lower(${jobs.location}) LIKE '%remote%')`);
+      } else if (filters.locationType === 'hybrid') {
+        conditions.push(eq(jobs.locationType, 'hybrid'));
+      } else if (filters.locationType === 'onsite') {
+        conditions.push(eq(jobs.locationType, 'onsite'));
+      }
+    }
+    if (filters?.location && filters.location !== 'remote' && filters.location !== 'hybrid' && filters.location !== 'onsite') {
       conditions.push(sql`lower(${jobs.location}) LIKE ${'%' + filters.location.toLowerCase() + '%'}`);
     }
     if (filters?.search) {
@@ -276,14 +298,34 @@ class DatabaseStorage implements IStorage {
     const offset = (page - 1) * limit;
 
     const results = await db
-      .select()
+      .select({
+        id: jobs.id,
+        title: jobs.title,
+        company: jobs.company,
+        location: jobs.location,
+        isRemote: jobs.isRemote,
+        locationType: jobs.locationType,
+        roleCategory: jobs.roleCategory,
+        seniorityLevel: jobs.seniorityLevel,
+        salaryMin: jobs.salaryMin,
+        salaryMax: jobs.salaryMax,
+        postedDate: jobs.postedDate,
+        applyUrl: jobs.applyUrl,
+        source: jobs.source,
+        isActive: jobs.isActive,
+        isPublished: jobs.isPublished,
+        pipelineStatus: jobs.pipelineStatus,
+        jobStatus: jobs.jobStatus,
+        lastSeenAt: jobs.lastSeenAt,
+        experienceText: jobs.experienceText,
+      })
       .from(jobs)
       .where(whereClause)
       .orderBy(desc(jobs.postedDate))
       .limit(limit)
       .offset(offset);
 
-    return { jobs: results, total, page, totalPages };
+    return { jobs: results as any, total, page, totalPages };
   }
 
   async getJobsForStandardization(status?: string): Promise<Job[]> {

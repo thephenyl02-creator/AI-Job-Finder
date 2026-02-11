@@ -132,6 +132,9 @@ export default function Jobs() {
   const [selectedLevel, setSelectedLevel] = useState<string>(levelParam && ["student", "entry", "mid", "senior"].includes(levelParam) ? levelParam : "all");
   const [selectedLocation, setSelectedLocation] = useState<string>("all");
   const [filterText, setFilterText] = useState("");
+  const [debouncedFilterText, setDebouncedFilterText] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const JOBS_PER_PAGE = 20;
   const [searchResults, setSearchResults] = useState<JobWithScore[] | null>(null);
   const [searchQuery, setSearchQuery] = useState<string | null>(null);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
@@ -305,6 +308,15 @@ export default function Jobs() {
   useEffect(() => { track({ eventType: "page_view", pagePath: "/jobs" }); }, []);
 
   useEffect(() => {
+    const timer = setTimeout(() => setDebouncedFilterText(filterText), 300);
+    return () => clearTimeout(timer);
+  }, [filterText]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedCategory, selectedLevel, selectedLocation, debouncedFilterText]);
+
+  useEffect(() => {
     const params = new URLSearchParams(searchString);
     const level = params.get("level");
     if (level && ["entry", "mid", "senior"].includes(level)) {
@@ -325,12 +337,34 @@ export default function Jobs() {
   }, []);
 
 
+  const jobsQueryParams = useMemo(() => {
+    const params = new URLSearchParams();
+    params.set("page", String(currentPage));
+    params.set("limit", String(JOBS_PER_PAGE));
+    if (selectedCategory !== "all") params.set("category", selectedCategory);
+    if (selectedLevel !== "all") params.set("seniority", selectedLevel);
+    if (selectedLocation === "remote" || selectedLocation === "hybrid" || selectedLocation === "onsite") {
+      params.set("locationType", selectedLocation);
+    } else if (selectedLocation !== "all") {
+      params.set("location", selectedLocation);
+    }
+    if (debouncedFilterText) params.set("search", debouncedFilterText);
+    return params.toString();
+  }, [currentPage, selectedCategory, selectedLevel, selectedLocation, debouncedFilterText]);
+
   const { data: jobsResponse, isLoading: jobsLoading } = useQuery<{ jobs: Job[]; total: number; page: number; totalPages: number }>({
-    queryKey: ["/api/jobs"],
-    queryFn: () => fetch("/api/jobs?limit=500&page=1").then(r => r.json()),
+    queryKey: ["/api/jobs", jobsQueryParams],
+    queryFn: () => fetch(`/api/jobs?${jobsQueryParams}`).then(r => r.json()),
+    placeholderData: (prev) => prev,
   });
   const allJobs = jobsResponse?.jobs ?? [];
   const totalJobCount = jobsResponse?.total ?? 0;
+  const totalPages = jobsResponse?.totalPages ?? 1;
+
+  const { data: statsData } = useQuery<{ totalJobs: number; categoryCounts: Record<string, number> }>({
+    queryKey: ["/api/stats"],
+    staleTime: 60000,
+  });
 
   const { data: resumeData } = useQuery<{ hasResume: boolean; filename?: string; extractedData?: ResumeExtractedData }>({
     queryKey: ["/api/resume"],
@@ -466,44 +500,7 @@ export default function Jobs() {
     return `Up to ${fmt(max!)}`;
   };
 
-  const displayJobs = searchResults || allJobs;
-
-  const filteredJobs = displayJobs.filter((job) => {
-    const matchesCategory = selectedCategory === "all" || job.roleCategory === selectedCategory;
-    const matchesText = filterText === "" || 
-      job.title.toLowerCase().includes(filterText.toLowerCase()) ||
-      job.company.toLowerCase().includes(filterText.toLowerCase()) ||
-      (job.location?.toLowerCase().includes(filterText.toLowerCase()));
-    
-    let matchesLevel = true;
-    if (selectedLevel !== "all") {
-      const levelConfig = SENIORITY_LEVELS.find(l => l.value === selectedLevel);
-      if (levelConfig && "match" in levelConfig && levelConfig.match) {
-        const matchPatterns = levelConfig.match;
-        matchesLevel = matchPatterns.some(m => 
-          job.seniorityLevel?.toLowerCase().includes(m.toLowerCase()) ||
-          job.title.toLowerCase().includes(m.toLowerCase())
-        );
-      }
-    }
-
-    let matchesLocation = true;
-    if (selectedLocation === "remote") {
-      matchesLocation = job.locationType === 'remote' || (!job.locationType && (!!job.isRemote || (job.location?.toLowerCase().includes("remote") ?? false)));
-    } else if (selectedLocation === "hybrid") {
-      matchesLocation = job.locationType === 'hybrid';
-    } else if (selectedLocation === "onsite") {
-      matchesLocation = job.locationType === 'onsite';
-    } else if (selectedLocation !== "all") {
-      const jobCity = normalizeLocation(job.location || "");
-      matchesLocation = jobCity === selectedLocation;
-    }
-    
-    return matchesCategory && matchesText && matchesLevel && matchesLocation;
-  });
-
-  const getCategoryCount = (category: string) => 
-    displayJobs.filter(job => job.roleCategory === category).length;
+  const filteredJobs = searchResults || allJobs;
 
   const jobsByCategory = Object.entries(JOB_TAXONOMY).reduce((acc, [category]) => {
     acc[category] = filteredJobs.filter(job => job.roleCategory === category);
@@ -545,7 +542,7 @@ export default function Jobs() {
             {searchResults ? `Results for "${searchQuery}"` : "Browse Jobs"}
           </h1>
           <span className="text-sm text-muted-foreground" data-testid="text-job-count">
-            {filteredJobs.length} jobs
+            {searchResults ? `${searchResults.length} results` : `${totalJobCount} jobs`}
           </span>
         </div>
 
@@ -908,7 +905,7 @@ export default function Jobs() {
                               All Categories
                             </Button>
                             {Object.entries(JOB_TAXONOMY).map(([category, data]) => {
-                              const count = getCategoryCount(category);
+                              const count = statsData?.categoryCounts?.[category] ?? 0;
                               const Icon = getCategoryIcon(data.icon);
                               return (
                                 <Button
@@ -1021,16 +1018,26 @@ export default function Jobs() {
           );
         })()}
 
-        {jobsLoading ? (
-          <div className="text-center py-12">
-            <motion.div
-              className="flex flex-col items-center gap-3"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-            >
-              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-              <span className="text-sm text-muted-foreground">Loading jobs...</span>
-            </motion.div>
+        {jobsLoading && !jobsResponse ? (
+          <div className="space-y-4" data-testid="skeleton-jobs">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Card key={i} className="overflow-visible">
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="h-10 w-10 rounded-md bg-muted animate-pulse shrink-0" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-4 w-3/5 bg-muted animate-pulse rounded" />
+                      <div className="h-3 w-2/5 bg-muted animate-pulse rounded" />
+                      <div className="flex gap-2 mt-2">
+                        <div className="h-5 w-16 bg-muted animate-pulse rounded-full" />
+                        <div className="h-5 w-20 bg-muted animate-pulse rounded-full" />
+                        <div className="h-5 w-14 bg-muted animate-pulse rounded-full" />
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         ) : filteredJobs.length === 0 ? (
           <motion.div
@@ -1152,6 +1159,34 @@ export default function Jobs() {
                 )}
               </>
             )}
+          </div>
+        )}
+
+        {!searchResults && totalPages > 1 && filteredJobs.length > 0 && (
+          <div className="flex items-center justify-center gap-2 mt-6 mb-2" data-testid="pagination-controls">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={currentPage <= 1}
+              onClick={() => { setCurrentPage(p => Math.max(1, p - 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+              data-testid="button-prev-page"
+            >
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              Previous
+            </Button>
+            <span className="text-sm text-muted-foreground px-3" data-testid="text-page-info">
+              Page {currentPage} of {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={currentPage >= totalPages}
+              onClick={() => { setCurrentPage(p => Math.min(totalPages, p + 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+              data-testid="button-next-page"
+            >
+              Next
+              <ArrowRight className="h-4 w-4 ml-1" />
+            </Button>
           </div>
         )}
 
