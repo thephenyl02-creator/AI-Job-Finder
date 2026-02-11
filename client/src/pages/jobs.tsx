@@ -56,6 +56,7 @@ import {
   ExternalLink,
   Lock,
   ArrowUpDown,
+  Wrench,
 } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
@@ -84,10 +85,10 @@ interface RefinedSearchResult {
 type GuidedStep = "idle" | "refining" | "questions" | "searching";
 
 const DEFAULT_SEARCH_SUGGESTIONS = [
-  { label: "Compliance & Risk", query: "compliance or risk management role" },
+  { label: "Compliance & Privacy", query: "compliance or privacy counsel role" },
   { label: "Remote Roles", query: "remote legal tech position" },
-  { label: "Legal AI", query: "legal AI company, any role" },
-  { label: "Entry Level", query: "internship or fellowship in legal tech" },
+  { label: "Legal Engineering", query: "legal engineer role" },
+  { label: "In-House Counsel", query: "counsel or attorney at legal tech company" },
 ];
 
 const CATEGORY_ICONS: Record<string, typeof Brain> = {
@@ -104,6 +105,9 @@ const CATEGORY_ICONS: Record<string, typeof Brain> = {
   "Landmark": Landmark,
   "Microscope": Microscope,
   "Sparkles": Sparkles,
+  "Wrench": Wrench,
+  "Target": Target,
+  "Briefcase": Briefcase,
 };
 
 const SENIORITY_LEVELS = [

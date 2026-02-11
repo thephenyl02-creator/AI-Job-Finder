@@ -72,19 +72,19 @@ interface InsightMessage {
 const SENIORITY_ORDER = ["Intern", "Fellowship", "Entry", "Mid", "Senior", "Lead", "Director", "VP"];
 
 const BAR_COLORS: Record<string, string> = {
-  "Legal AI & Machine Learning": "bg-blue-500 dark:bg-blue-400",
-  "Legal Product & Innovation": "bg-violet-500 dark:bg-violet-400",
+  "Legal Engineering": "bg-blue-500 dark:bg-blue-400",
   "Legal Operations": "bg-emerald-500 dark:bg-emerald-400",
-  "Contract Technology": "bg-amber-500 dark:bg-amber-400",
-  "Compliance & RegTech": "bg-rose-500 dark:bg-rose-400",
+  "Compliance & Privacy": "bg-rose-500 dark:bg-rose-400",
+  "Contract Management": "bg-amber-500 dark:bg-amber-400",
   "Litigation & eDiscovery": "bg-cyan-500 dark:bg-cyan-400",
-  "Legal Consulting & Strategy": "bg-orange-500 dark:bg-orange-400",
-  "Legal Education & Training": "bg-pink-500 dark:bg-pink-400",
-  "Courts & Public Legal Systems": "bg-teal-500 dark:bg-teal-400",
-  "Legal Research & Academia": "bg-indigo-500 dark:bg-indigo-400",
-  "Emerging LegalTech Roles": "bg-fuchsia-500 dark:bg-fuchsia-400",
-  "Legal Knowledge Engineering": "bg-lime-500 dark:bg-lime-400",
-  "Legal Publishing & Content": "bg-sky-500 dark:bg-sky-400",
+  "Legal AI & Analytics": "bg-violet-500 dark:bg-violet-400",
+  "Legal Product Management": "bg-indigo-500 dark:bg-indigo-400",
+  "In-House Counsel": "bg-sky-500 dark:bg-sky-400",
+  "Legal Consulting & Advisory": "bg-orange-500 dark:bg-orange-400",
+  "Knowledge Management": "bg-lime-500 dark:bg-lime-400",
+  "Policy & Access to Justice": "bg-teal-500 dark:bg-teal-400",
+  "Intellectual Property & Innovation": "bg-fuchsia-500 dark:bg-fuchsia-400",
+  "Legal Sales & Client Solutions": "bg-pink-500 dark:bg-pink-400",
 };
 
 const SUGGESTED_QUESTIONS = [

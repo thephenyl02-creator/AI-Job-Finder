@@ -11,6 +11,64 @@ const BATCH_SIZE = 25;
 let intervalId: NodeJS.Timeout | null = null;
 let isRunning = false;
 
+const HARD_REJECT_TITLE_PATTERNS = [
+  /\baccount executive\b/i,
+  /\bsales engineer\b/i,
+  /\bsales enablement\b/i,
+  /\bsales development\b/i,
+  /\bsales representative\b/i,
+  /\b(SDR|BDR)\b/,
+  /\bGTM\s+(manager|director|enablement|lead)\b/i,
+  /\bgo[- ]to[- ]market\b/i,
+  /\bmarketing manager\b/i,
+  /\bmarketing program\b/i,
+  /\bdemand gen\b/i,
+  /\bcontent marketing\b/i,
+  /\bbilling analyst\b/i,
+  /\bbilling team\b/i,
+  /\bdeal desk\b/i,
+  /\binvestment associate\b/i,
+  /\bproposal specialist\b/i,
+  /\bregional sales\b/i,
+  /\benterprise sales\b/i,
+  /\bpartner development\b/i,
+  /\bfield enablement\b/i,
+  /\brevenue operations\b/i,
+  /\brecruiter\b/i,
+  /\btalent acquisition\b/i,
+  /\btechnical support engineer\b/i,
+  /\bcustomer support (representative|specialist)\b/i,
+  /\btechnical account manager\b/i,
+  /\bdata migration engineer\b/i,
+  /\bchief of staff\b/i,
+  /\bexecutive (assistant|secretary)\b/i,
+  /\boffice manager\b/i,
+  /\bhr manager\b/i,
+  /\bfinance manager\b/i,
+  /\bfinancial audit\b/i,
+  /\bpricing specialist\b/i,
+  /\bsocial worker\b/i,
+  /\bbenefits assistant\b/i,
+  /\btax manager\b/i,
+  /\bdirector of tax\b/i,
+  /\bsenior engineer \(\.net\b/i,
+  /\btechnology coordinator\b/i,
+  /\bsenior product designer\b/i,
+  /\bimplementation partner manager\b/i,
+  /\bdevops\b/i,
+  /\b(SRE|site reliability)\b/i,
+  /\bsuccess account manager\b/i,
+  /\bglobal account manager\b/i,
+  /\bcorporate account executive\b/i,
+  /\bstrategic account executive\b/i,
+  /\bUS-?\s*General\b/i,
+  /\bSKYE TEST\b/i,
+];
+
+function shouldHardReject(title: string): boolean {
+  return HARD_REJECT_TITLE_PATTERNS.some(pattern => pattern.test(title));
+}
+
 interface EnrichmentResult {
   processed: number;
   published: number;
@@ -40,6 +98,17 @@ function computeQualityScore(job: Job, enrichedData: Record<string, any>): numbe
 }
 
 async function enrichJob(job: Job): Promise<void> {
+  if (shouldHardReject(job.title)) {
+    console.log(`[Enrichment] Hard-rejecting "${job.title}" at ${job.company} - irrelevant title pattern`);
+    await storage.updateJobPipeline(job.id, {
+      pipelineStatus: 'rejected',
+      isPublished: false,
+      reviewReasonCode: 'IRRELEVANT_TITLE',
+      lastEnrichedAt: new Date(),
+    });
+    return;
+  }
+
   const enrichedData: Record<string, any> = {
     pipelineStatus: 'enriching',
   };
@@ -115,11 +184,11 @@ async function enrichJob(job: Job): Promise<void> {
     enrichedData.relevanceConfidence = relevanceConfidence;
     enrichedData.lastEnrichedAt = new Date();
 
-    if (catResult?.reviewStatus === 'rejected' || relevanceConfidence < 30) {
+    if (catResult?.reviewStatus === 'rejected' || relevanceConfidence < 40) {
       enrichedData.pipelineStatus = 'rejected';
       enrichedData.isPublished = false;
       enrichedData.reviewReasonCode = 'LOW_RELEVANCE';
-    } else if (qualityScore >= 80 && relevanceConfidence >= 50) {
+    } else if (relevanceConfidence >= 50 && enrichedData.roleCategory) {
       enrichedData.pipelineStatus = 'ready';
       enrichedData.isPublished = true;
     } else {

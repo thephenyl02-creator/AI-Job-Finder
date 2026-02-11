@@ -30,111 +30,97 @@ export async function categorizeJob(
     .map(([cat, data]) => `${cat}:\n${data.subcategories.map(s => `  - ${s}`).join('\n')}`)
     .join('\n\n');
 
-  const prompt = `You are an expert at evaluating and categorizing jobs for a platform called "Legal Tech Careers" — built exclusively for lawyers and law students transitioning into legal technology roles.
+  const prompt = `You are a strict gatekeeper for "Legal Tech Careers" — a platform EXCLUSIVELY for lawyers and paralegals seeking careers in legal technology.
 
-CRITICAL MISSION: This platform ONLY shows jobs where legal knowledge is REQUIRED, PREFERRED, or MEANINGFULLY USEFUL. Every job must feel relevant to a lawyer. If legal knowledge is not important for the role, it should NOT be on this platform.
+YOUR AUDIENCE: Practicing lawyers, law graduates, and paralegals who want to transition into or advance within legal tech. Every job shown must be one they would credibly pursue.
 
 Job Title: ${title}
 Company: ${company}
 Description: ${description.substring(0, 2000)}
 
-=== STEP 1: LEGAL RELEVANCE SCORING (1-10) ===
+=== STEP 1: LEGAL RELEVANCE SCORING (1-10) — BE RUTHLESSLY STRICT ===
 
-Score how relevant this job is for lawyers/legal professionals transitioning to tech:
+Ask yourself: "Would a lawyer or paralegal want this job? Does it require or meaningfully benefit from legal training?"
 
-SCORE 9-10: Legal knowledge is REQUIRED. Examples: Product Counsel, Privacy Attorney, Legal Engineer, eDiscovery Counsel, Compliance Counsel, Legal Operations Manager, Legal AI Specialist, Legal Knowledge Engineer.
+SCORE 9-10: Legal knowledge is REQUIRED. The role cannot be performed without legal expertise.
+Examples: Legal Engineer, Product Counsel, Privacy Attorney, eDiscovery Counsel, Compliance Counsel, Legal Operations Manager, Contracts Counsel, Legal Director, Staff Attorney, Trademark Attorney, Immigration Attorney, ISDA Negotiator.
 
-SCORE 7-8: Legal knowledge is STRONGLY PREFERRED or the work directly involves legal processes/data. Examples: Legal Product Manager, Contract Automation Specialist, RegTech Product Manager, Legal Solutions Consultant, Innovation Manager at a law firm, CLM Implementation Consultant.
+SCORE 7-8: Legal knowledge is STRONGLY PREFERRED. The work directly involves legal processes, legal data, or serving legal professionals.
+Examples: Legal Product Manager, Contract Automation Specialist, Legal Solutions Director, Legal AI Product Manager, CLM Implementation Specialist, Engagement Manager at a legal tech company (if they work directly with lawyers on legal workflows), GRC Analyst.
 
-SCORE 5-6: The role is at a legal tech company and legal domain knowledge would be USEFUL but isn't explicitly required. Examples: Customer Success Manager at a legal tech vendor (serving law firm clients), Technical Writer creating legal software documentation, Sales Engineer at an eDiscovery platform.
+SCORE 5-6: Legal domain knowledge is USEFUL. The role is at a legal tech company and understanding legal concepts helps, but a non-lawyer could also do it.
+Examples: Product Manager at a legal tech company (generic product role), Legal Content Strategist, Professional Services at a legal tech vendor.
 
-SCORE 3-4: The role is at a legal tech company but is primarily a generic tech/business role where legal knowledge provides minimal advantage. Examples: General Software Engineer at a legal tech company, HR Manager at a legal tech startup, Marketing Manager, Revenue Operations Analyst.
+SCORE 3-4: GENERIC BUSINESS/TECH ROLE at a legal tech company. Legal knowledge provides minimal advantage. These should NOT be published.
+Examples: Account Executive, Sales Engineer, Marketing Manager, Software Engineer (generic), Customer Success Manager (generic), HR, Finance, Billing, GTM, Revenue Ops, Data Migration Engineer, Technical Support.
 
-SCORE 1-2: Generic technology role with NO legal connection. Examples: Backend Engineer at a non-legal company, General IT Support, DevOps Engineer with no legal domain work.
+SCORE 1-2: No legal connection whatsoever.
 
-COMPANY CONTEXT SIGNALS (adjust score accordingly):
-- Known legal tech companies (Everlaw, Relativity, NetDocuments, Clio, LegalZoom, Ironclad, Disco, Litera, Lex Machina, Lighthouse, vLex, Thomson Reuters Legal, LexisNexis, Westlaw): Jobs here get a +1 boost because legal domain knowledge genuinely helps even in broader roles.
-- Law firms or legal departments: Jobs here are likely legal-tech relevant.
-- General tech companies (unless the role specifically involves legal/compliance work): No boost.
+HARD REJECT LIST — If the title matches any of these patterns, score 1-3 regardless of company:
+Account Executive, SDR, BDR, Sales Representative, Sales Engineer, Sales Enablement, GTM Manager, Marketing Manager, Content Marketing, Demand Generation, Billing Analyst, Finance Manager, HR Manager, Recruiter, Talent Acquisition, Revenue Operations, Deal Desk, Proposal Specialist, Technical Support Engineer, Customer Support Representative, Data Migration Engineer, DevOps, SRE, Backend Engineer (generic), Frontend Engineer (generic), UI/UX Designer (generic), Technical Account Manager, Chief of Staff, Executive Assistant, Office Manager.
 
 === STEP 2: CATEGORIZATION ===
 
-Categorize this job into ONE of these categories and subcategories:
+Categorize into ONE of these categories and subcategories:
 
 ${taxonomyText}
 
 CATEGORIZATION GUIDANCE:
-- "Legal AI & Machine Learning": For AI/ML engineers, data scientists, NLP specialists, AI product managers working on LEGAL AI products
-- "Legal Product & Innovation": For product managers, innovation leaders, UX designers, digital transformation in legal
-- "Legal Knowledge Engineering": For knowledge managers, research engineers, taxonomy/ontology specialists in legal
-- "Legal Operations": For legal ops managers, process improvement, vendor management, implementations
-- "Contract Technology": For CLM specialists, contract automation, smart contracts, transaction tech
-- "Compliance & RegTech": For regulatory tech, compliance automation, privacy, AML/KYC
-- "Litigation & eDiscovery": For eDiscovery, litigation support, trial analytics, case strategy
-- "Legal Consulting & Strategy": For consultants, advisors, AI governance, strategy roles
-- "Legal Education & Training": For learning technology, curriculum design, training
-- "Legal Publishing & Content": For editorial tech, content platforms, publishing systems
-- "Courts & Public Legal Systems": For court tech, access to justice, government legal tech
-- "Legal Research & Academia": For academic researchers, computational law scientists
-- "Emerging LegalTech Roles": For new/cutting-edge roles like AI auditors, safety specialists
+- "Legal Engineering": For Legal Engineers who build/configure legal tech products using legal expertise. The role title typically contains "Legal Engineer" or involves designing legal workflows/automation.
+- "Legal Operations": For legal ops managers, legal project managers, process improvement, legal spend management, legal vendor management, legal tech implementation.
+- "Compliance & Privacy": For compliance counsel, privacy counsel, GRC analysts, trade compliance, regulatory tech roles, data privacy officers.
+- "Contract Management": For contracts counsel, contracts managers, CLM specialists, contract analysts, ISDA negotiators, deal specialists working with legal agreements.
+- "Litigation & eDiscovery": For eDiscovery project managers, litigation tech specialists, appellate specialists, case management, litigation analytics.
+- "Legal AI & Analytics": For AI product managers focused on legal AI, AI solutions engineers with legal domain, legal data scientists, AI safety counsel.
+- "Legal Product Management": For product managers/directors/leads at legal tech companies where the role requires understanding legal workflows and legal user needs.
+- "In-House Counsel": For attorneys, counsel, legal directors, staff attorneys working at legal tech or tech companies. These are practicing lawyers IN tech companies.
+- "Legal Consulting & Advisory": For consultants helping firms adopt legal tech, legal strategy advisors, legal innovation consultants, client-facing advisory roles requiring legal expertise.
+- "Knowledge Management": For legal knowledge managers, knowledge counsel, legal research engineers, legal taxonomy/ontology specialists, editorial managers in legal publishing.
+- "Policy & Access to Justice": For legal policy advisors, court tech advisors, access to justice roles, digital justice, legal aid technology.
+- "Intellectual Property & Innovation": For trademark attorneys, IP specialists, patent technology, IP legal specialists working at the intersection of IP law and technology.
+- "Legal Sales & Client Solutions": ONLY for business development roles that EXPLICITLY require a JD, legal background, or deep legal expertise. Generic sales roles at legal tech companies do NOT qualify. Examples: Engagement Manager who designs legal workflows for clients, Legal Solutions Consultant.
 
 === STEP 3: EXTRACTION ===
 
-Also extract:
-- Seniority level: MUST be exactly one of: Intern, Fellowship, Entry, Mid, Senior, Lead, Director, VP
-  SENIORITY RULES (follow in strict priority order):
-  1. Title contains "Intern", "Internship", "Co-op", "Summer Program" → "Intern"
-  2. Title contains "Fellow" or "Fellowship" → "Fellowship"
-  3. Title contains "VP" or "Vice President" → "VP"
-  4. Title contains "Director" (including "Deputy Director") → "Director"
-  5. Title contains "Lead", "Principal" → "Lead"
-  6. Title contains "Senior", "Sr.", "Staff" → "Senior"
-  7. Title contains "Associate" (without Senior/Director/Lead/VP) → "Entry"
-  8. Title contains "Junior", "Jr.", "Entry" → "Entry"
-  9. If title has NO seniority indicator: look at the description for experience requirements:
-     - No experience mentioned or 0-2 years → "Entry"
-     - 2-5 years → "Mid"
-     - 5+ years → "Senior"
-  10. If truly ambiguous with no clues → "Mid"
-  - NEVER combine levels (e.g. never return "Senior/Lead" — pick the single best match)
-- Key skills (5-8 most important technical/domain skills)
-- Experience range: set experienceMin and experienceMax if the posting mentions years of experience. If NOT mentioned, set BOTH to null — do NOT guess or invent experience numbers.
-- Salary: Extract salary/compensation if mentioned. Convert to annual USD amounts. Handle formats like "$120K-$150K", "$120,000 - $150,000/year", "$55/hr". If hourly, multiply by 2080 for annual. Set salaryMin and salaryMax. If only one number, set both to that number. If NOT mentioned, set both to null.
-- Remote: Set isRemote to true if the job is remote, hybrid-remote, or remote-first. Look for "remote", "work from home", "distributed", "hybrid" in both the title AND description. If not mentioned, set to false.
-- Employment type: Set employmentType to one of: "full-time", "part-time", "contract", "temporary", "internship". Default to "full-time" if not specified.
-- Summary (3 sentences max, focus on: what you'll do, what they're looking for, what makes it interesting for a LAWYER transitioning to tech)
-- Match keywords for search (5-10 relevant terms)
-- aiResponsibilities: Extract 4-8 bullet points describing what the person will actually DO in this role. Focus on concrete activities, not vague corporate speak. Strip boilerplate. Each bullet should be one clear sentence. If description is too short, set to null.
-- aiQualifications: Extract 4-8 REQUIRED qualifications (must-haves). Include years of experience, degrees, certifications, specific tools/skills they explicitly require. Each bullet should be one clear sentence. If description is too short, set to null.
-- aiNiceToHaves: Extract 2-5 PREFERRED/nice-to-have qualifications. These are things they say "preferred", "bonus", "a plus", "ideally", etc. If none mentioned, set to null.
+Extract:
+- Seniority level: Exactly one of: Intern, Fellowship, Entry, Mid, Senior, Lead, Director, VP
+  Priority rules: Intern/Fellowship from title → VP → Director → Lead/Principal → Senior/Sr./Staff → Associate/Junior/Entry → check description for years → default Mid
+- Key skills (5-8 most important)
+- Experience range: experienceMin/experienceMax from posting. null if not stated.
+- Salary: salaryMin/salaryMax in annual USD. null if not stated.
+- Remote: isRemote true if remote/hybrid mentioned.
+- Employment type: full-time/part-time/contract/temporary/internship
+- Summary: 3 sentences focused on what a LAWYER would find compelling about this role
+- Match keywords: 5-10 search terms
+- aiResponsibilities: 4-8 bullet points of what you'll DO
+- aiQualifications: 4-8 REQUIRED qualifications
+- aiNiceToHaves: 2-5 PREFERRED qualifications
 
 Return ONLY valid JSON:
 {
   "legalRelevanceScore": 8,
-  "category": "Legal AI & Machine Learning",
-  "subcategory": "Legal AI Engineer",
+  "category": "Legal Engineering",
+  "subcategory": "Legal Engineer",
   "seniorityLevel": "Senior",
-  "keySkills": ["Python", "NLP", "Legal Domain Knowledge"],
+  "keySkills": ["Legal Tech", "Contract Automation", "Legal Workflows"],
   "experienceMin": 5,
   "experienceMax": 8,
-  "salaryMin": 120000,
-  "salaryMax": 150000,
+  "salaryMin": null,
+  "salaryMax": null,
   "isRemote": false,
   "employmentType": "full-time",
   "aiSummary": "Brief 3-sentence summary here.",
-  "matchKeywords": ["ai", "machine learning", "legal", "nlp"],
-  "aiResponsibilities": ["Build NLP models for contract analysis", "Lead technical architecture for legal AI products"],
-  "aiQualifications": ["5+ years Python experience", "Experience with NLP/LLM frameworks", "JD or legal domain knowledge preferred"],
-  "aiNiceToHaves": ["Experience in legal tech industry", "Published research in NLP"]
+  "matchKeywords": ["legal engineer", "legal tech", "automation"],
+  "aiResponsibilities": ["Design legal workflows", "Configure legal AI tools"],
+  "aiQualifications": ["JD or equivalent legal training", "3+ years in legal tech"],
+  "aiNiceToHaves": ["Experience with CLM platforms"]
 }
 
 CRITICAL RULES:
-- legalRelevanceScore: MUST be an integer 1-10. Be STRICT. This is the most important field. A wrong score ruins platform credibility.
-- experienceMin/experienceMax: MUST be null if NOT explicitly stated. Do not guess.
-- salaryMin/salaryMax: MUST be null if NOT explicitly stated. Convert all amounts to annual USD.
-- isRemote: Check BOTH title and description for remote indicators.
-- aiResponsibilities/aiQualifications/aiNiceToHaves: Extract from the actual posting. Be specific and concise. Strip corporate fluff. Set to null if description is too short to extract meaningful data.
-- If the description is very short or empty, rely more heavily on the title for categorization.`;
+- legalRelevanceScore MUST be strict. When in doubt, score LOWER. Platform credibility depends on this.
+- Generic business roles at legal tech companies MUST score 3 or below.
+- experienceMin/experienceMax: null if not stated.
+- salaryMin/salaryMax: null if not stated.`;
 
   try {
     const completion = await getOpenAIClient().chat.completions.create({
@@ -200,20 +186,20 @@ function validateCategory(category: string): string {
     return category;
   }
   const categoryLower = category?.toLowerCase() || "";
-  if (categoryLower.includes("ai") || categoryLower.includes("machine learning") || categoryLower.includes("ml")) return "Legal AI & Machine Learning";
-  if (categoryLower.includes("product") || categoryLower.includes("innovation")) return "Legal Product & Innovation";
-  if (categoryLower.includes("knowledge") || categoryLower.includes("research")) return "Legal Knowledge Engineering";
+  if (categoryLower.includes("legal engineer")) return "Legal Engineering";
+  if (categoryLower.includes("in-house") || categoryLower.includes("in house") || categoryLower.includes("counsel")) return "In-House Counsel";
+  if (categoryLower.includes("ai") || categoryLower.includes("machine learning") || categoryLower.includes("analytics")) return "Legal AI & Analytics";
+  if (categoryLower.includes("product")) return "Legal Product Management";
+  if (categoryLower.includes("knowledge") || categoryLower.includes("publishing") || categoryLower.includes("editorial")) return "Knowledge Management";
   if (categoryLower.includes("operations") || categoryLower.includes("ops")) return "Legal Operations";
-  if (categoryLower.includes("contract") || categoryLower.includes("clm")) return "Contract Technology";
-  if (categoryLower.includes("compliance") || categoryLower.includes("regtech") || categoryLower.includes("regulatory")) return "Compliance & RegTech";
+  if (categoryLower.includes("contract") || categoryLower.includes("clm")) return "Contract Management";
+  if (categoryLower.includes("compliance") || categoryLower.includes("regtech") || categoryLower.includes("regulatory") || categoryLower.includes("privacy")) return "Compliance & Privacy";
   if (categoryLower.includes("litigation") || categoryLower.includes("ediscovery") || categoryLower.includes("discovery")) return "Litigation & eDiscovery";
-  if (categoryLower.includes("consult") || categoryLower.includes("strategy")) return "Legal Consulting & Strategy";
-  if (categoryLower.includes("education") || categoryLower.includes("training")) return "Legal Education & Training";
-  if (categoryLower.includes("publish") || categoryLower.includes("content")) return "Legal Publishing & Content";
-  if (categoryLower.includes("court") || categoryLower.includes("government") || categoryLower.includes("justice")) return "Courts & Public Legal Systems";
-  if (categoryLower.includes("academic") || categoryLower.includes("research")) return "Legal Research & Academia";
-  if (categoryLower.includes("emerging") || categoryLower.includes("new")) return "Emerging LegalTech Roles";
-  return "Legal AI & Machine Learning";
+  if (categoryLower.includes("consult") || categoryLower.includes("strategy") || categoryLower.includes("advisory")) return "Legal Consulting & Advisory";
+  if (categoryLower.includes("court") || categoryLower.includes("government") || categoryLower.includes("justice") || categoryLower.includes("policy")) return "Policy & Access to Justice";
+  if (categoryLower.includes("ip") || categoryLower.includes("intellectual") || categoryLower.includes("trademark") || categoryLower.includes("patent")) return "Intellectual Property & Innovation";
+  if (categoryLower.includes("sales") || categoryLower.includes("client solution") || categoryLower.includes("engagement")) return "Legal Sales & Client Solutions";
+  return "Legal Operations";
 }
 
 function validateSubcategory(category: string, subcategory: string): string {
@@ -348,71 +334,90 @@ function fallbackCategorization(
 ): JobCategorizationResult {
   const text = `${title} ${description}`.toLowerCase();
   
-  let category = "Legal AI & Machine Learning";
-  let subcategory = "Legal AI Engineer";
+  let category = "Legal Operations";
+  let subcategory = "Legal Operations Manager";
   const keySkills: string[] = [];
   const matchKeywords: string[] = [];
 
-  if (text.includes("ai engineer") || text.includes("ml engineer") || text.includes("machine learning") || text.includes("nlp")) {
-    category = "Legal AI & Machine Learning";
-    subcategory = "Legal AI Engineer";
-    keySkills.push("AI", "Machine Learning", "Python");
-    matchKeywords.push("ai", "ml", "machine learning", "nlp");
-  } else if (text.includes("data scientist") || text.includes("data science")) {
-    category = "Legal AI & Machine Learning";
-    subcategory = "Legal Data Scientist";
-    keySkills.push("Data Science", "Python", "Statistics");
-    matchKeywords.push("data", "analytics", "statistics");
-  } else if (text.includes("product manager") || text.includes("pm")) {
-    if (text.includes("ai")) {
-      category = "Legal AI & Machine Learning";
-      subcategory = "AI Product Manager";
+  if (text.includes("legal engineer")) {
+    category = "Legal Engineering";
+    subcategory = "Legal Engineer";
+    keySkills.push("Legal Tech", "Legal Workflows", "Automation");
+    matchKeywords.push("legal engineer", "legal tech", "automation");
+  } else if (text.includes("counsel") || text.includes("attorney") || text.includes("lawyer")) {
+    if (text.includes("compliance") || text.includes("privacy") || text.includes("regulatory")) {
+      category = "Compliance & Privacy";
+      subcategory = "Compliance Counsel";
+    } else if (text.includes("contract")) {
+      category = "Contract Management";
+      subcategory = "Contracts Counsel";
+    } else if (text.includes("product")) {
+      category = "Legal Product Management";
+      subcategory = "Product Counsel";
+    } else if (text.includes("trademark") || text.includes("ip") || text.includes("patent")) {
+      category = "Intellectual Property & Innovation";
+      subcategory = "Trademark Attorney";
     } else {
-      category = "Legal Product & Innovation";
+      category = "In-House Counsel";
+      subcategory = "Commercial Counsel";
+    }
+    keySkills.push("Legal Analysis", "Legal Advisory");
+    matchKeywords.push("counsel", "legal", "attorney");
+  } else if (text.includes("product manager") || text.includes("product lead")) {
+    if (text.includes("ai")) {
+      category = "Legal AI & Analytics";
+      subcategory = "Legal AI Product Manager";
+    } else {
+      category = "Legal Product Management";
       subcategory = "Legal Product Manager";
     }
     keySkills.push("Product Management", "Strategy", "User Research");
     matchKeywords.push("product", "roadmap", "strategy");
-  } else if (text.includes("legal ops") || text.includes("legal operations")) {
+  } else if (text.includes("legal ops") || text.includes("legal operations") || text.includes("legal project")) {
     category = "Legal Operations";
     subcategory = "Legal Operations Manager";
-    keySkills.push("Legal Operations", "Process Improvement", "Vendor Management");
-    matchKeywords.push("legal ops", "operations", "efficiency");
-  } else if (text.includes("contract") || text.includes("clm")) {
-    category = "Contract Technology";
-    subcategory = "Contract Automation Specialist";
-    keySkills.push("CLM", "Contract Management", "Automation");
-    matchKeywords.push("contract", "clm", "automation");
-  } else if (text.includes("compliance") || text.includes("regulatory") || text.includes("regtech")) {
-    category = "Compliance & RegTech";
-    subcategory = "Compliance Technology Counsel";
+    keySkills.push("Legal Operations", "Process Improvement");
+    matchKeywords.push("legal ops", "operations");
+  } else if (text.includes("contract") || text.includes("clm") || text.includes("isda")) {
+    category = "Contract Management";
+    subcategory = "Contracts Manager";
+    keySkills.push("CLM", "Contract Management");
+    matchKeywords.push("contract", "clm");
+  } else if (text.includes("compliance") || text.includes("regulatory") || text.includes("privacy") || text.includes("grc")) {
+    category = "Compliance & Privacy";
+    subcategory = "Compliance Manager";
     keySkills.push("Compliance", "Regulatory", "Risk Management");
     matchKeywords.push("compliance", "regulatory", "risk");
-  } else if (text.includes("ediscovery") || text.includes("e-discovery") || text.includes("litigation")) {
+  } else if (text.includes("ediscovery") || text.includes("e-discovery") || text.includes("litigation") || text.includes("appellate")) {
     category = "Litigation & eDiscovery";
-    subcategory = "eDiscovery Counsel";
-    keySkills.push("eDiscovery", "Litigation Support", "Relativity");
-    matchKeywords.push("ediscovery", "litigation", "review");
-  } else if (text.includes("consult")) {
-    category = "Legal Consulting & Strategy";
+    subcategory = "eDiscovery Project Manager";
+    keySkills.push("eDiscovery", "Litigation Support");
+    matchKeywords.push("ediscovery", "litigation");
+  } else if (text.includes("consult") || text.includes("advisory")) {
+    category = "Legal Consulting & Advisory";
     subcategory = "LegalTech Consultant";
-    keySkills.push("Consulting", "Strategy", "Implementation");
-    matchKeywords.push("consulting", "advisory", "strategy");
-  } else if (text.includes("knowledge") || text.includes("taxonomy")) {
-    category = "Legal Knowledge Engineering";
+    keySkills.push("Consulting", "Strategy");
+    matchKeywords.push("consulting", "advisory");
+  } else if (text.includes("knowledge") || text.includes("taxonomy") || text.includes("editorial")) {
+    category = "Knowledge Management";
     subcategory = "Legal Knowledge Manager";
-    keySkills.push("Knowledge Management", "Taxonomy", "Information Architecture");
-    matchKeywords.push("knowledge", "taxonomy", "information");
-  } else if (text.includes("innovation") || text.includes("transformation")) {
-    category = "Legal Product & Innovation";
-    subcategory = "Head of Legal Innovation";
-    keySkills.push("Innovation", "Digital Transformation", "Change Management");
-    matchKeywords.push("innovation", "transformation", "strategy");
-  } else if (text.includes("engineer") || text.includes("developer")) {
-    category = "Legal AI & Machine Learning";
-    subcategory = "Legal AI Engineer";
-    keySkills.push("Software Engineering", "Development");
-    matchKeywords.push("engineering", "development", "software");
+    keySkills.push("Knowledge Management", "Taxonomy");
+    matchKeywords.push("knowledge", "taxonomy");
+  } else if (text.includes("trademark") || text.includes("ip specialist") || text.includes("patent")) {
+    category = "Intellectual Property & Innovation";
+    subcategory = "IP Specialist";
+    keySkills.push("IP Law", "Trademark");
+    matchKeywords.push("trademark", "ip", "patent");
+  } else if (text.includes("policy") || text.includes("justice") || text.includes("court")) {
+    category = "Policy & Access to Justice";
+    subcategory = "Legal Policy Advisor";
+    keySkills.push("Legal Policy", "Justice Systems");
+    matchKeywords.push("policy", "justice");
+  } else if (text.includes("engagement manager") || text.includes("legal solutions")) {
+    category = "Legal Sales & Client Solutions";
+    subcategory = "Engagement Manager";
+    keySkills.push("Client Relations", "Legal Solutions");
+    matchKeywords.push("engagement", "solutions");
   }
 
   const seniorityLevel = inferSeniority(title, description);
