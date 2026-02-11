@@ -1,0 +1,104 @@
+You are a senior engineer working in my existing Replit app. Implement “Value first. Identity later.” so users can browse roles without an account, and login is required only for personal actions.
+
+ABSOLUTE CONSTRAINTS
+- Do NOT change database schema.
+- Do NOT add new dependencies.
+- Do NOT refactor unrelated code.
+- Keep existing routes, API calls, and data fetching logic.
+- Make minimal edits in the smallest number of files possible.
+- Use the app’s existing auth route (whatever it currently uses: /auth, /signin, etc.). Do NOT create new routes.
+
+PRIMARY GOAL
+- Logged-out users can:
+  ✅ Browse job listings
+  ✅ Open job details
+  ✅ Read role explanation + job description (public)
+- Logged-out users cannot:
+  ❌ Upload resume / see fit score
+  ❌ Save jobs
+  ❌ Set alerts
+  ❌ Compare roles
+  ❌ Any “Pro” personalized features
+- Logged-in users keep full functionality.
+
+IMPLEMENTATION STEPS
+
+STEP 1 — Find and remove “hard gate” browsing
+1) Search client code for text/logic like:
+   - "Sign in to see all roles"
+   - "Sign in to view jobs"
+   - checks like if (!user) return <SignInPrompt />
+2) Identify the jobs list page and job detail page and any components used by them.
+3) Ensure the job list is rendered for logged-out users.
+4) Ensure job detail content is rendered for logged-out users.
+
+STEP 2 — Gate only personal actions (soft gate)
+For every personalized action, replace “block the page” with “disable action + show sign-in prompt”.
+
+A) Save job
+- If user is logged out:
+  - Disable save button (or keep clickable but open sign-in modal/redirect)
+  - Show small helper text: “Sign in to save”
+  - Link to existing auth route
+
+B) Resume upload / Fit score / Match highlights
+- If logged out:
+  - Show the module in a locked state (teaser UI)
+  - Copy: “Upload your resume to see your fit score and what to improve.”
+  - CTA: “Upload resume →” (goes to existing auth route)
+- If logged in:
+  - Works normally
+
+C) Alerts
+- If logged out:
+  - Disable alert button
+  - Copy: “Sign in to get alerts when roles match you.”
+  - CTA links to auth route
+
+D) Compare roles
+- If logged out:
+  - Show compare UI locked/disabled
+  - Copy: “Sign in to compare roles side-by-side.”
+  - CTA links to auth route
+
+STEP 3 — Add a “soft conversion trigger” that feels premium (NO POPUPS)
+On the Job Detail page ONLY:
+- Keep the job description visible publicly.
+- Add a subtle conversion block AFTER the job description or below it:
+
+Title: “See how this role fits your background”
+Body: “Get a fit score, transferable skills, missing gaps, and realistic resume tweaks.”
+Button: “Upload resume” → existing auth route
+Secondary link: “Sign in” → existing auth route
+
+This block should NOT prevent reading. It should only encourage sign-in after value is delivered.
+
+STEP 4 — Fix landing page CTA language (no mention that login is required)
+- Replace any line that says “Sign in to see all roles” with:
+  “Browse freely. Sign in for fit score, saving, and alerts.”
+- Ensure primary CTA is “Explore roles” and works logged-out.
+- Ensure “Upload resume” CTA leads to existing auth route.
+
+STEP 5 — Employer visibility considerations (important)
+- Ensure jobs are public so employers don’t think listings are hidden.
+- If there is a “Post a Job” CTA, keep it public.
+- If apply is external (most job boards), do NOT require login just to click “Apply”.
+  - Only require login for personalization features (fit score, save, alerts, compare).
+
+STEP 6 — QA / Verification checklist (must pass)
+Logged out:
+- Can open /jobs (or browse page) and see job cards
+- Can open a job detail page and read full content
+- Clicking Save/Alert/Compare shows “Sign in to …” and redirects to auth
+- Sees the “See how this role fits your background” conversion block
+
+Logged in:
+- All previous functionality works exactly as before
+
+STEP 7 — Deliverable
+- List EXACT files changed
+- Briefly explain each change
+- Confirm: no schema changes, no new dependencies, no route changes
+
+NOTE:
+If there are multiple places where auth gating blocks browsing, fix them all, but keep changes minimal and scoped.
