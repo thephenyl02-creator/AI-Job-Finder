@@ -458,7 +458,7 @@ export async function scrapeGenericCareerPage(url: string, companyName: string, 
   }
 }
 
-export function isLegalTechRole(title: string): boolean {
+export function isLegalTechRole(title: string, companyType?: string): boolean {
   const t = title.toLowerCase();
 
   const rejectPatterns = [
@@ -540,6 +540,25 @@ export function isLegalTechRole(title: string): boolean {
     'senior program manager',
   ];
   if (lawyerFriendly.some(k => t.includes(k))) return true;
+
+  const isLegalTechCompany = companyType === 'startup' || companyType === 'tech-legal';
+  if (isLegalTechCompany) {
+    const legalTechCompanyRoles = [
+      'product marketing', 'marketing manager', 'marketing director',
+      'sales manager', 'sales director', 'sales operations',
+      'revenue operations', 'revops',
+      'professional services', 'training manager', 'training specialist',
+      'onboarding', 'support manager', 'support engineer',
+      'technical writer', 'documentation',
+      'data analyst', 'business analyst', 'analytics',
+      'partnerships', 'partner manager', 'alliances',
+      'pre-sales', 'presales', 'solution engineer',
+      'customer operations', 'client services', 'client success',
+      'director of operations', 'vp of operations',
+      'head of', 'vice president', 'chief',
+    ];
+    if (legalTechCompanyRoles.some(k => t.includes(k))) return true;
+  }
 
   return false;
 }
@@ -697,9 +716,13 @@ export function transformToJobSchema(job: ScrapedJob, categorization?: JobCatego
 export async function scrapeAllLawFirms(): Promise<{
   jobs: InsertJob[];
   stats: { company: string; found: number; filtered: number }[];
+  funnel: { totalScraped: number; titleFiltered: number; companiesAttempted: number; companiesWithJobs: number };
 }> {
   const allJobs: InsertJob[] = [];
   const stats: { company: string; found: number; filtered: number }[] = [];
+  let totalScraped = 0;
+  let totalFiltered = 0;
+  let companiesWithJobs = 0;
   
   for (const firm of LAW_FIRMS_AND_COMPANIES) {
     try {
@@ -719,7 +742,11 @@ export async function scrapeAllLawFirms(): Promise<{
         scrapedJobs = await scrapeGenericCareerPage(firm.careerUrl, firm.name, firm.selectors);
       }
       
-      const legalTechJobs = scrapedJobs.filter(job => isLegalTechRole(job.title));
+      const legalTechJobs = scrapedJobs.filter(job => isLegalTechRole(job.title, firm.type));
+      
+      totalScraped += scrapedJobs.length;
+      totalFiltered += legalTechJobs.length;
+      if (legalTechJobs.length > 0) companiesWithJobs++;
       
       const transformedJobs = legalTechJobs.map(job => transformToJobSchema(job));
       allJobs.push(...transformedJobs);
@@ -730,7 +757,7 @@ export async function scrapeAllLawFirms(): Promise<{
         filtered: legalTechJobs.length,
       });
       
-      console.log(`Found ${scrapedJobs.length} jobs, ${legalTechJobs.length} legal tech roles at ${firm.name}`);
+      console.log(`Found ${scrapedJobs.length} jobs, ${legalTechJobs.length} legal tech roles at ${firm.name} (${firm.type})`);
       
       await delay(2000);
       
@@ -744,7 +771,15 @@ export async function scrapeAllLawFirms(): Promise<{
     }
   }
   
-  return { jobs: allJobs, stats };
+  const funnel = {
+    totalScraped,
+    titleFiltered: totalFiltered,
+    companiesAttempted: LAW_FIRMS_AND_COMPANIES.length,
+    companiesWithJobs,
+  };
+  console.log(`[Pipeline Funnel] ${funnel.companiesAttempted} companies attempted → ${funnel.totalScraped} total jobs scraped → ${funnel.titleFiltered} passed title filter → ${funnel.companiesWithJobs} companies with relevant jobs`);
+  
+  return { jobs: allJobs, stats, funnel };
 }
 
 export async function scrapeSingleCompany(companyName: string): Promise<InsertJob[]> {
@@ -770,7 +805,7 @@ export async function scrapeSingleCompany(companyName: string): Promise<InsertJo
     scrapedJobs = await scrapeGenericCareerPage(firm.careerUrl, firm.name, firm.selectors);
   }
   
-  const legalTechJobs = scrapedJobs.filter(job => isLegalTechRole(job.title));
+  const legalTechJobs = scrapedJobs.filter(job => isLegalTechRole(job.title, firm.type));
   return legalTechJobs.map(job => transformToJobSchema(job));
 }
 
@@ -807,7 +842,7 @@ export async function scrapeAllLawFirmsWithAI(
         scrapedJobs = await scrapeGenericCareerPage(firm.careerUrl, firm.name, firm.selectors);
       }
       
-      const legalTechJobs = scrapedJobs.filter(job => isLegalTechRole(job.title));
+      const legalTechJobs = scrapedJobs.filter(job => isLegalTechRole(job.title, firm.type));
       
       let categorizedCount = 0;
       for (const job of legalTechJobs) {

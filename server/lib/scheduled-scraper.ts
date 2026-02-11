@@ -298,7 +298,7 @@ export async function runScheduledScrape(triggeredBy: string = 'scheduler'): Pro
   try {
     logInfo('PHASE', `--- Phase 1: Scraping ${LAW_FIRMS_AND_COMPANIES.length} companies ---`);
 
-    const { jobs: scrapedJobs, stats: scrapeStats } = await scrapeAllLawFirms();
+    const { jobs: scrapedJobs, stats: scrapeStats, funnel } = await scrapeAllLawFirms();
 
     const companiesAttempted = new Set(scrapeStats.map(s => s.company));
     for (const stat of scrapeStats) {
@@ -311,6 +311,7 @@ export async function runScheduledScrape(triggeredBy: string = 'scheduler'): Pro
     scrapeState.jobsFound = scrapedJobs.length;
 
     logInfo('SCRAPE', `Scraping complete: ${scrapedJobs.length} jobs from ${companiesSucceeded} companies (${companiesFailed} failed)`);
+    logInfo('FUNNEL', `Pipeline funnel: ${funnel.companiesAttempted} companies → ${funnel.totalScraped} scraped → ${funnel.titleFiltered} title-filtered → ${scrapedJobs.length} transformed`);
 
     for (const firm of LAW_FIRMS_AND_COMPANIES) {
       const firmStat = scrapeStats.find(s => s.company === firm.name);
@@ -449,8 +450,8 @@ export async function runScheduledScrape(triggeredBy: string = 'scheduler'): Pro
       jobsFound: scrapeState.jobsFound,
       jobsValidated,
       jobsRejectedValidation,
-      newJobs: inserted,
-      updatedJobs: updated,
+      inserted,
+      updated,
       alertsTriggered,
       totalActiveJobs,
       brokenLinks,

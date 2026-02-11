@@ -188,7 +188,7 @@ async function enrichJob(job: Job): Promise<void> {
       enrichedData.pipelineStatus = 'rejected';
       enrichedData.isPublished = false;
       enrichedData.reviewReasonCode = 'LOW_RELEVANCE';
-    } else if (relevanceConfidence >= 50 && enrichedData.roleCategory) {
+    } else if (relevanceConfidence >= 45 && enrichedData.roleCategory) {
       enrichedData.pipelineStatus = 'ready';
       enrichedData.isPublished = true;
     } else {

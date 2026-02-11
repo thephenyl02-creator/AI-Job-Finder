@@ -5,6 +5,8 @@ import { createServer } from "http";
 import { startEventLinkValidation } from "./lib/event-link-validator";
 import { startEnrichmentWorker } from "./workers/enrichment-worker";
 import { startReliabilityWorker } from "./workers/reliability-worker";
+import { runScheduledScrape } from "./lib/scheduled-scraper";
+import { storage } from "./storage";
 
 const app = express();
 const httpServer = createServer(app);
@@ -124,6 +126,22 @@ app.use((req, res, next) => {
       startEventLinkValidation();
       startEnrichmentWorker();
       startReliabilityWorker();
+
+      setTimeout(async () => {
+        try {
+          const published = await storage.getPublishedJobs();
+          if (published.length < 100) {
+            log(`Only ${published.length} published jobs found — triggering initial full scrape`);
+            runScheduledScrape('startup-initial').catch(err => {
+              console.error('[Startup Scrape] Failed:', err.message);
+            });
+          } else {
+            log(`${published.length} published jobs found — skipping initial scrape`);
+          }
+        } catch (err: any) {
+          console.error('[Startup Scrape] Check failed:', err.message);
+        }
+      }, 30000);
     },
   );
 })();
