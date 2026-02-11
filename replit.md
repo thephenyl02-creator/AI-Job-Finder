@@ -42,6 +42,18 @@ Legal Tech Careers is a freemium SaaS job search platform designed for legal pro
 - **Model**: Freemium SaaS with "Free" and "Pro" tiers, offering enhanced AI features, multi-resume management, job alerts, and market insights for Pro users.
 - **Management**: Stripe Checkout, Billing Portal, and webhooks.
 
+### Job Curation Pipeline
+- **Two-Layer Pipeline**: Raw ingestion → AI enrichment → trust gate → published inventory
+- **Pipeline Statuses**: `raw` (newly scraped) → `enriching` (being processed) → `ready` (passed quality gate) or `rejected` (failed quality gate)
+- **Enrichment Worker** (every 5 min): Processes 25 raw jobs - cleans descriptions, extracts experience requirements, categorizes with AI, computes quality scores, auto-publishes jobs scoring 80+ with 50+ relevance confidence
+- **Reliability Worker** (every 6 hours): Validates apply links for published jobs, unpublishes broken links and stale jobs (45+ days unseen)
+- **Trust Gate**: Public API only shows jobs with `pipelineStatus='ready'`, `isPublished=true`, `jobStatus='open'`, `isActive=true`
+- **Quality Score** (0-100): Based on category (20pts), structured description completeness (40pts), experience data (15pts), valid apply URL (10pts), description length (5pts), seniority (5pts), legal relevance (5pts)
+- **Re-enrichment**: When a job's description changes on re-scrape, pipeline status resets to 'raw' for re-processing
+- **Deduplication**: `jobHash` field prevents duplicate ingestion based on company + title + location + applyUrl
+- **API**: Paginated `/api/jobs` endpoint with server-side filtering (category, seniority, location, search)
+- **Admin**: `/api/admin/pipeline-stats` shows pipeline health metrics
+
 ### Core Features
 - **Unified Smart Search**: AI-powered natural language job search with guided queries.
 - **Job Categorization**: AI-driven classification into a 3-tier taxonomy.

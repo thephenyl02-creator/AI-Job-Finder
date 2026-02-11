@@ -3,6 +3,8 @@ import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
 import { startEventLinkValidation } from "./lib/event-link-validator";
+import { startEnrichmentWorker } from "./workers/enrichment-worker";
+import { startReliabilityWorker } from "./workers/reliability-worker";
 
 const app = express();
 const httpServer = createServer(app);
@@ -120,6 +122,8 @@ app.use((req, res, next) => {
     () => {
       log(`serving on port ${port}`);
       startEventLinkValidation();
+      startEnrichmentWorker();
+      startReliabilityWorker();
     },
   );
 })();

@@ -321,9 +321,12 @@ export default function Jobs() {
   }, []);
 
 
-  const { data: allJobs = [], isLoading: jobsLoading } = useQuery<Job[]>({
+  const { data: jobsResponse, isLoading: jobsLoading } = useQuery<{ jobs: Job[]; total: number; page: number; totalPages: number }>({
     queryKey: ["/api/jobs"],
+    queryFn: () => fetch("/api/jobs?limit=50&page=1").then(r => r.json()),
   });
+  const allJobs = jobsResponse?.jobs ?? [];
+  const totalJobCount = jobsResponse?.total ?? 0;
 
   const { data: resumeData } = useQuery<{ hasResume: boolean; filename?: string; extractedData?: ResumeExtractedData }>({
     queryKey: ["/api/resume"],

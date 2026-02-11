@@ -55,6 +55,18 @@ export const jobs = pgTable("jobs", {
   jobStatus: varchar("job_status", { length: 20 }).default("open"),
   closedReason: varchar("closed_reason", { length: 50 }),
   closedAt: timestamp("closed_at"),
+  pipelineStatus: varchar("pipeline_status", { length: 20 }).default("raw"),
+  qualityScore: integer("quality_score"),
+  relevanceConfidence: integer("relevance_confidence"),
+  reviewReasonCode: varchar("review_reason_code", { length: 50 }),
+  experienceText: varchar("experience_text", { length: 255 }),
+  secondaryTags: text("secondary_tags").array(),
+  careerTrack: varchar("career_track", { length: 100 }),
+  jobHash: varchar("job_hash", { length: 64 }),
+  firstSeenAt: timestamp("first_seen_at").default(sql`CURRENT_TIMESTAMP`),
+  lastSeenAt: timestamp("last_seen_at").default(sql`CURRENT_TIMESTAMP`),
+  lastEnrichedAt: timestamp("last_enriched_at"),
+  whyThisFitsLawyers: text("why_this_fits_lawyers"),
 });
 
 export const jobCategories = pgTable("job_categories", {
@@ -104,12 +116,31 @@ export const companyIntel = pgTable("company_intel", {
 export type CompanyIntel = typeof companyIntel.$inferSelect;
 export type InsertCompanyIntel = typeof companyIntel.$inferInsert;
 
+export const PIPELINE_STATUSES = ["raw", "enriching", "ready", "rejected"] as const;
+export type PipelineStatus = typeof PIPELINE_STATUSES[number];
+
+export const REVIEW_REASON_CODES = [
+  "LOW_QUALITY_SCORE",
+  "MISSING_EXPERIENCE",
+  "MISSING_CATEGORY",
+  "MISSING_SUMMARY",
+  "LOW_RELEVANCE",
+  "BROKEN_APPLY_LINK",
+  "STALE_LISTING",
+  "MANUAL_REVIEW",
+] as const;
+export type ReviewReasonCode = typeof REVIEW_REASON_CODES[number];
+
 export const insertJobSchema = createInsertSchema(jobs).omit({
   id: true,
   postedDate: true,
   viewCount: true,
   applyClickCount: true,
   lastScrapedAt: true,
+  qualityScore: true,
+  relevanceConfidence: true,
+  lastEnrichedAt: true,
+  firstSeenAt: true,
 });
 
 export type Job = typeof jobs.$inferSelect;

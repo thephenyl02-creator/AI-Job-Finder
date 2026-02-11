@@ -355,8 +355,16 @@ export async function registerRoutes(
 
   app.get("/api/jobs", async (req, res) => {
     try {
-      const jobs = await storage.getActiveJobs();
-      res.json(jobs);
+      const page = Math.max(1, parseInt(String(req.query.page || '1')));
+      const limit = Math.min(50, Math.max(1, parseInt(String(req.query.limit || '24'))));
+      const filters: { category?: string; location?: string; search?: string; seniority?: string } = {};
+      if (req.query.category) filters.category = String(req.query.category);
+      if (req.query.location) filters.location = String(req.query.location);
+      if (req.query.search) filters.search = String(req.query.search);
+      if (req.query.seniority) filters.seniority = String(req.query.seniority);
+
+      const result = await storage.getPublishedJobsPaginated(page, limit, filters);
+      res.json(result);
     } catch (error) {
       console.error("Error fetching jobs:", error);
       res.status(500).json({ error: "Failed to fetch jobs" });
@@ -3642,6 +3650,19 @@ Provide 2-4 recommended paths. Be specific to this candidate's actual experience
     } catch (error) {
       console.error("Error fetching monitoring data:", error);
       res.status(500).json({ error: "Failed to fetch monitoring data" });
+    }
+  });
+
+  app.get("/api/admin/pipeline-stats", isAuthenticated, async (req, res) => {
+    if (!(await isAdminCheck(req))) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    try {
+      const stats = await storage.getPipelineStats();
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching pipeline stats:", error);
+      res.status(500).json({ error: "Failed to fetch pipeline stats" });
     }
   });
 

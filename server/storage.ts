@@ -3,6 +3,7 @@ import { jobs, users, userPreferences, jobCategories, jobSubmissions, jobAlerts,
 import { eq, desc, and, sql, inArray, lt, gte, count } from "drizzle-orm";
 import { cleanJobDescription } from "./lib/description-cleaner";
 import { deriveSourceInfo } from "./lib/url-utils";
+import { generateJobHash } from "./lib/job-hash";
 
 export interface IStorage {
   // Jobs
@@ -20,6 +21,7 @@ export interface IStorage {
   trackJobView(jobId: number): Promise<void>;
   trackApplyClick(jobId: number): Promise<void>;
   getPublishedJobs(): Promise<Job[]>;
+  getPublishedJobsPaginated(page: number, limit: number, filters?: { category?: string; location?: string; search?: string; seniority?: string }): Promise<{ jobs: Job[]; total: number; page: number; totalPages: number }>;
   getJobsForStandardization(status?: string): Promise<Job[]>;
   publishJob(id: number): Promise<Job | undefined>;
   unpublishJob(id: number): Promise<Job | undefined>;
@@ -135,6 +137,13 @@ export interface IStorage {
   updateScrapeRun(id: number, data: Partial<InsertScrapeRun>): Promise<ScrapeRun | undefined>;
   getScrapeRuns(limit?: number): Promise<ScrapeRun[]>;
   getLatestScrapeRun(): Promise<ScrapeRun | undefined>;
+  // Pipeline / Enrichment
+  getJobsForEnrichment(limit?: number): Promise<Job[]>;
+  updateJobPipeline(id: number, data: Record<string, any>): Promise<Job | undefined>;
+  getJobsByPipelineStatus(status: string): Promise<Job[]>;
+  getStalePublishedJobs(days: number): Promise<Job[]>;
+  getPublishedJobsForLinkCheck(): Promise<Job[]>;
+  getPipelineStats(): Promise<{ raw: number; enriching: number; ready: number; rejected: number; published: number }>;
   // Job Reports
   createJobReport(report: InsertJobReport): Promise<JobReport>;
   getJobReports(status?: string): Promise<(JobReport & { jobTitle?: string; jobCompany?: string })[]>;
@@ -212,7 +221,12 @@ class DatabaseStorage implements IStorage {
     return db
       .select()
       .from(jobs)
-      .where(and(eq(jobs.isActive, true), eq(jobs.isPublished, true)))
+      .where(and(
+        eq(jobs.isActive, true),
+        eq(jobs.isPublished, true),
+        eq(jobs.pipelineStatus, 'ready'),
+        eq(jobs.jobStatus, 'open'),
+      ))
       .orderBy(desc(jobs.postedDate));
   }
 
@@ -220,8 +234,56 @@ class DatabaseStorage implements IStorage {
     return db
       .select()
       .from(jobs)
-      .where(and(eq(jobs.isActive, true), eq(jobs.isPublished, true)))
+      .where(and(
+        eq(jobs.isActive, true),
+        eq(jobs.isPublished, true),
+        eq(jobs.pipelineStatus, 'ready'),
+        eq(jobs.jobStatus, 'open'),
+      ))
       .orderBy(desc(jobs.postedDate));
+  }
+
+  async getPublishedJobsPaginated(
+    page: number = 1,
+    limit: number = 24,
+    filters?: { category?: string; location?: string; search?: string; seniority?: string }
+  ): Promise<{ jobs: Job[]; total: number; page: number; totalPages: number }> {
+    const conditions: any[] = [
+      eq(jobs.isActive, true),
+      eq(jobs.isPublished, true),
+      eq(jobs.pipelineStatus, 'ready'),
+      eq(jobs.jobStatus, 'open'),
+    ];
+
+    if (filters?.category) {
+      conditions.push(eq(jobs.roleCategory, filters.category));
+    }
+    if (filters?.seniority) {
+      conditions.push(eq(jobs.seniorityLevel, filters.seniority));
+    }
+    if (filters?.location) {
+      conditions.push(sql`lower(${jobs.location}) LIKE ${'%' + filters.location.toLowerCase() + '%'}`);
+    }
+    if (filters?.search) {
+      const term = '%' + filters.search.toLowerCase() + '%';
+      conditions.push(sql`(lower(${jobs.title}) LIKE ${term} OR lower(${jobs.company}) LIKE ${term})`);
+    }
+
+    const whereClause = and(...conditions);
+    const [{ total: totalCount }] = await db.select({ total: count() }).from(jobs).where(whereClause);
+    const total = Number(totalCount);
+    const totalPages = Math.ceil(total / limit);
+    const offset = (page - 1) * limit;
+
+    const results = await db
+      .select()
+      .from(jobs)
+      .where(whereClause)
+      .orderBy(desc(jobs.postedDate))
+      .limit(limit)
+      .offset(offset);
+
+    return { jobs: results, total, page, totalPages };
   }
 
   async getJobsForStandardization(status?: string): Promise<Job[]> {
@@ -296,16 +358,28 @@ class DatabaseStorage implements IStorage {
         externalId: job.externalId,
         isActive: true,
         lastScrapedAt: new Date(),
+        lastSeenAt: new Date(),
       };
+
+      if (!existing.jobHash) {
+        updateData.jobHash = generateJobHash(
+          (job.company || '').trim(), (job.title || '').trim(),
+          (job.location || '').trim(), job.applyUrl
+        );
+      }
 
       if (job.salaryMin) updateData.salaryMin = job.salaryMin;
       if (job.salaryMax) updateData.salaryMax = job.salaryMax;
 
       const newDesc = job.description ? cleanJobDescription(job.description) : '';
       const existingDesc = existing.description || '';
-      if (newDesc.length >= existingDesc.length * 0.5 && newDesc.length >= 50) {
+      const descriptionChanged = newDesc.length >= existingDesc.length * 0.5 && newDesc.length >= 50 && newDesc !== existingDesc;
+      if (descriptionChanged) {
         updateData.description = newDesc;
         updateData.descriptionFormatted = true;
+        if (existing.pipelineStatus === 'ready' || existing.pipelineStatus === 'rejected') {
+          updateData.pipelineStatus = 'raw';
+        }
       }
 
       for (const field of aiFields) {
@@ -354,9 +428,18 @@ class DatabaseStorage implements IStorage {
         }
       }
 
+      const hash = generateJobHash(
+        (job.company || '').trim(), (job.title || '').trim(),
+        (job.location || '').trim(), job.applyUrl
+      );
       const [newJob] = await db.insert(jobs).values({
         ...job,
         lastScrapedAt: new Date(),
+        lastSeenAt: new Date(),
+        firstSeenAt: new Date(),
+        jobHash: hash,
+        pipelineStatus: 'raw',
+        isPublished: false,
       } as any).returning();
       return { job: newJob, isNew: true };
     }
@@ -2517,8 +2600,94 @@ class DatabaseStorage implements IStorage {
     const [job] = await db
       .select()
       .from(jobs)
-      .where(and(eq(jobs.id, id), eq(jobs.isActive, true), eq(jobs.isPublished, true)));
+      .where(and(
+        eq(jobs.id, id),
+        eq(jobs.isActive, true),
+        eq(jobs.isPublished, true),
+        eq(jobs.pipelineStatus, 'ready'),
+      ));
     return job;
+  }
+
+  async getJobsForEnrichment(limit: number = 25): Promise<Job[]> {
+    return db
+      .select()
+      .from(jobs)
+      .where(and(eq(jobs.isActive, true), eq(jobs.pipelineStatus, 'raw')))
+      .orderBy(desc(jobs.postedDate))
+      .limit(limit);
+  }
+
+  async updateJobPipeline(id: number, data: Record<string, any>): Promise<Job | undefined> {
+    const [updated] = await db
+      .update(jobs)
+      .set(data)
+      .where(eq(jobs.id, id))
+      .returning();
+    return updated;
+  }
+
+  async getJobsByPipelineStatus(status: string): Promise<Job[]> {
+    if (status === 'published') {
+      return db
+        .select()
+        .from(jobs)
+        .where(and(eq(jobs.isActive, true), eq(jobs.pipelineStatus, 'ready'), eq(jobs.isPublished, true)))
+        .orderBy(desc(jobs.postedDate));
+    }
+    return db
+      .select()
+      .from(jobs)
+      .where(and(eq(jobs.isActive, true), eq(jobs.pipelineStatus, status)))
+      .orderBy(desc(jobs.postedDate));
+  }
+
+  async getStalePublishedJobs(days: number): Promise<Job[]> {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - days);
+    return db
+      .select()
+      .from(jobs)
+      .where(and(
+        eq(jobs.isActive, true),
+        eq(jobs.isPublished, true),
+        lt(jobs.lastSeenAt, cutoff)
+      ));
+  }
+
+  async getPublishedJobsForLinkCheck(): Promise<Job[]> {
+    return db
+      .select()
+      .from(jobs)
+      .where(and(
+        eq(jobs.isActive, true),
+        eq(jobs.isPublished, true),
+        eq(jobs.pipelineStatus, 'ready'),
+      ))
+      .orderBy(desc(jobs.lastCheckedAt));
+  }
+
+  async getPipelineStats(): Promise<{ raw: number; enriching: number; ready: number; rejected: number; published: number }> {
+    const results = await db
+      .select({
+        status: jobs.pipelineStatus,
+        isPublished: jobs.isPublished,
+        cnt: count(),
+      })
+      .from(jobs)
+      .where(eq(jobs.isActive, true))
+      .groupBy(jobs.pipelineStatus, jobs.isPublished);
+
+    const stats = { raw: 0, enriching: 0, ready: 0, rejected: 0, published: 0 };
+    for (const row of results) {
+      const s = row.status || 'raw';
+      if (s === 'ready' && row.isPublished) {
+        stats.published += Number(row.cnt);
+      } else if (s in stats) {
+        (stats as any)[s] += Number(row.cnt);
+      }
+    }
+    return stats;
   }
 }
 

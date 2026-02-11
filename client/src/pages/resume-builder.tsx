@@ -1152,9 +1152,11 @@ function JobSelector({
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
 
-  const { data: jobs } = useQuery<Job[]>({
+  const { data: jobsResponse } = useQuery<{ jobs: Job[]; total: number }>({
     queryKey: ["/api/jobs"],
+    queryFn: () => fetch("/api/jobs?limit=50&page=1").then(r => r.json()),
   });
+  const jobs = jobsResponse?.jobs;
 
   const filtered = (jobs || []).filter(
     (j) =>
