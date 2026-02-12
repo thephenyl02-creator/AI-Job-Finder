@@ -212,7 +212,7 @@ ${JSON.stringify(jobSummaries, null, 2)}`;
       ],
       temperature: 0.3,
       response_format: { type: "json_object" },
-      max_completion_tokens: 3000,
+      max_tokens: 3000,
     });
 
     const content = response.choices[0]?.message?.content;
@@ -399,7 +399,7 @@ ${(job.requirements || "").substring(0, 2000)}`;
       ],
       temperature: 0.3,
       response_format: { type: "json_object" },
-      max_completion_tokens: 4000,
+      max_tokens: 4000,
     });
 
     const content = response.choices[0]?.message?.content;

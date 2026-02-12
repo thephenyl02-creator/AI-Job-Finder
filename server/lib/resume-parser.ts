@@ -86,7 +86,7 @@ Return JSON with:
         { role: "user", content: `Parse this resume:\n\n${resumeText}` },
       ],
       response_format: { type: "json_object" },
-      max_completion_tokens: 2048,
+      max_tokens: 2048,
     });
 
     const content = completion.choices[0]?.message?.content;
@@ -124,7 +124,7 @@ export async function generateSearchQueryFromResume(parsedData: ResumeExtractedD
 Generate a natural search query that captures what this person is looking for in their next role.`,
         },
       ],
-      max_completion_tokens: 256,
+      max_tokens: 256,
     });
 
     return completion.choices[0]?.message?.content || generateFallbackQuery(parsedData);

@@ -61,7 +61,7 @@ SMART EXTRACTION RULES:
       },
     ],
     response_format: { type: "json_object" },
-    max_completion_tokens: 3000,
+    max_tokens: 3000,
   });
 
   const content = completion.choices[0]?.message?.content;
@@ -115,7 +115,7 @@ Apply the same extraction rules: clean titles, annual USD salary, remote detecti
         },
       ],
       response_format: { type: "json_object" },
-      max_completion_tokens: 4000,
+      max_tokens: 4000,
     });
 
     const content = completion.choices[0]?.message?.content;

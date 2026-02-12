@@ -838,7 +838,7 @@ Only include jobs with a score above 40. Sort by score descending.`;
             },
           ],
           response_format: { type: "json_object" },
-          max_completion_tokens: 2048,
+          max_tokens: 2048,
         });
       } catch (aiError) {
         console.error("AI search failed, returning keyword-based results:", aiError);
@@ -978,7 +978,7 @@ Return ONLY valid JSON in this format:
           { role: "user", content: `Search query: "${query}"${userContext}` },
         ],
         response_format: { type: "json_object" },
-        max_completion_tokens: 1024,
+        max_tokens: 1024,
       });
 
       const content = response.choices[0]?.message?.content;
@@ -1103,7 +1103,7 @@ ${JSON.stringify(jobSummaries, null, 2)}`
           },
         ],
         response_format: { type: "json_object" },
-        max_completion_tokens: 2048,
+        max_tokens: 2048,
       });
 
       const content = response.choices[0]?.message?.content;
@@ -1329,7 +1329,7 @@ Be specific and actionable. Focus on legal tech industry keywords and ATS best p
           }
         ],
         response_format: { type: "json_object" },
-        max_completion_tokens: 3000,
+        max_tokens: 3000,
       });
 
       const content = completion.choices[0]?.message?.content;
@@ -1340,8 +1340,9 @@ Be specific and actionable. Focus on legal tech industry keywords and ATS best p
       const review = JSON.parse(content);
       res.json(review);
     } catch (error: any) {
-      console.error("ATS review error:", error);
-      res.status(500).json({ error: "Failed to generate ATS review. Please try again." });
+      console.error("ATS review error:", error?.message || error, error?.response?.data || "");
+      const msg = error?.message?.includes("model") ? "AI model temporarily unavailable" : "Failed to generate ATS review. Please try again.";
+      res.status(500).json({ error: msg });
     }
   });
 
@@ -4253,7 +4254,7 @@ Return a JSON response with this exact structure:
           },
         ],
         response_format: { type: "json_object" },
-        max_completion_tokens: 4000,
+        max_tokens: 4000,
       });
 
       const content = completion.choices[0]?.message?.content;
@@ -4270,9 +4271,10 @@ Return a JSON response with this exact structure:
       }
 
       res.json(result);
-    } catch (error) {
-      console.error("Career advisor error:", error);
-      res.status(500).json({ error: "Failed to analyze career options" });
+    } catch (error: any) {
+      console.error("Career advisor error:", error?.message || error, error?.response?.data || "");
+      const msg = error?.message?.includes("model") ? "AI model temporarily unavailable" : "Failed to analyze career options. Please try again.";
+      res.status(500).json({ error: msg });
     }
   });
 
@@ -5408,7 +5410,7 @@ Return JSON: { "suggestion": "<improved content>", "tips": ["<tip>"] }`;
           { role: "user", content: prompt }
         ],
         response_format: { type: "json_object" },
-        max_completion_tokens: 2000,
+        max_tokens: 2000,
       });
 
       const content = completion.choices[0]?.message?.content;
@@ -5500,7 +5502,7 @@ Return valid JSON:
           }
         ],
         response_format: { type: "json_object" },
-        max_completion_tokens: 3000,
+        max_tokens: 3000,
       });
 
       const content = completion.choices[0]?.message?.content;
@@ -5566,7 +5568,7 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
           }
         ],
         response_format: { type: "json_object" },
-        max_completion_tokens: 3000,
+        max_tokens: 3000,
       });
 
       const content = completion.choices[0]?.message?.content;
@@ -5634,7 +5636,7 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
           }
         ],
         response_format: { type: "json_object" },
-        max_completion_tokens: 3000,
+        max_tokens: 3000,
       });
 
       const content = completion.choices[0]?.message?.content;
