@@ -1206,6 +1206,7 @@ function BrowseCompareView({ jobs, onClose, onClear }: { jobs: Job[]; onClose: (
     mutationFn: async () => {
       const payload = {
         jobs: jobs.map((j) => ({
+          id: String(j.id),
           title: j.title,
           description: j.description || j.aiSummary || j.title,
         })),
