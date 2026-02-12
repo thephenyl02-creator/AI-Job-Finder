@@ -15,6 +15,7 @@ interface ScrapedJob {
   externalId: string;
   salaryMin?: number;
   salaryMax?: number;
+  salaryCurrency?: string;
   compensationText?: string;
   locationType?: 'remote' | 'hybrid' | 'onsite';
   department?: string;
@@ -23,6 +24,26 @@ interface ScrapedJob {
 
 function delay(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function inferCurrencyFromLocation(location: string): string {
+  const loc = (location || '').toLowerCase();
+  const gbpSignals = ['uk', 'united kingdom', 'london', 'manchester', 'birmingham', 'edinburgh', 'glasgow', 'bristol', 'leeds', 'cambridge', 'oxford', 'england', 'scotland', 'wales', 'northern ireland'];
+  const eurSignals = ['germany', 'france', 'netherlands', 'spain', 'italy', 'ireland', 'belgium', 'austria', 'portugal', 'finland', 'sweden', 'denmark', 'norway', 'berlin', 'munich', 'paris', 'amsterdam', 'dublin', 'madrid', 'stockholm', 'copenhagen', 'oslo', 'vienna', 'brussels', 'zurich', 'emea', 'europe'];
+  const audSignals = ['australia', 'sydney', 'melbourne', 'brisbane', 'perth'];
+  const cadSignals = ['canada', 'toronto', 'vancouver', 'montreal', 'ottawa', 'calgary'];
+  const sgdSignals = ['singapore'];
+  const hkdSignals = ['hong kong'];
+  const inrSignals = ['india', 'mumbai', 'bangalore', 'delhi', 'hyderabad', 'chennai', 'pune'];
+
+  if (gbpSignals.some(s => loc.includes(s))) return 'GBP';
+  if (eurSignals.some(s => loc.includes(s))) return 'EUR';
+  if (audSignals.some(s => loc.includes(s))) return 'AUD';
+  if (cadSignals.some(s => loc.includes(s))) return 'CAD';
+  if (sgdSignals.some(s => loc.includes(s))) return 'SGD';
+  if (hkdSignals.some(s => loc.includes(s))) return 'HKD';
+  if (inrSignals.some(s => loc.includes(s))) return 'INR';
+  return 'USD';
 }
 
 function detectLocationType(text: string): 'remote' | 'hybrid' | 'onsite' | undefined {
@@ -115,33 +136,27 @@ function extractGreenhouseSalary(job: any): { min?: number; max?: number; text?:
   return {};
 }
 
-function extractLeverSalary(job: any): { min?: number; max?: number; text?: string } {
+function extractLeverSalary(job: any): { min?: number; max?: number; currency?: string; text?: string } {
   if (job.salaryRange) {
     const range = job.salaryRange;
+    let min = range.min || undefined;
+    let max = range.max || undefined;
+    const currency = range.currency || undefined;
+
+    if (min !== undefined && min > 1000000) min = Math.round(min / 100);
+    if (max !== undefined && max > 1000000) max = Math.round(max / 100);
+
+    if (min !== undefined && min < 1000) return {};
+    if (max !== undefined && max < 1000) return {};
+
     return {
-      min: range.min || undefined,
-      max: range.max || undefined,
-      text: range.currency
-        ? `${range.currency} ${range.min?.toLocaleString()} - ${range.max?.toLocaleString()}`
+      min,
+      max,
+      currency,
+      text: currency
+        ? `${currency} ${min?.toLocaleString()} - ${max?.toLocaleString()}`
         : undefined,
     };
-  }
-
-  if (job.categories?.commitment) {
-    const parsed = parseSalaryFromText(job.categories.commitment);
-    if (parsed.min || parsed.max) return { min: parsed.min, max: parsed.max };
-  }
-
-  const lists = job.lists || [];
-  for (const list of lists) {
-    const listText = (list.text || '').toLowerCase();
-    if (listText.includes('compensation') || listText.includes('salary') || listText.includes('pay')) {
-      const content = (list.content || '');
-      const parsed = parseSalaryFromText(content);
-      if (parsed.min || parsed.max) {
-        return { min: parsed.min, max: parsed.max, text: content.replace(/<[^>]*>/g, '').trim() };
-      }
-    }
   }
 
   return {};
@@ -235,6 +250,7 @@ export async function scrapeLever(leverUrl: string, companyName: string): Promis
         externalId: `lever_${job.id}`,
         salaryMin: salary.min,
         salaryMax: salary.max,
+        salaryCurrency: salary.currency,
         compensationText: salary.text,
         locationType,
         department: job.categories?.department || undefined,
@@ -708,10 +724,12 @@ export function transformToJobSchema(job: ScrapedJob, categorization?: JobCatego
     salaryMin = categorization?.salaryMin || null;
     salaryMax = categorization?.salaryMax || null;
   }
-  if (!salaryMin && !salaryMax) {
-    const parsed = parseSalaryFromText(cleanDescription);
-    salaryMin = parsed.min ?? null;
-    salaryMax = parsed.max ?? null;
+
+  let salaryCurrency: string | null = job.salaryCurrency || null;
+  if (salaryMin || salaryMax) {
+    if (!salaryCurrency) {
+      salaryCurrency = inferCurrencyFromLocation(locationText);
+    }
   }
 
   return {
@@ -723,6 +741,7 @@ export function transformToJobSchema(job: ScrapedJob, categorization?: JobCatego
     locationType,
     salaryMin,
     salaryMax,
+    salaryCurrency,
     experienceMin: categorization?.experienceMin || null,
     experienceMax: categorization?.experienceMax || null,
     roleType: inferRoleType(job.title),

@@ -11,6 +11,7 @@ import { useSubscription } from "@/hooks/use-subscription";
 import { useActivityTracker } from "@/hooks/use-activity-tracker";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Job, SavedJob } from "@shared/schema";
+import { formatSalary } from "@/lib/format-salary";
 import {
   Bookmark,
   BookmarkX,
@@ -53,16 +54,6 @@ function getUrgencyLevel(postedDate: Date | string | null | undefined): "urgent"
   return "normal";
 }
 
-function formatSalary(min?: number | null, max?: number | null): string | null {
-  if (!min && !max) return null;
-  const fmt = (n: number) => {
-    const k = n / 1000;
-    return k % 1 === 0 ? `$${k.toFixed(0)}K` : `$${k.toFixed(1)}K`;
-  };
-  if (min && max) return `${fmt(min)} \u2013 ${fmt(max)}`;
-  if (min) return `${fmt(min)}+`;
-  return `Up to ${fmt(max!)}`;
-}
 
 function getLocationLabel(job: Job): string {
   if (job.locationType === 'remote' || (!job.locationType && job.isRemote)) return 'Remote';
@@ -118,7 +109,7 @@ function CompareView({ jobs, onClose }: { jobs: Job[]; onClose: () => void }) {
     {
       label: "Salary",
       render: (job) => {
-        const salary = formatSalary(job.salaryMin, job.salaryMax);
+        const salary = formatSalary(job.salaryMin, job.salaryMax, (job as any).salaryCurrency);
         return salary
           ? <span className="text-sm font-medium text-green-600 dark:text-green-400">{salary}</span>
           : <span className="text-sm text-muted-foreground">Not listed</span>;
@@ -407,7 +398,7 @@ export default function SavedJobs() {
           <div className="space-y-3">
             {savedJobs.map((sj) => {
               const urgency = getUrgencyLevel(sj.job.postedDate);
-              const salary = formatSalary(sj.job.salaryMin, sj.job.salaryMax);
+              const salary = formatSalary(sj.job.salaryMin, sj.job.salaryMax, (sj.job as any).salaryCurrency);
               const isSelected = selectedIds.has(sj.job.id);
               const atLimit = selectedIds.size >= MAX_COMPARE && !isSelected;
               return (

@@ -9,6 +9,7 @@ import { apiRequest } from "@/lib/queryClient";
 import type { Job, JobWithScore } from "@shared/schema";
 import { JOB_TAXONOMY } from "@shared/schema";
 import { cleanStructuredText } from "@/lib/structured-description";
+import { formatSalary } from "@/lib/format-salary";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -448,19 +449,6 @@ export default function Jobs() {
     );
   }
 
-  const formatSalaryRange = (min?: number | null, max?: number | null) => {
-    if (!min && !max) return null;
-    const fmt = (n: number) => {
-      if (n >= 1000) {
-        const k = n / 1000;
-        return k % 1 === 0 ? `$${k.toFixed(0)}K` : `$${k.toFixed(1)}K`;
-      }
-      return `$${n}`;
-    };
-    if (min && max) return `${fmt(min)} \u2013 ${fmt(max)}`;
-    if (min) return `${fmt(min)}+`;
-    return `Up to ${fmt(max!)}`;
-  };
 
   const filteredJobs = searchResults || allJobs;
 
@@ -919,7 +907,7 @@ export default function Jobs() {
         ) : (
           <div className="grid gap-3">
             {filteredJobs.map((job) => {
-              const salaryDisplay = formatSalaryRange(job.salaryMin, job.salaryMax);
+              const salaryDisplay = formatSalary(job.salaryMin, job.salaryMax, (job as any).salaryCurrency);
               const locType = job.locationType || (job.isRemote ? "remote" : null);
               const postedAgo = job.postedDate ? (() => {
                 const days = Math.floor((Date.now() - new Date(job.postedDate).getTime()) / 86400000);
@@ -1234,16 +1222,6 @@ function BrowseCompareView({ jobs, onClose, onClear }: { jobs: Job[]; onClose: (
     },
   });
 
-  const formatSalary = (min?: number | null, max?: number | null): string | null => {
-    if (!min && !max) return null;
-    const fmt = (n: number) => {
-      const k = n / 1000;
-      return k % 1 === 0 ? `$${k.toFixed(0)}K` : `$${k.toFixed(1)}K`;
-    };
-    if (min && max) return `${fmt(min)} \u2013 ${fmt(max)}`;
-    if (min) return `${fmt(min)}+`;
-    return `Up to ${fmt(max!)}`;
-  };
 
   const getLocationLabel = (job: Job): string => {
     if (job.locationType === 'remote' || (!job.locationType && job.isRemote)) return 'Remote';
@@ -1388,7 +1366,7 @@ function BrowseCompareView({ jobs, onClose, onClear }: { jobs: Job[]; onClose: (
     {
       label: "Salary",
       render: (job) => {
-        const salary = formatSalary(job.salaryMin, job.salaryMax);
+        const salary = formatSalary(job.salaryMin, job.salaryMax, (job as any).salaryCurrency);
         return salary
           ? <span className="text-sm font-medium text-green-600 dark:text-green-400">{salary}</span>
           : <span className="text-sm text-muted-foreground">Not listed</span>;

@@ -15,6 +15,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Job, Resume, StructuredDescription } from "@shared/schema";
 import type { ResumeExtractedData } from "@shared/models/auth";
 import { decodeHtmlEntities, fixMissingSentenceSpaces, cleanStructuredText, parseStructuredDescription } from "@/lib/structured-description";
+import { formatSalary } from "@/lib/format-salary";
 import { StructuredDescriptionView } from "@/components/structured-description-view";
 import { ResumeRewriteDialog } from "@/components/resume-rewrite-dialog";
 import { ResumeStrategyDialog } from "@/components/resume-strategy-dialog";
@@ -631,18 +632,7 @@ export default function JobDetail() {
   });
 
 
-  const formatSalary = (min?: number | null, max?: number | null) => {
-    if (!min && !max) return null;
-    const fmt = (n: number) => {
-      const k = n / 1000;
-      return k % 1 === 0 ? `$${k.toFixed(0)}K` : `$${k.toFixed(1)}K`;
-    };
-    if (min && max) return `${fmt(min)} \u2013 ${fmt(max)}`;
-    if (min) return `From ${fmt(min)}`;
-    return `Up to ${fmt(max!)}`;
-  };
-
-  const salary = formatSalary(job?.salaryMin, job?.salaryMax);
+  const salary = formatSalary(job?.salaryMin, job?.salaryMax, (job as any)?.salaryCurrency);
   const postedLabel = getPostedDateLabel(job?.postedDate);
   const locationTypeLabel = job ? getLocationTypeLabel(job) : null;
 
@@ -1277,7 +1267,7 @@ export default function JobDetail() {
             <h2 className="text-lg font-serif font-medium text-foreground mb-4 tracking-tight">Similar Roles</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {similarJobs.map(sj => {
-                const sjSalary = formatSalary(sj.salaryMin, sj.salaryMax);
+                const sjSalary = formatSalary(sj.salaryMin, sj.salaryMax, (sj as any).salaryCurrency);
                 const sjLegalFit = sj.legalRelevanceScore && sj.legalRelevanceScore >= 8;
                 return (
                   <Link key={sj.id} href={`/jobs/${sj.id}`}>

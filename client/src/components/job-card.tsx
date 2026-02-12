@@ -8,6 +8,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useMutation } from "@tanstack/react-query";
 import { JobComparison } from "./job-comparison";
 import { useToast } from "@/hooks/use-toast";
+import { formatSalary } from "@/lib/format-salary";
 
 function stripHtmlPreview(text: string): string {
   if (!text) return "";
@@ -37,13 +38,6 @@ interface JobCardProps {
 
 export function JobCard({ job, showMatchScore = false, hasResume = false, isSaved = false, isAuthenticated = false }: JobCardProps) {
   const { toast } = useToast();
-  const formatSalary = (min?: number | null, max?: number | null) => {
-    if (!min && !max) return null;
-    const formatNum = (num: number) => `$${(num / 1000).toFixed(0)}K`;
-    if (min && max) return `${formatNum(min)} - ${formatNum(max)}`;
-    if (min) return `${formatNum(min)}+`;
-    return `Up to ${formatNum(max!)}`;
-  };
 
   const formatExperience = (min?: number | null, max?: number | null) => {
     if (!min && !max) return null;
@@ -95,7 +89,7 @@ export function JobCard({ job, showMatchScore = false, hasResume = false, isSave
   const CategoryIcon = getCategoryIcon(job.roleCategory);
   const legalFit = getLegalFitLabel(job.legalRelevanceScore);
 
-  const salary = formatSalary(job.salaryMin, job.salaryMax);
+  const salary = formatSalary(job.salaryMin, job.salaryMax, (job as any).salaryCurrency);
   const experience = formatExperience(job.experienceMin, job.experienceMax);
 
   const saveMutation = useMutation({
