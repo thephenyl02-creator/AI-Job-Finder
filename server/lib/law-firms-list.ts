@@ -254,39 +254,39 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
     name: 'Clio',
     careerUrl: 'https://www.clio.com/company/careers/',
     workday: { company: 'clio', instance: 'wd3', site: 'ClioCareerSite' },
-    type: 'company',
+    type: 'tech-legal',
   },
   {
     name: 'Filevine',
     careerUrl: 'https://www.filevine.com/careers/',
     leverPostingsUrl: 'https://jobs.lever.co/filevine',
-    type: 'company',
+    type: 'tech-legal',
   },
   {
     name: 'Litify',
     careerUrl: 'https://www.litify.com/careers/',
     greenhouseId: 'litify',
-    type: 'company',
+    type: 'tech-legal',
   },
   {
     name: 'Smokeball',
     careerUrl: 'https://www.smokeball.com/careers/',
-    type: 'company',
+    type: 'tech-legal',
   },
   {
     name: 'PracticePanther',
     careerUrl: 'https://www.practicepanther.com/careers/',
-    type: 'company',
+    type: 'tech-legal',
   },
   {
     name: 'MyCase',
     careerUrl: 'https://www.mycase.com/company/careers/',
-    type: 'company',
+    type: 'tech-legal',
   },
   {
     name: 'Lawmatics',
     careerUrl: 'https://www.lawmatics.com/careers/',
-    type: 'company',
+    type: 'tech-legal',
   },
 
   // --- Contract Lifecycle Management ---
@@ -294,40 +294,40 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
     name: 'Ironclad',
     careerUrl: 'https://ironcladapp.com/careers/',
     ashbyUrl: 'https://api.ashbyhq.com/posting-api/job-board/ironclad',
-    type: 'company',
+    type: 'tech-legal',
   },
   {
     name: 'Agiloft',
     careerUrl: 'https://www.agiloft.com/company/careers/',
     leverPostingsUrl: 'https://jobs.lever.co/agiloft',
-    type: 'company',
+    type: 'tech-legal',
   },
   {
     name: 'ContractPodAi',
     careerUrl: 'https://contractpodai.com/careers/',
-    type: 'company',
+    type: 'tech-legal',
   },
   {
     name: 'Onit',
     careerUrl: 'https://www.onit.com/company/careers/',
     leverPostingsUrl: 'https://jobs.lever.co/onit',
-    type: 'company',
+    type: 'tech-legal',
   },
   {
     name: 'LinkSquares',
     careerUrl: 'https://linksquares.com/careers/',
     greenhouseId: 'linksquaresinc',
-    type: 'company',
+    type: 'tech-legal',
   },
   {
     name: 'Icertis',
     careerUrl: 'https://www.icertis.com/company/careers/',
-    type: 'company',
+    type: 'tech-legal',
   },
   {
     name: 'ConcordNow',
     careerUrl: 'https://www.concordnow.com/careers',
-    type: 'company',
+    type: 'tech-legal',
   },
   {
     name: 'DocuSign',
@@ -341,18 +341,18 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
     name: 'Brightflag',
     careerUrl: 'https://www.brightflag.com/careers/',
     greenhouseId: 'brightflag',
-    type: 'company',
+    type: 'tech-legal',
   },
   {
     name: 'SimpleLegal',
     careerUrl: 'https://www.simplelegal.com/careers',
-    type: 'company',
+    type: 'tech-legal',
   },
   {
     name: 'Mitratech',
     careerUrl: 'https://mitratech.com/company/careers/',
     greenhouseId: 'mitratech',
-    type: 'company',
+    type: 'tech-legal',
   },
 
   // --- Document Management & Collaboration ---
@@ -360,13 +360,13 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
     name: 'NetDocuments',
     careerUrl: 'https://www.netdocuments.com/company/careers',
     greenhouseId: 'netdocuments',
-    type: 'company',
+    type: 'tech-legal',
   },
   {
     name: 'Litera',
     careerUrl: 'https://www.litera.com/company/careers/',
     workday: { company: 'litera', instance: 'wd12', site: 'Litera_Careers' },
-    type: 'company',
+    type: 'tech-legal',
   },
 
   // --- eDiscovery & Litigation ---
@@ -374,108 +374,108 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
     name: 'DISCO',
     careerUrl: 'https://www.csdisco.com/careers',
     greenhouseId: 'disco',
-    type: 'company',
+    type: 'tech-legal',
   },
   {
     name: 'Everlaw',
     careerUrl: 'https://www.everlaw.com/careers/',
     greenhouseId: 'everlaw',
-    type: 'company',
+    type: 'tech-legal',
   },
   {
     name: 'Relativity',
     careerUrl: 'https://www.relativity.com/careers/',
     workday: { company: 'kcura', instance: 'wd1', site: 'External_Career_Site' },
-    type: 'company',
+    type: 'tech-legal',
   },
   {
     name: 'Nuix',
     careerUrl: 'https://www.nuix.com/company/careers',
-    type: 'company',
+    type: 'tech-legal',
   },
   {
     name: 'Exterro',
     careerUrl: 'https://www.exterro.com/careers',
-    type: 'company',
+    type: 'tech-legal',
   },
   {
     name: 'Logikcull',
     careerUrl: 'https://www.logikcull.com/careers',
-    type: 'company',
+    type: 'tech-legal',
   },
   {
     name: 'Reveal Data',
     careerUrl: 'https://www.revealdata.com/careers',
-    type: 'company',
+    type: 'tech-legal',
   },
   {
     name: 'Onna',
     careerUrl: 'https://onna.com/careers/',
-    type: 'company',
+    type: 'tech-legal',
   },
   {
     name: 'Hanzo',
     careerUrl: 'https://www.hanzo.co/careers',
-    type: 'company',
+    type: 'tech-legal',
   },
   {
     name: 'Epiq Global',
     careerUrl: 'https://www.epiqglobal.com/en-us/careers',
-    type: 'company',
+    type: 'tech-legal',
   },
   {
     name: 'LogicGate',
     careerUrl: 'https://www.logicgate.com/careers/',
     greenhouseId: 'logicgate',
-    type: 'company',
+    type: 'tech-legal',
   },
 
   // --- Legal Research & Data ---
   {
     name: 'vLex',
     careerUrl: 'https://vlex.com/careers',
-    type: 'company',
+    type: 'tech-legal',
   },
   {
     name: 'Fastcase',
     careerUrl: 'https://www.fastcase.com/careers/',
-    type: 'company',
+    type: 'tech-legal',
   },
   {
     name: 'Lex Machina',
     careerUrl: 'https://lexmachina.com/careers/',
     greenhouseId: 'lex',
-    type: 'company',
+    type: 'tech-legal',
   },
   {
     name: 'Docket Alarm',
     careerUrl: 'https://www.docketalarm.com/careers',
-    type: 'company',
+    type: 'tech-legal',
   },
 
   // --- AI & NLP for Legal (Contract Analysis) ---
   {
     name: 'Kira Systems',
     careerUrl: 'https://kirasystems.com/careers/',
-    type: 'company',
+    type: 'tech-legal',
   },
   {
     name: 'Eigen Technologies',
     careerUrl: 'https://eigentech.com/careers/',
-    type: 'company',
+    type: 'tech-legal',
   },
 
   // --- IP & Patent Tech ---
   {
     name: 'Anaqua',
     careerUrl: 'https://www.anaqua.com/company/careers/',
-    type: 'company',
+    type: 'tech-legal',
   },
   {
     name: 'PatSnap',
     careerUrl: 'https://www.patsnap.com/careers/',
     leverPostingsUrl: 'https://jobs.lever.co/patsnap',
-    type: 'company',
+    type: 'tech-legal',
   },
   {
     name: 'Clarivate (IP)',
@@ -486,12 +486,12 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   {
     name: 'CPA Global',
     careerUrl: 'https://www.cpaglobal.com/careers',
-    type: 'company',
+    type: 'tech-legal',
   },
   {
     name: 'Dennemeyer',
     careerUrl: 'https://www.dennemeyer.com/careers/',
-    type: 'company',
+    type: 'tech-legal',
   },
 
   // --- Enterprise Tech with Major Legal Products ---

@@ -341,7 +341,7 @@ export async function scrapeWorkday(
 
       for (const posting of postings) {
         const externalPath = posting.externalPath || '';
-        const applyUrl = externalPath ? `${baseUrl}${externalPath}` : '';
+        const applyUrl = externalPath ? `${baseUrl}/${config.site}${externalPath}` : '';
         const jobId = externalPath.split('/').pop() || `${offset}_${postings.indexOf(posting)}`;
         const locationText = posting.locationsText || (posting.bulletFields || []).find((f: string) => /,/.test(f)) || 'Not specified';
         const locationType = detectLocationType(locationText + ' ' + (posting.title || ''));
@@ -472,6 +472,33 @@ export async function scrapeGenericCareerPage(url: string, companyName: string, 
     console.error(`Generic scrape error for ${companyName}:`, error.message);
     return [];
   }
+}
+
+export function isValidJobUrl(url: string): boolean {
+  if (!url || url.trim().length === 0) return false;
+
+  const NON_JOB_PATTERNS = [
+    /\/news\//i,
+    /\/blog\//i,
+    /\/press-release/i,
+    /\/articles?\//i,
+    /\/insights?\//i,
+    /\/whitepaper/i,
+    /\/webinar/i,
+  ];
+
+  if (NON_JOB_PATTERNS.some(p => p.test(url))) return false;
+
+  const GENERIC_PORTAL_PATTERNS = [
+    /\/jobs\/intro\?/i,
+    /\/jobs\/?(\?(?!.*(?:gh_jid|id=|job)).*)?$/i,
+    /\/careers\/?$/i,
+    /\/openings\/?$/i,
+  ];
+
+  if (GENERIC_PORTAL_PATTERNS.some(p => p.test(url))) return false;
+
+  return true;
 }
 
 export function isLegalTechRole(title: string, companyType?: string): boolean {
@@ -792,7 +819,9 @@ export async function scrapeAllLawFirms(): Promise<{
         scrapedJobs = await scrapeGenericCareerPage(firm.careerUrl, firm.name, firm.selectors);
       }
       
-      const legalTechJobs = scrapedJobs.filter(job => isLegalTechRole(job.title, firm.type));
+      const legalTechJobs = scrapedJobs
+        .filter(job => isLegalTechRole(job.title, firm.type))
+        .filter(job => isValidJobUrl(job.applyUrl));
       
       totalScraped += scrapedJobs.length;
       totalFiltered += legalTechJobs.length;
@@ -855,7 +884,9 @@ export async function scrapeSingleCompany(companyName: string): Promise<InsertJo
     scrapedJobs = await scrapeGenericCareerPage(firm.careerUrl, firm.name, firm.selectors);
   }
   
-  const legalTechJobs = scrapedJobs.filter(job => isLegalTechRole(job.title, firm.type));
+  const legalTechJobs = scrapedJobs
+    .filter(job => isLegalTechRole(job.title, firm.type))
+    .filter(job => isValidJobUrl(job.applyUrl));
   return legalTechJobs.map(job => transformToJobSchema(job));
 }
 
@@ -892,7 +923,9 @@ export async function scrapeAllLawFirmsWithAI(
         scrapedJobs = await scrapeGenericCareerPage(firm.careerUrl, firm.name, firm.selectors);
       }
       
-      const legalTechJobs = scrapedJobs.filter(job => isLegalTechRole(job.title, firm.type));
+      const legalTechJobs = scrapedJobs
+        .filter(job => isLegalTechRole(job.title, firm.type))
+        .filter(job => isValidJobUrl(job.applyUrl));
       
       let categorizedCount = 0;
       for (const job of legalTechJobs) {
