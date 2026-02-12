@@ -588,29 +588,7 @@ export function isLegalTechRole(title: string, companyType?: string): boolean {
   const isLegalTechCompany = companyType === 'startup' || companyType === 'tech-legal';
 
   if (isLegalTechCompany) {
-    if (hasLegalSignal) return true;
-
-    const legalTechCompanyRoles = [
-      'customer success', 'customer enablement', 'customer onboarding',
-      'engagement manager', 'engagement associate',
-      'implementation', 'solutions consultant', 'solutions architect',
-      'product manager', 'product lead', 'product owner',
-      'product operations', 'program manager',
-      'enablement manager', 'enablement specialist', 'enablement director',
-      'account manager',
-      'content strategy', 'content lead',
-      'technical delivery', 'delivery manager',
-      'senior program manager',
-      'professional services', 'training manager', 'training specialist',
-      'onboarding', 'support manager',
-      'technical writer', 'documentation',
-      'data analyst', 'business analyst', 'analytics',
-      'partnerships', 'partner manager', 'alliances',
-      'pre-sales', 'presales', 'solution engineer',
-      'customer operations', 'client services', 'client success',
-      'editorial manager',
-    ];
-    if (legalTechCompanyRoles.some(k => t.includes(k))) return true;
+    return true;
   }
 
   return false;

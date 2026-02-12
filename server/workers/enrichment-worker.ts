@@ -326,20 +326,31 @@ function computeQualityScore(job: Job, enrichedData: Record<string, any>): numbe
   let score = 0;
 
   if (enrichedData.roleCategory) score += 20;
+
   if (enrichedData.structuredDescription) {
     const sd = enrichedData.structuredDescription as any;
-    if (sd.summary && sd.summary.length > 20) score += 10;
-    if (sd.aboutCompany && sd.aboutCompany.length > 20) score += 5;
-    if (sd.responsibilities?.length >= 3) score += 15;
-    else if (sd.responsibilities?.length > 0) score += 5;
-    if (sd.minimumQualifications?.length >= 2) score += 5;
-    if (sd.skillsRequired?.length >= 3) score += 5;
+    if (sd.summary && sd.summary.length > 20) score += 5;
+    if (sd.responsibilities?.length >= 3) score += 10;
+    else if (sd.responsibilities?.length > 0) score += 3;
+    if (sd.minimumQualifications?.length >= 2) score += 3;
+    if (sd.skillsRequired?.length >= 3) score += 2;
   }
-  if (enrichedData.experienceMin !== null && enrichedData.experienceMin !== undefined) score += 15;
+
+  if (enrichedData.experienceMin !== null && enrichedData.experienceMin !== undefined) score += 10;
+
   if (job.applyUrl && job.applyUrl.startsWith('http')) score += 10;
-  if (job.description && job.description.length > 200) score += 5;
+
+  const descLen = (job.description || '').length;
+  if (descLen > 1000) score += 15;
+  else if (descLen > 500) score += 10;
+  else if (descLen > 200) score += 5;
+
   if (enrichedData.seniorityLevel && enrichedData.seniorityLevel !== 'Not specified') score += 5;
-  if (enrichedData.legalRelevanceScore && enrichedData.legalRelevanceScore >= 5) score += 5;
+
+  const relevance = enrichedData.legalRelevanceScore || 0;
+  if (relevance >= 8) score += 15;
+  else if (relevance >= 6) score += 10;
+  else if (relevance >= 4) score += 5;
 
   return Math.min(100, score);
 }
@@ -553,8 +564,8 @@ async function enrichJob(job: Job): Promise<void> {
       enrichedData.pipelineStatus = 'rejected';
       enrichedData.isPublished = false;
       enrichedData.reviewReasonCode = 'LOW_RELEVANCE';
-    } else if (relevanceConfidence >= 60 && enrichedData.roleCategory && structuredComplete && relevanceScore >= 6 && qualityScore >= 80) {
-      const existingDuplicate = await storage.findLiveJobByTitleAndCompany(job.title, job.company, job.id);
+    } else if (relevanceConfidence >= 60 && enrichedData.roleCategory && relevanceScore >= 6 && qualityScore >= 70) {
+      const existingDuplicate = await storage.findLiveJobDuplicate(job.title, job.company, job.location, job.id);
       if (existingDuplicate) {
         enrichedData.pipelineStatus = 'rejected';
         enrichedData.isPublished = false;
@@ -562,16 +573,15 @@ async function enrichJob(job: Job): Promise<void> {
         console.log(`[Enrichment] Duplicate detected: "${job.title}" at ${job.company} (existing live job #${existingDuplicate.id})`);
       } else {
         enrichedData.pipelineStatus = 'ready';
+        enrichedData.isPublished = true;
       }
     } else {
       enrichedData.pipelineStatus = 'ready';
       if (!enrichedData.roleCategory) {
         enrichedData.reviewReasonCode = 'MISSING_CATEGORY';
-      } else if (!structuredComplete) {
-        enrichedData.reviewReasonCode = 'INCOMPLETE_DESCRIPTION';
       } else if (relevanceScore < 6) {
         enrichedData.reviewReasonCode = 'LOW_RELEVANCE_SCORE';
-      } else if (qualityScore < 80) {
+      } else if (qualityScore < 70) {
         enrichedData.reviewReasonCode = 'LOW_QUALITY_SCORE';
       } else {
         enrichedData.reviewReasonCode = 'MANUAL_REVIEW';

@@ -50,11 +50,11 @@ Legal Tech Careers is a freemium SaaS job search platform designed for legal pro
 - **Global Coverage**: 200+ companies across US, UK, Europe, Asia-Pacific, Canada, Middle East, Africa, and Latin America including legal AI startups, established legal tech companies, AmLaw 200 firms, Magic Circle firms, major international firms, and ALSPs
 - **ATS Coverage**: 20 Greenhouse, 8 Lever, 3 Ashby, 3 Workday CXS (Thomson Reuters, Wolters Kluwer, LexisNexis), rest use generic career page scraping
 - **Scheduled Scraper** (every 12 hours): Runs `scrapeAllLawFirms()` from `law-firm-scraper.ts` covering all 200+ companies. Includes scrape lock, job validation, 500-job cap, 30% company success threshold for stale detection. On startup, triggers initial scrape if fewer than 100 published jobs exist.
-- **Enrichment Worker** (every 2 min): Processes 25 raw jobs - cleans descriptions, extracts experience requirements, categorizes with AI, computes quality scores, auto-publishes jobs scoring 80+ with 45+ relevance confidence
+- **Enrichment Worker** (every 2 min): Processes 25 raw jobs - cleans descriptions, extracts experience requirements, categorizes with AI, computes quality scores, auto-publishes jobs scoring 70+ with relevanceConfidence ≥60% and legalRelevanceScore ≥6
 - **Reliability Worker** (every 6 hours): Validates apply links for published jobs, unpublishes broken links and stale jobs (45+ days unseen)
-- **Title Filter**: Company-type-aware — legal tech startups (`startup`/`tech-legal`) allow broader roles (Product Marketing, Sales, Analytics, Partnerships) while general companies keep strict legal-only filtering. Pure engineering/design/IT always blocked.
+- **Title Filter**: Company-type-aware — legal tech startups (`startup`/`tech-legal`) use blocklist-only approach (blocks pure engineering, HR, IT, finance) and lets AI enrichment evaluate everything else. General companies keep strict legal-only filtering.
 - **Trust Gate**: Public API only shows jobs with `pipelineStatus='ready'`, `isPublished=true`, `jobStatus='open'`, `isActive=true`
-- **Quality Score** (0-100): Based on category (20pts), structured description completeness (40pts), experience data (15pts), valid apply URL (10pts), description length (5pts), seniority (5pts), legal relevance (5pts)
+- **Quality Score** (0-100): Based on category (20pts), structured description completeness (20pts), experience data (10pts), valid apply URL (10pts), description length (5pts), seniority (5pts), legal relevance (5pts)
 - **Re-enrichment**: When a job's description changes on re-scrape, pipeline status resets to 'raw' for re-processing
 - **Deduplication**: `jobHash` field prevents duplicate ingestion based on company + title + location + applyUrl
 - **API**: Paginated `/api/jobs` endpoint with server-side filtering (category, seniority, location, search)
