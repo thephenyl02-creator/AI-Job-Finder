@@ -254,6 +254,7 @@ export function JobCard({ job, showMatchScore = false, hasResume = false, isSave
                 jobTitle={job.title}
                 company={job.company}
                 hasResume={hasResume}
+                isAuthenticated={isAuthenticated}
               />
               <Button asChild size="sm" className="gap-2" data-testid={`button-apply-${job.id}`}>
                 <a 

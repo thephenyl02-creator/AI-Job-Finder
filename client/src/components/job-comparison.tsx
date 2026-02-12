@@ -25,6 +25,7 @@ import {
   Lightbulb,
   FileText,
   Crown,
+  Upload,
 } from "lucide-react";
 import { useState } from "react";
 import { Link } from "wouter";
@@ -72,6 +73,7 @@ interface JobComparisonProps {
   jobTitle: string;
   company: string;
   hasResume: boolean;
+  isAuthenticated?: boolean;
 }
 
 function StatusIcon({ status }: { status: string }) {
@@ -132,7 +134,7 @@ function ScoreCircle({ score }: { score: number }) {
   );
 }
 
-export function JobComparison({ jobId, jobTitle, company, hasResume }: JobComparisonProps) {
+export function JobComparison({ jobId, jobTitle, company, hasResume, isAuthenticated }: JobComparisonProps) {
   const [open, setOpen] = useState(false);
   const [comparison, setComparison] = useState<ComparisonResult | null>(null);
 
@@ -153,8 +155,9 @@ export function JobComparison({ jobId, jobTitle, company, hasResume }: JobCompar
   };
 
   if (!hasResume) {
+    const linkTarget = isAuthenticated ? "/resumes" : "/pricing";
     return (
-      <Link href="/pricing">
+      <Link href={linkTarget}>
         <Button 
           variant="outline" 
           size="sm" 
@@ -162,8 +165,12 @@ export function JobComparison({ jobId, jobTitle, company, hasResume }: JobCompar
           data-testid="button-compare-teaser"
         >
           <Scale className="h-4 w-4" />
-          <span className="hidden sm:inline">See Match</span>
-          <Crown className="h-3 w-3 text-muted-foreground" />
+          <span className="hidden sm:inline">{isAuthenticated ? "Upload Resume" : "See Match"}</span>
+          {isAuthenticated ? (
+            <Upload className="h-3 w-3 text-muted-foreground" />
+          ) : (
+            <Crown className="h-3 w-3 text-muted-foreground" />
+          )}
         </Button>
       </Link>
     );
