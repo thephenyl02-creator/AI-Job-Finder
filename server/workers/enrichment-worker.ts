@@ -245,19 +245,25 @@ function isLikelyNonEnglish(text: string): boolean {
 
 function isArticleTitle(title: string): boolean {
   const words = title.trim().split(/\s+/);
-  if (words.length <= 10) return false;
 
-  const JOB_KEYWORDS = /\b(manager|engineer|analyst|counsel|director|specialist|coordinator|lead|associate|consultant|designer|architect|officer|paralegal|attorney|advisor)\b/i;
+  const JOB_KEYWORDS = /\b(manager|engineer|analyst|counsel|director|specialist|coordinator|lead|associate|consultant|designer|architect|officer|paralegal|attorney|advisor|developer|recruiter|intern|fellow)\b/i;
+
+  const ARTICLE_SIGNALS = /\b(mastering|navigating|understanding|exploring|unlocking|transforming|reimagining|rethinking|how to|why you|the future of|ease the way|successful implementation|fragmented|landscape|strategies for|insights into|guide to)\b/i;
+  if (ARTICLE_SIGNALS.test(title) && !JOB_KEYWORDS.test(title)) return true;
+
+  if (words.length <= 8) return false;
   if (JOB_KEYWORDS.test(title)) return false;
 
   const colonIndex = title.indexOf(':');
   if (colonIndex >= 0) {
     const afterColon = title.substring(colonIndex + 1).trim();
     const afterColonWords = afterColon.split(/\s+/);
-    if (afterColonWords.length >= 5) return true;
+    if (afterColonWords.length >= 4) return true;
   }
 
-  return true;
+  if (words.length > 10) return true;
+
+  return false;
 }
 
 function hasGarbageDescription(description: string | null): boolean {
