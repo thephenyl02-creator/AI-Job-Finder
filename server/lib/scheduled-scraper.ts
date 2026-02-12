@@ -361,10 +361,11 @@ export async function runScheduledScrape(triggeredBy: string = 'scheduler'): Pro
       logWarn('STALE', 'Skipping stale detection: job cap was hit, external ID set is incomplete');
     } else if (successfulSources.length > 0 && companiesSucceeded >= LAW_FIRMS_AND_COMPANIES.length * 0.3) {
       const scrapedExternalIds = new Set(validJobs.map(j => j.externalId).filter(Boolean) as string[]);
+      const scrapedCompanyNames = new Set(scrapeStats.map(s => s.company));
       if (scrapedExternalIds.size > 0) {
-        const staleDeactivated = await storage.deactivateStaleJobs(scrapedExternalIds, successfulSources);
+        const staleDeactivated = await storage.deactivateStaleJobs(scrapedExternalIds, successfulSources, scrapedCompanyNames);
         if (staleDeactivated > 0) {
-          logInfo('STALE', `Deactivated ${staleDeactivated} stale jobs from sources: ${successfulSources.join(', ')}`);
+          logInfo('STALE', `Deactivated ${staleDeactivated} stale jobs from ${scrapedCompanyNames.size} scraped companies`);
         }
       }
     } else {

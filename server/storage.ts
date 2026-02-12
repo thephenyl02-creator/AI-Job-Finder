@@ -17,7 +17,7 @@ export interface IStorage {
   upsertJobByExternalId(job: InsertJob): Promise<{ job: Job; isNew: boolean }>;
   getJobByExternalId(externalId: string): Promise<Job | undefined>;
   bulkUpsertJobs(jobsList: InsertJob[]): Promise<{ inserted: number; updated: number; newJobs: Job[] }>;
-  deactivateStaleJobs(scrapedExternalIds: Set<string>, sources: string[]): Promise<number>;
+  deactivateStaleJobs(scrapedExternalIds: Set<string>, sources: string[], scrapedCompanies?: Set<string>): Promise<number>;
   trackJobView(jobId: number): Promise<void>;
   trackApplyClick(jobId: number): Promise<void>;
   getPublishedJobs(): Promise<Job[]>;
@@ -537,13 +537,14 @@ class DatabaseStorage implements IStorage {
     return { inserted, updated, newJobs };
   }
 
-  async deactivateStaleJobs(scrapedExternalIds: Set<string>, sources: string[]): Promise<number> {
+  async deactivateStaleJobs(scrapedExternalIds: Set<string>, sources: string[], scrapedCompanies?: Set<string>): Promise<number> {
     if (scrapedExternalIds.size === 0 || sources.length === 0) return 0;
 
     const activeJobs = await db.select({
       id: jobs.id,
       externalId: jobs.externalId,
       source: jobs.source,
+      company: jobs.company,
       pipelineStatus: jobs.pipelineStatus,
       isPublished: jobs.isPublished,
       lastEnrichedAt: jobs.lastEnrichedAt,
@@ -552,6 +553,10 @@ class DatabaseStorage implements IStorage {
       .where(eq(jobs.isActive, true));
 
     const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const normalizeCompany = (name: string) => name.toLowerCase().trim();
+    const normalizedScrapedCompanies = scrapedCompanies 
+      ? new Set(Array.from(scrapedCompanies).map(normalizeCompany))
+      : null;
 
     let deactivated = 0;
     for (const job of activeJobs) {
@@ -559,6 +564,7 @@ class DatabaseStorage implements IStorage {
       if (!sources.includes(job.source)) continue;
       if (job.pipelineStatus === 'raw') continue;
       if (job.isPublished && job.lastEnrichedAt && job.lastEnrichedAt > twentyFourHoursAgo) continue;
+      if (normalizedScrapedCompanies && job.company && !normalizedScrapedCompanies.has(normalizeCompany(job.company))) continue;
       if (!scrapedExternalIds.has(job.externalId)) {
         await db.update(jobs)
           .set({ isActive: false })
