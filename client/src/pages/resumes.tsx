@@ -1101,7 +1101,14 @@ export default function Resumes() {
       setAtsReview(data);
     },
     onError: (err: Error) => {
-      toast({ title: "ATS review failed", description: err.message, variant: "destructive" });
+      let msg = err.message;
+      try {
+        const jsonPart = msg.substring(msg.indexOf("{"));
+        const parsed = JSON.parse(jsonPart);
+        if (parsed.error) msg = parsed.error;
+        if (parsed.message) msg = parsed.message;
+      } catch { /* use original message */ }
+      toast({ title: "ATS review failed", description: msg, variant: "destructive" });
     },
   });
 

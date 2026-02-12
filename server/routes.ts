@@ -1253,18 +1253,27 @@ ${JSON.stringify(jobSummaries, null, 2)}`
 
       const { resumeId } = req.body;
       if (resumeId) {
-        const userResumes = await storage.getUserResumes(userId);
-        const resume = userResumes.find((r: any) => r.id === resumeId);
+        const resume = await storage.getResumeWithText(resumeId, userId);
         if (!resume) return res.status(404).json({ error: "Resume not found" });
         resumeText = resume.resumeText ?? undefined;
         extractedData = resume.extractedData as ResumeExtractedData;
       } else {
-        const userData = await storage.getUserResumeWithText(userId);
-        if (!userData?.resumeText) {
-          return res.status(400).json({ error: "No resume uploaded. Please upload a resume first." });
+        const primaryResume = await storage.getPrimaryResume(userId);
+        if (primaryResume) {
+          const fullResume = await storage.getResumeWithText(primaryResume.id, userId);
+          if (fullResume?.resumeText) {
+            resumeText = fullResume.resumeText;
+            extractedData = fullResume.extractedData as ResumeExtractedData;
+          }
         }
-        resumeText = userData.resumeText;
-        extractedData = userData.extractedData as ResumeExtractedData;
+        if (!resumeText) {
+          const userData = await storage.getUserResumeWithText(userId);
+          if (!userData?.resumeText) {
+            return res.status(400).json({ error: "No resume uploaded. Please upload a resume first." });
+          }
+          resumeText = userData.resumeText;
+          extractedData = userData.extractedData as ResumeExtractedData;
+        }
       }
 
       if (!resumeText || resumeText.trim().length < 50) {
