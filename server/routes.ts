@@ -407,7 +407,7 @@ export async function registerRoutes(
       if (isNaN(id)) {
         return res.status(400).json({ error: "Invalid job ID" });
       }
-      const job = await storage.getJob(id);
+      const job = await storage.getPublicJob(id);
       if (!job) {
         return res.status(404).json({ error: "Job not found" });
       }
