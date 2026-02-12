@@ -54,7 +54,8 @@ Legal Tech Careers is a freemium SaaS job search platform designed for legal pro
 - **Reliability Worker** (every 6 hours): Validates apply links for published jobs, unpublishes broken links and stale jobs (45+ days unseen)
 - **Title Filter**: Company-type-aware — legal tech startups (`startup`/`tech-legal`) use blocklist-only approach (blocks pure engineering, HR, IT, finance) and lets AI enrichment evaluate everything else. General companies keep strict legal-only filtering.
 - **Trust Gate**: Public API only shows jobs with `pipelineStatus='ready'`, `isPublished=true`, `jobStatus='open'`, `isActive=true`
-- **Quality Score** (0-100): Based on category (20pts), structured description completeness (20pts), experience data (10pts), valid apply URL (10pts), description length (5pts), seniority (5pts), legal relevance (5pts)
+- **Quality Score** (0-100): Based on category (15pts), structured description completeness (38pts: responsibilities 10, skills 8, qualifications 8, transition notes 6, company desc 6), relevance (15pts), apply URL (10pts), raw description length (8pts), experience data (5pts), seniority (5pts), AI summary quality (3pts)
+- **Audit Worker** (every 4 hours): Checks published jobs against quality gates, skips jobs with pipelineStatus 'raw' or 'enriching' to avoid interfering with re-enrichment
 - **Re-enrichment**: When a job's description changes on re-scrape, pipeline status resets to 'raw' for re-processing
 - **Deduplication**: `jobHash` field prevents duplicate ingestion based on company + title + location + applyUrl
 - **API**: Paginated `/api/jobs` endpoint with server-side filtering (category, seniority, location, search)
