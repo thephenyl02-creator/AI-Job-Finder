@@ -14,6 +14,7 @@ export const jobs = pgTable("jobs", {
   location: varchar("location", { length: 255 }),
   isRemote: boolean("is_remote").default(false),
   locationType: varchar("location_type", { length: 20 }),
+  locationRegion: varchar("location_region", { length: 50 }),
   salaryMin: integer("salary_min"),
   salaryMax: integer("salary_max"),
   salaryCurrency: varchar("salary_currency", { length: 3 }),

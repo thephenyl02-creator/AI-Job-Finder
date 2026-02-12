@@ -2,7 +2,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { MapPin, DollarSign, Clock, ExternalLink, Sparkles, Building2, Briefcase, Brain, Scale, Zap, Bookmark, Wifi, Home, Laptop, GraduationCap } from "lucide-react";
+import { DollarSign, Clock, ExternalLink, Sparkles, Building2, Briefcase, Brain, Scale, Zap, Bookmark, GraduationCap } from "lucide-react";
+import { JobLocation } from "./job-location";
 import type { JobWithScore } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useMutation } from "@tanstack/react-query";
@@ -184,26 +185,12 @@ export function JobCard({ job, showMatchScore = false, hasResume = false, isSave
                 {job.seniorityLevel}
               </Badge>
             )}
-            {job.location && job.location !== 'Not specified' && (
-              <Badge variant="secondary" className="gap-1.5">
-                <MapPin className="h-3 w-3" />
-                {job.location}
-              </Badge>
-            )}
-            {job.locationType && (
-              <Badge variant="secondary" className={`gap-1 ${
-                job.locationType === 'remote'
-                  ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800'
-                  : job.locationType === 'hybrid'
-                  ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800'
-                  : 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 border-orange-200 dark:border-orange-800'
-              }`} data-testid={`badge-work-setting-${job.id}`}>
-                {job.locationType === 'remote' && <Wifi className="h-3 w-3" />}
-                {job.locationType === 'hybrid' && <Laptop className="h-3 w-3" />}
-                {job.locationType === 'onsite' && <Building2 className="h-3 w-3" />}
-                {job.locationType === 'hybrid' ? 'Hybrid' : job.locationType === 'onsite' ? 'On-site' : 'Remote'}
-              </Badge>
-            )}
+            <JobLocation
+              location={job.location}
+              locationType={job.locationType}
+              isRemote={job.isRemote}
+              testIdPrefix={`job-${job.id}`}
+            />
           </div>
 
           <p className="text-sm text-muted-foreground line-clamp-2" data-testid={`text-job-description-${job.id}`}>

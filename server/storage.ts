@@ -250,7 +250,7 @@ class DatabaseStorage implements IStorage {
   async getPublishedJobsPaginated(
     page: number = 1,
     limit: number = 20,
-    filters?: { category?: string; location?: string; locationType?: string; search?: string; seniority?: string; sort?: string }
+    filters?: { category?: string; location?: string; locationType?: string; search?: string; seniority?: string; sort?: string; region?: string }
   ): Promise<{ jobs: Job[]; total: number; page: number; totalPages: number }> {
     const conditions: any[] = [
       eq(jobs.isActive, true),
@@ -286,6 +286,9 @@ class DatabaseStorage implements IStorage {
       } else if (filters.locationType === 'onsite') {
         conditions.push(eq(jobs.locationType, 'onsite'));
       }
+    }
+    if (filters?.region) {
+      conditions.push(eq(jobs.locationRegion, filters.region));
     }
     if (filters?.location && filters.location !== 'remote' && filters.location !== 'hybrid' && filters.location !== 'onsite') {
       conditions.push(sql`lower(${jobs.location}) LIKE ${'%' + filters.location.toLowerCase() + '%'}`);

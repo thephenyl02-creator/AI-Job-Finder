@@ -10,6 +10,7 @@ import type { Job, JobWithScore } from "@shared/schema";
 import { JOB_TAXONOMY } from "@shared/schema";
 import { cleanStructuredText } from "@/lib/structured-description";
 import { formatSalary } from "@/lib/format-salary";
+import { JobLocation, JobLocationInline } from "@/components/job-location";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -131,6 +132,7 @@ export default function Jobs() {
   const [selectedCategory, setSelectedCategory] = useState<string>(categoryParam || "all");
   const [selectedLevel, setSelectedLevel] = useState<string>(levelParam && ["student", "entry", "mid", "senior"].includes(levelParam) ? levelParam : "all");
   const [selectedLocation, setSelectedLocation] = useState<string>("all");
+  const [selectedRegion, setSelectedRegion] = useState<string>("all");
   const [filterText, setFilterText] = useState("");
   const [debouncedFilterText, setDebouncedFilterText] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -311,7 +313,7 @@ export default function Jobs() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedCategory, selectedLevel, selectedLocation, debouncedFilterText]);
+  }, [selectedCategory, selectedLevel, selectedLocation, selectedRegion, debouncedFilterText]);
 
   useEffect(() => {
     const params = new URLSearchParams(searchString);
@@ -345,10 +347,11 @@ export default function Jobs() {
     } else if (selectedLocation !== "all") {
       params.set("location", selectedLocation);
     }
+    if (selectedRegion !== "all") params.set("region", selectedRegion);
     if (debouncedFilterText) params.set("search", debouncedFilterText);
     if (sortBy !== "newest") params.set("sort", sortBy);
     return params.toString();
-  }, [currentPage, selectedCategory, selectedLevel, selectedLocation, debouncedFilterText, sortBy]);
+  }, [currentPage, selectedCategory, selectedLevel, selectedLocation, selectedRegion, debouncedFilterText, sortBy]);
 
   const { data: jobsResponse, isLoading: jobsLoading } = useQuery<{ jobs: Job[]; total: number; page: number; totalPages: number }>({
     queryKey: ["/api/jobs", jobsQueryParams],
@@ -791,6 +794,23 @@ export default function Jobs() {
                 </SelectContent>
               </Select>
             </div>
+            <Select value={selectedRegion} onValueChange={(val) => { setSelectedRegion(val); setCurrentPage(1); track({ eventType: "filter_change", metadata: { filterType: "region", value: val } }); }}>
+              <SelectTrigger className="w-auto min-w-[100px] max-w-[170px]" data-testid="select-region">
+                <Globe className="h-3 w-3 mr-1 shrink-0" />
+                <SelectValue placeholder="Region" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all" data-testid="select-region-all">All Regions</SelectItem>
+                <SelectItem value="United States" data-testid="select-region-us">United States</SelectItem>
+                <SelectItem value="Europe" data-testid="select-region-europe">Europe</SelectItem>
+                <SelectItem value="Asia-Pacific" data-testid="select-region-apac">Asia-Pacific</SelectItem>
+                <SelectItem value="Canada" data-testid="select-region-canada">Canada</SelectItem>
+                <SelectItem value="Latin America" data-testid="select-region-latam">Latin America</SelectItem>
+                <SelectItem value="Middle East" data-testid="select-region-me">Middle East</SelectItem>
+                <SelectItem value="Africa" data-testid="select-region-africa">Africa</SelectItem>
+                <SelectItem value="Global" data-testid="select-region-global">Global</SelectItem>
+              </SelectContent>
+            </Select>
             <Select value={sortBy} onValueChange={(val) => { setSortBy(val); setCurrentPage(1); }}>
               <SelectTrigger className="w-auto min-w-[110px] max-w-[150px]" data-testid="select-sort">
                 <ArrowUpDown className="h-3 w-3 mr-1 shrink-0" />
@@ -802,11 +822,11 @@ export default function Jobs() {
                 <SelectItem value="company" data-testid="select-sort-company">Company A-Z</SelectItem>
               </SelectContent>
             </Select>
-            {(selectedCategory !== "all" || selectedLevel !== "all" || selectedLocation !== "all" || filterText) && (
+            {(selectedCategory !== "all" || selectedLevel !== "all" || selectedLocation !== "all" || selectedRegion !== "all" || filterText) && (
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => { setSelectedCategory("all"); setSelectedLevel("all"); setSelectedLocation("all"); setFilterText(""); }}
+                onClick={() => { setSelectedCategory("all"); setSelectedLevel("all"); setSelectedLocation("all"); setSelectedRegion("all"); setFilterText(""); }}
                 className="text-xs text-muted-foreground gap-1"
                 data-testid="button-clear-all-filters"
               >
@@ -857,11 +877,11 @@ export default function Jobs() {
                     : "Try adjusting your filters or search for something specific."}
                 </p>
                 <div className="flex flex-wrap gap-2 justify-center mb-4">
-                  {(filterText || selectedCategory !== "all" || selectedLevel !== "all" || selectedLocation !== "all") && (
+                  {(filterText || selectedCategory !== "all" || selectedLevel !== "all" || selectedLocation !== "all" || selectedRegion !== "all") && (
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => { setFilterText(""); setSelectedCategory("all"); setSelectedLevel("all"); setSelectedLocation("all"); }}
+                      onClick={() => { setFilterText(""); setSelectedCategory("all"); setSelectedLevel("all"); setSelectedLocation("all"); setSelectedRegion("all"); }}
                       className="gap-1 min-h-[44px]"
                       data-testid="button-clear-all-filters"
                     >
@@ -908,7 +928,6 @@ export default function Jobs() {
           <div className="grid gap-3">
             {filteredJobs.map((job) => {
               const salaryDisplay = formatSalary(job.salaryMin, job.salaryMax, (job as any).salaryCurrency);
-              const locType = job.locationType || (job.isRemote ? "remote" : null);
               const postedAgo = job.postedDate ? (() => {
                 const days = Math.floor((Date.now() - new Date(job.postedDate).getTime()) / 86400000);
                 if (days === 0) return "Today";
@@ -967,17 +986,12 @@ export default function Jobs() {
                           <Building2 className="h-3 w-3 shrink-0" />
                           <span data-testid={`text-job-company-${job.id}`}>{cleanStructuredText(job.company)}</span>
                         </span>
-                        {job.location && job.location !== 'Not specified' && (
-                          <span className="flex items-center gap-1">
-                            <MapPin className="h-3 w-3 shrink-0" />
-                            <span data-testid={`text-job-location-${job.id}`}>{cleanStructuredText(job.location)}</span>
-                          </span>
-                        )}
-                        {locType && (
-                          <Badge variant="outline" className="text-xs" data-testid={`badge-loc-type-${job.id}`}>
-                            {locType === "remote" ? "Remote" : locType === "hybrid" ? "Hybrid" : "On-site"}
-                          </Badge>
-                        )}
+                        <JobLocation
+                          location={job.location}
+                          locationType={job.locationType}
+                          isRemote={job.isRemote}
+                          testIdPrefix={`browse-job-${job.id}`}
+                        />
                         {salaryDisplay ? (
                           <span className="flex items-center gap-1 text-green-600 dark:text-green-400">
                             <DollarSign className="h-3 w-3 shrink-0" />
@@ -1351,18 +1365,7 @@ function BrowseCompareView({ jobs, onClose, onClear }: { jobs: Job[]; onClose: (
       label: "Location",
       render: (job) => (
         <div className="space-y-1">
-          <span className="text-sm text-foreground/80">{job.location && job.location !== 'Not specified' ? job.location : "—"}</span>
-          {getLocationLabel(job) && (
-            <Badge variant="secondary" className={`text-[10px] block w-fit ${
-              getLocationLabel(job) === 'Remote'
-                ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
-                : getLocationLabel(job) === 'Hybrid'
-                ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
-                : 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400'
-            }`}>
-              {getLocationLabel(job)}
-            </Badge>
-          )}
+          <JobLocationInline location={job.location} locationType={job.locationType} isRemote={job.isRemote} className="text-sm text-foreground/80" />
         </div>
       ),
     },

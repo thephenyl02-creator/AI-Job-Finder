@@ -22,12 +22,12 @@ import {
   DollarSign,
   ExternalLink,
   Loader2,
-  MapPin,
   AlertTriangle,
   Scale,
   X,
   ArrowLeftRight,
 } from "lucide-react";
+import { JobLocation, JobLocationInline } from "@/components/job-location";
 import { Link } from "wouter";
 import { Footer } from "@/components/footer";
 
@@ -55,12 +55,6 @@ function getUrgencyLevel(postedDate: Date | string | null | undefined): "urgent"
 }
 
 
-function getLocationLabel(job: Job): string {
-  if (job.locationType === 'remote' || (!job.locationType && job.isRemote)) return 'Remote';
-  if (job.locationType === 'hybrid') return 'Hybrid';
-  if (job.locationType === 'onsite') return 'On-site';
-  return '';
-}
 
 function getLegalFitLabel(score: number | null | undefined): string | null {
   if (!score || score < 8) return null;
@@ -91,18 +85,7 @@ function CompareView({ jobs, onClose }: { jobs: Job[]; onClose: () => void }) {
       label: "Location",
       render: (job) => (
         <div className="space-y-1">
-          <span className="text-sm text-foreground/80">{job.location && job.location !== 'Not specified' ? job.location : "—"}</span>
-          {getLocationLabel(job) && (
-            <Badge variant="secondary" className={`text-[10px] block w-fit ${
-              getLocationLabel(job) === 'Remote'
-                ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
-                : getLocationLabel(job) === 'Hybrid'
-                ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
-                : 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400'
-            }`}>
-              {getLocationLabel(job)}
-            </Badge>
-          )}
+          <JobLocationInline location={job.location} locationType={job.locationType} isRemote={job.isRemote} className="text-sm text-foreground/80" />
         </div>
       ),
     },
@@ -472,23 +455,7 @@ export default function SavedJobs() {
                         </div>
 
                         <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 mt-2 text-xs text-muted-foreground">
-                          {sj.job.location && sj.job.location !== 'Not specified' && (
-                            <span className="flex items-center gap-1 min-w-0 max-w-[200px] sm:max-w-none">
-                              <MapPin className="h-3 w-3 shrink-0" />
-                              <span className="truncate">{sj.job.location}</span>
-                            </span>
-                          )}
-                          {(sj.job.locationType || sj.job.isRemote) && (
-                            <Badge variant="secondary" className={`text-[10px] ${
-                              (sj.job.locationType === 'remote' || (!sj.job.locationType && sj.job.isRemote))
-                                ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
-                                : sj.job.locationType === 'hybrid'
-                                ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
-                                : 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400'
-                            }`}>
-                              {sj.job.locationType === 'hybrid' ? 'Hybrid' : sj.job.locationType === 'onsite' ? 'On-site' : 'Remote'}
-                            </Badge>
-                          )}
+                          <JobLocation location={sj.job.location} locationType={sj.job.locationType} isRemote={sj.job.isRemote} />
                           {salary && (
                             <span className="flex items-center gap-1">
                               <DollarSign className="h-3 w-3" />

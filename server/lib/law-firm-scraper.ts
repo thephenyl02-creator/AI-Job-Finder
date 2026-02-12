@@ -3,6 +3,7 @@ import * as cheerio from 'cheerio';
 import { LAW_FIRMS_AND_COMPANIES, type LawFirmConfig } from './law-firms-list';
 import type { InsertJob } from '@shared/schema';
 import { categorizeJob, parseSalaryFromText, type JobCategorizationResult } from './job-categorizer';
+import { normalizeLocation } from './location-normalizer';
 
 interface ScrapedJob {
   title: string;
@@ -204,7 +205,7 @@ export async function scrapeGreenhouse(companyId: string, companyName: string): 
       return {
         title: job.title,
         company: companyName,
-        location: job.location?.name || 'Not specified',
+        location: job.location?.name || '',
         description: job.content || '',
         applyUrl: job.absolute_url,
         postedDate: job.updated_at || new Date().toISOString(),
@@ -242,7 +243,7 @@ export async function scrapeLever(leverUrl: string, companyName: string): Promis
       return {
         title: job.text,
         company: companyName,
-        location: job.categories?.location || 'Not specified',
+        location: job.categories?.location || '',
         description: job.description || '',
         applyUrl: job.hostedUrl,
         postedDate: new Date(job.createdAt).toISOString(),
@@ -276,7 +277,7 @@ export async function scrapeAshby(ashbyUrl: string, companyName: string): Promis
     });
     
     const jobs: ScrapedJob[] = (response.data.jobs || []).map((job: any) => {
-      const locationName = job.location?.name || job.locationName || 'Not specified';
+      const locationName = job.location?.name || job.locationName || '';
       const locationType = detectLocationType(locationName + ' ' + (job.descriptionPlain || ''));
       const descText = job.descriptionPlain || job.descriptionHtml || '';
       const salary = parseSalaryFromText(descText);
@@ -343,7 +344,7 @@ export async function scrapeWorkday(
         const externalPath = posting.externalPath || '';
         const applyUrl = externalPath ? `${baseUrl}/${config.site}${externalPath}` : '';
         const jobId = externalPath.split('/').pop() || `${offset}_${postings.indexOf(posting)}`;
-        const locationText = posting.locationsText || (posting.bulletFields || []).find((f: string) => /,/.test(f)) || 'Not specified';
+        const locationText = posting.locationsText || (posting.bulletFields || []).find((f: string) => /,/.test(f)) || '';
         const locationType = detectLocationType(locationText + ' ' + (posting.title || ''));
 
         let description = posting.title || '';
@@ -689,9 +690,9 @@ function cleanCompanyName(name: string): string {
     .trim();
 }
 
-function sanitizeLocation(location: string, company: string): string {
+function sanitizeLocation(location: string, company: string): string | null {
   const loc = location?.trim();
-  if (!loc || loc === 'Not specified') return loc || 'Not specified';
+  if (!loc || loc === 'Not specified') return null;
 
   const locLower = loc.toLowerCase();
   const companyLower = company.toLowerCase();
@@ -719,7 +720,7 @@ function sanitizeLocation(location: string, company: string): string {
     for (const [borough, fullLoc] of Object.entries(boroughMap)) {
       if (locLower.includes(borough)) return fullLoc;
     }
-    return 'Not specified';
+    return null;
   }
 
   return loc;
@@ -731,18 +732,19 @@ export function transformToJobSchema(job: ScrapedJob, categorization?: JobCatego
   
   const cleanDescription = cleanDescriptionText(job.description || '') || `${job.title} position at ${companyClean}`;
   
-  const locationText = sanitizeLocation(job.location || '', companyClean);
-  const fullText = `${job.title} ${cleanDescription} ${locationText}`.toLowerCase();
+  const normalized = normalizeLocation(job.location, companyClean);
+  const locationText = normalized.display || null;
+  const fullText = `${job.title} ${cleanDescription} ${locationText || ''}`.toLowerCase();
   const negativeRemote = /\bnot remote\b|\bon[- ]?site only\b|\bin[- ]?office only\b|\bno remote\b/.test(fullText);
   const hasRemoteSignal = /\bremote\b/.test(fullText) || /\bwork from home\b/.test(fullText) || /\bhybrid\b/.test(fullText) || /\bwfh\b/.test(fullText);
 
-  const locationType = job.locationType || detectLocationType(fullText) || null;
+  const locationType = job.locationType || normalized.locationType || detectLocationType(fullText) || null;
 
   let isRemoteDetected: boolean;
   if (locationType) {
     isRemoteDetected = locationType === 'remote' || locationType === 'hybrid';
   } else {
-    isRemoteDetected = !negativeRemote && (hasRemoteSignal || categorization?.isRemote === true);
+    isRemoteDetected = normalized.isRemote || (!negativeRemote && (hasRemoteSignal || categorization?.isRemote === true));
   }
 
   let salaryMin: number | null = job.salaryMin || null;
@@ -755,7 +757,7 @@ export function transformToJobSchema(job: ScrapedJob, categorization?: JobCatego
   let salaryCurrency: string | null = job.salaryCurrency || null;
   if (salaryMin || salaryMax) {
     if (!salaryCurrency) {
-      salaryCurrency = inferCurrencyFromLocation(locationText);
+      salaryCurrency = inferCurrencyFromLocation(locationText || '');
     }
   }
 
@@ -766,6 +768,7 @@ export function transformToJobSchema(job: ScrapedJob, categorization?: JobCatego
     location: locationText,
     isRemote: isRemoteDetected,
     locationType,
+    locationRegion: normalized.region,
     salaryMin,
     salaryMax,
     salaryCurrency,

@@ -16,6 +16,7 @@ import type { Job, Resume, StructuredDescription } from "@shared/schema";
 import type { ResumeExtractedData } from "@shared/models/auth";
 import { decodeHtmlEntities, fixMissingSentenceSpaces, cleanStructuredText, parseStructuredDescription } from "@/lib/structured-description";
 import { formatSalary } from "@/lib/format-salary";
+import { JobLocation } from "@/components/job-location";
 import { StructuredDescriptionView } from "@/components/structured-description-view";
 import { ResumeRewriteDialog } from "@/components/resume-rewrite-dialog";
 import { ResumeStrategyDialog } from "@/components/resume-strategy-dialog";
@@ -746,18 +747,13 @@ export default function JobDetail() {
               <Building2 className="h-3.5 w-3.5 shrink-0" />
               <span className="font-medium text-foreground/80" data-testid="text-job-detail-company">{cleanStructuredText(job.company)}</span>
             </span>
-            {job.location && job.location !== 'Not specified' && (
-              <span className="flex items-center gap-1.5">
-                <MapPin className="h-3.5 w-3.5 shrink-0" />
-                <span data-testid="text-job-detail-location">{cleanStructuredText(job.location)}</span>
-              </span>
-            )}
-            {locationTypeLabel && (
-              <span className="flex items-center gap-1.5">
-                <Globe className="h-3.5 w-3.5 shrink-0" />
-                <span data-testid="text-job-detail-location-type">{locationTypeLabel}</span>
-              </span>
-            )}
+            <JobLocation
+              location={job.location}
+              locationType={job.locationType}
+              isRemote={job.isRemote}
+              size="md"
+              testIdPrefix="job-detail"
+            />
             {salary && (
               <span className="flex items-center gap-1.5 text-green-600 dark:text-green-400">
                 <DollarSign className="h-3.5 w-3.5 shrink-0" />
@@ -1147,12 +1143,12 @@ export default function JobDetail() {
                             <Building2 className="h-3 w-3" />
                             {cleanStructuredText(sj.company)}
                           </span>
-                          {sj.location && sj.location !== 'Not specified' && (
-                            <span className="flex items-center gap-1">
-                              <MapPin className="h-3 w-3" />
-                              {cleanStructuredText(sj.location)}
-                            </span>
-                          )}
+                          <JobLocation
+                            location={sj.location}
+                            locationType={sj.locationType}
+                            isRemote={sj.isRemote}
+                            showIcon={true}
+                          />
                           {sjSalary && (
                             <span className="flex items-center gap-1 text-green-600 dark:text-green-400">
                               <DollarSign className="h-3 w-3" />

@@ -456,7 +456,7 @@ function MatchCard({
                 {(match.isRemote || (match.location && match.location !== 'Not specified')) && (
                   <span className="flex items-center gap-1">
                     <MapPin className="h-3.5 w-3.5" />
-                    {match.isRemote
+                    {match.isRemote && (!match.location || match.location === 'Not specified')
                       ? "Remote"
                       : match.location}
                   </span>

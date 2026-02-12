@@ -12,10 +12,10 @@ import {
   ArrowRight,
   FileText,
   Compass,
-  MapPin,
   Building2,
   CheckCircle2,
 } from "lucide-react";
+import { JobLocation } from "@/components/job-location";
 import {
   ScrollReveal,
   StaggerContainer,
@@ -43,26 +43,6 @@ interface FeaturedJob {
   seniorityLevel: string | null;
 }
 
-function shortenLocation(location: string): string {
-  if (location.includes(";")) {
-    const parts = location.split(";").map(s => s.trim());
-    const first = shortenLocation(parts[0]);
-    return parts.length > 1 ? `${first} +${parts.length - 1}` : first;
-  }
-  if (location.includes("·")) {
-    const parts = location.split("·").map(s => s.trim());
-    const first = shortenLocation(parts[0]);
-    return parts.length > 1 ? `${first} +${parts.length - 1}` : first;
-  }
-  const commas = location.split(",").map(s => s.trim());
-  if (commas.length >= 3) {
-    return `${commas[0]}, ${commas[1]}`;
-  }
-  if (commas.length === 2) {
-    return location;
-  }
-  return location;
-}
 
 const careerPaths: { label: string; category: string }[] = [
   { label: "Legal Operations", category: "Legal Operations" },
@@ -202,12 +182,7 @@ export default function Landing() {
                                       <Building2 className="h-3 w-3 shrink-0" />
                                       <span className="truncate">{cleanStructuredText(job.company)}</span>
                                     </span>
-                                    {job.location && job.location !== 'Not specified' && (
-                                      <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                                        <MapPin className="h-3 w-3 shrink-0" />
-                                        <span className="truncate">{(job.locationType === 'remote' || (!job.locationType && job.isRemote)) ? "Remote" : job.locationType === 'hybrid' ? "Hybrid" : shortenLocation(job.location)}</span>
-                                      </span>
-                                    )}
+                                    <JobLocation location={job.location} locationType={job.locationType} isRemote={job.isRemote} showTypeBadge={false} size="sm" />
                                   </div>
                                 </div>
                                 {job.roleCategory && (
@@ -261,12 +236,7 @@ export default function Landing() {
                                 {cleanStructuredText(job.company)}
                               </span>
                             </div>
-                            {job.location && job.location !== 'Not specified' && (
-                              <span className="flex items-center gap-1 text-xs text-muted-foreground mt-1 truncate">
-                                <MapPin className="h-3 w-3 shrink-0" />
-                                {(job.locationType === 'remote' || (!job.locationType && job.isRemote)) ? "Remote" : job.locationType === 'hybrid' ? "Hybrid" : shortenLocation(job.location)}
-                              </span>
-                            )}
+                            <JobLocation location={job.location} locationType={job.locationType} isRemote={job.isRemote} showTypeBadge={false} size="sm" className="mt-1 text-xs text-muted-foreground" />
                           </CardContent>
                         </Card>
                       </motion.div>
