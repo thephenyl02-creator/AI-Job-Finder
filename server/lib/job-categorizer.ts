@@ -477,19 +477,28 @@ export async function generateJobSummary(
   company: string
 ): Promise<string> {
   try {
-    const prompt = `Summarize this job posting in exactly 3 concise sentences.
-Focus on: (1) What you'll do, (2) What they're looking for, (3) What makes it interesting.
+    const prompt = `You are writing a job summary for a premium legal technology careers platform. Write a detailed, specific summary of this job posting in 4-5 sentences.
+
+STRICT RULES:
+- Extract CONCRETE details from the actual job description — specific tools, technologies, practice areas, team structures, products, or workflows mentioned.
+- NEVER use generic filler like "leverage your legal expertise", "cutting-edge technology", "innovative solutions", or "dynamic environment". These phrases are banned.
+- First sentence: What the role does day-to-day in specific terms.
+- Second sentence: The team, product, or business area this role supports.
+- Third sentence: Key qualifications or experience the employer values most.
+- Fourth/fifth sentences: What makes this particular opportunity distinctive — growth path, impact scope, unique aspects of the company or product.
+- Write in third person ("This role..." or "The position..."), not second person ("You will...").
+- Be factual and informative, not promotional.
 
 Job: ${title} at ${company}
-Description: ${description.substring(0, 1500)}
+Description: ${description.substring(0, 3000)}
 
-Return ONLY the 3-sentence summary, no extra text.`;
+Return ONLY the summary paragraph, no labels or extra text.`;
 
     const completion = await getOpenAIClient().chat.completions.create({
       model: "gpt-4o-mini",
       messages: [{ role: "user", content: prompt }],
-      temperature: 0.5,
-      max_tokens: 200,
+      temperature: 0.3,
+      max_tokens: 400,
     });
 
     return completion.choices[0].message.content?.trim() || `${title} position at ${company}.`;

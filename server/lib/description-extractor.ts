@@ -13,33 +13,48 @@ export async function extractStructuredDescription(
     messages: [
       {
         role: "system",
-        content: `You are an expert job description analyzer for a legal technology careers platform. Your task is to extract and structure job descriptions into a uniform JSON format.
+        content: `You are an expert job description analyst for a premium legal technology careers platform. Your task is to produce thorough, uniform structured descriptions that give candidates a complete picture of each role.
 
-IMPORTANT RULES:
-1. Extract ONLY factual information from the original description. Do not invent or add information that isn't present.
-2. If a section's information is not explicitly stated, infer it from context clues in the description.
-3. Keep each bullet point concise and clear - one requirement or responsibility per bullet.
-4. Remove company benefits, perks, salary details, EEO statements, and application instructions.
-5. The "aboutCompany" section should be 2-4 sentences maximum.
-6. "skillsRequired" should be specific, named skills (tools, technologies, domains, certifications) - not generic traits like "good communicator". Use short keywords.
-7. If minimum vs preferred qualifications are hard to distinguish, put firm requirements (with "must", "required", years of experience, bar/licensure, certifications) in minimum, and everything else ("preferred", "bonus", "plus", "nice to have") in preferred.
-8. "responsibilities" items must start with action verbs.
-9. "summary" should be a single sentence (max 350 chars) describing the role in plain language.
-10. "lawyerTransitionNotes" should be 2-4 bullets in plain language explaining how a lawyer could transition into this role, or why it would be challenging.
+QUALITY STANDARDS — every section must be substantive:
+
+1. "summary" — A detailed 2-3 sentence summary (max 500 chars) that describes what this role does concretely. Mention the specific product, team, or practice area. NEVER use vague phrases like "leverage expertise" or "innovative solutions". Be specific and factual.
+
+2. "aboutCompany" — 3-4 informative sentences about the company. Include: what the company does (specific products/services), who their customers are, company size or stage if mentioned, and what differentiates them. If the posting doesn't say much about the company, use what's available but keep it factual.
+
+3. "responsibilities" — Extract 6-10 specific responsibilities. Each MUST start with an action verb. Be detailed enough that a candidate understands the day-to-day work. Avoid generic bullets like "work with cross-functional teams" unless the description specifies which teams and why. If the posting lists fewer responsibilities, infer reasonable ones from context but mark nothing as invented.
+
+4. "minimumQualifications" — Extract 4-8 firm requirements. Include years of experience, degrees, bar admission, certifications, and required technical skills with "must have" or "required" language. Each bullet should be a clear, testable requirement.
+
+5. "preferredQualifications" — Extract 3-6 nice-to-have qualifications. Include "preferred", "bonus", "plus" items. If none are explicitly stated, separate softer requirements from minimumQualifications.
+
+6. "skillsRequired" — List 6-12 specific, named skills as short keywords. Include tools (e.g., "Relativity", "iManage"), technologies (e.g., "Python", "SQL"), domains (e.g., "eDiscovery", "contract lifecycle management"), and certifications (e.g., "CIPP", "PMP"). NO generic traits.
+
+7. "lawyerTransitionNotes" — 3-5 detailed bullets aimed at lawyers considering this role. Address: (a) which legal skills transfer directly, (b) what new skills they'd need to develop, (c) realistic assessment of the transition difficulty, (d) how JD/bar admission helps or doesn't. Be honest and specific, not promotional.
+
+8. "seniority" — One of: Entry-Level | Mid-Level | Senior | Lead | Director | VP | C-Suite
+9. "legalTechCategory" — Primary legal tech category (Contract Management, eDiscovery, Legal AI, Compliance Tech, Legal Analytics, Practice Management, IP Tech, RegTech, Access to Justice Tech, Legal Marketplace, Court Tech, General Legal Tech)
+10. "aiRelevanceScore" — Low | Medium | High
+11. "lawyerTransitionFriendly" — true or false
+
+QUALITY RULES:
+- Extract ONLY factual information. Do not invent details not present in the description.
+- Remove benefits, perks, salary details, EEO statements, and application instructions.
+- Every section should feel thorough and informative — shallow output is unacceptable.
+- The goal is that a candidate reading this structured description gets a COMPLETE understanding of the role without needing to read the raw posting.
 
 Return ONLY valid JSON with this exact structure:
 {
-  "summary": "One-sentence plain-language summary of the role (max 350 chars)",
-  "aboutCompany": "Brief 2-4 sentence company description",
-  "responsibilities": ["Start with action verb 1", "Start with action verb 2", ...],
-  "minimumQualifications": ["qualification 1", "qualification 2", ...],
-  "preferredQualifications": ["qualification 1", "qualification 2", ...],
-  "skillsRequired": ["short skill keyword 1", "short skill keyword 2", ...],
-  "seniority": "Entry-Level | Mid-Level | Senior | Lead | Director | VP | C-Suite",
-  "legalTechCategory": "Primary legal tech category (e.g., Contract Management, eDiscovery, Legal AI, Compliance Tech, Legal Analytics, Practice Management, IP Tech, RegTech, Access to Justice Tech, Legal Marketplace, Court Tech, General Legal Tech)",
+  "summary": "Detailed 2-3 sentence summary (max 500 chars)",
+  "aboutCompany": "3-4 informative sentences about the company",
+  "responsibilities": ["Action verb responsibility 1", ...],
+  "minimumQualifications": ["Firm requirement 1", ...],
+  "preferredQualifications": ["Nice-to-have 1", ...],
+  "skillsRequired": ["Specific skill keyword 1", ...],
+  "seniority": "Level",
+  "legalTechCategory": "Category",
   "aiRelevanceScore": "Low | Medium | High",
-  "lawyerTransitionFriendly": true or false,
-  "lawyerTransitionNotes": ["Note about transition feasibility 1", "Note 2", ...]
+  "lawyerTransitionFriendly": true/false,
+  "lawyerTransitionNotes": ["Detailed transition note 1", ...]
 }`
       },
       {
@@ -50,12 +65,12 @@ Company: ${company}
 Title: ${title}
 
 Raw Description:
-${rawDescription.substring(0, 12000)}`
+${rawDescription.substring(0, 14000)}`
       }
     ],
     response_format: { type: "json_object" },
-    max_tokens: 2500,
-    temperature: 0.1,
+    max_tokens: 3500,
+    temperature: 0.15,
   });
 
   const content = response.choices[0]?.message?.content;
@@ -66,7 +81,7 @@ ${rawDescription.substring(0, 12000)}`
   try {
     const parsed = JSON.parse(content);
     return {
-      summary: typeof parsed.summary === "string" ? parsed.summary.substring(0, 350) : `${title} at ${company}`,
+      summary: typeof parsed.summary === "string" ? parsed.summary.substring(0, 500) : `${title} at ${company}`,
       aboutCompany: parsed.aboutCompany || `${company} is a company in the legal technology space.`,
       responsibilities: ensureArray(parsed.responsibilities),
       minimumQualifications: ensureArray(parsed.minimumQualifications),
@@ -86,7 +101,7 @@ ${rawDescription.substring(0, 12000)}`
 export function validateStructuredDescription(sd: StructuredDescription): { valid: boolean; issues: string[] } {
   const issues: string[] = [];
   if (!sd.summary || sd.summary.trim().length === 0) issues.push("Missing summary");
-  if (sd.summary && sd.summary.length > 350) issues.push("Summary exceeds 350 characters");
+  if (sd.summary && sd.summary.length > 500) issues.push("Summary exceeds 500 characters");
   if (!sd.aboutCompany || sd.aboutCompany.trim().length === 0) issues.push("Missing about company");
   if (!sd.minimumQualifications || sd.minimumQualifications.length < 3) issues.push("Minimum qualifications needs at least 3 bullets");
   if (!sd.responsibilities || sd.responsibilities.length < 4) issues.push("Responsibilities needs at least 4 bullets");

@@ -331,25 +331,32 @@ interface EnrichmentResult {
 function computeQualityScore(job: Job, enrichedData: Record<string, any>): number {
   let score = 0;
 
-  if (enrichedData.roleCategory) score += 20;
+  if (enrichedData.roleCategory) score += 15;
 
   if (enrichedData.structuredDescription) {
     const sd = enrichedData.structuredDescription as any;
-    if (sd.summary && sd.summary.length > 20) score += 5;
-    if (sd.responsibilities?.length >= 3) score += 10;
-    else if (sd.responsibilities?.length > 0) score += 3;
-    if (sd.minimumQualifications?.length >= 2) score += 3;
-    if (sd.skillsRequired?.length >= 3) score += 2;
+    if (sd.summary && sd.summary.length > 50) score += 5;
+    else if (sd.summary && sd.summary.length > 20) score += 3;
+    if (sd.aboutCompany && sd.aboutCompany.length > 50) score += 5;
+    if (sd.responsibilities?.length >= 6) score += 12;
+    else if (sd.responsibilities?.length >= 4) score += 8;
+    else if (sd.responsibilities?.length >= 2) score += 4;
+    if (sd.minimumQualifications?.length >= 4) score += 5;
+    else if (sd.minimumQualifications?.length >= 2) score += 3;
+    if (sd.preferredQualifications?.length >= 2) score += 3;
+    if (sd.skillsRequired?.length >= 6) score += 5;
+    else if (sd.skillsRequired?.length >= 3) score += 3;
+    if (sd.lawyerTransitionNotes?.length >= 2) score += 3;
   }
 
-  if (enrichedData.experienceMin !== null && enrichedData.experienceMin !== undefined) score += 10;
+  if (enrichedData.experienceMin !== null && enrichedData.experienceMin !== undefined) score += 5;
 
   if (job.applyUrl && job.applyUrl.startsWith('http')) score += 10;
 
   const descLen = (job.description || '').length;
-  if (descLen > 1000) score += 15;
-  else if (descLen > 500) score += 10;
-  else if (descLen > 200) score += 5;
+  if (descLen > 1000) score += 8;
+  else if (descLen > 500) score += 5;
+  else if (descLen > 200) score += 3;
 
   if (enrichedData.seniorityLevel && enrichedData.seniorityLevel !== 'Not specified') score += 5;
 
@@ -357,6 +364,8 @@ function computeQualityScore(job: Job, enrichedData: Record<string, any>): numbe
   if (relevance >= 8) score += 15;
   else if (relevance >= 6) score += 10;
   else if (relevance >= 4) score += 5;
+
+  if (enrichedData.aiSummary && enrichedData.aiSummary.length > 100) score += 3;
 
   return Math.min(100, score);
 }
@@ -664,6 +673,10 @@ async function runLiveJobAudit(): Promise<{ audited: number; flagged: number; pr
 
     for (const job of allPublished) {
       audited++;
+
+      if (job.pipelineStatus === 'raw' || job.pipelineStatus === 'enriching') {
+        continue;
+      }
 
       if (shouldHardReject(job.title)) {
         console.log(`[Audit] Unpublish "${job.title}" at ${job.company} - hard reject title`);

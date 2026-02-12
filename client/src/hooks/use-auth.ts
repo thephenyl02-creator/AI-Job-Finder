@@ -84,6 +84,7 @@ export function useAuth() {
       queryClient.setQueryData(["/api/auth/user"], null);
       queryClient.setQueryData(["/api/auth/is-admin"], false);
       queryClient.clear();
+      window.location.href = "/";
     },
   });
 
