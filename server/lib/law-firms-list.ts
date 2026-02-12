@@ -25,16 +25,19 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   {
     name: 'Harvey AI',
     careerUrl: 'https://www.harvey.ai/careers',
+    ashbyUrl: 'https://api.ashbyhq.com/posting-api/job-board/harvey',
     type: 'startup',
   },
   {
     name: 'EvenUp',
     careerUrl: 'https://www.evenuplaw.com/careers',
+    ashbyUrl: 'https://api.ashbyhq.com/posting-api/job-board/evenup',
     type: 'startup',
   },
   {
     name: 'Spellbook',
     careerUrl: 'https://www.spellbook.legal/careers',
+    ashbyUrl: 'https://api.ashbyhq.com/posting-api/job-board/spellbook.legal',
     type: 'startup',
   },
   {
