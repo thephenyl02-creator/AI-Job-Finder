@@ -138,7 +138,7 @@ export function ResumeStrategyDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2" data-testid="text-strategy-title">
             <Compass className="h-5 w-5" />
-            Alignment Strategy
+            Positioning Advice
           </DialogTitle>
           <DialogDescription data-testid="text-strategy-description">
             How to position your resume for{" "}

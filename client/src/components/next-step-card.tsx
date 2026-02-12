@@ -104,13 +104,16 @@ export function NextStepCard({
             </div>
             <h3 className="text-sm font-semibold text-foreground" data-testid="heading-next-step">Your Next Step</h3>
           </div>
-          <p className="text-sm text-muted-foreground mb-3" data-testid="text-next-step-message">
-            This role is a stretch right now. Start with Strategy to identify the fastest improvements.
+          <p className="text-sm text-muted-foreground mb-1" data-testid="text-next-step-message">
+            This role is a stretch right now. Start with positioning advice to identify the fastest improvements.
+          </p>
+          <p className="text-xs text-muted-foreground/70 mb-3">
+            See what to emphasize and reorder — no rewrites, just guidance.
           </p>
           <div className="flex items-center gap-2 flex-wrap">
             <Button size="sm" className="gap-1.5" onClick={onOpenStrategy} data-testid="button-next-step-strategy">
               <Compass className="h-3.5 w-3.5" />
-              View Alignment Strategy
+              Get Positioning Advice
             </Button>
             <Link href={browseHref}>
               <Button variant="ghost" size="sm" className="text-xs text-muted-foreground" data-testid="link-explore-similar">
@@ -134,25 +137,25 @@ export function NextStepCard({
             </div>
             <h3 className="text-sm font-semibold text-foreground" data-testid="heading-next-step">Your Next Step</h3>
           </div>
-          <p className="text-sm text-muted-foreground mb-3" data-testid="text-next-step-message">
-            You've seen your fit. Next, improve your application.
+          <p className="text-sm text-muted-foreground mb-1" data-testid="text-next-step-message">
+            See how to position your background for this role.
+          </p>
+          <p className="text-xs text-muted-foreground/70 mb-3">
+            What to emphasize, what to reorder — no rewrites, just guidance.
           </p>
           <div className="flex items-center gap-2 flex-wrap">
             <Button size="sm" className="gap-1.5" onClick={onOpenStrategy} data-testid="button-next-step-strategy">
               <Compass className="h-3.5 w-3.5" />
-              View Alignment Strategy
+              Get Positioning Advice
             </Button>
             <Link href="/pricing">
               <Button variant="ghost" size="sm" className="text-xs text-muted-foreground gap-1" data-testid="button-next-step-rewrite-locked">
                 <Lock className="h-3 w-3" />
-                Rewrite Selected Lines
+                Tailor My Resume
                 <Badge variant="secondary" className="text-[10px] ml-0.5">Pro</Badge>
               </Button>
             </Link>
           </div>
-          <p className="text-[11px] text-muted-foreground mt-2" data-testid="text-next-step-microcopy">
-            Pro feature — we rewrite for alignment, not exaggeration.
-          </p>
         </CardContent>
       </Card>
     );
@@ -167,22 +170,22 @@ export function NextStepCard({
           </div>
           <h3 className="text-sm font-semibold text-foreground" data-testid="heading-next-step">Your Next Step</h3>
         </div>
-        <p className="text-sm text-muted-foreground mb-3" data-testid="text-next-step-message">
-          Improve your strongest bullets for this role.
+        <p className="text-sm text-muted-foreground mb-1" data-testid="text-next-step-message">
+          Tailor your resume bullets to match this role's language and priorities.
+        </p>
+        <p className="text-xs text-muted-foreground/70 mb-3">
+          We rewrite for alignment, not exaggeration.
         </p>
         <div className="flex items-center gap-2 flex-wrap">
           <Button size="sm" className="gap-1.5" onClick={onOpenRewrite} data-testid="button-next-step-rewrite">
             <PenLine className="h-3.5 w-3.5" />
-            Rewrite Selected Lines
+            Tailor My Resume
           </Button>
           <Button variant="ghost" size="sm" className="text-xs text-muted-foreground gap-1" onClick={onOpenStrategy} data-testid="button-next-step-strategy-secondary">
             <Compass className="h-3 w-3" />
-            View Alignment Strategy
+            Get Positioning Advice
           </Button>
         </div>
-        <p className="text-[11px] text-muted-foreground mt-2" data-testid="text-next-step-microcopy">
-          We rewrite for alignment, not exaggeration.
-        </p>
       </CardContent>
     </Card>
   );

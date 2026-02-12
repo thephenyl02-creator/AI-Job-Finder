@@ -327,7 +327,7 @@ export default function CareerPathAdvisor() {
             )}
 
             <p className="text-xs text-muted-foreground italic">
-              This is career-level guidance based on your resume profile. For job-specific positioning, use Alignment Strategy on individual job pages.
+              This is career-level guidance based on your resume profile. For job-specific positioning, use Get Positioning Advice on individual job pages.
             </p>
           </motion.div>
         )}

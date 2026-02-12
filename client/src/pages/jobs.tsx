@@ -967,10 +967,12 @@ export default function Jobs() {
                           <Building2 className="h-3 w-3 shrink-0" />
                           <span data-testid={`text-job-company-${job.id}`}>{cleanStructuredText(job.company)}</span>
                         </span>
-                        <span className="flex items-center gap-1">
-                          <MapPin className="h-3 w-3 shrink-0" />
-                          <span data-testid={`text-job-location-${job.id}`}>{job.location ? cleanStructuredText(job.location) : "Not specified"}</span>
-                        </span>
+                        {job.location && job.location !== 'Not specified' && (
+                          <span className="flex items-center gap-1">
+                            <MapPin className="h-3 w-3 shrink-0" />
+                            <span data-testid={`text-job-location-${job.id}`}>{cleanStructuredText(job.location)}</span>
+                          </span>
+                        )}
                         {locType && (
                           <Badge variant="outline" className="text-xs" data-testid={`badge-loc-type-${job.id}`}>
                             {locType === "remote" ? "Remote" : locType === "hybrid" ? "Hybrid" : "On-site"}
@@ -1349,7 +1351,7 @@ function BrowseCompareView({ jobs, onClose, onClear }: { jobs: Job[]; onClose: (
       label: "Location",
       render: (job) => (
         <div className="space-y-1">
-          <span className="text-sm text-foreground/80">{job.location || "Not specified"}</span>
+          <span className="text-sm text-foreground/80">{job.location && job.location !== 'Not specified' ? job.location : "—"}</span>
           {getLocationLabel(job) && (
             <Badge variant="secondary" className={`text-[10px] block w-fit ${
               getLocationLabel(job) === 'Remote'

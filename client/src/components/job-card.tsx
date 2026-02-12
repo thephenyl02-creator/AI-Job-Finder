@@ -184,7 +184,7 @@ export function JobCard({ job, showMatchScore = false, hasResume = false, isSave
                 {job.seniorityLevel}
               </Badge>
             )}
-            {job.location && (
+            {job.location && job.location !== 'Not specified' && (
               <Badge variant="secondary" className="gap-1.5">
                 <MapPin className="h-3 w-3" />
                 {job.location}

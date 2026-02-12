@@ -91,7 +91,7 @@ function CompareView({ jobs, onClose }: { jobs: Job[]; onClose: () => void }) {
       label: "Location",
       render: (job) => (
         <div className="space-y-1">
-          <span className="text-sm text-foreground/80">{job.location || "Not specified"}</span>
+          <span className="text-sm text-foreground/80">{job.location && job.location !== 'Not specified' ? job.location : "—"}</span>
           {getLocationLabel(job) && (
             <Badge variant="secondary" className={`text-[10px] block w-fit ${
               getLocationLabel(job) === 'Remote'
@@ -472,7 +472,7 @@ export default function SavedJobs() {
                         </div>
 
                         <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 mt-2 text-xs text-muted-foreground">
-                          {sj.job.location && (
+                          {sj.job.location && sj.job.location !== 'Not specified' && (
                             <span className="flex items-center gap-1 min-w-0 max-w-[200px] sm:max-w-none">
                               <MapPin className="h-3 w-3 shrink-0" />
                               <span className="truncate">{sj.job.location}</span>

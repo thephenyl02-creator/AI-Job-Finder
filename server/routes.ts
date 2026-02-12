@@ -35,6 +35,7 @@ import {
   validateJobUrl,
   scrapeBulkUrls,
   discoverJobLinksFromUrl,
+  isValidJobUrl,
 } from "./lib/law-firm-scraper";
 import { LAW_FIRMS_AND_COMPANIES } from "./lib/law-firms-list";
 import { categorizeJob } from "./lib/job-categorizer";
@@ -1976,7 +1977,7 @@ Provide 2-4 recommended paths. Be specific to this candidate's actual experience
       return res.status(403).json({ error: "Admin access required" });
     }
     try {
-      const targetUserId = req.params.id;
+      const targetUserId = req.params.id as string;
       const currentUser = req.user as any;
       if (targetUserId === currentUser.id) {
         return res.status(400).json({ error: "Cannot change your own admin status" });
@@ -1994,7 +1995,7 @@ Provide 2-4 recommended paths. Be specific to this candidate's actual experience
       return res.status(403).json({ error: "Admin access required" });
     }
     try {
-      const targetUserId = req.params.id;
+      const targetUserId = req.params.id as string;
       const subData = await storage.getUserSubscription(targetUserId);
       const isPro = subData?.subscriptionTier === "pro" && subData?.subscriptionStatus === "active";
       if (isPro) {
@@ -2164,6 +2165,10 @@ Provide 2-4 recommended paths. Be specific to this candidate's actual experience
         return res.status(400).json({ error: "Invalid URL format" });
       }
       
+      if (!isValidJobUrl(url)) {
+        return res.status(400).json({ error: "This URL does not appear to be a job posting. It may be a blog post, news article, or generic career portal." });
+      }
+
       console.log(`Scraping job from URL: ${url}`);
       
       const job = await scrapeSingleJobUrl(url);
@@ -2220,7 +2225,7 @@ Provide 2-4 recommended paths. Be specific to this candidate's actual experience
       }
 
       const validUrls = urls.filter((u: string) => {
-        try { new URL(u.trim()); return true; } catch { return false; }
+        try { new URL(u.trim()); return isValidJobUrl(u.trim()); } catch { return false; }
       });
 
       console.log(`[Bulk Scraper] Processing ${validUrls.length} URLs...`);
@@ -2236,15 +2241,19 @@ Provide 2-4 recommended paths. Be specific to this candidate's actual experience
         try {
           let existing = await storage.getJobByExternalId(result.job.externalId!);
           if (!existing && result.job.applyUrl) {
-            const allJobs = await storage.getJobs();
-            existing = allJobs.find((j: any) => j.applyUrl === result.job!.applyUrl) || undefined;
+            existing = await storage.getJobByApplyUrl(result.job.applyUrl);
           }
           if (existing) {
             await storage.updateJob(existing.id, result.job);
             updated++;
             savedJobs.push({ ...result.job, id: existing.id, status: 'updated' });
           } else {
-            const saved = await storage.createJob(result.job);
+            const jobWithPipeline = {
+              ...result.job,
+              pipelineStatus: 'raw',
+              isPublished: false,
+            };
+            const saved = await storage.createJob(jobWithPipeline);
             inserted++;
             savedJobs.push({ ...saved, status: 'created' });
             if (!saved.structuredDescription && saved.description) {
@@ -2476,6 +2485,10 @@ Provide 2-4 recommended paths. Be specific to this candidate's actual experience
         return res.status(400).json({ error: "URL is required" });
       }
       try { new URL(url); } catch { return res.status(400).json({ error: "Invalid URL format" }); }
+
+      if (!isValidJobUrl(url)) {
+        return res.status(400).json({ error: "This URL does not appear to be a job posting." });
+      }
 
       const job = await scrapeSingleJobUrl(url);
       if (!job) {
@@ -2859,6 +2872,10 @@ Provide 2-4 recommended paths. Be specific to this candidate's actual experience
 
       for (const url of validUrls) {
         try {
+          if (!isValidJobUrl(url)) {
+            results.push({ url, status: 'skipped', error: 'URL does not appear to be a job posting' });
+            continue;
+          }
           console.log(`[Quick Add] Processing: ${url}`);
           const job = await scrapeSingleJobUrl(url);
           if (!job) {
@@ -2871,7 +2888,7 @@ Provide 2-4 recommended paths. Be specific to this candidate's actual experience
             title: job.title?.substring(0, 255),
             company: job.company?.substring(0, 255),
             companyLogo: companySlug ? `https://logo.clearbit.com/${companySlug}.com` : null,
-            location: job.location || "Not specified",
+            location: job.location || null,
             isRemote: Boolean(job.isRemote),
             locationType: job.locationType || (job.isRemote ? 'remote' : 'onsite'),
             salaryMin: job.salaryMin ? Number(job.salaryMin) : null,
@@ -2891,6 +2908,8 @@ Provide 2-4 recommended paths. Be specific to this candidate's actual experience
             keySkills: job.keySkills || null,
             aiSummary: job.aiSummary || null,
             matchKeywords: job.matchKeywords || null,
+            pipelineStatus: 'raw',
+            isPublished: false,
           };
 
           const { inserted, updated, newJobs } = await storage.bulkUpsertJobs([insertData]);

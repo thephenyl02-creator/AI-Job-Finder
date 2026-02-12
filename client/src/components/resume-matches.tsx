@@ -453,12 +453,12 @@ function MatchCard({
                   <Building2 className="h-3.5 w-3.5" />
                   {match.company}
                 </span>
-                {(match.location || match.isRemote) && (
+                {(match.isRemote || (match.location && match.location !== 'Not specified')) && (
                   <span className="flex items-center gap-1">
                     <MapPin className="h-3.5 w-3.5" />
                     {match.isRemote
                       ? "Remote"
-                      : match.location || "Not specified"}
+                      : match.location}
                   </span>
                 )}
               </div>

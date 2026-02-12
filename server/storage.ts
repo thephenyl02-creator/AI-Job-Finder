@@ -16,6 +16,7 @@ export interface IStorage {
   seedJobs(): Promise<void>;
   upsertJobByExternalId(job: InsertJob): Promise<{ job: Job; isNew: boolean }>;
   getJobByExternalId(externalId: string): Promise<Job | undefined>;
+  getJobByApplyUrl(applyUrl: string): Promise<Job | undefined>;
   bulkUpsertJobs(jobsList: InsertJob[]): Promise<{ inserted: number; updated: number; newJobs: Job[] }>;
   deactivateStaleJobs(scrapedExternalIds: Set<string>, sources: string[], scrapedCompanies?: Set<string>): Promise<number>;
   trackJobView(jobId: number): Promise<void>;
@@ -402,6 +403,11 @@ class DatabaseStorage implements IStorage {
 
   async getJobByExternalId(externalId: string): Promise<Job | undefined> {
     const [job] = await db.select().from(jobs).where(eq(jobs.externalId, externalId));
+    return job;
+  }
+
+  async getJobByApplyUrl(applyUrl: string): Promise<Job | undefined> {
+    const [job] = await db.select().from(jobs).where(eq(jobs.applyUrl, applyUrl));
     return job;
   }
 
@@ -2154,13 +2160,20 @@ class DatabaseStorage implements IStorage {
 
     const jobSkills = job.keySkills || [];
 
+    const trustGate = [
+      sql`${jobs.id} != ${jobId}`,
+      eq(jobs.isActive, true),
+      eq(jobs.isPublished, true),
+      eq(jobs.pipelineStatus, 'ready'),
+      eq(jobs.jobStatus, 'open'),
+    ];
+
     if (job.roleCategory) {
       const sameCategoryJobs = await db
         .select()
         .from(jobs)
         .where(and(
-          sql`${jobs.id} != ${jobId}`,
-          eq(jobs.isActive, true),
+          ...trustGate,
           eq(jobs.roleCategory, job.roleCategory),
         ))
         .orderBy(desc(jobs.postedDate))
@@ -2184,7 +2197,7 @@ class DatabaseStorage implements IStorage {
           .from(jobs)
           .where(and(
             sql`${jobs.id} NOT IN (${sql.join(excludeIds.map(id => sql`${id}`), sql`, `)})`,
-            eq(jobs.isActive, true),
+            ...trustGate,
           ))
           .orderBy(desc(jobs.postedDate))
           .limit(limit - results.length);
@@ -2200,8 +2213,7 @@ class DatabaseStorage implements IStorage {
       .select()
       .from(jobs)
       .where(and(
-        sql`${jobs.id} != ${jobId}`,
-        eq(jobs.isActive, true),
+        ...trustGate,
       ))
       .orderBy(desc(jobs.postedDate))
       .limit(limit);

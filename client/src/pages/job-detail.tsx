@@ -51,10 +51,6 @@ import {
   CalendarDays,
   CheckCircle2,
   Upload,
-  Crown,
-  Lock,
-  PenLine,
-  Compass,
   ShieldCheck,
   AlertTriangle,
   Flag,
@@ -750,7 +746,7 @@ export default function JobDetail() {
               <Building2 className="h-3.5 w-3.5 shrink-0" />
               <span className="font-medium text-foreground/80" data-testid="text-job-detail-company">{cleanStructuredText(job.company)}</span>
             </span>
-            {job.location && (
+            {job.location && job.location !== 'Not specified' && (
               <span className="flex items-center gap-1.5">
                 <MapPin className="h-3.5 w-3.5 shrink-0" />
                 <span data-testid="text-job-detail-location">{cleanStructuredText(job.location)}</span>
@@ -898,8 +894,17 @@ export default function JobDetail() {
                   className="gap-1.5 w-full sm:w-auto"
                   data-testid="button-resume-match"
                 >
-                  <Upload className="h-4 w-4" />
-                  Upload Resume &mdash; See Match %
+                  {userResumes.length > 0 ? (
+                    <>
+                      <FileText className="h-4 w-4" />
+                      View Resume Match
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="h-4 w-4" />
+                      Upload Resume
+                    </>
+                  )}
                 </Button>
               </Link>
             ) : (
@@ -910,7 +915,7 @@ export default function JobDetail() {
                   data-testid="button-resume-match-signin"
                 >
                   <Upload className="h-4 w-4" />
-                  Upload Resume &mdash; See Match %
+                  Upload Resume
                 </Button>
               </Link>
             )}
@@ -1085,42 +1090,6 @@ export default function JobDetail() {
               </div>
             )}
 
-            {isAuthenticated && !resumeFit && !isPro && userResumes.length > 0 && job?.keySkills && job.keySkills.length > 0 && (
-              <div data-testid="section-resume-match-teaser" className="mt-6 pt-6 border-t border-border/40">
-                <div className="rounded-md border border-border/40 p-4 relative overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background/90 pointer-events-none z-10" />
-                  <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Resume Fit</h3>
-                  <div className="rounded-md border border-border/30 p-3 opacity-60">
-                    <div className="flex items-center justify-between gap-3 mb-2">
-                      <div className="flex items-center gap-2">
-                        <FileText className="h-3.5 w-3.5 text-muted-foreground" />
-                        <span className="text-sm font-medium text-muted-foreground">Your Resume</span>
-                      </div>
-                      <span className="text-sm font-semibold text-muted-foreground">??% match</span>
-                    </div>
-                    <div className="h-1.5 bg-muted/40 rounded-full overflow-hidden">
-                      <div className="h-full bg-muted-foreground/20 rounded-full w-3/5" />
-                    </div>
-                  </div>
-                  <div className="relative z-20 text-center mt-3">
-                    <div className="flex items-center justify-center gap-1.5 mb-1.5">
-                      <Lock className="h-3.5 w-3.5 text-primary" />
-                      <span className="text-sm font-medium text-foreground">See how you match this role</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground mb-2">
-                      Pro members get match scores, gap analysis, and personalized recommendations.
-                    </p>
-                    <Link href="/pricing">
-                      <Button size="sm" className="gap-1.5 text-xs" data-testid="button-resume-match-upgrade">
-                        <Crown className="h-3 w-3" />
-                        Unlock with Pro
-                      </Button>
-                    </Link>
-                  </div>
-                </div>
-              </div>
-            )}
-
             {(() => {
               const hasMatch = !!(resumeFit && resumeFit.length > 0);
               const primaryFit = resumeFit?.find(r => r.isPrimary) || resumeFit?.[0];
@@ -1148,111 +1117,6 @@ export default function JobDetail() {
               );
             })()}
 
-            {!isAuthenticated && (
-              <div className="mt-6 pt-6 border-t border-border/40" data-testid="section-conversion-block">
-                <Card>
-                  <CardContent className="p-5 sm:p-6 text-center">
-                    <div className="flex justify-center mb-3">
-                      <div className="p-2 rounded-lg bg-primary/10">
-                        <Target className="h-5 w-5 text-primary" />
-                      </div>
-                    </div>
-                    <h3 className="text-base font-serif font-medium text-foreground mb-1.5">
-                      See how this role fits your background
-                    </h3>
-                    <p className="text-sm text-muted-foreground mb-4 max-w-md mx-auto">
-                      Create a free account to save jobs, see your match %, get alerts, and track applications.
-                    </p>
-                    <div className="flex items-center justify-center gap-3 flex-wrap">
-                      <Link href={authReturnUrl}>
-                        <Button className="gap-1.5" data-testid="button-conversion-upload">
-                          <Upload className="h-4 w-4" />
-                          Upload resume
-                        </Button>
-                      </Link>
-                      <Link href={authReturnUrl}>
-                        <Button variant="ghost" size="sm" className="text-muted-foreground" data-testid="button-conversion-signin">
-                          Sign in
-                        </Button>
-                      </Link>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            )}
-
-            {isAuthenticated && resumeFit && resumeFit.length > 0 && (
-              <div data-testid="section-improve-application" className="mt-6 pt-6 border-t border-border/40">
-                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Improve Your Application</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <Card data-testid="card-strategy">
-                    <CardContent className="p-4 space-y-3">
-                      <div className="flex items-center gap-2">
-                        <div className="p-1.5 rounded-md bg-blue-50 dark:bg-blue-900/20">
-                          <Compass className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                        </div>
-                        <h4 className="text-sm font-semibold text-foreground">Alignment Strategy</h4>
-                      </div>
-                      <p className="text-xs text-muted-foreground leading-relaxed">
-                        How to position your resume for this job (no rewrites).
-                      </p>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="gap-1.5 w-full"
-                        onClick={() => setShowStrategyDialog(true)}
-                        data-testid="button-view-strategy"
-                      >
-                        <Compass className="h-3.5 w-3.5" />
-                        View Strategy
-                      </Button>
-                    </CardContent>
-                  </Card>
-
-                  <Card data-testid="card-rewrite-lines">
-                    <CardContent className="p-4 space-y-3">
-                      <div className="flex items-center gap-2">
-                        <div className="p-1.5 rounded-md bg-violet-50 dark:bg-violet-900/20">
-                          <PenLine className="h-4 w-4 text-violet-600 dark:text-violet-400" />
-                        </div>
-                        <h4 className="text-sm font-semibold text-foreground">Tailor My Resume</h4>
-                      </div>
-                      <p className="text-xs text-muted-foreground leading-relaxed">
-                        Auto-extract and rewrite your resume bullets for this role.
-                      </p>
-                      <p className="text-[11px] font-medium text-foreground/70" data-testid="text-trust-line-card">
-                        We rewrite for alignment, not exaggeration.
-                      </p>
-                      {isPro ? (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="gap-1.5 w-full"
-                          onClick={() => setShowRewriteDialog(true)}
-                          data-testid="button-rewrite-lines"
-                        >
-                          <PenLine className="h-3.5 w-3.5" />
-                          Rewrite Lines
-                        </Button>
-                      ) : (
-                        <Link href="/pricing">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="gap-1.5 w-full text-muted-foreground"
-                            data-testid="button-rewrite-locked"
-                          >
-                            <Lock className="h-3.5 w-3.5" />
-                            Rewrite Lines
-                            <Badge variant="secondary" className="text-[10px] ml-1">Pro</Badge>
-                          </Button>
-                        </Link>
-                      )}
-                    </CardContent>
-                  </Card>
-                </div>
-              </div>
-            )}
           </CardContent>
         </Card>
 
@@ -1264,7 +1128,9 @@ export default function JobDetail() {
 
         {similarJobs.length > 0 && (
           <div className="mb-8" data-testid="section-similar-jobs">
-            <h2 className="text-lg font-serif font-medium text-foreground mb-4 tracking-tight">Similar Roles</h2>
+            <h2 className="text-lg font-serif font-medium text-foreground mb-4 tracking-tight">
+              {job?.roleCategory ? `More in ${job.roleCategory}` : "Similar Roles"}
+            </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {similarJobs.map(sj => {
                 const sjSalary = formatSalary(sj.salaryMin, sj.salaryMax, (sj as any).salaryCurrency);
@@ -1281,7 +1147,7 @@ export default function JobDetail() {
                             <Building2 className="h-3 w-3" />
                             {cleanStructuredText(sj.company)}
                           </span>
-                          {sj.location && (
+                          {sj.location && sj.location !== 'Not specified' && (
                             <span className="flex items-center gap-1">
                               <MapPin className="h-3 w-3" />
                               {cleanStructuredText(sj.location)}
@@ -1336,7 +1202,25 @@ export default function JobDetail() {
           >
             <div className="max-w-3xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
               <div className="min-w-0 flex-1 hidden sm:block">
-                <p className="text-sm font-medium text-foreground truncate">{job.title}</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-medium text-foreground truncate">{job.title}</p>
+                  {resumeFit && resumeFit.length > 0 && (() => {
+                    const pf = resumeFit.find(r => r.isPrimary) || resumeFit[0];
+                    return pf ? (
+                      <Badge
+                        variant="secondary"
+                        className={`text-[10px] shrink-0 ${
+                          pf.score >= 60 ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400" :
+                          pf.score >= 30 ? "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400" :
+                          ""
+                        }`}
+                        data-testid="badge-sticky-match"
+                      >
+                        {pf.score}% match
+                      </Badge>
+                    ) : null;
+                  })()}
+                </div>
                 <p className="text-xs text-muted-foreground truncate">{job.company}</p>
               </div>
               <div className="flex items-center gap-2 w-full sm:w-auto">

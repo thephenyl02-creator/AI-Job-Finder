@@ -202,7 +202,7 @@ export default function Landing() {
                                       <Building2 className="h-3 w-3 shrink-0" />
                                       <span className="truncate">{cleanStructuredText(job.company)}</span>
                                     </span>
-                                    {job.location && (
+                                    {job.location && job.location !== 'Not specified' && (
                                       <span className="flex items-center gap-1 text-xs text-muted-foreground">
                                         <MapPin className="h-3 w-3 shrink-0" />
                                         <span className="truncate">{(job.locationType === 'remote' || (!job.locationType && job.isRemote)) ? "Remote" : job.locationType === 'hybrid' ? "Hybrid" : shortenLocation(job.location)}</span>
@@ -261,7 +261,7 @@ export default function Landing() {
                                 {cleanStructuredText(job.company)}
                               </span>
                             </div>
-                            {job.location && (
+                            {job.location && job.location !== 'Not specified' && (
                               <span className="flex items-center gap-1 text-xs text-muted-foreground mt-1 truncate">
                                 <MapPin className="h-3 w-3 shrink-0" />
                                 {(job.locationType === 'remote' || (!job.locationType && job.isRemote)) ? "Remote" : job.locationType === 'hybrid' ? "Hybrid" : shortenLocation(job.location)}
