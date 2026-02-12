@@ -570,7 +570,7 @@ async function enrichJob(job: Job): Promise<void> {
       enrichedData.pipelineStatus = 'rejected';
       enrichedData.isPublished = false;
       enrichedData.reviewReasonCode = 'LOW_RELEVANCE';
-    } else if (relevanceConfidence >= 60 && enrichedData.roleCategory && relevanceScore >= 6 && qualityScore >= 70) {
+    } else if (relevanceConfidence >= 40 && enrichedData.roleCategory && relevanceScore >= 5 && qualityScore >= 65) {
       const existingDuplicate = await storage.findLiveJobDuplicate(job.title, job.company, job.location, job.id);
       if (existingDuplicate) {
         enrichedData.pipelineStatus = 'rejected';
@@ -697,10 +697,10 @@ async function runLiveJobAudit(): Promise<{ audited: number; flagged: number; pr
       let failReason: string | null = null;
       if (!job.isActive) failReason = 'INACTIVE';
       else if (job.jobStatus !== 'open') failReason = 'JOB_CLOSED';
-      else if ((job.qualityScore ?? 0) < 70) failReason = 'LOW_QUALITY_SCORE';
-      else if ((job.legalRelevanceScore ?? 0) < 6) failReason = 'LOW_RELEVANCE_SCORE';
+      else if ((job.qualityScore ?? 0) < 65) failReason = 'LOW_QUALITY_SCORE';
+      else if ((job.legalRelevanceScore ?? 0) < 5) failReason = 'LOW_RELEVANCE_SCORE';
       else if (!job.roleCategory) failReason = 'MISSING_CATEGORY';
-      else if ((job.relevanceConfidence ?? 0) < 60) failReason = 'LOW_CONFIDENCE';
+      else if ((job.relevanceConfidence ?? 0) < 40) failReason = 'LOW_CONFIDENCE';
       else if (!job.applyUrl || job.applyUrl.trim() === '') failReason = 'NO_APPLY_URL';
 
       if (failReason) {
@@ -722,10 +722,10 @@ async function runLiveJobAudit(): Promise<{ audited: number; flagged: number; pr
     );
 
     for (const job of candidates) {
-      const passesGate = (job.qualityScore ?? 0) >= 70
-        && (job.legalRelevanceScore ?? 0) >= 6
+      const passesGate = (job.qualityScore ?? 0) >= 65
+        && (job.legalRelevanceScore ?? 0) >= 5
         && job.roleCategory !== null
-        && (job.relevanceConfidence ?? 0) >= 60
+        && (job.relevanceConfidence ?? 0) >= 40
         && job.applyUrl && job.applyUrl.trim() !== ''
         && !isGenericCareersUrl(job.applyUrl)
         && !shouldHardReject(job.title)

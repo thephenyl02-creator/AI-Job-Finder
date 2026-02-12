@@ -1415,6 +1415,57 @@ Be specific and actionable. Focus on legal tech industry keywords and ATS best p
     }
   });
 
+  app.post("/api/resume/extract-bullets", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const userId = user?.id;
+      if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+      const schema = z.object({
+        resumeId: z.number().optional(),
+      });
+      const parsed = schema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ error: "Invalid input" });
+
+      let resume;
+      if (parsed.data.resumeId) {
+        resume = await storage.getResumeById(parsed.data.resumeId, userId);
+      } else {
+        resume = await storage.getPrimaryResume(userId);
+      }
+      if (!resume) return res.status(404).json({ error: "No resume found. Please upload a resume first." });
+
+      const extracted = resume.extractedData as any;
+      if (!extracted?.experience || !Array.isArray(extracted.experience) || extracted.experience.length === 0) {
+        return res.status(400).json({ error: "Your resume doesn't have extractable experience entries. Try using manual entry instead." });
+      }
+
+      const bullets: Array<{ text: string; source: string; experienceIndex: number }> = [];
+      for (let i = 0; i < extracted.experience.length; i++) {
+        const exp = extracted.experience[i];
+        if (!exp.description) continue;
+        const lines = exp.description.split(/[\n•·\-–—]/).map((l: string) => l.trim()).filter((l: string) => l.length >= 15);
+        const source = `${exp.title || "Role"} at ${exp.company || "Company"}`;
+        for (const line of lines) {
+          bullets.push({ text: line, source, experienceIndex: i });
+        }
+      }
+
+      if (bullets.length === 0) {
+        return res.status(400).json({ error: "No bullet points could be extracted from your resume experience." });
+      }
+
+      res.json({
+        bullets,
+        resumeId: resume.id,
+        resumeLabel: (resume as any).label || resume.filename || "Primary Resume",
+      });
+    } catch (error: any) {
+      console.error("Error extracting bullets:", error);
+      res.status(500).json({ error: "Failed to extract resume bullets" });
+    }
+  });
+
   app.post("/api/resume/rewrite-for-job", isAuthenticated, requirePro, async (req, res) => {
     try {
       const user = req.user as any;

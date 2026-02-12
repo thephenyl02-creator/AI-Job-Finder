@@ -1215,10 +1215,10 @@ export default function JobDetail() {
                         <div className="p-1.5 rounded-md bg-violet-50 dark:bg-violet-900/20">
                           <PenLine className="h-4 w-4 text-violet-600 dark:text-violet-400" />
                         </div>
-                        <h4 className="text-sm font-semibold text-foreground">Rewrite Selected Lines</h4>
+                        <h4 className="text-sm font-semibold text-foreground">Tailor My Resume</h4>
                       </div>
                       <p className="text-xs text-muted-foreground leading-relaxed">
-                        Bullet rewrites aligned to this job.
+                        Auto-extract and rewrite your resume bullets for this role.
                       </p>
                       <p className="text-[11px] font-medium text-foreground/70" data-testid="text-trust-line-card">
                         We rewrite for alignment, not exaggeration.

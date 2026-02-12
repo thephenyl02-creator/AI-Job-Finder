@@ -50,7 +50,7 @@ Legal Tech Careers is a freemium SaaS job search platform designed for legal pro
 - **Global Coverage**: 200+ companies across US, UK, Europe, Asia-Pacific, Canada, Middle East, Africa, and Latin America including legal AI startups, established legal tech companies, AmLaw 200 firms, Magic Circle firms, major international firms, and ALSPs
 - **ATS Coverage**: 20 Greenhouse, 8 Lever, 3 Ashby, 3 Workday CXS (Thomson Reuters, Wolters Kluwer, LexisNexis), rest use generic career page scraping
 - **Scheduled Scraper** (every 12 hours): Runs `scrapeAllLawFirms()` from `law-firm-scraper.ts` covering all 200+ companies. Includes scrape lock, job validation, 500-job cap, 30% company success threshold for stale detection. On startup, triggers initial scrape if fewer than 100 published jobs exist.
-- **Enrichment Worker** (every 2 min): Processes 25 raw jobs - cleans descriptions, extracts experience requirements, categorizes with AI, computes quality scores, auto-publishes jobs scoring 70+ with relevanceConfidence ≥60% and legalRelevanceScore ≥6
+- **Enrichment Worker** (every 2 min): Processes 25 raw jobs - cleans descriptions, extracts experience requirements, categorizes with AI, computes quality scores, auto-publishes jobs scoring 65+ with relevanceConfidence ≥40% and legalRelevanceScore ≥5
 - **Reliability Worker** (every 6 hours): Validates apply links for published jobs, unpublishes broken links and stale jobs (45+ days unseen)
 - **Title Filter**: Company-type-aware — legal tech startups (`startup`/`tech-legal`) use blocklist-only approach (blocks pure engineering, HR, IT, finance) and lets AI enrichment evaluate everything else. General companies keep strict legal-only filtering.
 - **Trust Gate**: Public API only shows jobs with `pipelineStatus='ready'`, `isPublished=true`, `jobStatus='open'`, `isActive=true`
@@ -78,7 +78,7 @@ Legal Tech Careers is a freemium SaaS job search platform designed for legal pro
 - **Structured Job Descriptions**: AI-extracted and validated job descriptions for quality and consistency, with an admin workflow for approval.
 - **Unified Job Comparison**: Consolidated comparison flow on the browse page with quick compare (all users) and deep AI analysis (Pro users).
 - **Resume Strategy**: AI-powered recommendations for resume alignment against job postings.
-- **Rewrite Selected Lines**: AI-powered bullet point rewriting for Pro users to align resume experience with job posting language.
+- **Tailor My Resume**: Enhanced AI-powered resume tailoring for Pro users. Auto-extracts bullet points from uploaded resumes with checkbox selection, or manual entry fallback. Rewrites bullets to align with job posting language and keywords.
 - **Trust & Freshness**: Source attribution, URL canonicalization, last checked timestamps, job status tracking, and user reporting for job quality.
 - **Events Autopilot**: AI-driven discovery and management of legal tech events from global regions.
 
