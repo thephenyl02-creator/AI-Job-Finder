@@ -653,71 +653,104 @@ async function runEnrichmentBatch(): Promise<EnrichmentResult> {
   return result;
 }
 
-async function runLiveJobAudit(): Promise<{ audited: number; flagged: number }> {
+async function runLiveJobAudit(): Promise<{ audited: number; flagged: number; promoted: number }> {
   let audited = 0;
   let flagged = 0;
+  let promoted = 0;
 
   try {
-    const liveJobs = await storage.getLiveJobs();
-    console.log(`[Audit] Checking ${liveJobs.length} live jobs against updated filters...`);
+    const allPublished = await db.select().from(jobs).where(eq(jobs.isPublished, true));
+    console.log(`[Audit] Checking ${allPublished.length} published jobs against ALL quality gates...`);
 
-    for (const job of liveJobs) {
+    for (const job of allPublished) {
       audited++;
 
       if (shouldHardReject(job.title)) {
-        console.log(`[Audit] Flagging "${job.title}" at ${job.company} - matched hard reject title pattern`);
-        await storage.updateJobWorkerFields(job.id, {
-          pipelineStatus: 'rejected',
-          isPublished: false,
-          reviewReasonCode: 'AUDIT_TITLE_REJECT',
-        });
+        console.log(`[Audit] Unpublish "${job.title}" at ${job.company} - hard reject title`);
+        await storage.updateJobWorkerFields(job.id, { pipelineStatus: 'rejected', isPublished: false, reviewReasonCode: 'AUDIT_TITLE_REJECT' });
         flagged++;
         continue;
       }
 
       if (shouldRejectByCompany(job.title, job.company)) {
-        console.log(`[Audit] Flagging "${job.title}" at ${job.company} - non-legal-tech company`);
-        await storage.updateJobWorkerFields(job.id, {
-          pipelineStatus: 'rejected',
-          isPublished: false,
-          reviewReasonCode: 'AUDIT_COMPANY_REJECT',
-        });
+        console.log(`[Audit] Unpublish "${job.title}" at ${job.company} - non-legal-tech company`);
+        await storage.updateJobWorkerFields(job.id, { pipelineStatus: 'rejected', isPublished: false, reviewReasonCode: 'AUDIT_COMPANY_REJECT' });
         flagged++;
         continue;
       }
 
       if (isGenericCareersUrl(job.applyUrl || '')) {
-        console.log(`[Audit] Flagging "${job.title}" at ${job.company} - generic careers URL: ${job.applyUrl}`);
-        await storage.updateJobWorkerFields(job.id, {
-          pipelineStatus: 'rejected',
-          isPublished: false,
-          reviewReasonCode: 'GENERIC_APPLY_URL',
-        });
+        console.log(`[Audit] Unpublish "${job.title}" at ${job.company} - generic careers URL`);
+        await storage.updateJobWorkerFields(job.id, { pipelineStatus: 'rejected', isPublished: false, reviewReasonCode: 'GENERIC_APPLY_URL' });
         flagged++;
         continue;
       }
 
       const duplicate = await storage.findLiveJobDuplicate(job.title, job.company, job.location, job.id);
       if (duplicate && duplicate.id < job.id) {
-        console.log(`[Audit] Flagging duplicate "${job.title}" at ${job.company} [${job.location}] (keeping #${duplicate.id}, rejecting #${job.id})`);
-        await storage.updateJobWorkerFields(job.id, {
-          pipelineStatus: 'rejected',
-          isPublished: false,
-          reviewReasonCode: 'AUDIT_DUPLICATE',
-        });
+        console.log(`[Audit] Unpublish duplicate "${job.title}" at ${job.company} (keeping #${duplicate.id})`);
+        await storage.updateJobWorkerFields(job.id, { pipelineStatus: 'rejected', isPublished: false, reviewReasonCode: 'AUDIT_DUPLICATE' });
+        flagged++;
+        continue;
+      }
+
+      let failReason: string | null = null;
+      if (!job.isActive) failReason = 'INACTIVE';
+      else if (job.jobStatus !== 'open') failReason = 'JOB_CLOSED';
+      else if ((job.qualityScore ?? 0) < 70) failReason = 'LOW_QUALITY_SCORE';
+      else if ((job.legalRelevanceScore ?? 0) < 6) failReason = 'LOW_RELEVANCE_SCORE';
+      else if (!job.roleCategory) failReason = 'MISSING_CATEGORY';
+      else if ((job.relevanceConfidence ?? 0) < 60) failReason = 'LOW_CONFIDENCE';
+      else if (!job.applyUrl || job.applyUrl.trim() === '') failReason = 'NO_APPLY_URL';
+
+      if (failReason) {
+        console.log(`[Audit] Unpublish "${job.title}" at ${job.company} - ${failReason} (quality=${job.qualityScore}, relevance=${job.legalRelevanceScore}, status=${job.jobStatus}, active=${job.isActive})`);
+        await storage.updateJobWorkerFields(job.id, { isPublished: false, reviewReasonCode: failReason });
         flagged++;
       }
     }
 
-    console.log(`[Audit] Done: ${audited} audited, ${flagged} flagged for removal`);
+    console.log(`[Audit] Phase 1 done: ${audited} checked, ${flagged} unpublished`);
+
+    const candidates = await db.select().from(jobs).where(
+      and(
+        eq(jobs.pipelineStatus, 'ready'),
+        eq(jobs.isPublished, false),
+        eq(jobs.isActive, true),
+        eq(jobs.jobStatus, 'open')
+      )
+    );
+
+    for (const job of candidates) {
+      const passesGate = (job.qualityScore ?? 0) >= 70
+        && (job.legalRelevanceScore ?? 0) >= 6
+        && job.roleCategory !== null
+        && (job.relevanceConfidence ?? 0) >= 60
+        && job.applyUrl && job.applyUrl.trim() !== ''
+        && !isGenericCareersUrl(job.applyUrl)
+        && !shouldHardReject(job.title)
+        && !shouldRejectByCompany(job.title, job.company);
+
+      if (!passesGate) continue;
+
+      const dup = await storage.findLiveJobDuplicate(job.title, job.company, job.location, job.id);
+      if (dup) continue;
+
+      console.log(`[Audit] Auto-publishing "${job.title}" at ${job.company} (quality=${job.qualityScore}, relevance=${job.legalRelevanceScore})`);
+      await storage.updateJobWorkerFields(job.id, { isPublished: true });
+      promoted++;
+    }
+
+    console.log(`[Audit] Phase 2 done: ${candidates.length} candidates checked, ${promoted} newly published`);
+    console.log(`[Audit] Complete: ${flagged} unpublished, ${promoted} promoted`);
   } catch (err: any) {
     console.error('[Audit] Failed:', err.message);
   }
 
-  return { audited, flagged };
+  return { audited, flagged, promoted };
 }
 
-const AUDIT_INTERVAL_MS = 6 * 60 * 60 * 1000;
+const AUDIT_INTERVAL_MS = 4 * 60 * 60 * 1000;
 let auditIntervalId: NodeJS.Timeout | null = null;
 
 export function startEnrichmentWorker() {
@@ -740,7 +773,7 @@ export function startEnrichmentWorker() {
     auditIntervalId = setInterval(() => {
       runLiveJobAudit().catch(console.error);
     }, AUDIT_INTERVAL_MS);
-    console.log('[Audit] Starting live job audit worker (every 6 hours)');
+    console.log('[Audit] Starting quality gate audit worker (every 4 hours)');
   }
 }
 
