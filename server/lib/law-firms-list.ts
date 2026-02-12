@@ -30,8 +30,7 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   },
   {
     name: 'EvenUp',
-    careerUrl: 'https://www.evenuplaw.com/careers',
-    ashbyUrl: 'https://api.ashbyhq.com/posting-api/job-board/evenup',
+    careerUrl: 'https://jobs.ashbyhq.com/evenup',
     type: 'startup',
   },
   {
@@ -53,6 +52,7 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   {
     name: 'Legora',
     careerUrl: 'https://www.legora.com/careers',
+    ashbyUrl: 'https://api.ashbyhq.com/posting-api/job-board/legora',
     type: 'startup',
   },
   {
@@ -253,6 +253,7 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   {
     name: 'Clio',
     careerUrl: 'https://www.clio.com/company/careers/',
+    workday: { company: 'clio', instance: 'wd3', site: 'ClioCareerSite' },
     type: 'company',
   },
   {
@@ -292,6 +293,7 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   {
     name: 'Ironclad',
     careerUrl: 'https://ironcladapp.com/careers/',
+    ashbyUrl: 'https://api.ashbyhq.com/posting-api/job-board/ironclad',
     type: 'company',
   },
   {
@@ -314,6 +316,7 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   {
     name: 'LinkSquares',
     careerUrl: 'https://linksquares.com/careers/',
+    greenhouseId: 'linksquaresinc',
     type: 'company',
   },
   {
@@ -329,6 +332,7 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   {
     name: 'DocuSign',
     careerUrl: 'https://careers.docusign.com/',
+    greenhouseId: 'docusign',
     type: 'company',
   },
 
@@ -347,6 +351,7 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   {
     name: 'Mitratech',
     careerUrl: 'https://mitratech.com/company/careers/',
+    greenhouseId: 'mitratech',
     type: 'company',
   },
 
@@ -360,6 +365,7 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   {
     name: 'Litera',
     careerUrl: 'https://www.litera.com/company/careers/',
+    workday: { company: 'litera', instance: 'wd12', site: 'Litera_Careers' },
     type: 'company',
   },
 
@@ -379,6 +385,7 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   {
     name: 'Relativity',
     careerUrl: 'https://www.relativity.com/careers/',
+    workday: { company: 'kcura', instance: 'wd1', site: 'External_Career_Site' },
     type: 'company',
   },
   {
@@ -467,11 +474,13 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   {
     name: 'PatSnap',
     careerUrl: 'https://www.patsnap.com/careers/',
+    leverPostingsUrl: 'https://jobs.lever.co/patsnap',
     type: 'company',
   },
   {
     name: 'Clarivate (IP)',
     careerUrl: 'https://clarivate.com/careers/',
+    workday: { company: 'clarivate', instance: 'wd3', site: 'Clarivate_Careers' },
     type: 'company',
   },
   {
@@ -520,6 +529,7 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   {
     name: 'DLA Piper',
     careerUrl: 'https://www.dlapiper.com/en/us/careers/',
+    workday: { company: 'dlapiper', instance: 'wd1', site: 'dlapiper' },
     type: 'biglaw',
   },
   {
@@ -545,6 +555,7 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   {
     name: 'Skadden',
     careerUrl: 'https://www.skadden.com/careers',
+    workday: { company: 'skadden', instance: 'wd5', site: 'Skadden_Careers' },
     type: 'biglaw',
   },
   {
@@ -580,11 +591,13 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   {
     name: 'Hogan Lovells',
     careerUrl: 'https://www.hoganlovells.com/en/careers',
+    workday: { company: 'hoganlovells', instance: 'wd3', site: 'Search' },
     type: 'biglaw',
   },
   {
     name: 'Morgan Lewis',
     careerUrl: 'https://www.morganlewis.com/careers',
+    workday: { company: 'morganlewis', instance: 'wd5', site: 'morganlewis' },
     type: 'biglaw',
   },
   {
@@ -620,11 +633,13 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   {
     name: 'Cooley',
     careerUrl: 'https://www.cooley.com/careers',
+    workday: { company: 'cooley', instance: 'wd1', site: 'Cooley_US_LLP' },
     type: 'biglaw',
   },
   {
     name: 'Goodwin Procter',
     careerUrl: 'https://www.goodwinlaw.com/careers',
+    workday: { company: 'goodwinprocter', instance: 'wd5', site: 'External_Careers' },
     type: 'biglaw',
   },
   {
@@ -660,6 +675,7 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   {
     name: 'Perkins Coie',
     careerUrl: 'https://www.perkinscoie.com/en/careers.html',
+    workday: { company: 'perkinscoie', instance: 'wd1', site: 'perkinscoieexternal' },
     type: 'biglaw',
   },
   {
@@ -724,11 +740,13 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   {
     name: 'Herbert Smith Freehills',
     careerUrl: 'https://www.herbertsmithfreehills.com/careers',
+    workday: { company: 'herbertsmithfreehills', instance: 'wd3', site: 'External' },
     type: 'biglaw',
   },
   {
     name: 'Norton Rose Fulbright',
     careerUrl: 'https://www.nortonrosefulbright.com/en/careers',
+    workday: { company: 'nrf', instance: 'wd3', site: 'External' },
     type: 'biglaw',
   },
   {
