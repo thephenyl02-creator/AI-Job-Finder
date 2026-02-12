@@ -41,7 +41,7 @@ export const jobs = pgTable("jobs", {
   applyClickCount: integer("apply_click_count").default(0),
   lastScrapedAt: timestamp("last_scraped_at").default(sql`CURRENT_TIMESTAMP`),
   manuallyEdited: boolean("manually_edited").default(false),
-  editedBy: integer("edited_by"),
+  editedBy: text("edited_by"),
   editedAt: timestamp("edited_at"),
   legalRelevanceScore: integer("legal_relevance_score"),
   reviewStatus: varchar("review_status", { length: 20 }),

@@ -682,12 +682,63 @@ function cleanDescriptionText(raw: string): string {
   return text.trim();
 }
 
+function isGarbageScrapedJob(job: Partial<ScrapedJob>): boolean {
+  const title = (job.title || '').trim();
+  const desc = (job.description || '').trim();
+  const company = (job.company || '').trim();
+
+  if (!title || title.length < 3) return true;
+
+  if (title === company) return true;
+
+  const navGarbagePatterns = [
+    /skip to (?:main )?content/i,
+    /^menu$/i,
+    /^close$/i,
+    /^careers$/i,
+    /^home$/i,
+    /^search$/i,
+    /^sign in$/i,
+    /^login$/i,
+    /^apply$/i,
+    /^back to/i,
+    /^cookie/i,
+  ];
+  if (navGarbagePatterns.some(p => p.test(title))) return true;
+
+  const descLower = desc.toLowerCase();
+  const navKeywords = ['skip to main content', 'careers @', 'returning candidates', 'current employees', 'stay connected', 'visit linkedin', 'visit facebook'];
+  const navKeywordCount = navKeywords.filter(kw => descLower.includes(kw)).length;
+  if (navKeywordCount >= 2) return true;
+
+  if (desc.length > 0 && desc.length < 50) {
+    const menuItems = desc.split(/\n/).filter(l => l.trim().length > 0 && l.trim().length < 30);
+    if (menuItems.length > 3 && menuItems.length > desc.split(/\n/).filter(l => l.trim().length >= 30).length * 2) {
+      return true;
+    }
+  }
+
+  if (desc.length > 100) {
+    const lines = desc.split(/\n/).filter(l => l.trim().length > 0);
+    const shortLines = lines.filter(l => l.trim().length < 25);
+    if (lines.length > 5 && shortLines.length > lines.length * 0.7) {
+      const hasJobContent = /(?:responsibilit|qualificat|requirement|experience|you will|you'll|we are|we're looking)/i.test(desc);
+      if (!hasJobContent) return true;
+    }
+  }
+
+  return false;
+}
+
 function cleanCompanyName(name: string): string {
-  return name
+  let cleaned = name;
+  cleaned = decodeHtmlEntities(cleaned);
+  cleaned = cleaned
     .replace(/\s*\(formerly\s+[^)]+\)/gi, '')
     .replace(/\s*\(fka\s+[^)]+\)/gi, '')
     .replace(/\s*\(prev(?:iously)?\s+[^)]+\)/gi, '')
     .trim();
+  return cleaned;
 }
 
 function sanitizeLocation(location: string, company: string): string | null {
@@ -762,7 +813,7 @@ export function transformToJobSchema(job: ScrapedJob, categorization?: JobCatego
   }
 
   return {
-    title: job.title.trim(),
+    title: decodeHtmlEntities(job.title.trim()),
     company: companyClean,
     companyLogo: `https://logo.clearbit.com/${companySlug}.com`,
     location: locationText,
@@ -1875,9 +1926,21 @@ export async function scrapeSingleJobUrl(url: string, withTrace?: boolean): Prom
       return null;
     }
 
+    if (scrapedJob.title) {
+      scrapedJob.title = decodeHtmlEntities(scrapedJob.title).trim();
+    }
     if (scrapedJob.description) {
       scrapedJob.description = cleanDescriptionText(scrapedJob.description);
     }
+
+    if (isGarbageScrapedJob(scrapedJob)) {
+      console.log(`[Smart Scraper] Rejected garbage scrape result from ${url}: title="${scrapedJob.title}", desc=${scrapedJob.description?.length || 0} chars`);
+      trace.steps.push({ method: 'Quality Gate', status: 'failed', detail: 'Scraped content appears to be navigation/menu HTML, not a job posting' });
+      trace.confidence = 'low';
+      trace.processingTimeMs = Date.now() - startTime;
+      return null;
+    }
+
     if (!scrapedJob.description || scrapedJob.description.length < 20) {
       scrapedJob.description = `${scrapedJob.title} position at ${scrapedJob.company}. Location: ${scrapedJob.location || 'Not specified'}.`;
     }
