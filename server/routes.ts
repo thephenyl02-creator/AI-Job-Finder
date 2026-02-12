@@ -401,7 +401,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/jobs/:id", isAuthenticated, async (req, res) => {
+  app.get("/api/jobs/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id as string);
       if (isNaN(id)) {
@@ -419,7 +419,7 @@ export async function registerRoutes(
   });
 
   // Track apply button clicks for analytics
-  app.post("/api/jobs/:id/apply-click", isAuthenticated, async (req, res) => {
+  app.post("/api/jobs/:id/apply-click", async (req, res) => {
     try {
       const id = parseInt(req.params.id as string);
       await storage.trackApplyClick(id);
@@ -3067,6 +3067,8 @@ Provide 2-4 recommended paths. Be specific to this candidate's actual experience
         "roleType", "description", "requirements", "applyUrl", "isActive",
         "roleCategory", "roleSubcategory", "seniorityLevel", "keySkills", "aiSummary",
         "legalRelevanceScore", "reviewStatus", "structuredDescription",
+        "experienceMin", "experienceMax", "experienceText",
+        "isPublished", "pipelineStatus", "jobStatus",
       ];
       const updates: Record<string, any> = {};
       for (const field of allowedFields) {
