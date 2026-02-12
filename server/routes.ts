@@ -2485,15 +2485,24 @@ Provide 2-4 recommended paths. Be specific to this candidate's actual experience
       return res.status(403).json({ error: "Admin access required" });
     }
     try {
+      const forceOverride = req.body?.forceOverride === true;
+      const DANGEROUS_REVIEW_CODES = ['BROKEN_APPLY_LINK', 'AUDIT_TITLE_REJECT', 'AUDIT_COMPANY_REJECT', 'HARD_REJECT', 'NON_ENGLISH', 'GARBAGE_DESCRIPTION', 'GENERIC_APPLY_URL', 'LOW_QUALITY_SCRAPE', 'ARTICLE_TITLE', 'AUDIT_DUPLICATE'];
       const approvedJobs = await storage.getJobsForStandardization("approved");
       let published = 0;
+      let skipped = 0;
       for (const job of approvedJobs) {
         if (!job.isPublished) {
+          if (!forceOverride) {
+            if (job.qualityScore !== null && job.qualityScore < 80) { skipped++; continue; }
+            if (job.reviewReasonCode && DANGEROUS_REVIEW_CODES.includes(job.reviewReasonCode)) { skipped++; continue; }
+            const desc = (job.description || '').trim();
+            if (desc.length < 100 || desc.includes('Skip to main content')) { skipped++; continue; }
+          }
           await storage.publishJob(job.id);
           published++;
         }
       }
-      res.json({ published, total: approvedJobs.length });
+      res.json({ published, skipped, total: approvedJobs.length });
     } catch (error) {
       console.error("Error bulk publishing:", error);
       res.status(500).json({ error: "Failed to bulk publish" });
@@ -2651,6 +2660,21 @@ Provide 2-4 recommended paths. Be specific to this candidate's actual experience
       if (!job) return res.status(404).json({ error: "Job not found" });
       if (job.structuredStatus !== "approved") {
         return res.status(400).json({ error: "Job must be approved before publishing" });
+      }
+
+      const forceOverride = req.body?.forceOverride === true;
+      if (!forceOverride) {
+        const DANGEROUS_REVIEW_CODES = ['BROKEN_APPLY_LINK', 'AUDIT_TITLE_REJECT', 'AUDIT_COMPANY_REJECT', 'HARD_REJECT', 'NON_ENGLISH', 'GARBAGE_DESCRIPTION', 'GENERIC_APPLY_URL', 'LOW_QUALITY_SCRAPE', 'ARTICLE_TITLE', 'AUDIT_DUPLICATE'];
+        if (job.qualityScore !== null && job.qualityScore < 80) {
+          return res.status(400).json({ error: `Quality score is ${job.qualityScore} (below 80). Set forceOverride=true to publish anyway.`, warning: 'LOW_QUALITY_SCORE' });
+        }
+        if (job.reviewReasonCode && DANGEROUS_REVIEW_CODES.includes(job.reviewReasonCode)) {
+          return res.status(400).json({ error: `Job has review reason code '${job.reviewReasonCode}'. Set forceOverride=true to publish anyway.`, warning: 'DANGEROUS_REVIEW_CODE' });
+        }
+        const desc = (job.description || '').trim();
+        if (desc.length < 100 || desc.includes('Skip to main content')) {
+          return res.status(400).json({ error: 'Job description is too short or contains scraper artifacts. Set forceOverride=true to publish anyway.', warning: 'BAD_DESCRIPTION' });
+        }
       }
 
       const updated = await storage.publishJob(id);

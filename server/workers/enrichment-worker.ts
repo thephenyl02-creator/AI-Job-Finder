@@ -5,6 +5,9 @@ import { categorizeJob } from '../lib/job-categorizer';
 import { cleanJobDescription } from '../lib/description-cleaner';
 import { generateJobHash } from '../lib/job-hash';
 import type { Job } from '@shared/schema';
+import { jobs } from '@shared/schema';
+import { db } from '../db';
+import { eq, and, sql } from 'drizzle-orm';
 import axios from 'axios';
 
 async function fetchJobPageContent(url: string): Promise<string | null> {
@@ -46,6 +49,16 @@ async function fetchJobPageContent(url: string): Promise<string | null> {
   } catch {
     return null;
   }
+}
+
+function cleanJobTitle(title: string): string {
+  let cleaned = title.trim();
+  cleaned = cleaned.replace(/\s*[\|–—-]\s*(Remote|Hybrid|On-?site|Full[- ]?Time|Part[- ]?Time|Contract|Temporary|Intern|Internship)\s*$/i, '');
+  cleaned = cleaned.replace(/\s*\((Remote|Hybrid|On-?site|Full[- ]?Time|Part[- ]?Time|Contract|Temporary|Intern|Internship)\)\s*$/i, '');
+  cleaned = cleaned.replace(/\s*\[.*?\]\s*$/, '');
+  cleaned = cleaned.replace(/\s*-\s*(US|UK|EU|EMEA|APAC|LATAM|Remote)\s*$/i, '');
+  cleaned = cleaned.replace(/\s{2,}/g, ' ').trim();
+  return cleaned || title;
 }
 
 const ENRICHMENT_INTERVAL_MS = 2 * 60 * 1000;
@@ -212,6 +225,95 @@ function shouldRejectByCompany(title: string, company: string): boolean {
   return false;
 }
 
+function isLikelyNonEnglish(text: string): boolean {
+  const cyrillicPattern = /[\u0400-\u04FF]/g;
+  const cjkPattern = /[\u4E00-\u9FFF]/g;
+  const arabicPattern = /[\u0600-\u06FF]/g;
+  const hangulPattern = /[\uAC00-\uD7AF]/g;
+
+  const nonLatinMatches = (text.match(cyrillicPattern) || []).length +
+    (text.match(cjkPattern) || []).length +
+    (text.match(arabicPattern) || []).length +
+    (text.match(hangulPattern) || []).length;
+
+  const latinAlpha = (text.match(/[a-zA-Z]/g) || []).length;
+  const totalAlpha = latinAlpha + nonLatinMatches;
+
+  if (totalAlpha === 0) return false;
+  return nonLatinMatches / totalAlpha > 0.2;
+}
+
+function isArticleTitle(title: string): boolean {
+  const words = title.trim().split(/\s+/);
+  if (words.length <= 10) return false;
+
+  const JOB_KEYWORDS = /\b(manager|engineer|analyst|counsel|director|specialist|coordinator|lead|associate|consultant|designer|architect|officer|paralegal|attorney|advisor)\b/i;
+  if (JOB_KEYWORDS.test(title)) return false;
+
+  const colonIndex = title.indexOf(':');
+  if (colonIndex >= 0) {
+    const afterColon = title.substring(colonIndex + 1).trim();
+    const afterColonWords = afterColon.split(/\s+/);
+    if (afterColonWords.length >= 5) return true;
+  }
+
+  return true;
+}
+
+function hasGarbageDescription(description: string | null): boolean {
+  if (!description || description.trim().length === 0) return true;
+  const trimmed = description.trim();
+  if (trimmed.length < 100) return true;
+  if (trimmed.includes('Skip to main content') || trimmed.includes('Skip to content')) return true;
+  if (trimmed.startsWith('-->')) return true;
+  const textChars = trimmed.replace(/\s/g, '').length;
+  if (trimmed.length > 0 && textChars / trimmed.length < 0.3) return true;
+  return false;
+}
+
+function isGenericCareersUrl(url: string): boolean {
+  if (!url) return false;
+  try {
+    const parsed = new URL(url);
+    const path = parsed.pathname.toLowerCase();
+
+    if (/gh_jid=|jobs\/\d+|\/job\/\d+|\/position\/|\/opening\/|\/requisition\/|\/jid\/|\/apply\/\d+/i.test(url)) return false;
+    if (/\/jobs\/[a-z0-9-]{5,}/i.test(path) && !/\/jobs\/?$/i.test(path)) return false;
+
+    if (url.includes('icims.com/jobs/intro')) return true;
+
+    if (/^\/careers\/?$/.test(path) || /^\/jobs\/?$/.test(path)) return true;
+
+    if (path === '/' || path === '') return true;
+
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+function reconcileLocation(location: string | null, enrichedData: Record<string, any>): void {
+  if (!location) return;
+  const loc = location.toLowerCase();
+
+  const hasRemote = /\bremote\b/i.test(loc);
+  const hasHybrid = /\bhybrid\b/i.test(loc);
+
+  const cityPatterns = /\b(new york|san francisco|los angeles|chicago|boston|seattle|austin|denver|washington|atlanta|dallas|houston|miami|philadelphia|phoenix|portland|minneapolis|detroit|charlotte|nashville|raleigh|salt lake|san diego|san jose|tampa|orlando|pittsburgh|st\.? louis|indianapolis|columbus|milwaukee|kansas city|cleveland|cincinnati|sacramento|las vegas|london|toronto|berlin|amsterdam|dublin|paris|singapore|sydney|mumbai|bangalore|tokyo)\b/i;
+  const hasCity = cityPatterns.test(loc);
+
+  if (hasRemote && !hasCity) {
+    enrichedData.isRemote = true;
+    enrichedData.locationType = 'remote';
+  } else if (hasCity && (hasRemote || hasHybrid)) {
+    enrichedData.isRemote = false;
+    enrichedData.locationType = 'hybrid';
+  } else if (hasCity && !hasRemote) {
+    enrichedData.isRemote = false;
+    enrichedData.locationType = 'onsite';
+  }
+}
+
 interface EnrichmentResult {
   processed: number;
   published: number;
@@ -251,11 +353,34 @@ function isStructuredDescriptionComplete(sd: any): boolean {
   return hasAboutCompany && hasResponsibilities && hasQualifications && hasSkills;
 }
 
+async function recoverStuckJobs(): Promise<number> {
+  try {
+    const stuckJobs = await db.select().from(jobs)
+      .where(and(
+        eq(jobs.pipelineStatus, 'enriching'),
+        eq(jobs.isActive, true),
+        sql`(${jobs.lastEnrichedAt} < NOW() - INTERVAL '30 minutes' OR ${jobs.lastEnrichedAt} IS NULL)`
+      ));
+
+    if (stuckJobs.length > 0) {
+      console.log(`[Enrichment] Found ${stuckJobs.length} stuck jobs in 'enriching' state, resetting to 'raw'`);
+      for (const job of stuckJobs) {
+        await storage.updateJobWorkerFields(job.id, { pipelineStatus: 'raw' });
+      }
+    }
+    return stuckJobs.length;
+  } catch (err: any) {
+    console.error('[Enrichment] Failed to recover stuck jobs:', err.message);
+    return 0;
+  }
+}
+
 async function enrichJob(job: Job): Promise<void> {
   if (shouldHardReject(job.title)) {
     console.log(`[Enrichment] Hard-rejecting "${job.title}" at ${job.company} - irrelevant title pattern`);
     await storage.updateJobWorkerFields(job.id, {
       pipelineStatus: 'rejected',
+      isPublished: false,
       reviewReasonCode: 'IRRELEVANT_TITLE',
       lastEnrichedAt: new Date(),
     });
@@ -266,22 +391,76 @@ async function enrichJob(job: Job): Promise<void> {
     console.log(`[Enrichment] Company-rejecting "${job.title}" at ${job.company} - non-legal-tech company without legal signal`);
     await storage.updateJobWorkerFields(job.id, {
       pipelineStatus: 'rejected',
+      isPublished: false,
       reviewReasonCode: 'NON_LEGAL_TECH_COMPANY',
       lastEnrichedAt: new Date(),
     });
     return;
   }
 
+  if (isLikelyNonEnglish(job.title)) {
+    console.log(`[Enrichment] Non-English title detected: "${job.title}" at ${job.company}`);
+    await storage.updateJobWorkerFields(job.id, {
+      pipelineStatus: 'rejected',
+      isPublished: false,
+      reviewReasonCode: 'NON_ENGLISH',
+      lastEnrichedAt: new Date(),
+    });
+    return;
+  }
+
+  if (isArticleTitle(job.title)) {
+    console.log(`[Enrichment] Article title detected: "${job.title}" at ${job.company}`);
+    await storage.updateJobWorkerFields(job.id, {
+      pipelineStatus: 'rejected',
+      isPublished: false,
+      reviewReasonCode: 'ARTICLE_TITLE',
+      lastEnrichedAt: new Date(),
+    });
+    return;
+  }
+
+  if (hasGarbageDescription(job.description)) {
+    console.log(`[Enrichment] Garbage description detected for "${job.title}" at ${job.company}`);
+    await storage.updateJobWorkerFields(job.id, {
+      pipelineStatus: 'rejected',
+      isPublished: false,
+      reviewReasonCode: 'GARBAGE_DESCRIPTION',
+      lastEnrichedAt: new Date(),
+    });
+    return;
+  }
+
+  if (job.source === 'generic' && ((job.description || '').trim().length < 200 || hasGarbageDescription(job.description))) {
+    console.log(`[Enrichment] Low quality generic scrape: "${job.title}" at ${job.company}`);
+    await storage.updateJobWorkerFields(job.id, {
+      pipelineStatus: 'rejected',
+      isPublished: false,
+      reviewReasonCode: 'LOW_QUALITY_SCRAPE',
+      lastEnrichedAt: new Date(),
+    });
+    return;
+  }
+
+  const cleanedTitle = cleanJobTitle(job.title);
+  if (cleanedTitle !== job.title) {
+    console.log(`[Enrichment] Title cleaned: "${job.title}" → "${cleanedTitle}"`);
+  }
+
   const enrichedData: Record<string, any> = {
     pipelineStatus: 'enriching',
   };
+
+  if (cleanedTitle !== job.title) {
+    enrichedData.title = cleanedTitle;
+  }
 
   try {
     await storage.updateJobWorkerFields(job.id, { pipelineStatus: 'enriching' });
 
     if (!job.jobHash) {
       enrichedData.jobHash = generateJobHash(
-        job.company, job.title, job.location || '', job.applyUrl
+        job.company, cleanedTitle, job.location || '', job.applyUrl
       );
     }
 
@@ -356,6 +535,8 @@ async function enrichJob(job: Job): Promise<void> {
       }
     }
 
+    reconcileLocation(job.location, enrichedData);
+
     const qualityScore = computeQualityScore(job, enrichedData);
     const relevanceConfidence = enrichedData.legalRelevanceScore
       ? Math.min(100, enrichedData.legalRelevanceScore * 10)
@@ -370,11 +551,13 @@ async function enrichJob(job: Job): Promise<void> {
 
     if (catResult?.reviewStatus === 'rejected' || relevanceConfidence < 40) {
       enrichedData.pipelineStatus = 'rejected';
+      enrichedData.isPublished = false;
       enrichedData.reviewReasonCode = 'LOW_RELEVANCE';
     } else if (relevanceConfidence >= 60 && enrichedData.roleCategory && structuredComplete && relevanceScore >= 6 && qualityScore >= 80) {
       const existingDuplicate = await storage.findLiveJobByTitleAndCompany(job.title, job.company, job.id);
       if (existingDuplicate) {
         enrichedData.pipelineStatus = 'rejected';
+        enrichedData.isPublished = false;
         enrichedData.reviewReasonCode = 'DUPLICATE_JOB';
         console.log(`[Enrichment] Duplicate detected: "${job.title}" at ${job.company} (existing live job #${existingDuplicate.id})`);
       } else {
@@ -413,6 +596,8 @@ async function runEnrichmentBatch(): Promise<EnrichmentResult> {
   const result: EnrichmentResult = { processed: 0, published: 0, needsReview: 0, rejected: 0, errors: 0 };
 
   try {
+    await recoverStuckJobs();
+
     const rawJobs = await storage.getJobsForEnrichment(BATCH_SIZE);
     if (rawJobs.length === 0) return result;
 
@@ -467,6 +652,7 @@ async function runLiveJobAudit(): Promise<{ audited: number; flagged: number }> 
         console.log(`[Audit] Flagging "${job.title}" at ${job.company} - matched hard reject title pattern`);
         await storage.updateJobWorkerFields(job.id, {
           pipelineStatus: 'rejected',
+          isPublished: false,
           reviewReasonCode: 'AUDIT_TITLE_REJECT',
         });
         flagged++;
@@ -477,17 +663,30 @@ async function runLiveJobAudit(): Promise<{ audited: number; flagged: number }> 
         console.log(`[Audit] Flagging "${job.title}" at ${job.company} - non-legal-tech company`);
         await storage.updateJobWorkerFields(job.id, {
           pipelineStatus: 'rejected',
+          isPublished: false,
           reviewReasonCode: 'AUDIT_COMPANY_REJECT',
         });
         flagged++;
         continue;
       }
 
-      const duplicate = await storage.findLiveJobByTitleAndCompany(job.title, job.company, job.id);
-      if (duplicate && duplicate.id < job.id) {
-        console.log(`[Audit] Flagging duplicate "${job.title}" at ${job.company} (keeping #${duplicate.id}, rejecting #${job.id})`);
+      if (isGenericCareersUrl(job.applyUrl || '')) {
+        console.log(`[Audit] Flagging "${job.title}" at ${job.company} - generic careers URL: ${job.applyUrl}`);
         await storage.updateJobWorkerFields(job.id, {
           pipelineStatus: 'rejected',
+          isPublished: false,
+          reviewReasonCode: 'GENERIC_APPLY_URL',
+        });
+        flagged++;
+        continue;
+      }
+
+      const duplicate = await storage.findLiveJobDuplicate(job.title, job.company, job.location, job.id);
+      if (duplicate && duplicate.id < job.id) {
+        console.log(`[Audit] Flagging duplicate "${job.title}" at ${job.company} [${job.location}] (keeping #${duplicate.id}, rejecting #${job.id})`);
+        await storage.updateJobWorkerFields(job.id, {
+          pipelineStatus: 'rejected',
+          isPublished: false,
           reviewReasonCode: 'AUDIT_DUPLICATE',
         });
         flagged++;

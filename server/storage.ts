@@ -139,7 +139,7 @@ export interface IStorage {
   getLatestScrapeRun(): Promise<ScrapeRun | undefined>;
   // Pipeline / Enrichment
   getJobsForEnrichment(limit?: number): Promise<Job[]>;
-  findLiveJobByTitleAndCompany(title: string, company: string, excludeId: number): Promise<Job | undefined>;
+  findLiveJobDuplicate(title: string, company: string, location: string | null, excludeId: number): Promise<Job | undefined>;
   getLiveJobs(): Promise<Job[]>;
   updateJobPipeline(id: number, data: Record<string, any>): Promise<Job | undefined>;
   updateJobWorkerFields(id: number, data: Record<string, any>): Promise<Job | undefined>;
@@ -445,8 +445,14 @@ class DatabaseStorage implements IStorage {
       if (descriptionChanged) {
         updateData.description = newDesc;
         updateData.descriptionFormatted = true;
-        if (existing.pipelineStatus === 'ready' || existing.pipelineStatus === 'rejected') {
+        const PERMANENT_REJECTION_CODES = ['AUDIT_TITLE_REJECT', 'AUDIT_COMPANY_REJECT', 'HARD_REJECT', 'NON_ENGLISH', 'GARBAGE_DESCRIPTION', 'AUDIT_DUPLICATE'];
+        if (existing.pipelineStatus === 'ready') {
           updateData.pipelineStatus = 'raw';
+        } else if (existing.pipelineStatus === 'rejected') {
+          const isPermanent = existing.reviewReasonCode && PERMANENT_REJECTION_CODES.includes(existing.reviewReasonCode);
+          if (!isPermanent) {
+            updateData.pipelineStatus = 'raw';
+          }
         }
       }
 
@@ -2714,13 +2720,16 @@ class DatabaseStorage implements IStorage {
       );
   }
 
-  async findLiveJobByTitleAndCompany(title: string, company: string, excludeId: number): Promise<Job | undefined> {
-    const [existing] = await db
+  async findLiveJobDuplicate(title: string, company: string, location: string | null, excludeId: number): Promise<Job | undefined> {
+    const { normalizeTitle, normalizeLocation } = await import('./lib/job-normalization');
+    const normTitle = normalizeTitle(title);
+    const normLoc = normalizeLocation(location);
+    
+    const candidates = await db
       .select()
       .from(jobs)
       .where(
         and(
-          eq(jobs.title, title),
           eq(jobs.company, company),
           eq(jobs.isPublished, true),
           eq(jobs.isActive, true),
@@ -2728,9 +2737,12 @@ class DatabaseStorage implements IStorage {
           eq(jobs.jobStatus, 'open'),
           sql`${jobs.id} != ${excludeId}`
         )
-      )
-      .limit(1);
-    return existing;
+      );
+    
+    return candidates.find(j => 
+      normalizeTitle(j.title) === normTitle && 
+      normalizeLocation(j.location) === normLoc
+    );
   }
 
   async updateJobPipeline(id: number, data: Record<string, any>): Promise<Job | undefined> {
@@ -2749,9 +2761,12 @@ class DatabaseStorage implements IStorage {
       'lastSeenAt', 'lastCheckedAt', 'lastEnrichedAt', 'applyUrlStatus',
       'roleCategory', 'roleSubcategory', 'roleFocus', 'seniorityLevel',
       'legalRelevanceScore', 'legalRelevanceReasoning', 'aiSummary',
-      'cleanedDescription', 'experienceMin', 'experienceMax',
+      'cleanedDescription', 'experienceMin', 'experienceMax', 'experienceText',
       'salaryMin', 'salaryMax', 'salaryCurrency',
-      'jobStatus', 'isActive',
+      'jobStatus', 'isActive', 'isPublished',
+      'title', 'description', 'descriptionFormatted', 'jobHash',
+      'keySkills', 'matchKeywords', 'aiResponsibilities', 'aiQualifications', 'aiNiceToHaves',
+      'isRemote', 'locationType', 'reviewStatus',
     ]);
     const safeData: Record<string, any> = {};
     for (const [key, val] of Object.entries(data)) {
