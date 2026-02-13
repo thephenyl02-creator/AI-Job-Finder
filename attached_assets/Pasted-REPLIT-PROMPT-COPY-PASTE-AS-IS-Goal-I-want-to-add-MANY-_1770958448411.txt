@@ -1,0 +1,272 @@
+REPLIT PROMPT (COPY/PASTE AS-IS)
+
+Goal:
+I want to add MANY more jobs, but ONLY jobs that pass strict checks so the USER SIDE always looks clean, consistent, and “lawyer-first”. Build an end-to-end ingestion + QA + publish pipeline that guarantees no admin/user mismatch and prevents irrelevant jobs (e.g., Software Engineer) from appearing unless explicitly allowed.
+
+Non-negotiables:
+- Users only see PUBLISHED jobs that passed validation + QA.
+- Every published job must render in the same structured format:
+  Summary, Minimum, Preferred, Core Skills, Responsibilities, (Collapsed original).
+- Arrays are never null/undefined (always []).
+- No “random” engineering roles shown by default.
+
+-------------------------------------------------------
+1) DATA MODEL: ADD INGESTION + QA FIELDS TO JOB
+-------------------------------------------------------
+Extend the canonical NormalizedJob schema to include:
+
+type QAStatus = "failed" | "passed" | "needs_review";
+type IngestStatus = "imported" | "normalized" | "qa_passed" | "published" | "rejected";
+
+type NormalizedJob = {
+  id: string;
+  title: string;
+  company: string;
+  location: string;
+  remoteType: "onsite" | "hybrid" | "remote" | "unknown";
+  roleCategory: string;
+  seniority: string;
+
+  summary: string;
+  minimumQualifications: string[];
+  preferredQualifications: string[];
+  coreSkills: string[];
+  responsibilities: string[];
+
+  compensation: string;
+  originalUrl: string;
+  originalDescription: string;
+
+  // new fields for scale + checks
+  source: string;                 // "LinkedIn", "Greenhouse", "Lever", "Manual", etc.
+  sourceId: string;               // external id if available
+  jobHash: string;                // hash(title+company+location+originalUrl) for dedupe
+  postedAt: string | null;
+  expiresAt: string | null;
+
+  lawyerFirstScore: number;       // 0-100 (how relevant to lawyers/legal tech)
+  excludeReason: string | null;   // e.g. "Engineering-only role"
+
+  ingestStatus: IngestStatus;
+  qaStatus: QAStatus;
+
+  qaErrors: { code: string; message: string }[];  // why it failed
+  qaWarnings: { code: string; message: string }[];// allowed but flagged
+  status: "draft" | "published";  // published only when qa_passed + admin publish
+
+  createdAt: string;
+  updatedAt: string;
+};
+
+Rules:
+- status="published" only if ingestStatus="published" AND qaStatus="passed".
+- Users query ONLY published jobs.
+
+-------------------------------------------------------
+2) INGESTION PIPELINE (BULK JOBS) — THE CORE FEATURE
+-------------------------------------------------------
+Create a pipeline that supports:
+A) Manual admin entry (paste description/url)
+B) Bulk import (JSON / CSV upload)
+C) Scraper/aggregator feed (server job/cron)
+
+All ingestion must follow:
+RAW INPUT -> NORMALIZE -> QA CHECKS -> (AUTO-PUBLISH OR NEEDS_REVIEW) -> USER
+
+Do NOT normalize on user view. Normalize at ingestion only.
+
+-------------------------------------------------------
+3) ADMIN BULK IMPORT FLOW (FAST WAY TO ADD MANY JOBS)
+-------------------------------------------------------
+Build an admin page: /admin/import-jobs
+
+Features:
+- Upload CSV or JSON
+- Fields accepted:
+  title, company, location, originalUrl, originalDescription, source, sourceId, postedAt
+
+Process after upload:
+1) Create jobs in DB as ingestStatus="imported", status="draft"
+2) Run normalization on each job -> ingestStatus="normalized"
+3) Run QA checks -> set qaStatus + qaErrors/qaWarnings
+4) Show results in a table:
+   - Passed (ready to publish)
+   - Needs review
+   - Failed (rejected)
+5) Bulk actions:
+   - “Publish all passed”
+   - “Send needs_review to edit”
+   - “Reject all failed”
+
+Add filters:
+- qaStatus
+- roleCategory
+- lawyerFirstScore range
+- missing fields
+
+-------------------------------------------------------
+4) QA CHECKS (THIS IS WHAT PREVENTS ADMIN/USER MISMATCH)
+-------------------------------------------------------
+Implement a QA function that returns:
+{ qaStatus, errors[], warnings[], lawyerFirstScore, excludeReason }
+
+PUBLISH-BLOCKING ERRORS (fail QA):
+E_TITLE_MISSING: title < 3 chars
+E_COMPANY_MISSING: company < 2 chars
+E_SUMMARY_SHORT: summary < 30 chars
+E_SKILLS_TOO_FEW: coreSkills < 3
+E_MINQ_EMPTY: minimumQualifications empty (or responsibilities empty) -> choose one as required
+E_ROLECATEGORY_EMPTY: roleCategory empty
+E_ENGINEERING_ONLY: detected engineering-only job (see rules below)
+E_DUPLICATE: jobHash already exists and is active
+
+WARNINGS (allowed but flagged):
+W_LOCATION_UNKNOWN
+W_PREFERRED_EMPTY
+W_RESP_TOO_FEW (responsibilities < 2)
+W_LOW_LAWYER_SCORE (lawyerFirstScore < threshold)
+W_TOO_MUCH_RAW (originalDescription huge / untrimmed)
+
+DEFAULT THRESHOLDS:
+- lawyerFirstScore must be >= 60 to auto-pass without review
+- 40–59 => needs_review
+- < 40 => fail (unless admin overrides with “Include anyway” toggle)
+
+-------------------------------------------------------
+5) LAWYER-FIRST FILTER (STOP RANDOM SOFTWARE ENGINEER JOBS)
+-------------------------------------------------------
+Implement a deterministic relevance scoring (no AI required), based on title + description keywords.
+
+A) HARD EXCLUDE (engineering-only by default):
+If title matches any of:
+- Software Engineer, Backend Engineer, Frontend Engineer, Full Stack, DevOps, SRE, QA Engineer, Mobile Engineer
+AND does NOT contain legal indicators (below),
+=> fail with E_ENGINEERING_ONLY.
+
+B) POSITIVE LEGAL INDICATORS (increase score):
+Keywords in title/description:
+- Counsel, Attorney, Legal, Privacy, Compliance, Contracts, Legal Ops, CLM, eDiscovery, Governance, Risk, Policy, Regulatory, Product Counsel, Legal Engineer, Knowledge Engineer, Innovation, Transformation, AI Adoption
+
+C) LEGAL TECH ROLE CATEGORIES (map to roleCategory):
+- Privacy Counsel / Privacy Program Manager
+- Product Counsel / Legal Product Counsel
+- Legal Operations / CLM / Contract Manager
+- Legal Engineer / Knowledge Engineer
+- AI Adoption Manager / Innovation Manager (Legal)
+- Compliance / Risk / Governance
+- eDiscovery / Investigations Tech
+- Regulatory / Policy (AI, data)
+
+D) OPTIONAL USER TOGGLE:
+On user side, add a filter “Include engineering roles” (default OFF).
+Even if OFF, ensure those roles never appear.
+
+-------------------------------------------------------
+6) DEDUPLICATION (AVOID MULTIPLE COPIES)
+-------------------------------------------------------
+Compute jobHash = sha256(lower(title|company|location|originalUrl))
+Before insert/publish:
+- If same hash exists and not expired/rejected -> mark as duplicate and skip or update existing.
+
+Also handle “same job posted with slight changes”:
+- fallback hash without URL: sha256(lower(title|company|location))
+
+-------------------------------------------------------
+7) AUTO-PUBLISH POLICY (SCALE WITHOUT MANUAL WORK)
+-------------------------------------------------------
+Add setting:
+AUTO_PUBLISH=true
+
+If a job passes QA with:
+qaStatus="passed" AND lawyerFirstScore >= 70
+=> set ingestStatus="published", status="published"
+
+If lawyerFirstScore 60–69 => needs_review
+If < 60 or has blocking errors => fail/reject
+
+This allows you to ingest hundreds of jobs and only the good ones appear.
+
+-------------------------------------------------------
+8) USER-SIDE REFLECTS CHECKS (CLEAN DISPLAY GUARANTEE)
+-------------------------------------------------------
+In user API:
+GET /api/jobs -> returns only status="published"
+User never sees draft, needs_review, failed.
+
+In UI:
+Render only normalized fields.
+If optional sections empty:
+- show calm empty text (“Not listed”)
+Never show broken sections or undefined arrays.
+
+Add badges (optional):
+- “Curated”
+- “Verified”
+- “New” (postedAt within 7 days)
+
+-------------------------------------------------------
+9) ADMIN REVIEW QUEUE (FOR NEEDS_REVIEW JOBS)
+-------------------------------------------------------
+Admin screen: /admin/review-jobs
+
+Show jobs where qaStatus="needs_review"
+Admin can:
+- edit normalized fields (skills/min/preferred/summary)
+- change roleCategory
+- override engineer filter (rare) with “Allow engineering role”
+Then rerun QA and publish.
+
+-------------------------------------------------------
+10) BACKEND JOB RUNNER (TO ADD MORE JOBS DAILY)
+-------------------------------------------------------
+Add a server job runner (cron-like):
+- Runs every X hours
+- Pulls from your chosen sources/feed (or a file drop)
+- Ingest -> normalize -> QA -> autopublish
+
+IMPORTANT:
+If you don’t have legal permission to scrape a source, DO NOT scrape it.
+Prefer:
+- Public RSS feeds
+- Greenhouse/Lever public APIs (where allowed)
+- Company career pages with permission
+- User-submitted jobs (with moderation)
+
+-------------------------------------------------------
+11) IMPLEMENTATION TASKS (DO THIS IN CODEBASE)
+-------------------------------------------------------
+A) DB migration:
+- add new fields qaStatus, qaErrors, qaWarnings, lawyerFirstScore, jobHash, ingestStatus, source, sourceId, postedAt, expiresAt, excludeReason
+
+B) Backend utilities:
+- normalizeJob(raw) -> NormalizedJob (structured fields, defaults)
+- qaJob(normalized) -> {qaStatus, errors, warnings, score, excludeReason}
+- computeJobHash(job)
+
+C) API endpoints:
+POST /api/admin/jobs/bulk-import (CSV/JSON)
+POST /api/admin/jobs/:id/recheck-qa
+POST /api/admin/jobs/publish-passed
+GET /api/admin/jobs?qaStatus=...
+GET /api/jobs (published only)
+GET /api/jobs/:id
+
+D) Frontend admin pages:
+- Import jobs page (upload + results table)
+- Review queue page (edit + rerun QA + publish)
+
+E) Frontend user pages:
+- Ensure jobs list shows only published
+- Add “Include engineering roles” filter (OFF by default)
+- Badges “Curated/Verified/New” if you want
+
+-------------------------------------------------------
+12) FINAL GUARANTEE
+-------------------------------------------------------
+After this implementation:
+- You can add many jobs (bulk import + automated feed).
+- Only “clean, lawyer-first” jobs appear to users.
+- Admin/user mismatch disappears because users render only structured normalized fields.
+- Irrelevant jobs are filtered out by hard exclude + lawyerFirstScore + QA.
+
+Now implement all of the above end-to-end in this project.

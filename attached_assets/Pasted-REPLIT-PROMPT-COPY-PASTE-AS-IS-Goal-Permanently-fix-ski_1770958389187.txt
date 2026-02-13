@@ -1,0 +1,171 @@
+REPLIT PROMPT (COPY/PASTE AS-IS)
+
+Goal: Permanently fix “skills mismatch between admin and user” by enforcing ONE normalized Job schema. Admin can paste a job link/description; the backend normalizes into structured fields; Admin reviews/edits; only then publish. Users ONLY see structured fields (not raw text). No more UI mismatches.
+
+TECH CONTEXT
+- This is a React/TS frontend with a backend API and a DB.
+- Implement in a safe, incremental way (no breaking changes).
+- Add strong validation + defaults so arrays are never undefined.
+
+WHAT TO BUILD (PERMANENT FIX)
+
+1) STANDARDIZE THE JOB DATA MODEL (single source of truth)
+Create a canonical “NormalizedJob” shape used by BOTH admin + user UIs:
+
+type NormalizedJob = {
+  id: string;
+  title: string;
+  company: string;
+  location: string;
+  remoteType: "onsite" | "hybrid" | "remote" | "unknown";
+  roleCategory: string;                 // e.g., "Privacy Counsel", "Legal Ops", "Legal Product", "Legal Engineer"
+  seniority: string;                    // e.g., "Entry", "Mid", "Senior", "Unknown"
+  summary: string;                      // plain English
+  minimumQualifications: string[];      // ALWAYS an array, default []
+  preferredQualifications: string[];    // ALWAYS an array, default []
+  coreSkills: string[];                 // ALWAYS an array, default []
+  responsibilities: string[];           // ALWAYS an array, default []
+  compensation: string;                 // free text, default ""
+  originalUrl: string;                  // default ""
+  originalDescription: string;          // raw HTML/text, default ""
+  status: "draft" | "published";        // draft until admin publishes
+  createdAt: string;
+  updatedAt: string;
+};
+
+CRITICAL RULES:
+- In DB, store BOTH originalDescription (raw) AND normalized fields.
+- In ALL user-facing pages, render ONLY normalized fields (summary/min/preferred/skills/responsibilities).
+- Arrays must never be null/undefined. Always [].
+
+2) ADD A NORMALIZATION PIPELINE (runs on admin save/import, not on user view)
+When admin creates/updates a job:
+- Input: either (a) a pasted raw job description text OR (b) a URL OR (c) both.
+- Backend should produce NormalizedJob fields with safe defaults.
+- Admin must be able to edit normalized fields before publishing.
+
+Normalization steps:
+A) sanitize raw description (strip scripts, normalize whitespace)
+B) extract sections into arrays (min/preferred/responsibilities)
+C) extract coreSkills from bullet lists + keywords (dedupe, max 25)
+D) generate a plain-English summary (3–5 bullets or 2–3 sentences)
+E) set missing fields to defaults ("" or [] or "unknown")
+
+IMPORTANT: Do NOT block publishing if optional sections are missing, but block if required fields are missing:
+Required for publish:
+- title (min 3 chars)
+- company (min 2 chars)
+- summary (min 30 chars)
+- coreSkills length >= 3
+- roleCategory not empty
+
+3) BACKEND API (create endpoints + validation)
+Implement these endpoints:
+
+POST /api/admin/jobs/normalize
+- Body: { title?, company?, location?, originalUrl?, originalDescription? }
+- Returns: { normalized: Partial<NormalizedJob> } with defaults filled
+- This endpoint DOES NOT write to DB; it just returns extracted structured fields for preview.
+
+POST /api/admin/jobs
+- Body: NormalizedJob (or Partial + originalDescription/originalUrl)
+- Server: validate + ensure defaults + save as status="draft"
+- Return saved job.
+
+PUT /api/admin/jobs/:id
+- Update draft fields (normalized + raw)
+- Return updated job.
+
+POST /api/admin/jobs/:id/publish
+- Validate required fields; if ok set status="published"
+- Return published job.
+
+GET /api/jobs
+- For users: return only status="published" jobs
+- Return normalized fields + (optional) originalUrl
+- Do NOT return admin-only metadata.
+
+GET /api/jobs/:id
+- For users: return published job
+- Include normalized fields and optionally include originalUrl; keep originalDescription behind a “View original” collapsible if you want.
+
+4) ADMIN UI (two-step workflow)
+In Admin job creation screen:
+Step 1: “Import”
+- Textarea: paste job description (raw)
+- Input: job URL (optional)
+- Button: “Extract & Preview”
+  -> Calls POST /api/admin/jobs/normalize
+  -> Shows a preview form populated with extracted fields.
+
+Step 2: “Review & Edit”
+- Editable fields:
+  title, company, location, remoteType, roleCategory, seniority,
+  summary,
+  minimumQualifications (editable list),
+  preferredQualifications (editable list),
+  coreSkills (tag editor),
+  responsibilities (editable list),
+  compensation,
+  originalUrl
+- Buttons:
+  “Save Draft” (POST/PUT)
+  “Publish” (POST /publish; show validation errors clearly)
+
+Add UI validation messages (inline):
+- If publish fails, show which required fields missing.
+
+5) USER UI (render safely + consistently)
+Update job detail page to render these sections in this order (even if empty):
+- Summary (plain English)
+- Minimum Qualifications
+- Preferred Qualifications
+- Core Skills
+- Responsibilities
+- (Collapsed) Full Original Posting (link only; optional raw)
+
+If a section is empty, show a calm empty state instead of blank space, e.g.:
+- “No preferred qualifications listed.”
+- “Skills not specified — we’ll improve this listing.”
+
+Ensure you never do `map()` on possibly undefined arrays.
+All arrays must default to [] from API and UI must still guard.
+
+6) DB MIGRATION / BACKFILL (so old jobs stop breaking)
+Write a one-time script or migration:
+- For each existing job record:
+  - If normalized fields missing, set defaults [] / ""
+  - Optionally run the normalize function on old originalDescription and fill fields
+  - Set status to draft if required fields are missing, else published (your choice)
+This fixes the current admin/user mismatch for existing data.
+
+7) ADD SERVER-SIDE “DEFAULT ENFORCER”
+No matter what the admin sends, server must enforce defaults:
+- If minimumQualifications is null -> []
+- If summary is null -> ""
+- etc.
+This prevents mismatches forever.
+
+8) QUALITY / LOGGING (debug mismatches)
+Add structured logs:
+- When normalize runs, log job id + counts: { minCount, prefCount, skillsCount, respCount }
+- When publish fails, return clear error array:
+  [{ field: "coreSkills", message: "Add at least 3 skills" }]
+
+DELIVERABLES
+- Updated Job schema/type (shared between FE/BE if possible)
+- Normalization function (backend utility)
+- Admin normalize preview flow + publish gating
+- User job rendering uses normalized fields only
+- Backfill/migration script for existing jobs
+- Minimal but clear UI empty-states + validation messages
+
+IMPORTANT IMPLEMENTATION NOTES
+- Keep changes incremental and non-breaking.
+- If there’s no AI model available on backend, implement a deterministic parser first:
+  - Use common headings: “Minimum Qualifications”, “Preferred Qualifications”, “Requirements”, “What you’ll do”, etc.
+  - Split by lines/bullets; dedupe; trim.
+- Make sure arrays always exist.
+- Ensure admin routes require isAdmin and are not accessible to normal users.
+
+Now implement this end-to-end in the codebase.
