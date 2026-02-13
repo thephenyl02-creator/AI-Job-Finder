@@ -1,0 +1,243 @@
+You are a senior product architect and staff engineer. Your task is to evolve this platform from a job discovery tool into a CAREER INTELLIGENCE PLATFORM for lawyers transitioning into legal technology and AI roles.
+
+This is NOT a UI-only change. This is a product architecture change.
+
+The objective is to make the platform the place lawyers return weekly to understand career transitions in legal technology.
+
+------------------------------------------------------------
+GOAL
+------------------------------------------------------------
+
+The platform must become the place lawyers return to understand:
+
+- what roles exist in legal technology
+- how lawyers transition into those roles
+- what skills are required next
+- how close they are to those roles
+- what realistic next steps look like
+
+The product must shift from:
+
+Jobs → Match → Apply
+
+to:
+
+Profile → Career Paths → Skill Gaps → Role Fit → Jobs
+
+------------------------------------------------------------
+CORE PRINCIPLES (NON-NEGOTIABLE)
+------------------------------------------------------------
+
+1) Job discovery is not the product. Career understanding is the product.
+2) Resume upload is optional and never required for value.
+3) Users must get meaningful insight within 30 seconds.
+4) Every feature must increase repeat usage.
+5) Long-term defensibility comes from structured career intelligence data.
+6) Simplicity over automation — avoid complexity that reduces clarity.
+
+------------------------------------------------------------
+DATA QUALITY PRINCIPLE (CRITICAL)
+------------------------------------------------------------
+
+Career intelligence must prioritize accuracy over automation.
+
+If transition data is uncertain:
+
+- allow admin-curated career paths first
+- clearly label AI-generated suggestions
+- do NOT fabricate transition probabilities or statistics
+- avoid fake precision
+
+Early versions must rely on curated mappings and expert-defined transitions.
+
+Trust is more important than automation.
+
+------------------------------------------------------------
+CORE USER LOOP (MUST BE PRESERVED)
+------------------------------------------------------------
+
+Every feature must reinforce this loop:
+
+1) User discovers a role
+2) User understands how lawyers transition into it
+3) User learns skill gaps
+4) User saves or tracks roles
+5) User returns to check progress or new matching roles
+
+If a feature does not strengthen this loop, do not implement it.
+
+------------------------------------------------------------
+IMPLEMENTATION REQUIREMENTS
+------------------------------------------------------------
+
+A) CAREER PATH LAYER (NEW CORE FEATURE)
+
+Create a new structured data model:
+
+career_path:
+- source_role (e.g., Litigation Associate)
+- target_role (e.g., Legal Operations Manager)
+- role_family
+- common_skills_required (array)
+- common_skill_gaps (array)
+- years_of_experience_range
+- confidence_type (curated | inferred)
+
+For every job category:
+
+- define common previous roles lawyers come from
+- define typical next roles
+
+UI REQUIREMENT:
+Add a “Career Path” section on job pages:
+
+"This role is commonly reached from:"
+"This role often leads to:"
+
+This must be readable in plain English.
+
+------------------------------------------------------------
+
+B) ROLE INTELLIGENCE LAYER
+
+Each role must include structured fields:
+
+- plain_english_explanation
+- why_lawyers_fit
+- transferable_skills
+- common_skill_gaps
+- related_roles
+- role_family
+- seniority_level
+- background_fit (JD required / JD preferred / lawyer-friendly)
+
+This must be stored as structured data, not only text.
+
+No LIVE job may exist without this data.
+
+------------------------------------------------------------
+
+C) QUICK FIT (NO RESUME REQUIRED)
+
+Create a guided flow with 5 questions:
+
+- current role
+- years of experience
+- interest area (product, AI, ops, privacy, compliance, innovation)
+- comfort with technology
+- desired work style
+
+Output:
+
+- top 3 role families
+- suggested career paths
+- recommended next skills
+- matching jobs
+
+Users must receive value without uploading a resume.
+
+------------------------------------------------------------
+
+D) ROLE GRAPH (LONG-TERM DEFENSIBILITY)
+
+Create internal mapping:
+
+role → adjacent roles → common transitions
+
+This graph powers:
+
+- career path suggestions
+- related roles
+- future recommendations
+
+This is internal intelligence, not exposed as raw data.
+
+------------------------------------------------------------
+
+E) USER RETURN LOOP (DASHBOARD)
+
+Create a simple dashboard showing:
+
+- roles closer to user profile
+- new roles matching saved interests
+- skills trending in target roles
+- saved career paths
+
+The dashboard must encourage weekly return.
+
+------------------------------------------------------------
+
+F) UI SIMPLIFICATION (MANDATORY)
+
+Reduce resume upload dominance.
+
+Primary navigation:
+
+Home
+Explore Roles
+Career Paths
+Quick Fit
+Saved Roles
+
+Rules:
+
+- Resume upload appears only when useful.
+- Remove ATS language.
+- Replace with “Role Fit” terminology.
+- Interface must remain calm, minimal, and lawyer-friendly.
+
+------------------------------------------------------------
+
+G) ADMIN EXTENSION
+
+Admin must be able to:
+
+- create/edit career paths
+- approve role intelligence content
+- edit role explanations
+- see most viewed transitions
+- manage role graph safely
+
+Admin must never require code changes for career path edits.
+
+------------------------------------------------------------
+
+H) ADMIN VS USER CONSISTENCY (CRITICAL FIX)
+
+- User job feed must ONLY show pipeline_status = LIVE.
+- Admin “Live” view must use the same query.
+- Remove or derive duplicate flags (published/approved/status).
+- Add debug panel showing:
+  - DB identity
+  - pipeline counts
+  - user feed count
+
+------------------------------------------------------------
+
+ACCEPTANCE CRITERIA
+------------------------------------------------------------
+
+1) A new user gets career insight within 30 seconds.
+2) Users can explore transitions without uploading resumes.
+3) Every LIVE job includes career path context.
+4) Platform provides value even without applying to jobs.
+5) Users have reasons to return weekly.
+6) Career intelligence is trustworthy and not over-automated.
+7) Admin and User job counts match exactly.
+
+------------------------------------------------------------
+
+DELIVERABLES REQUIRED
+------------------------------------------------------------
+
+1) Updated architecture description.
+2) New data models implemented.
+3) Updated UI flow and navigation.
+4) Explanation of how this increases defensibility.
+5) Explanation of how this improves investor readiness.
+6) Walkthrough of user journey from landing to repeat visit.
+
+START BY:
+- Reviewing existing architecture.
+- Identifying conflicts with current system.
+- Implementing changes incrementally without breaking existing jobs pipeline.
