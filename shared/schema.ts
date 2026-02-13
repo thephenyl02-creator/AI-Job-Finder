@@ -69,6 +69,12 @@ export const jobs = pgTable("jobs", {
   lastSeenAt: timestamp("last_seen_at").default(sql`CURRENT_TIMESTAMP`),
   lastEnrichedAt: timestamp("last_enriched_at"),
   whyThisFitsLawyers: text("why_this_fits_lawyers"),
+  qaStatus: varchar("qa_status", { length: 20 }),
+  qaErrors: jsonb("qa_errors"),
+  qaWarnings: jsonb("qa_warnings"),
+  lawyerFirstScore: integer("lawyer_first_score"),
+  qaExcludeReason: varchar("qa_exclude_reason", { length: 255 }),
+  qaCheckedAt: timestamp("qa_checked_at"),
 });
 
 export const jobCategories = pgTable("job_categories", {

@@ -60,6 +60,12 @@ Legal Tech Careers is a freemium SaaS job search platform designed for legal pro
 - **Deduplication**: `jobHash` field prevents duplicate ingestion based on company + title + location + applyUrl
 - **API**: Paginated `/api/jobs` endpoint with server-side filtering (category, seniority, location, search)
 - **Admin**: `/api/admin/pipeline-stats` shows pipeline health metrics
+- **QA Validation System**: Comprehensive publish-blocking QA with persisted results (qaStatus, qaErrors, qaWarnings, lawyerFirstScore, qaExcludeReason, qaCheckedAt columns). Error codes: E_TITLE_MISSING, E_COMPANY_MISSING, E_SUMMARY_SHORT, E_SKILLS_TOO_FEW, E_ROLECATEGORY_EMPTY, E_ENGINEERING_ONLY, E_MINQ_EMPTY. Statuses: passed/needs_review/failed. Lawyer-first scoring (0-100) from title/description keywords.
+- **Description Parser**: Deterministic text parser (server/lib/description-parser.ts) extracting summary, responsibilities, qualifications, preferred, skills from raw descriptions using heading/bullet detection.
+- **Job Defaults Enforcer**: server/lib/job-defaults.ts ensures all array fields default to [] and string fields to '' to prevent null rendering.
+- **Admin Import**: POST /api/admin/jobs/create-draft, POST /api/admin/jobs/bulk-import (CSV/JSON), POST /api/admin/jobs/:id/qa-publish, POST /api/admin/jobs/:id/qa-check, POST /api/admin/jobs/bulk-qa-publish
+- **Admin Review Queue**: GET /api/admin/jobs/review-queue with filter param (all/passed/needs_review/failed), uses persisted QA data with fallback to on-the-fly computation
+- **Backfill Script**: server/scripts/backfill-qa.ts - backfills defaults, structured descriptions, and QA results for existing published jobs
 
 ### Core Features
 - **Unified Smart Search**: AI-powered natural language job search with guided queries.

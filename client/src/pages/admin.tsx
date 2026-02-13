@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Link } from "wouter";
-import { ArrowLeft, RefreshCw, Building2, Globe, Loader2, CheckCircle, XCircle, Sparkles, Activity, FileText, Play, Square, LinkIcon, Clock, ShieldX, ShieldCheck, Plus, Upload, Pencil, Trash2, RotateCw, ToggleLeft, ToggleRight, Search, Filter, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Save, X as XIcon, BarChart3, ClipboardPaste, Zap, MapPin, DollarSign, Briefcase, GraduationCap, Tag, Eye, Calendar } from "lucide-react";
+import { ArrowLeft, RefreshCw, Building2, Globe, Loader2, CheckCircle, XCircle, Sparkles, Activity, FileText, Play, Square, LinkIcon, Clock, ShieldX, ShieldCheck, Plus, Upload, Pencil, Trash2, RotateCw, ToggleLeft, ToggleRight, Search, Filter, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Save, X as XIcon, BarChart3, ClipboardPaste, ClipboardCheck, Zap, MapPin, DollarSign, Briefcase, GraduationCap, Tag, Eye, Calendar } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { Job, StructuredDescription } from "@shared/schema";
@@ -923,6 +923,18 @@ export default function AdminPage() {
                 <Button variant="outline" data-testid="link-reports-admin">
                   <ShieldX className="h-4 w-4 mr-2" />
                   Reports
+                </Button>
+              </Link>
+              <Link href="/admin/import-jobs">
+                <Button variant="outline" data-testid="link-import-jobs">
+                  <Upload className="h-4 w-4 mr-2" />
+                  Import Jobs
+                </Button>
+              </Link>
+              <Link href="/admin/review-jobs">
+                <Button variant="outline" data-testid="link-review-queue">
+                  <ClipboardCheck className="h-4 w-4 mr-2" />
+                  Review Queue
                 </Button>
               </Link>
             </div>

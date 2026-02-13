@@ -3,6 +3,15 @@ import { cleanStructuredText } from "@/lib/structured-description";
 import { Building2, Briefcase, CheckCircle2, Star, Hash, TrendingUp, Layers, Bot, Scale } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
+const EMPTY_MESSAGES: Record<string, string> = {
+  aboutCompany: "Company details not available.",
+  responsibilities: "Responsibilities not listed.",
+  minimumQualifications: "Requirements not specified.",
+  preferredQualifications: "No preferred qualifications listed.",
+  skillsRequired: "Skills not specified.",
+  lawyerTransitionNotes: "Transition notes not yet available.",
+};
+
 function MetaBadges({ data, compact }: { data: StructuredDescription; compact?: boolean }) {
   const hasMeta = !!(data.seniority || data.legalTechCategory || data.aiRelevanceScore || data.lawyerTransitionFriendly);
   if (!hasMeta) return null;
@@ -40,14 +49,26 @@ function MetaBadges({ data, compact }: { data: StructuredDescription; compact?: 
   );
 }
 
+interface SectionDef {
+  key: string;
+  title: string;
+  items: string[] | null;
+  text: string | null;
+  icon: typeof Building2;
+  renderAsBadges?: boolean;
+  alwaysShow?: boolean;
+}
+
 export function StructuredDescriptionView({ data, compact }: { data: StructuredDescription; compact?: boolean }) {
-  const sections: { key: string; title: string; items: string[] | null; text: string | null; icon: typeof Building2; renderAsBadges?: boolean }[] = [
-    { key: "aboutCompany", title: "About the Company", items: null, text: data.aboutCompany, icon: Building2 },
-    { key: "responsibilities", title: "What You'll Do", items: data.responsibilities, text: null, icon: Briefcase },
-    { key: "minimumQualifications", title: "Requirements", items: data.minimumQualifications, text: null, icon: CheckCircle2 },
-    { key: "preferredQualifications", title: "Nice to Have", items: data.preferredQualifications, text: null, icon: Star },
-    { key: "skillsRequired", title: "Key Skills", items: data.skillsRequired, text: null, icon: Hash, renderAsBadges: true },
-    { key: "lawyerTransitionNotes", title: "For Lawyers Considering This Role", items: data.lawyerTransitionNotes || null, text: null, icon: Scale },
+  const safeArray = (arr: unknown): string[] => Array.isArray(arr) ? arr : [];
+
+  const sections: SectionDef[] = [
+    { key: "aboutCompany", title: "About the Company", items: null, text: data.aboutCompany || null, icon: Building2 },
+    { key: "responsibilities", title: "What You'll Do", items: safeArray(data.responsibilities), text: null, icon: Briefcase, alwaysShow: true },
+    { key: "minimumQualifications", title: "Requirements", items: safeArray(data.minimumQualifications), text: null, icon: CheckCircle2, alwaysShow: true },
+    { key: "preferredQualifications", title: "Nice to Have", items: safeArray(data.preferredQualifications), text: null, icon: Star, alwaysShow: true },
+    { key: "skillsRequired", title: "Key Skills", items: safeArray(data.skillsRequired), text: null, icon: Hash, renderAsBadges: true, alwaysShow: true },
+    { key: "lawyerTransitionNotes", title: "For Lawyers Considering This Role", items: safeArray(data.lawyerTransitionNotes), text: null, icon: Scale },
   ];
 
   if (compact) {
@@ -57,10 +78,10 @@ export function StructuredDescriptionView({ data, compact }: { data: StructuredD
           <p className="text-xs text-muted-foreground italic leading-relaxed" data-testid="structured-summary">{cleanStructuredText(data.summary)}</p>
         )}
         <MetaBadges data={data} compact />
-        {sections.map(({ key, title, items, text, icon: Icon, renderAsBadges }) => {
+        {sections.map(({ key, title, items, text, icon: Icon, renderAsBadges, alwaysShow }) => {
           const hasText = text && text.trim();
           const hasItems = items && items.length > 0;
-          if (!hasText && !hasItems) return null;
+          if (!hasText && !hasItems && !alwaysShow) return null;
           return (
             <div key={key} data-testid={`structured-${key}`}>
               <div className="flex items-center gap-1.5 mb-1">
@@ -69,7 +90,7 @@ export function StructuredDescriptionView({ data, compact }: { data: StructuredD
               </div>
               {hasText ? (
                 <p className="text-xs text-muted-foreground leading-relaxed pl-4">{cleanStructuredText(text!)}</p>
-              ) : renderAsBadges ? (
+              ) : hasItems && renderAsBadges ? (
                 <div className="flex flex-wrap gap-1 pl-4">
                   {items!.map((item, i) => (
                     <Badge key={i} variant="secondary" className="text-[10px]">
@@ -77,7 +98,7 @@ export function StructuredDescriptionView({ data, compact }: { data: StructuredD
                     </Badge>
                   ))}
                 </div>
-              ) : (
+              ) : hasItems ? (
                 <ul className="space-y-0.5 pl-4">
                   {items!.map((item, i) => (
                     <li key={i} className="flex gap-1.5 text-xs text-muted-foreground leading-relaxed">
@@ -86,6 +107,10 @@ export function StructuredDescriptionView({ data, compact }: { data: StructuredD
                     </li>
                   ))}
                 </ul>
+              ) : (
+                <p className="text-xs text-muted-foreground/60 italic pl-4" data-testid={`empty-${key}`}>
+                  {EMPTY_MESSAGES[key] || "Not listed."}
+                </p>
               )}
             </div>
           );
@@ -100,10 +125,10 @@ export function StructuredDescriptionView({ data, compact }: { data: StructuredD
         <p className="text-sm text-muted-foreground italic leading-relaxed" data-testid="structured-summary">{cleanStructuredText(data.summary)}</p>
       )}
       <MetaBadges data={data} />
-      {sections.map(({ key, title, items, text, icon: Icon, renderAsBadges }) => {
+      {sections.map(({ key, title, items, text, icon: Icon, renderAsBadges, alwaysShow }) => {
         const hasText = text && text.trim();
         const hasItems = items && items.length > 0;
-        if (!hasText && !hasItems) return null;
+        if (!hasText && !hasItems && !alwaysShow) return null;
         return (
           <div key={key} data-testid={`structured-${key}`}>
             <div className="flex items-center gap-2 mb-2.5">
@@ -112,7 +137,7 @@ export function StructuredDescriptionView({ data, compact }: { data: StructuredD
             </div>
             {hasText ? (
               <p className="text-sm text-muted-foreground leading-relaxed pl-6">{cleanStructuredText(text!)}</p>
-            ) : renderAsBadges ? (
+            ) : hasItems && renderAsBadges ? (
               <div className="flex flex-wrap gap-1.5 pl-6">
                 {items!.map((item, i) => (
                   <Badge key={i} variant="secondary" className="text-xs" data-testid={`badge-skill-${i}`}>
@@ -120,7 +145,7 @@ export function StructuredDescriptionView({ data, compact }: { data: StructuredD
                   </Badge>
                 ))}
               </div>
-            ) : (
+            ) : hasItems ? (
               <ul className="space-y-1.5 pl-6">
                 {items!.map((item, i) => (
                   <li key={i} className="text-sm text-muted-foreground leading-relaxed flex items-start gap-2">
@@ -129,6 +154,10 @@ export function StructuredDescriptionView({ data, compact }: { data: StructuredD
                   </li>
                 ))}
               </ul>
+            ) : (
+              <p className="text-sm text-muted-foreground/60 italic pl-6" data-testid={`empty-${key}`}>
+                {EMPTY_MESSAGES[key] || "Not listed."}
+              </p>
             )}
           </div>
         );

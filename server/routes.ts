@@ -52,6 +52,13 @@ async function extractStructuredDescriptionBackground(jobId: number, description
   }
 }
 import { parseJobFile, parseMultipleJobsFromText } from "./lib/job-file-parser";
+import { parseDescription as parseDescriptionDeterministic } from "./lib/description-parser";
+import { runQAChecks, checkDuplicate } from "./lib/job-qa";
+import { enforceJobDefaults } from "./lib/job-defaults";
+import { generateJobHash } from "./lib/job-hash";
+import { db } from "./db";
+import { jobs } from "@shared/schema";
+import { eq, and } from "drizzle-orm";
 import { JOB_TAXONOMY } from "@shared/schema";
 import {
   startScheduler,
@@ -2833,6 +2840,555 @@ Provide 2-4 recommended paths. Be specific to this candidate's actual experience
     } catch (error: any) {
       console.error("Error confirming job:", error);
       res.status(500).json({ error: error.message || "Failed to save job" });
+    }
+  });
+
+  // === NORMALIZATION + QA ENDPOINTS ===
+
+  app.post("/api/admin/jobs/normalize", isAuthenticated, async (req, res) => {
+    if (!(await isAdminCheck(req))) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    try {
+      const { title, company, location, originalUrl, originalDescription } = req.body;
+      const rawText = originalDescription || '';
+
+      if (!rawText && !originalUrl) {
+        return res.status(400).json({ error: "Provide either a description or a URL" });
+      }
+
+      let descriptionText = rawText;
+
+      if (originalUrl && !rawText) {
+        try {
+          const scraped = await scrapeSingleJobUrl(originalUrl, false);
+          if (scraped) {
+            descriptionText = scraped.description || '';
+            const merged = {
+              title: title || scraped.title || '',
+              company: company || scraped.company || '',
+              location: location || scraped.location || '',
+              description: descriptionText,
+              applyUrl: originalUrl,
+            };
+            const parsed = parseDescriptionDeterministic(descriptionText, merged.title, merged.company);
+            const qaResult = runQAChecks({
+              title: merged.title,
+              company: merged.company,
+              location: merged.location,
+              description: descriptionText,
+              roleCategory: scraped.roleCategory || '',
+              keySkills: parsed.coreSkills,
+              aiSummary: parsed.summary,
+              structuredDescription: {
+                summary: parsed.summary,
+                aboutCompany: '',
+                responsibilities: parsed.responsibilities,
+                minimumQualifications: parsed.minimumQualifications,
+                preferredQualifications: parsed.preferredQualifications,
+                skillsRequired: parsed.coreSkills,
+                seniority: '',
+                legalTechCategory: '',
+              } as any,
+            } as any);
+
+            return res.json({
+              normalized: {
+                title: merged.title,
+                company: merged.company,
+                location: merged.location,
+                summary: parsed.summary,
+                responsibilities: parsed.responsibilities,
+                minimumQualifications: parsed.minimumQualifications,
+                preferredQualifications: parsed.preferredQualifications,
+                coreSkills: parsed.coreSkills,
+                compensation: parsed.compensation,
+                originalUrl,
+                originalDescription: descriptionText,
+                roleCategory: scraped.roleCategory || '',
+                seniorityLevel: scraped.seniorityLevel || '',
+              },
+              qa: qaResult,
+            });
+          }
+        } catch (err: any) {
+          console.error("[Normalize] URL scrape failed:", err.message);
+        }
+      }
+
+      const parsed = parseDescriptionDeterministic(descriptionText, title || '', company || '');
+      const qaResult = runQAChecks({
+        title: title || '',
+        company: company || '',
+        location: location || '',
+        description: descriptionText,
+        roleCategory: '',
+        keySkills: parsed.coreSkills,
+        aiSummary: parsed.summary,
+        structuredDescription: {
+          summary: parsed.summary,
+          aboutCompany: '',
+          responsibilities: parsed.responsibilities,
+          minimumQualifications: parsed.minimumQualifications,
+          preferredQualifications: parsed.preferredQualifications,
+          skillsRequired: parsed.coreSkills,
+          seniority: '',
+          legalTechCategory: '',
+        } as any,
+      } as any);
+
+      res.json({
+        normalized: {
+          title: title || '',
+          company: company || '',
+          location: location || '',
+          summary: parsed.summary,
+          responsibilities: parsed.responsibilities,
+          minimumQualifications: parsed.minimumQualifications,
+          preferredQualifications: parsed.preferredQualifications,
+          coreSkills: parsed.coreSkills,
+          compensation: parsed.compensation,
+          originalUrl: originalUrl || '',
+          originalDescription: descriptionText,
+          roleCategory: '',
+          seniorityLevel: '',
+        },
+        qa: qaResult,
+      });
+    } catch (error: any) {
+      console.error("[Normalize] Error:", error);
+      res.status(500).json({ error: error.message || "Normalization failed" });
+    }
+  });
+
+  app.post("/api/admin/jobs/create-draft", isAuthenticated, async (req, res) => {
+    if (!(await isAdminCheck(req))) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    try {
+      const body = req.body;
+      if (!body.title || !body.company) {
+        return res.status(400).json({ error: "Title and company are required" });
+      }
+
+      const defaults = enforceJobDefaults({
+        title: body.title,
+        company: body.company,
+        location: body.location || 'Not specified',
+        isRemote: Boolean(body.isRemote),
+        locationType: body.locationType || (body.isRemote ? 'remote' : 'unknown'),
+        description: body.originalDescription || body.description || `${body.title} at ${body.company}`,
+        applyUrl: body.originalUrl || body.applyUrl || '#',
+        isActive: true,
+        isPublished: false,
+        pipelineStatus: 'raw',
+        source: body.source || 'admin-manual',
+        externalId: `manual_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
+        roleCategory: body.roleCategory || null,
+        seniorityLevel: body.seniorityLevel || null,
+        keySkills: body.coreSkills || [],
+        aiSummary: body.summary || '',
+        structuredDescription: {
+          summary: body.summary || '',
+          aboutCompany: body.aboutCompany || '',
+          responsibilities: body.responsibilities || [],
+          minimumQualifications: body.minimumQualifications || [],
+          preferredQualifications: body.preferredQualifications || [],
+          skillsRequired: body.coreSkills || [],
+          seniority: body.seniorityLevel || '',
+          legalTechCategory: body.roleCategory || '',
+        },
+        structuredStatus: 'generated',
+      }) as any;
+
+      defaults.jobHash = generateJobHash(defaults.company, defaults.title, defaults.location, defaults.applyUrl);
+
+      const isDup = await checkDuplicate(defaults.jobHash);
+      if (isDup) {
+        return res.status(409).json({ error: "A similar job already exists (duplicate detected)" });
+      }
+
+      const qaResult = runQAChecks(defaults);
+      defaults.qaStatus = qaResult.qaStatus;
+      defaults.qaErrors = qaResult.errors;
+      defaults.qaWarnings = qaResult.warnings;
+      defaults.lawyerFirstScore = qaResult.lawyerFirstScore;
+      defaults.qaExcludeReason = qaResult.excludeReason;
+      defaults.qaCheckedAt = new Date();
+
+      const { inserted, newJobs } = await storage.bulkUpsertJobs([defaults]);
+
+      res.json({
+        success: true,
+        message: "Draft created",
+        jobId: newJobs.length > 0 ? newJobs[0].id : null,
+        inserted,
+        qa: qaResult,
+      });
+    } catch (error: any) {
+      console.error("[Create Draft] Error:", error);
+      res.status(500).json({ error: error.message || "Failed to create draft" });
+    }
+  });
+
+  app.post("/api/admin/jobs/:id/qa-check", isAuthenticated, async (req, res) => {
+    if (!(await isAdminCheck(req))) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    try {
+      const id = parseInt(req.params.id as string);
+      const job = await storage.getJob(id);
+      if (!job) return res.status(404).json({ error: "Job not found" });
+
+      const qaResult = runQAChecks(job);
+
+      await storage.updateJob(id, {
+        qaStatus: qaResult.qaStatus,
+        qaErrors: qaResult.errors,
+        qaWarnings: qaResult.warnings,
+        lawyerFirstScore: qaResult.lawyerFirstScore,
+        qaExcludeReason: qaResult.excludeReason,
+        qaCheckedAt: new Date(),
+      } as any);
+
+      res.json({ jobId: id, ...qaResult });
+    } catch (error: any) {
+      console.error("[QA Check] Error:", error);
+      res.status(500).json({ error: "QA check failed" });
+    }
+  });
+
+  app.post("/api/admin/jobs/:id/qa-publish", isAuthenticated, async (req, res) => {
+    if (!(await isAdminCheck(req))) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    try {
+      const id = parseInt(req.params.id as string);
+      const forceOverride = req.body?.forceOverride === true;
+      const job = await storage.getJob(id);
+      if (!job) return res.status(404).json({ error: "Job not found" });
+
+      const qaResult = runQAChecks(job);
+
+      if (qaResult.errors.length > 0 && !forceOverride) {
+        return res.status(400).json({
+          error: "Job failed QA checks",
+          qaStatus: qaResult.qaStatus,
+          errors: qaResult.errors,
+          warnings: qaResult.warnings,
+          lawyerFirstScore: qaResult.lawyerFirstScore,
+        });
+      }
+
+      if (qaResult.qaStatus === 'needs_review' && !forceOverride) {
+        return res.status(400).json({
+          error: "Job needs review before publishing (low lawyer relevance score)",
+          qaStatus: qaResult.qaStatus,
+          errors: qaResult.errors,
+          warnings: qaResult.warnings,
+          lawyerFirstScore: qaResult.lawyerFirstScore,
+        });
+      }
+
+      const updated = await storage.updateJob(id, {
+        isPublished: true,
+        pipelineStatus: 'ready',
+        structuredStatus: job.structuredStatus === 'missing' ? 'generated' : job.structuredStatus,
+        legalRelevanceScore: qaResult.lawyerFirstScore,
+        qaStatus: qaResult.qaStatus,
+        qaErrors: qaResult.errors,
+        qaWarnings: qaResult.warnings,
+        lawyerFirstScore: qaResult.lawyerFirstScore,
+        qaExcludeReason: qaResult.excludeReason,
+        qaCheckedAt: new Date(),
+      } as any);
+
+      res.json({
+        success: true,
+        job: updated,
+        qa: qaResult,
+      });
+    } catch (error: any) {
+      console.error("[QA Publish] Error:", error);
+      res.status(500).json({ error: "Failed to publish job" });
+    }
+  });
+
+  app.post("/api/admin/jobs/bulk-import", isAuthenticated, adminUpload.single("file"), async (req, res) => {
+    if (!(await isAdminCheck(req))) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    try {
+      let jobsData: any[] = [];
+
+      if (req.file) {
+        const content = req.file.buffer.toString('utf-8');
+        const ext = (req.file.originalname || '').toLowerCase();
+
+        if (ext.endsWith('.json')) {
+          const parsed = JSON.parse(content);
+          jobsData = Array.isArray(parsed) ? parsed : [parsed];
+        } else if (ext.endsWith('.csv')) {
+          const lines = content.split('\n').filter((l: string) => l.trim());
+          if (lines.length < 2) {
+            return res.status(400).json({ error: "CSV must have headers and at least one row" });
+          }
+          const headers = lines[0].split(',').map((h: string) => h.trim().toLowerCase());
+          for (let i = 1; i < lines.length; i++) {
+            const vals = lines[i].split(',').map((v: string) => v.trim().replace(/^"|"$/g, ''));
+            const row: any = {};
+            headers.forEach((h: string, idx: number) => { row[h] = vals[idx] || ''; });
+            jobsData.push(row);
+          }
+        } else {
+          return res.status(400).json({ error: "Upload a .json or .csv file" });
+        }
+      } else if (req.body.jobs && Array.isArray(req.body.jobs)) {
+        jobsData = req.body.jobs;
+      } else {
+        return res.status(400).json({ error: "Provide a file upload or a jobs array in the body" });
+      }
+
+      if (jobsData.length > 200) {
+        return res.status(400).json({ error: "Maximum 200 jobs per import" });
+      }
+
+      const results: Array<{
+        index: number;
+        title: string;
+        company: string;
+        status: 'created' | 'duplicate' | 'failed';
+        qaStatus?: string;
+        errors?: any[];
+        warnings?: any[];
+        lawyerFirstScore?: number;
+        jobId?: number;
+        error?: string;
+      }> = [];
+
+      for (let i = 0; i < jobsData.length; i++) {
+        const raw = jobsData[i];
+        try {
+          const title = (raw.title || '').trim();
+          const company = (raw.company || '').trim();
+          const location = (raw.location || 'Not specified').trim();
+          const description = (raw.originalDescription || raw.description || '').trim();
+          const applyUrl = (raw.originalUrl || raw.applyUrl || raw.apply_url || '#').trim();
+
+          if (!title || !company) {
+            results.push({ index: i, title, company, status: 'failed', error: 'Title and company required' });
+            continue;
+          }
+
+          const hash = generateJobHash(company, title, location, applyUrl);
+          const isDup = await checkDuplicate(hash);
+          if (isDup) {
+            results.push({ index: i, title, company, status: 'duplicate', error: 'Duplicate job' });
+            continue;
+          }
+
+          const parsed = parseDescriptionDeterministic(description, title, company);
+          const jobForQA = {
+            title, company, location, description,
+            roleCategory: raw.roleCategory || '',
+            keySkills: parsed.coreSkills,
+            aiSummary: parsed.summary,
+            structuredDescription: {
+              summary: parsed.summary,
+              aboutCompany: '',
+              responsibilities: parsed.responsibilities,
+              minimumQualifications: parsed.minimumQualifications,
+              preferredQualifications: parsed.preferredQualifications,
+              skillsRequired: parsed.coreSkills,
+              seniority: '',
+              legalTechCategory: '',
+            },
+          } as any;
+
+          const qaResult = runQAChecks(jobForQA);
+
+          const insertData = enforceJobDefaults({
+            title,
+            company,
+            location,
+            isRemote: Boolean(raw.isRemote),
+            locationType: raw.isRemote ? 'remote' : 'unknown',
+            description: description || `${title} at ${company}`,
+            applyUrl,
+            isActive: true,
+            isPublished: false,
+            pipelineStatus: 'raw',
+            source: raw.source || 'bulk-import',
+            externalId: raw.sourceId || `import_${Date.now()}_${i}`,
+            roleCategory: raw.roleCategory || '',
+            seniorityLevel: raw.seniorityLevel || '',
+            keySkills: parsed.coreSkills,
+            aiSummary: parsed.summary,
+            jobHash: hash,
+            legalRelevanceScore: qaResult.lawyerFirstScore,
+            structuredDescription: jobForQA.structuredDescription,
+            structuredStatus: 'generated',
+            qaStatus: qaResult.qaStatus,
+            qaErrors: qaResult.errors,
+            qaWarnings: qaResult.warnings,
+            lawyerFirstScore: qaResult.lawyerFirstScore,
+            qaExcludeReason: qaResult.excludeReason,
+            qaCheckedAt: new Date(),
+          }) as any;
+
+          const { newJobs } = await storage.bulkUpsertJobs([insertData]);
+          const jobId = newJobs.length > 0 ? newJobs[0].id : undefined;
+
+          results.push({
+            index: i,
+            title,
+            company,
+            status: 'created',
+            qaStatus: qaResult.qaStatus,
+            errors: qaResult.errors,
+            warnings: qaResult.warnings,
+            lawyerFirstScore: qaResult.lawyerFirstScore,
+            jobId,
+          });
+        } catch (err: any) {
+          results.push({
+            index: i,
+            title: raw.title || '',
+            company: raw.company || '',
+            status: 'failed',
+            error: err.message || 'Unknown error',
+          });
+        }
+      }
+
+      const created = results.filter(r => r.status === 'created').length;
+      const duplicates = results.filter(r => r.status === 'duplicate').length;
+      const failed = results.filter(r => r.status === 'failed').length;
+      const passed = results.filter(r => r.qaStatus === 'passed').length;
+      const needsReview = results.filter(r => r.qaStatus === 'needs_review').length;
+      const qaFailed = results.filter(r => r.qaStatus === 'failed').length;
+
+      res.json({
+        success: true,
+        summary: { total: jobsData.length, created, duplicates, failed, passed, needsReview, qaFailed },
+        results,
+      });
+    } catch (error: any) {
+      console.error("[Bulk Import] Error:", error);
+      res.status(500).json({ error: error.message || "Bulk import failed" });
+    }
+  });
+
+  app.get("/api/admin/jobs/review-queue", isAuthenticated, async (req, res) => {
+    if (!(await isAdminCheck(req))) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    try {
+      const filter = (req.query.filter as string) || 'all';
+      const allJobs = await db.select().from(jobs)
+        .where(
+          and(
+            eq(jobs.isActive, true),
+            eq(jobs.isPublished, false),
+          )
+        )
+        .orderBy(jobs.id)
+        .limit(200);
+
+      const withQA = allJobs.map(job => {
+        const qa = job.qaStatus
+          ? {
+              qaStatus: job.qaStatus as string,
+              errors: (job.qaErrors as any[]) || [],
+              warnings: (job.qaWarnings as any[]) || [],
+              lawyerFirstScore: job.lawyerFirstScore ?? 0,
+              excludeReason: job.qaExcludeReason || null,
+            }
+          : runQAChecks(job);
+        return { ...job, qa };
+      });
+
+      let filtered = withQA;
+      if (filter === 'passed') {
+        filtered = withQA.filter(j => j.qa.qaStatus === 'passed');
+      } else if (filter === 'needs_review') {
+        filtered = withQA.filter(j => j.qa.qaStatus === 'needs_review');
+      } else if (filter === 'failed') {
+        filtered = withQA.filter(j => j.qa.qaStatus === 'failed');
+      }
+
+      res.json({
+        total: filtered.length,
+        jobs: filtered.map(j => ({
+          id: j.id,
+          title: j.title,
+          company: j.company,
+          location: j.location,
+          roleCategory: j.roleCategory,
+          source: j.source,
+          pipelineStatus: j.pipelineStatus,
+          qualityScore: j.qualityScore,
+          legalRelevanceScore: j.legalRelevanceScore,
+          structuredStatus: j.structuredStatus,
+          qa: j.qa,
+          createdAt: j.postedDate,
+        })),
+      });
+    } catch (error: any) {
+      console.error("[Review Queue] Error:", error);
+      res.status(500).json({ error: "Failed to load review queue" });
+    }
+  });
+
+  app.post("/api/admin/jobs/bulk-qa-publish", isAuthenticated, async (req, res) => {
+    if (!(await isAdminCheck(req))) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    try {
+      const { jobIds } = req.body;
+      if (!jobIds || !Array.isArray(jobIds) || jobIds.length === 0) {
+        return res.status(400).json({ error: "Provide an array of job IDs" });
+      }
+
+      const results: Array<{ id: number; status: 'published' | 'failed'; error?: string }> = [];
+
+      for (const id of jobIds.slice(0, 100)) {
+        try {
+          const job = await storage.getJob(id);
+          if (!job) {
+            results.push({ id, status: 'failed', error: 'Job not found' });
+            continue;
+          }
+
+          const qaResult = runQAChecks(job);
+          if (qaResult.errors.length > 0) {
+            results.push({ id, status: 'failed', error: `QA failed: ${qaResult.errors.map(e => e.message).join(', ')}` });
+            continue;
+          }
+
+          await storage.updateJob(id, {
+            isPublished: true,
+            pipelineStatus: 'ready',
+            legalRelevanceScore: qaResult.lawyerFirstScore,
+            qaStatus: qaResult.qaStatus,
+            qaErrors: qaResult.errors,
+            qaWarnings: qaResult.warnings,
+            lawyerFirstScore: qaResult.lawyerFirstScore,
+            qaExcludeReason: qaResult.excludeReason,
+            qaCheckedAt: new Date(),
+          } as any);
+
+          results.push({ id, status: 'published' });
+        } catch (err: any) {
+          results.push({ id, status: 'failed', error: err.message });
+        }
+      }
+
+      const published = results.filter(r => r.status === 'published').length;
+      res.json({ success: true, published, total: results.length, results });
+    } catch (error: any) {
+      console.error("[Bulk QA Publish] Error:", error);
+      res.status(500).json({ error: "Bulk publish failed" });
     }
   });
 
