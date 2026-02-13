@@ -2,6 +2,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Container } from "@/components/container";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -74,8 +75,8 @@ export function Header() {
   const isResumesActive = isActive("/resumes") || isActive("/resume-builder");
 
   return (
-    <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border/40">
-      <nav className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-2">
+    <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border/40 header-elev">
+      <Container className="h-14 flex items-center justify-between gap-2">
         <div className="flex items-center gap-4 lg:gap-6">
           <Link href={isAuthenticated ? "/jobs" : "/"} className="flex items-center gap-2.5 hover:opacity-80 transition-opacity" data-testid="logo-header">
             <Logo className="h-5 w-5 text-foreground" />
@@ -330,7 +331,7 @@ export function Header() {
             </>
           )}
         </div>
-      </nav>
+      </Container>
     </header>
   );
 }

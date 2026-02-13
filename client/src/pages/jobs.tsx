@@ -3,6 +3,8 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { usePageTitle } from "@/hooks/use-page-title";
 import { useLocation, useSearch } from "wouter";
 import { Header } from "@/components/header";
+import { Container } from "@/components/container";
+import { Segmented } from "@/components/segmented";
 import { useAuth } from "@/hooks/use-auth";
 import { useActivityTracker } from "@/hooks/use-activity-tracker";
 import { apiRequest } from "@/lib/queryClient";
@@ -83,6 +85,7 @@ interface RefinedSearchResult {
 }
 
 type GuidedStep = "idle" | "refining" | "questions" | "searching";
+type JobsMode = "browse" | "resume";
 
 const DEFAULT_SEARCH_SUGGESTIONS = [
   { label: "Compliance & Privacy", query: "compliance or privacy counsel role" },
@@ -147,6 +150,7 @@ export default function Jobs() {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [refinedSummary, setRefinedSummary] = useState<string | null>(null);
 
+  const [mode, setMode] = useState<JobsMode>("browse");
   const [compareIds, setCompareIds] = useState<Set<number>>(new Set());
   const [showCompare, setShowCompare] = useState(false);
   const MAX_COMPARE = 3;
@@ -464,27 +468,110 @@ export default function Jobs() {
     <div className="min-h-screen bg-background overflow-x-hidden">
       <Header />
       
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 overflow-hidden">
-        <div className="flex items-center gap-2 sm:gap-4 mb-4 flex-wrap">
-          {searchResults && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleClearSearch}
-              className="min-h-[44px]"
-              data-testid="button-back-search"
-            >
-              <ArrowLeft className="h-4 w-4 mr-1" />
-              All Jobs
-            </Button>
-          )}
-          <h1 className="text-lg sm:text-xl font-semibold text-foreground tracking-tight" data-testid="text-page-title">
-            {searchResults ? `Results for "${searchQuery}"` : "Browse Jobs"}
-          </h1>
-          <span className="text-sm text-muted-foreground" data-testid="text-job-count">
-            {searchResults ? `${searchResults.length} results` : `${totalJobCount} jobs`}
-          </span>
+      <main className="py-6 overflow-hidden">
+        <Container className="space-y-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
+            {searchResults && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleClearSearch}
+                className="min-h-[44px]"
+                data-testid="button-back-search"
+              >
+                <ArrowLeft className="h-4 w-4 mr-1" />
+                All Jobs
+              </Button>
+            )}
+            <div className="space-y-0.5">
+              <h1 className="text-lg sm:text-xl font-semibold text-foreground tracking-tight" data-testid="text-page-title">
+                {searchResults ? `Results for "${searchQuery}"` : "Legal tech roles for lawyers"}
+              </h1>
+              <p className="text-sm text-muted-foreground hidden sm:block" data-testid="text-page-subtitle">
+                {searchResults
+                  ? `${searchResults.length} results`
+                  : `${totalJobCount} curated roles \u00B7 Browse or upload your resume to see fit scores`}
+              </p>
+              <span className="text-sm text-muted-foreground sm:hidden" data-testid="text-job-count">
+                {searchResults ? `${searchResults.length} results` : `${totalJobCount} jobs`}
+              </span>
+            </div>
+          </div>
+          <Segmented
+            value={mode}
+            onChange={setMode}
+            options={[
+              { label: "Browse Jobs", value: "browse" as JobsMode },
+              { label: "Upload Resume", value: "resume" as JobsMode },
+            ]}
+          />
         </div>
+
+        {mode === "resume" && (
+          <div className="rounded-lg border bg-card p-4 card-elev" data-testid="card-resume-prompt">
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <div className="text-sm font-medium" data-testid="text-resume-prompt-title">Upload your resume</div>
+                <div className="text-sm text-muted-foreground">
+                  {resumeData?.hasResume
+                    ? `Currently using: ${resumeData.filename || "Uploaded resume"}. Searches are personalized to your background.`
+                    : "We'll show where you match, where you don't, and realistic resume tweaks for each role."}
+                </div>
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                {resumeData?.hasResume ? (
+                  <>
+                    <Badge variant="secondary" className="gap-1 text-xs">
+                      <CheckCircle2 className="h-3 w-3" />
+                      Resume uploaded
+                    </Badge>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => resumeFileInputRef.current?.click()}
+                      data-testid="button-replace-resume"
+                    >
+                      <Upload className="h-3.5 w-3.5 mr-1.5" />
+                      Replace
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleRemoveResume}
+                      className="text-muted-foreground"
+                      data-testid="button-remove-resume"
+                    >
+                      Remove
+                    </Button>
+                  </>
+                ) : isAuthenticated ? (
+                  <Button
+                    onClick={() => resumeFileInputRef.current?.click()}
+                    disabled={isUploadingResume}
+                    data-testid="button-upload-resume"
+                  >
+                    {isUploadingResume ? (
+                      <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                    ) : (
+                      <Upload className="h-4 w-4 mr-1.5" />
+                    )}
+                    {isUploadingResume ? "Uploading..." : "Upload Resume"}
+                  </Button>
+                ) : (
+                  <Link href="/auth?returnTo=/jobs">
+                    <Button data-testid="button-signin-to-upload">
+                      Sign in to upload
+                    </Button>
+                  </Link>
+                )}
+              </div>
+              {isUploadingResume && (
+                <Progress value={uploadProgress} className="h-1" />
+              )}
+            </div>
+          </div>
+        )}
 
         <input
           ref={resumeFileInputRef}
@@ -495,7 +582,7 @@ export default function Jobs() {
           data-testid="input-resume-upload"
         />
 
-        <Card className="mb-4 shadow-sm" data-testid="card-smart-search">
+        <Card className="mb-4 card-elev" data-testid="card-smart-search">
           <CardContent className="p-3 sm:p-4">
             <div className="flex items-end gap-2">
               <div className="flex-1 min-w-0">
@@ -943,7 +1030,7 @@ export default function Jobs() {
               return (
                 <div
                   key={job.id}
-                  className={`p-3 sm:p-4 rounded-lg border bg-card hover-elevate transition-colors cursor-pointer ${isSelected ? "ring-1 ring-primary/40" : ""}`}
+                  className={`p-3 sm:p-4 rounded-lg border bg-card card-elev transition-colors cursor-pointer ${isSelected ? "ring-1 ring-primary/40" : ""}`}
                   data-testid={`card-job-${job.id}`}
                   onClick={() => setLocation(`/jobs/${job.id}`)}
                 >
@@ -1091,6 +1178,7 @@ export default function Jobs() {
           </div>
         )}
 
+        </Container>
       </main>
 
       <AnimatePresence>
