@@ -1,0 +1,58 @@
+import { useState } from "react";
+import { Container } from "@/components/container";
+import { Segmented } from "@/components/segmented";
+import { Button } from "@/components/ui/button";
+
+// Put this type near the top (outside component or inside file scope)
+type JobsMode = "browse" | "resume";
+
+// Inside your Jobs component:
+export default function JobsPage() {
+  const [mode, setMode] = useState<JobsMode>("browse");
+
+  return (
+    <div className="py-6">
+      <Container className="space-y-6">
+        {/* Premium header */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-1">
+            <h1 className="text-2xl font-semibold tracking-tight">
+              Legal tech roles for lawyers
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              Browse curated roles or upload your resume to see an honest fit score and what to tweak.
+            </p>
+          </div>
+
+          <Segmented<JobsMode>
+            value={mode}
+            onChange={setMode}
+            options={[
+              { label: "Browse Jobs", value: "browse" },
+              { label: "Upload Resume", value: "resume" },
+            ]}
+          />
+        </div>
+
+        {/* Resume prompt panel (optional, but makes it feel guided) */}
+        {mode === "resume" && (
+          <div className="rounded-lg border bg-card p-4 card-elev">
+            <div className="space-y-2">
+              <div className="text-sm font-medium">Upload your resume</div>
+              <div className="text-sm text-muted-foreground">
+                We’ll show where you match, where you don’t, and realistic resume tweaks for this role type.
+              </div>
+              <Button className="w-fit">Upload Resume</Button>
+            </div>
+          </div>
+        )}
+
+        {/* Your existing Jobs UI below */}
+        <div>
+          {/* KEEP your existing filters + job list + job detail UI here */}
+          {/* TIP: Hide resume-only widgets when mode==="browse" to reduce clutter */}
+        </div>
+      </Container>
+    </div>
+  );
+}
