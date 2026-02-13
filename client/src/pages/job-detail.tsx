@@ -633,7 +633,7 @@ export default function JobDetail() {
   const postedLabel = getPostedDateLabel(job?.postedDate);
   const locationTypeLabel = job ? getLocationTypeLabel(job) : null;
 
-  const handleApplyClick = async () => {
+  const handleApplyClick = () => {
     if (!job) return;
     trackNow({
       eventType: "apply_click",
@@ -645,12 +645,9 @@ export default function JobDetail() {
         title: job.title,
       },
     });
-    try {
-      await apiRequest("POST", `/api/jobs/${job.id}/apply-click`);
-    } catch (e) {
-      console.error("Failed to track apply click", e);
-    }
-    window.open(job.applyUrl, "_blank");
+    apiRequest("POST", `/api/jobs/${job.id}/apply-click`).catch((e) =>
+      console.error("Failed to track apply click", e)
+    );
     if (!isPro) {
       setShowApplyNudge(true);
     }
@@ -874,15 +871,19 @@ export default function JobDetail() {
           </div>
 
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 mt-4">
-            <Button
-              onClick={handleApplyClick}
-              className="gap-2"
-              disabled={!job?.applyUrl}
-              data-testid="button-apply-top"
-            >
-              <ExternalLink className="h-4 w-4" />
-              {job?.applyUrl ? "Apply on Company Website" : "Apply link unavailable"}
-            </Button>
+            {job?.applyUrl ? (
+              <a href={job.applyUrl} target="_blank" rel="noopener noreferrer" onClick={handleApplyClick}>
+                <Button className="gap-2" data-testid="button-apply-top">
+                  <ExternalLink className="h-4 w-4" />
+                  Apply on Company Website
+                </Button>
+              </a>
+            ) : (
+              <Button className="gap-2" disabled data-testid="button-apply-top">
+                <ExternalLink className="h-4 w-4" />
+                Apply link unavailable
+              </Button>
+            )}
             {isAuthenticated ? (
               <Link href="/resumes">
                 <Button
@@ -1245,14 +1246,19 @@ export default function JobDetail() {
                     </Button>
                   </Link>
                 )}
-                <Button
-                  onClick={handleApplyClick}
-                  className="gap-2 flex-1 sm:flex-none"
-                  data-testid="button-apply-sticky"
-                >
-                  <ExternalLink className="h-4 w-4" />
-                  Apply Now
-                </Button>
+                {job?.applyUrl ? (
+                  <a href={job.applyUrl} target="_blank" rel="noopener noreferrer" onClick={handleApplyClick} className="flex-1 sm:flex-none">
+                    <Button className="gap-2 w-full" data-testid="button-apply-sticky">
+                      <ExternalLink className="h-4 w-4" />
+                      Apply Now
+                    </Button>
+                  </a>
+                ) : (
+                  <Button className="gap-2 flex-1 sm:flex-none" disabled data-testid="button-apply-sticky">
+                    <ExternalLink className="h-4 w-4" />
+                    Apply Now
+                  </Button>
+                )}
               </div>
             </div>
           </motion.div>
