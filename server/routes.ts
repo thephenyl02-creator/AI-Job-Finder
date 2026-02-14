@@ -1205,6 +1205,42 @@ ${JSON.stringify(jobSummaries, null, 2)}`
     }
   });
 
+  app.post("/api/resume/anonymous-match", upload.single("resume"), async (req, res) => {
+    try {
+      const file = req.file;
+      if (!file) return res.status(400).json({ error: "No file provided" });
+
+      let resumeText: string;
+      if (file.mimetype === "application/pdf") {
+        resumeText = await extractTextFromPDF(file.buffer);
+      } else {
+        resumeText = await extractTextFromDOCX(file.buffer);
+      }
+
+      if (!resumeText || resumeText.trim().length < 50) {
+        return res.status(400).json({ error: "Could not extract text from file. Please ensure your resume contains readable text." });
+      }
+
+      const parsedData = await parseResumeWithAI(resumeText);
+
+      const allJobs = await storage.getActiveJobs();
+      if (allJobs.length === 0) return res.json({ matches: [], parsedData });
+
+      const matches = await batchMatchResume(
+        parsedData as ResumeExtractedData,
+        allJobs
+      );
+
+      res.json({ matches, parsedData });
+    } catch (error: any) {
+      console.error("Anonymous resume match error:", error);
+      if (error instanceof InvalidPDFError) {
+        return res.status(400).json({ error: error.message });
+      }
+      res.status(500).json({ error: "Failed to process resume. Please try a different file." });
+    }
+  });
+
   // Get user's resume data
   app.get("/api/resume", isAuthenticated, async (req, res) => {
     try {

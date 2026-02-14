@@ -205,10 +205,6 @@ export default function Jobs() {
   });
 
   const handleResumeUpload = useCallback(async (file: File) => {
-    if (!isAuthenticated) {
-      toast({ title: "Sign in to match your resume", description: "Create a free account to see which roles fit your background." });
-      return;
-    }
     try {
       setResumeMatchStep("uploading");
       setResumeMatches(null);
@@ -217,41 +213,67 @@ export default function Jobs() {
 
       const formData = new FormData();
       formData.append("resume", file);
-      formData.append("label", file.name.replace(/\.[^/.]+$/, ""));
 
-      const uploadRes = await fetch("/api/resumes/upload", {
-        method: "POST",
-        body: formData,
-        credentials: "include",
-      });
+      if (isAuthenticated) {
+        formData.append("label", file.name.replace(/\.[^/.]+$/, ""));
 
-      if (!uploadRes.ok) {
-        const err = await uploadRes.json().catch(() => ({ error: "Upload failed" }));
-        if (err.limitReached) {
-          throw new Error("You already have a resume saved. Delete it from your profile first, or upgrade to Pro for up to 5.");
+        const uploadRes = await fetch("/api/resumes/upload", {
+          method: "POST",
+          body: formData,
+          credentials: "include",
+        });
+
+        if (!uploadRes.ok) {
+          const err = await uploadRes.json().catch(() => ({ error: "Upload failed" }));
+          if (err.limitReached) {
+            throw new Error("You already have a resume saved. Delete it from your profile first, or upgrade to Pro for up to 5.");
+          }
+          throw new Error(err.error || "Upload failed");
         }
-        throw new Error(err.error || "Upload failed");
+
+        const uploadData = await uploadRes.json();
+        const resumeId = uploadData.resume?.id;
+        if (!resumeId) {
+          throw new Error("Resume uploaded but couldn't start matching. Please try again.");
+        }
+
+        setResumeMatchStep("matching");
+
+        const matchRes = await apiRequest("POST", `/api/resumes/${resumeId}/match-jobs`);
+        const matchData = await matchRes.json();
+
+        setResumeMatches(matchData.matches || []);
+        setResumeMatchStep("idle");
+        track({ eventType: "resume_match", metadata: { resumeId, matchCount: matchData.matches?.length || 0 } });
+
+        toast({
+          title: `Found ${matchData.matches?.length || 0} matching roles`,
+          description: matchData.matches?.length > 0 ? "Sorted by how well they fit your background." : "Try broadening your experience or upload a different resume.",
+        });
+      } else {
+        const matchRes = await fetch("/api/resume/anonymous-match", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!matchRes.ok) {
+          const err = await matchRes.json().catch(() => ({ error: "Upload failed" }));
+          throw new Error(err.error || "Upload failed");
+        }
+
+        setResumeMatchStep("matching");
+        const matchData = await matchRes.json();
+
+        setResumeMatches(matchData.matches || []);
+        setResumeMatchStep("idle");
+
+        toast({
+          title: `Found ${matchData.matches?.length || 0} matching roles`,
+          description: matchData.matches?.length > 0
+            ? "Sign in to save these results and apply."
+            : "Try uploading a different resume.",
+        });
       }
-
-      const uploadData = await uploadRes.json();
-      const resumeId = uploadData.resume?.id;
-      if (!resumeId) {
-        throw new Error("Resume uploaded but couldn't start matching. Please try again.");
-      }
-
-      setResumeMatchStep("matching");
-
-      const matchRes = await apiRequest("POST", `/api/resumes/${resumeId}/match-jobs`);
-      const matchData = await matchRes.json();
-
-      setResumeMatches(matchData.matches || []);
-      setResumeMatchStep("idle");
-      track({ eventType: "resume_match", metadata: { resumeId, matchCount: matchData.matches?.length || 0 } });
-
-      toast({
-        title: `Found ${matchData.matches?.length || 0} matching roles`,
-        description: matchData.matches?.length > 0 ? "Sorted by how well they fit your background." : "Try broadening your experience or upload a different resume.",
-      });
     } catch (error: any) {
       setResumeMatchStep("idle");
       toast({
@@ -478,7 +500,7 @@ export default function Jobs() {
         />
 
         <div data-testid="card-smart-search">
-          <div className="relative flex items-center gap-0 rounded-xl border border-border bg-card shadow-sm py-3.5 transition-shadow focus-within:shadow-md focus-within:border-primary/40">
+          <div className="relative flex items-center gap-0 rounded-xl border border-border bg-card py-4 transition-colors focus-within:border-primary/30">
             <Search className="absolute left-4 h-5 w-5 text-muted-foreground/40 pointer-events-none" />
             <Input
               placeholder="Search by role, skill, or interest..."
@@ -498,13 +520,7 @@ export default function Jobs() {
                 variant="ghost"
                 size="icon"
                 className="text-muted-foreground/60"
-                onClick={() => {
-                  if (!isAuthenticated) {
-                    toast({ title: "Sign in to match your resume", description: "Create a free account to see which roles fit your background." });
-                    return;
-                  }
-                  fileInputRef.current?.click();
-                }}
+                onClick={() => fileInputRef.current?.click()}
                 disabled={resumeMatchStep !== "idle"}
                 data-testid="button-upload-resume"
                 title="Upload resume to find matching roles"
@@ -599,7 +615,18 @@ export default function Jobs() {
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  {!isAuthenticated && resumeMatches.length > 0 && (
+                    <Link href="/auth">
+                      <Button
+                        size="sm"
+                        className="gap-1 text-xs"
+                        data-testid="button-signin-save-matches"
+                      >
+                        Sign in to save results
+                      </Button>
+                    </Link>
+                  )}
                   <Button
                     variant="outline"
                     size="sm"
