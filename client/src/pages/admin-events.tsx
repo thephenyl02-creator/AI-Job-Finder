@@ -13,11 +13,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { Header } from "@/components/header";
-import { Footer } from "@/components/footer";
+import { AdminHeader } from "@/components/admin-header";
 import { Link } from "wouter";
 import {
-  ArrowLeft, Plus, LinkIcon, Trash2, Calendar, Loader2, Search,
+  Plus, LinkIcon, Trash2, Calendar, Loader2, Search,
   CheckCircle, XCircle, ToggleLeft, ToggleRight, Pencil, Sparkles,
   RefreshCw, Clock, Activity, AlertTriangle, ExternalLink
 } from "lucide-react";
@@ -83,7 +82,7 @@ interface ValidationResult {
 export default function AdminEvents() {
   usePageTitle("Admin - Events");
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, isAdmin, isLoading: authLoading } = useAuth();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -293,26 +292,36 @@ export default function AdminEvents() {
     });
   }
 
-  if (!user) return null;
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (!user || !isAdmin) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Card className="max-w-md w-full mx-4">
+          <CardContent className="pt-6">
+            <div className="text-center space-y-4">
+              <h2 className="text-xl font-semibold" data-testid="text-admin-required">Access Denied</h2>
+              <p className="text-muted-foreground">Admin access required.</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <Header />
+      <AdminHeader title="Event Management" />
 
       <main className="flex-1">
         <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
-          <div className="flex items-center justify-between gap-4 flex-wrap">
-            <div className="flex items-center gap-3">
-              <Link href="/admin">
-                <Button variant="ghost" size="icon" data-testid="button-back-admin">
-                  <ArrowLeft className="w-4 h-4" />
-                </Button>
-              </Link>
-              <div>
-                <h1 className="text-2xl font-bold font-serif" data-testid="text-page-title">Event Management</h1>
-                <p className="text-sm text-muted-foreground">Manage legal tech events, conferences, and workshops</p>
-              </div>
-            </div>
+          <div className="flex items-center justify-end gap-4 flex-wrap">
             <div className="flex items-center gap-2 flex-wrap">
               <Button
                 variant="outline"
@@ -603,8 +612,6 @@ export default function AdminEvents() {
           )}
         </div>
       </main>
-
-      <Footer />
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">

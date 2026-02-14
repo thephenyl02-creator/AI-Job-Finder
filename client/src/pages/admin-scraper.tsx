@@ -6,7 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Link } from "wouter";
-import { ArrowLeft, RefreshCw, Loader2, Play, Square, Clock, CheckCircle, XCircle, AlertTriangle, Activity, Zap, Bell, LinkIcon, Database, Timer, TrendingUp } from "lucide-react";
+import { RefreshCw, Loader2, Play, Square, Clock, CheckCircle, XCircle, AlertTriangle, Activity, Zap, Bell, LinkIcon, Database, Timer, TrendingUp } from "lucide-react";
+import { AdminHeader } from "@/components/admin-header";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { ScrapeRun } from "@shared/schema";
@@ -97,12 +98,9 @@ export default function AdminScraper() {
   if (!isAdmin) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <Card>
+        <Card className="max-w-md w-full mx-4">
           <CardContent className="pt-6">
             <div className="text-center space-y-4">
-              <div className="mx-auto w-12 h-12 bg-destructive/10 rounded-full flex items-center justify-center">
-                <XCircle className="h-6 w-6 text-destructive" />
-              </div>
               <h2 className="text-xl font-semibold">Access Denied</h2>
               <p className="text-muted-foreground">Admin access required.</p>
             </div>
@@ -126,19 +124,10 @@ export default function AdminScraper() {
 
   return (
     <div className="min-h-screen bg-background">
+      <AdminHeader title="Scraper Autopilot" />
       <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
         <div className="flex items-center justify-between gap-4 flex-wrap">
-          <div className="flex items-center gap-3">
-            <Link href="/admin">
-              <Button variant="ghost" size="icon" data-testid="button-back-admin">
-                <ArrowLeft className="w-4 h-4" />
-              </Button>
-            </Link>
-            <div>
-              <h1 className="text-2xl font-bold font-serif" data-testid="text-page-title">Scraper Autopilot</h1>
-              <p className="text-sm text-muted-foreground">Fully automated job scraping, categorization, and alerts</p>
-            </div>
-          </div>
+          <div />
           <div className="flex items-center gap-2">
             <Button
               variant="outline"

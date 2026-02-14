@@ -8,9 +8,10 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Link, useLocation } from "wouter";
 import {
-  ArrowLeft, RefreshCw, Loader2, CheckCircle, XCircle, AlertTriangle,
+  RefreshCw, Loader2, CheckCircle, XCircle, AlertTriangle,
   Send, Eye, Filter,
 } from "lucide-react";
+import { AdminHeader } from "@/components/admin-header";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -136,8 +137,15 @@ export default function AdminReview() {
   if (authLoading) return null;
   if (!user || !isAdmin) {
     return (
-      <div className="p-8 text-center" data-testid="text-admin-required">
-        <p className="text-muted-foreground">Admin access required.</p>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Card className="max-w-md w-full mx-4">
+          <CardContent className="pt-6">
+            <div className="text-center space-y-4">
+              <h2 className="text-xl font-semibold" data-testid="text-admin-required">Access Denied</h2>
+              <p className="text-muted-foreground">Admin access required.</p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -162,34 +170,30 @@ export default function AdminReview() {
   ];
 
   return (
-    <div className="max-w-6xl mx-auto p-4 sm:p-6 space-y-6">
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-3">
-          <Link href="/admin">
-            <Button variant="ghost" size="icon" data-testid="button-back-admin">
-              <ArrowLeft className="w-4 h-4" />
+    <div className="min-h-screen bg-background">
+      <AdminHeader title="Review Queue" />
+      <div className="max-w-6xl mx-auto p-4 sm:p-6 space-y-6">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-3">
+            {data && (
+              <Badge variant="secondary" data-testid="badge-total-count">
+                {data.total} unpublished
+              </Badge>
+            )}
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => refetch()}
+              disabled={isLoading}
+              data-testid="button-refresh"
+            >
+              <RefreshCw className={`w-4 h-4 mr-1 ${isLoading ? "animate-spin" : ""}`} />
+              Refresh
             </Button>
-          </Link>
-          <h1 className="text-2xl font-bold font-serif" data-testid="text-page-title">Review Queue</h1>
-          {data && (
-            <Badge variant="secondary" data-testid="badge-total-count">
-              {data.total} unpublished
-            </Badge>
-          )}
+          </div>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => refetch()}
-            disabled={isLoading}
-            data-testid="button-refresh"
-          >
-            <RefreshCw className={`w-4 h-4 mr-1 ${isLoading ? "animate-spin" : ""}`} />
-            Refresh
-          </Button>
-        </div>
-      </div>
 
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2" data-testid="filter-buttons">
@@ -342,6 +346,7 @@ export default function AdminReview() {
           </div>
         </ScrollArea>
       )}
+      </div>
     </div>
   );
 }

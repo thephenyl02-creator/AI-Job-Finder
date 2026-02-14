@@ -12,7 +12,8 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Link } from "wouter";
-import { ArrowLeft, RefreshCw, Building2, Globe, Loader2, CheckCircle, XCircle, Sparkles, Activity, FileText, Play, Square, LinkIcon, Clock, ShieldX, ShieldCheck, Plus, Upload, Pencil, Trash2, RotateCw, ToggleLeft, ToggleRight, Search, Filter, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Save, X as XIcon, BarChart3, ClipboardPaste, ClipboardCheck, Zap, MapPin, DollarSign, Briefcase, GraduationCap, Tag, Eye, Calendar } from "lucide-react";
+import { ArrowLeft, RefreshCw, Building2, Globe, Loader2, CheckCircle, XCircle, Sparkles, Activity, FileText, Play, Square, LinkIcon, Clock, ShieldX, ShieldCheck, Plus, Upload, Pencil, Trash2, RotateCw, ToggleLeft, ToggleRight, Search, Filter, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Save, X as XIcon, ClipboardPaste, ClipboardCheck, Zap, MapPin, DollarSign, Briefcase, GraduationCap, Tag, Eye, Calendar } from "lucide-react";
+import { AdminHeader } from "@/components/admin-header";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { Job, StructuredDescription } from "@shared/schema";
@@ -886,61 +887,7 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b bg-card">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center gap-4">
-            <Link href="/">
-              <Button variant="ghost" size="icon" data-testid="button-back">
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-            </Link>
-            <div>
-              <h1 className="text-xl font-semibold">Job Scraper Admin</h1>
-              <p className="text-sm text-muted-foreground">
-                Scrape legal tech jobs from career websites
-              </p>
-            </div>
-            <div className="ml-auto flex items-center gap-2">
-              <Link href="/admin/scraper">
-                <Button variant="outline" data-testid="link-scraper-dashboard">
-                  <Activity className="h-4 w-4 mr-2" />
-                  Scraper Autopilot
-                </Button>
-              </Link>
-              <Link href="/admin/analytics">
-                <Button variant="outline" data-testid="link-analytics">
-                  <BarChart3 className="h-4 w-4 mr-2" />
-                  User Analytics
-                </Button>
-              </Link>
-              <Link href="/admin/events">
-                <Button variant="outline" data-testid="link-events-admin">
-                  <Calendar className="h-4 w-4 mr-2" />
-                  Events
-                </Button>
-              </Link>
-              <Link href="/admin/reports">
-                <Button variant="outline" data-testid="link-reports-admin">
-                  <ShieldX className="h-4 w-4 mr-2" />
-                  Reports
-                </Button>
-              </Link>
-              <Link href="/admin/import-jobs">
-                <Button variant="outline" data-testid="link-import-jobs">
-                  <Upload className="h-4 w-4 mr-2" />
-                  Import Jobs
-                </Button>
-              </Link>
-              <Link href="/admin/review-jobs">
-                <Button variant="outline" data-testid="link-review-queue">
-                  <ClipboardCheck className="h-4 w-4 mr-2" />
-                  Review Queue
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </header>
+      <AdminHeader title="Job Management" />
 
       <main className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto space-y-6">

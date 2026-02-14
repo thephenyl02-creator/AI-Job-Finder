@@ -3,14 +3,14 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { usePageTitle } from "@/hooks/use-page-title";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
-import { Header } from "@/components/header";
+import { AdminHeader } from "@/components/admin-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Link } from "wouter";
-import { Flag, ArrowLeft, CheckCircle, AlertTriangle, Loader2 } from "lucide-react";
+import { Flag, CheckCircle, Loader2 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
 interface JobReport {
@@ -226,38 +226,25 @@ export default function AdminReportsPage() {
 
   if (!isAdmin) {
     return (
-      <>
-        <Header />
-        <main className="container mx-auto px-4 py-16 text-center">
-          <AlertTriangle className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-          <h1 className="text-2xl font-bold mb-2" data-testid="text-access-denied">Access Denied</h1>
-          <p className="text-muted-foreground">Admin access required.</p>
-        </main>
-      </>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Card className="max-w-md w-full mx-4">
+          <CardContent className="pt-6">
+            <div className="text-center space-y-4">
+              <h2 className="text-xl font-semibold" data-testid="text-access-denied">Access Denied</h2>
+              <p className="text-muted-foreground">Admin access required.</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
   return (
-    <>
-      <Header />
+    <div className="min-h-screen bg-background">
+      <AdminHeader title="Job Reports" />
       <main className="container mx-auto px-4 py-6">
         <div className="max-w-4xl mx-auto space-y-6">
-          <div className="flex items-center justify-between gap-4 flex-wrap">
-            <div className="flex items-center gap-3">
-              <Link href="/admin">
-                <Button variant="ghost" size="icon" data-testid="button-back-admin">
-                  <ArrowLeft className="h-4 w-4" />
-                </Button>
-              </Link>
-              <div>
-                <h1 className="text-2xl font-bold tracking-tight" data-testid="text-reports-title">
-                  Job Reports
-                </h1>
-                <p className="text-sm text-muted-foreground">
-                  Manage user-submitted job reports
-                </p>
-              </div>
-            </div>
+          <div className="flex items-center justify-end gap-4 flex-wrap">
             <Link href="/admin">
               <Button variant="outline" size="sm" data-testid="link-back-admin">
                 Back to Admin
@@ -307,6 +294,6 @@ export default function AdminReportsPage() {
           )}
         </div>
       </main>
-    </>
+    </div>
   );
 }

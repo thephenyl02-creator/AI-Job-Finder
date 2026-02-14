@@ -11,11 +11,11 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Link } from "wouter";
 import {
-  ArrowLeft, Users, Briefcase, TrendingUp, Search, Eye, MousePointerClick,
+  Users, Briefcase, TrendingUp, Search, Eye, MousePointerClick,
   FileText, Bookmark, Bell, BarChart3, Activity, Crown, ArrowUpRight,
-  Loader2, ShieldX, Filter, ChevronDown, ChevronUp, ExternalLink, Shield
+  Loader2, Filter, ChevronDown, ChevronUp, ExternalLink, Shield
 } from "lucide-react";
-import { Header } from "@/components/header";
+import { AdminHeader } from "@/components/admin-header";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -257,14 +257,16 @@ export default function AdminAnalyticsPage() {
 
   if (!isAdmin) {
     return (
-      <>
-        <Header />
-        <main className="container mx-auto px-4 py-16 text-center">
-          <ShieldX className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-          <h1 className="text-2xl font-bold mb-2">Access Denied</h1>
-          <p className="text-muted-foreground">Admin access required.</p>
-        </main>
-      </>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Card className="max-w-md w-full mx-4">
+          <CardContent className="pt-6">
+            <div className="text-center space-y-4">
+              <h2 className="text-xl font-semibold">Access Denied</h2>
+              <p className="text-muted-foreground">Admin access required.</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
@@ -321,26 +323,11 @@ export default function AdminAnalyticsPage() {
     : 1;
 
   return (
-    <>
-      <Header />
+    <div className="min-h-screen bg-background">
+      <AdminHeader title="User Analytics" />
       <main className="container mx-auto px-4 py-6">
         <div className="max-w-6xl mx-auto space-y-6">
-          <div className="flex items-center justify-between gap-4 flex-wrap">
-            <div className="flex items-center gap-3">
-              <Link href="/admin">
-                <Button variant="ghost" size="icon" data-testid="button-back-admin">
-                  <ArrowLeft className="h-4 w-4" />
-                </Button>
-              </Link>
-              <div>
-                <h1 className="text-2xl font-bold tracking-tight" data-testid="text-analytics-title">
-                  User Analytics
-                </h1>
-                <p className="text-sm text-muted-foreground">
-                  Product metrics and user behavior insights
-                </p>
-              </div>
-            </div>
+          <div className="flex items-center justify-end gap-4 flex-wrap">
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-2 text-xs text-muted-foreground" data-testid="live-indicator">
                 <span className="relative flex h-2.5 w-2.5">
@@ -888,6 +875,6 @@ export default function AdminAnalyticsPage() {
           </Card>
         </div>
       </main>
-    </>
+    </div>
   );
 }
