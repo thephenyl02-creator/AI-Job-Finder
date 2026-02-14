@@ -478,11 +478,11 @@ export default function Jobs() {
         />
 
         <div data-testid="card-smart-search">
-          <div className="relative flex items-center gap-0 rounded-xl border border-border bg-card shadow-sm py-1.5 transition-shadow focus-within:shadow-md focus-within:border-primary/40">
-            <Search className="absolute left-4 h-5 w-5 text-muted-foreground/50 pointer-events-none" />
+          <div className="relative flex items-center gap-0 rounded-xl border border-border bg-card shadow-sm py-3.5 transition-shadow focus-within:shadow-md focus-within:border-primary/40">
+            <Search className="absolute left-4 h-5 w-5 text-muted-foreground/40 pointer-events-none" />
             <Input
               placeholder="Search by role, skill, or interest..."
-              className="border-0 shadow-none text-base pl-12 pr-28 focus-visible:ring-0 bg-transparent placeholder:text-muted-foreground/50"
+              className="border-0 shadow-none text-base pl-12 pr-28 focus-visible:ring-0 bg-transparent placeholder:text-muted-foreground/40"
               value={smartQuery}
               onChange={(e) => setSmartQuery(e.target.value)}
               onKeyDown={(e) => {
