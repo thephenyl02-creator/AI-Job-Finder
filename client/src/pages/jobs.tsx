@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { usePageTitle } from "@/hooks/use-page-title";
 import { useLocation, useSearch } from "wouter";
@@ -31,10 +31,28 @@ import {
   Check,
   ExternalLink,
   ArrowUpDown,
+  Upload,
+  FileText,
+  Sparkles,
 } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { queryClient } from "@/lib/queryClient";
 import { Footer } from "@/components/footer";
+
+interface ResumeMatchResult {
+  jobId: number;
+  title: string;
+  company: string;
+  location: string | null;
+  isRemote: boolean | null;
+  locationType: string | null;
+  matchScore: number;
+  tweakPercentage: number;
+  brutalVerdict: string;
+  matchHighlights: string[];
+  gapSummary: string;
+  topMissingSkills: string[];
+}
 
 interface SearchQuestion {
   id: string;
@@ -97,6 +115,10 @@ export default function Jobs() {
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [refinedSummary, setRefinedSummary] = useState<string | null>(null);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [resumeMatches, setResumeMatches] = useState<ResumeMatchResult[] | null>(null);
+  const [resumeMatchStep, setResumeMatchStep] = useState<"idle" | "uploading" | "matching">("idle");
 
   const { data: usageLimits } = useQuery<{
     isPro: boolean;
@@ -180,6 +202,86 @@ export default function Jobs() {
       searchMutation.mutate(smartQuery);
     },
   });
+
+  const handleResumeUpload = useCallback(async (file: File) => {
+    if (!isAuthenticated) {
+      toast({ title: "Sign in to match your resume", description: "Create a free account to see which roles fit your background." });
+      return;
+    }
+    try {
+      setResumeMatchStep("uploading");
+      setResumeMatches(null);
+      setSearchResults(null);
+      setSearchQuery(null);
+
+      const formData = new FormData();
+      formData.append("resume", file);
+      formData.append("label", file.name.replace(/\.[^/.]+$/, ""));
+
+      const uploadRes = await fetch("/api/resumes/upload", {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+      });
+
+      if (!uploadRes.ok) {
+        const err = await uploadRes.json().catch(() => ({ error: "Upload failed" }));
+        if (err.limitReached) {
+          throw new Error("You already have a resume saved. Delete it from your profile first, or upgrade to Pro for up to 5.");
+        }
+        throw new Error(err.error || "Upload failed");
+      }
+
+      const uploadData = await uploadRes.json();
+      const resumeId = uploadData.resume?.id;
+      if (!resumeId) {
+        throw new Error("Resume uploaded but couldn't start matching. Please try again.");
+      }
+
+      setResumeMatchStep("matching");
+
+      const matchRes = await apiRequest("POST", `/api/resumes/${resumeId}/match-jobs`);
+      const matchData = await matchRes.json();
+
+      setResumeMatches(matchData.matches || []);
+      setResumeMatchStep("idle");
+      track({ eventType: "resume_match", metadata: { resumeId, matchCount: matchData.matches?.length || 0 } });
+
+      toast({
+        title: `Found ${matchData.matches?.length || 0} matching roles`,
+        description: matchData.matches?.length > 0 ? "Sorted by how well they fit your background." : "Try broadening your experience or upload a different resume.",
+      });
+    } catch (error: any) {
+      setResumeMatchStep("idle");
+      toast({
+        title: "Couldn't match your resume",
+        description: error.message || "Please try again.",
+        variant: "destructive",
+      });
+    }
+  }, [isAuthenticated, track, toast]);
+
+  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      handleResumeUpload(file);
+    }
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  }, [handleResumeUpload]);
+
+  const handleClearResumeMatches = useCallback(() => {
+    setResumeMatches(null);
+    setResumeMatchStep("idle");
+  }, []);
+
+  const resumeMatchMap = useMemo(() => {
+    if (!resumeMatches) return null;
+    const map = new Map<number, ResumeMatchResult>();
+    resumeMatches.forEach(m => map.set(m.jobId, m));
+    return map;
+  }, [resumeMatches]);
 
   const handleSmartSearch = useCallback(() => {
     if (!smartQuery.trim()) return;
@@ -365,14 +467,23 @@ export default function Jobs() {
           </div>
         </div>
 
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".pdf,.docx"
+          onChange={handleFileChange}
+          className="hidden"
+          data-testid="input-resume-file"
+        />
+
         <Card className="card-elev" data-testid="card-smart-search">
-          <CardContent className="p-3 sm:p-4">
+          <CardContent className="p-4 sm:p-5">
             <div className="flex items-center gap-2">
               <div className="flex-1 min-w-0 relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-[18px] w-[18px] text-muted-foreground/50" />
                 <Input
                   placeholder={isAuthenticated ? searchPlaceholder : "Search by keyword, role, or company..."}
-                  className="border-0 text-sm sm:text-base focus-visible:ring-0 shadow-none pl-9 placeholder:text-muted-foreground/50"
+                  className="border-0 text-base focus-visible:ring-0 shadow-none pl-10 min-h-11 placeholder:text-muted-foreground/50"
                   value={smartQuery}
                   onChange={(e) => setSmartQuery(e.target.value)}
                   onKeyDown={(e) => {
@@ -385,8 +496,32 @@ export default function Jobs() {
                 />
               </div>
               <Button
+                variant="outline"
+                size="lg"
+                className="gap-1.5 shrink-0"
+                onClick={() => {
+                  if (!isAuthenticated) {
+                    toast({ title: "Sign in to match your resume", description: "Create a free account to see which roles fit your background." });
+                    return;
+                  }
+                  fileInputRef.current?.click();
+                }}
+                disabled={resumeMatchStep !== "idle"}
+                data-testid="button-upload-resume"
+              >
+                {resumeMatchStep !== "idle" ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Upload className="h-4 w-4" />
+                )}
+                <span className="hidden sm:inline">
+                  {resumeMatchStep === "uploading" ? "Reading..." : resumeMatchStep === "matching" ? "Matching..." : "Upload Resume"}
+                </span>
+              </Button>
+              <Button
                 onClick={handleSmartSearch}
                 disabled={!smartQuery.trim() || isSearching}
+                size="lg"
                 className="gap-1.5 shrink-0"
                 data-testid="button-smart-search"
               >
@@ -435,6 +570,68 @@ export default function Jobs() {
             )}
           </CardContent>
         </Card>
+
+        {resumeMatchStep !== "idle" && (
+          <Card className="border-primary/20" data-testid="card-resume-matching">
+            <CardContent className="p-5 flex items-center gap-3">
+              <Loader2 className="h-4 w-4 animate-spin text-primary shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-foreground">
+                  {resumeMatchStep === "uploading" ? "Reading your resume..." : "Finding matching roles..."}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {resumeMatchStep === "uploading" ? "Extracting skills and experience" : "Comparing your background against open positions"}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {resumeMatches && (
+          <Card className="bg-muted/40 border-border/60" data-testid="card-resume-match-results">
+            <CardContent className="p-3 sm:p-4">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-primary shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium text-foreground">
+                      {resumeMatches.length > 0
+                        ? `${resumeMatches.length} roles match your resume`
+                        : "No strong matches found"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {resumeMatches.length > 0
+                        ? "Sorted by fit. Match scores show how well each role aligns with your background."
+                        : "Try uploading a different resume or browse all roles below."}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="gap-1 text-xs"
+                    data-testid="button-try-another-resume"
+                  >
+                    <Upload className="h-3 w-3" />
+                    Try another
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleClearResumeMatches}
+                    className="gap-1 text-xs"
+                    data-testid="button-clear-resume-matches"
+                  >
+                    <X className="h-3 w-3" />
+                    Clear
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {guidedStep === "refining" && (
           <Card className="border-primary/20">
@@ -758,6 +955,69 @@ export default function Jobs() {
           </div>
         ) : (
           <div className="grid gap-3">
+            {resumeMatches && resumeMatches.length > 0 && (
+              <div className="grid gap-3 mb-2" data-testid="section-resume-matches">
+                {resumeMatches.map((match) => {
+                  const scoreColor = match.matchScore >= 75 ? "text-emerald-600 dark:text-emerald-400" :
+                    match.matchScore >= 55 ? "text-amber-600 dark:text-amber-400" :
+                    "text-muted-foreground";
+                  const scoreBg = match.matchScore >= 75 ? "bg-emerald-500/10 border-emerald-500/20" :
+                    match.matchScore >= 55 ? "bg-amber-500/10 border-amber-500/20" :
+                    "bg-muted/50 border-border/60";
+                  return (
+                    <div
+                      key={`match-${match.jobId}`}
+                      className="p-3 sm:p-4 rounded-lg border bg-card hover-elevate cursor-pointer"
+                      data-testid={`card-match-${match.jobId}`}
+                      onClick={() => setLocation(`/jobs/${match.jobId}`)}
+                    >
+                      <div className="flex gap-3">
+                        <div className={`flex flex-col items-center justify-center rounded-md border px-2 py-1.5 shrink-0 ${scoreBg}`}>
+                          <span className={`text-lg font-bold leading-none ${scoreColor}`} data-testid={`text-match-score-${match.jobId}`}>
+                            {match.matchScore}
+                          </span>
+                          <span className="text-[9px] text-muted-foreground mt-0.5">match</span>
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <h3 className="font-medium text-foreground text-sm sm:text-base leading-snug" data-testid={`text-match-title-${match.jobId}`}>
+                            {cleanStructuredText(match.title)}
+                          </h3>
+                          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+                            {cleanStructuredText(match.company)}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1 line-clamp-1" data-testid={`text-match-verdict-${match.jobId}`}>
+                            {match.brutalVerdict}
+                          </p>
+                          <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                            {match.location && (
+                              <span className="text-[11px] text-muted-foreground flex items-center gap-0.5">
+                                <MapPin className="h-3 w-3" />
+                                {match.location}
+                              </span>
+                            )}
+                            {match.matchHighlights.length > 0 && (
+                              <Badge variant="secondary" className="text-[10px]">
+                                <Sparkles className="h-2.5 w-2.5 mr-0.5" />
+                                {match.matchHighlights[0]}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {resumeMatches && resumeMatches.length > 0 && filteredJobs.length > 0 && (
+              <div className="flex items-center gap-3 py-2">
+                <div className="h-px flex-1 bg-border/60" />
+                <span className="text-xs text-muted-foreground shrink-0">All roles</span>
+                <div className="h-px flex-1 bg-border/60" />
+              </div>
+            )}
+
             {filteredJobs.map((job) => {
               const postedAgo = job.postedDate ? (() => {
                 const days = Math.floor((Date.now() - new Date(job.postedDate).getTime()) / 86400000);
@@ -768,6 +1028,7 @@ export default function Jobs() {
                 return `${Math.floor(days / 30)}mo ago`;
               })() : null;
               const taxonomy = job.roleCategory ? JOB_TAXONOMY[job.roleCategory as keyof typeof JOB_TAXONOMY] : null;
+              const matchData = resumeMatchMap?.get(job.id);
               return (
                 <div
                   key={job.id}
@@ -787,11 +1048,22 @@ export default function Jobs() {
                         <h3 className="font-medium text-foreground text-sm sm:text-base leading-snug" data-testid={`text-job-title-${job.id}`}>
                           {cleanStructuredText(job.title)}
                         </h3>
-                        {postedAgo && (
-                          <span className="text-xs text-muted-foreground shrink-0 mt-0.5" data-testid={`text-posted-${job.id}`}>
-                            {postedAgo}
-                          </span>
-                        )}
+                        <div className="flex items-center gap-2 shrink-0">
+                          {matchData && (
+                            <Badge
+                              variant="secondary"
+                              className={`text-[10px] ${matchData.matchScore >= 75 ? "text-emerald-600 dark:text-emerald-400" : matchData.matchScore >= 55 ? "text-amber-600 dark:text-amber-400" : ""}`}
+                              data-testid={`badge-match-${job.id}`}
+                            >
+                              {matchData.matchScore}% fit
+                            </Badge>
+                          )}
+                          {postedAgo && (
+                            <span className="text-xs text-muted-foreground mt-0.5" data-testid={`text-posted-${job.id}`}>
+                              {postedAgo}
+                            </span>
+                          )}
+                        </div>
                       </div>
                       <p className="text-xs sm:text-sm text-muted-foreground mt-0.5" data-testid={`text-job-company-${job.id}`}>
                         {cleanStructuredText(job.company)}
