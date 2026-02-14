@@ -156,11 +156,37 @@ export function AssistantWidget() {
     return chips.slice(0, 4);
   }, [hasPersona, persona, hasResume, currentJobId]);
 
-  if (!isAuthenticated) return null;
+  const GUEST_CHIPS = [
+    { label: "What roles exist for corporate lawyers?", icon: Briefcase, requiresResume: false },
+    { label: "How do I get started in legal tech?", icon: FileText, requiresResume: false },
+    { label: "What does a legal ops role involve?", icon: Sparkles, requiresResume: false },
+  ];
 
   const sendMessage = async (text?: string) => {
     const msgText = text || input.trim();
     if (!msgText || isLoading) return;
+
+    if (!isAuthenticated) {
+      const userMsg: ChatMessage = {
+        id: `user-${Date.now()}`,
+        role: "user",
+        content: msgText,
+      };
+      setMessages((prev) => [...prev, userMsg]);
+      setInput("");
+      setTimeout(() => {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `guest-${Date.now()}`,
+            role: "assistant",
+            content: "Great question! Sign up for a free account to chat with me. I can help you explore roles, understand job descriptions, and plan your career move into legal tech.",
+            isLimitReached: true,
+          },
+        ]);
+      }, 500);
+      return;
+    }
 
     const userMsg: ChatMessage = {
       id: `user-${Date.now()}`,
@@ -256,10 +282,16 @@ export function AssistantWidget() {
                   </div>
                   <div>
                     <p className="font-medium text-foreground text-sm">
-                      {hasPersona ? "Welcome back. How can I help today?" : "How can I help?"}
+                      {!isAuthenticated
+                        ? "Thinking about legal tech?"
+                        : hasPersona
+                        ? "Welcome back. How can I help today?"
+                        : "How can I help?"}
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {currentJobId
+                      {!isAuthenticated
+                        ? "I can help you explore career paths, understand roles, and figure out your next move."
+                        : currentJobId
                         ? "Ask me anything about this job posting. I'll explain it in plain language."
                         : hasPersona && persona?.personaSummary
                         ? "I know your interests and can give you personalized recommendations."
@@ -268,9 +300,9 @@ export function AssistantWidget() {
                         : "Ask about any job listing, career advice, or legal tech in general."}
                     </p>
                   </div>
-                  {dynamicChips.length > 0 && (
+                  {(isAuthenticated ? dynamicChips : GUEST_CHIPS).length > 0 && (
                     <div className="flex flex-wrap gap-2 justify-center">
-                      {dynamicChips.map((chip) => (
+                      {(isAuthenticated ? dynamicChips : GUEST_CHIPS).map((chip) => (
                         <Badge
                           key={chip.label}
                           variant="outline"
@@ -305,9 +337,9 @@ export function AssistantWidget() {
                     {msg.isLimitReached ? (
                       <div className="space-y-2.5">
                         <p className="text-sm text-muted-foreground">{msg.content}</p>
-                        <Link href="/pricing">
+                        <Link href={isAuthenticated ? "/pricing" : "/auth"}>
                           <Button variant="outline" size="sm" className="w-full" data-testid="link-assistant-pricing">
-                            See pricing options
+                            {isAuthenticated ? "See pricing options" : "Create free account"}
                           </Button>
                         </Link>
                       </div>

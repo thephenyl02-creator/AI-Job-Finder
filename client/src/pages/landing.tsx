@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LogoMark } from "@/components/logo";
-import { ArrowRight, Building2 } from "lucide-react";
+import { ArrowRight, Building2, Search, FileText, Target, Sparkles } from "lucide-react";
 import { JobLocation } from "@/components/job-location";
 import { Footer } from "@/components/footer";
 
@@ -218,6 +218,125 @@ export default function Landing() {
                   </Badge>
                 </Link>
               ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="border-t border-border/40">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
+            <div className="text-center mb-10">
+              <h2 className="text-2xl sm:text-3xl font-serif font-medium text-foreground tracking-tight" data-testid="text-how-it-works-title">
+                How it works
+              </h2>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 max-w-3xl mx-auto" data-testid="how-it-works-steps">
+              <div className="text-center space-y-3">
+                <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mx-auto">
+                  <Search className="h-5 w-5 text-foreground" />
+                </div>
+                <h3 className="text-sm font-semibold text-foreground">Browse & Search</h3>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Curated roles from 200+ legal tech companies, organized by career path. No noise, no irrelevant listings.
+                </p>
+              </div>
+              <div className="text-center space-y-3">
+                <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mx-auto">
+                  <Target className="h-5 w-5 text-foreground" />
+                </div>
+                <h3 className="text-sm font-semibold text-foreground">Check Your Fit</h3>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Upload your resume and see how you match. Get a clear fit score, gap analysis, and suggestions for every role.
+                </p>
+              </div>
+              <div className="text-center space-y-3">
+                <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mx-auto">
+                  <FileText className="h-5 w-5 text-foreground" />
+                </div>
+                <h3 className="text-sm font-semibold text-foreground">Apply with Confidence</h3>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Tailor your resume, compare offers, and apply knowing exactly where you stand. No guesswork.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {stats && (stats.totalJobs > 0 || stats.totalCompanies > 0) && (
+          <section className="border-t border-border/40 bg-muted/30">
+            <div className="max-w-5xl mx-auto px-4 sm:px-6 py-10 sm:py-12">
+              <div className="flex items-center justify-center gap-8 sm:gap-16 flex-wrap" data-testid="stats-bar">
+                {stats.totalJobs > 0 && (
+                  <div className="text-center">
+                    <p className="text-2xl sm:text-3xl font-semibold text-foreground" data-testid="stat-jobs">{stats.totalJobs}+</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Curated roles</p>
+                  </div>
+                )}
+                {stats.totalCompanies > 0 && (
+                  <div className="text-center">
+                    <p className="text-2xl sm:text-3xl font-semibold text-foreground" data-testid="stat-companies">{stats.totalCompanies}+</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Companies</p>
+                  </div>
+                )}
+                {stats.totalCategories > 0 && (
+                  <div className="text-center">
+                    <p className="text-2xl sm:text-3xl font-semibold text-foreground" data-testid="stat-categories">{stats.totalCategories}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Career paths</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </section>
+        )}
+
+        <section className="border-t border-border/40">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
+            <div className="max-w-3xl mx-auto">
+              <div className="text-center mb-8">
+                <h2 className="text-2xl sm:text-3xl font-serif font-medium text-foreground tracking-tight" data-testid="text-pro-preview-title">
+                  Go further with Pro
+                </h2>
+                <p className="text-sm text-muted-foreground mt-2 max-w-md mx-auto">
+                  Everything you need to move from browsing to applying, starting at $2.50/mo.
+                </p>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="flex items-start gap-3 p-4 rounded-lg bg-muted/30">
+                  <Target className="h-4 w-4 text-foreground shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Resume Match Scores</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">See exactly how your experience lines up with each role, with specific gap analysis.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3 p-4 rounded-lg bg-muted/30">
+                  <Sparkles className="h-4 w-4 text-foreground shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Resume Tailoring</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Rewrite your bullet points to match the language and keywords each employer uses.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3 p-4 rounded-lg bg-muted/30">
+                  <Search className="h-4 w-4 text-foreground shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Guided Search</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Describe what you want in plain English. We'll ask a few questions and find your best-fit roles.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3 p-4 rounded-lg bg-muted/30">
+                  <FileText className="h-4 w-4 text-foreground shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Job Alerts</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Get notified when roles matching your profile are posted. Never miss the right opportunity.</p>
+                  </div>
+                </div>
+              </div>
+              <div className="text-center mt-6">
+                <Button variant="outline" asChild data-testid="button-landing-pricing">
+                  <Link href="/pricing">
+                    See pricing
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
+              </div>
             </div>
           </div>
         </section>

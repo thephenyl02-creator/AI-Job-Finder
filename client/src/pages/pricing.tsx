@@ -66,14 +66,14 @@ const FREE_FEATURES = [
 
 const PRO_FEATURES = [
   { text: "Everything in Free", included: true },
-  { text: "Resume matching & tweaks", included: true },
-  { text: "Deep job comparison & analysis", included: true },
-  { text: "ATS resume review", included: true },
-  { text: "Full events calendar", included: true },
-  { text: "Market insights & analytics", included: true },
-  { text: "Job alerts & notifications", included: true },
-  { text: "Up to 5 resumes", included: true },
-  { text: "Guided search with refinement", included: true },
+  { text: "Resume matching & tweaks", included: true, detail: "See a fit score for every role, with gap analysis and rewrite suggestions" },
+  { text: "Deep job comparison & analysis", included: true, detail: "Compare roles side by side with career trajectory insights" },
+  { text: "ATS resume review", included: true, detail: "Check how applicant tracking systems will read your resume" },
+  { text: "Full events calendar", included: true, detail: "Legal tech conferences, webinars, and networking events" },
+  { text: "Market insights & analytics", included: true, detail: "Salary data, hiring trends, and demand by category" },
+  { text: "Job alerts & notifications", included: true, detail: "Get notified when roles matching your profile are posted" },
+  { text: "Up to 5 resumes", included: true, detail: "Tailor different resumes for different role types" },
+  { text: "Guided search with refinement", included: true, detail: "Describe what you want and we find your best matches" },
   { text: "Priority support", included: true },
 ];
 
@@ -428,9 +428,14 @@ export default function Pricing() {
               )}
               <ul className="space-y-3">
                 {PRO_FEATURES.map((feature, i) => (
-                  <li key={i} className="flex items-center gap-2.5 text-sm">
-                    <Check className="h-4 w-4 text-emerald-500 shrink-0" />
-                    <span className="text-foreground">{feature.text}</span>
+                  <li key={i} className="flex items-start gap-2.5 text-sm">
+                    <Check className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+                    <div>
+                      <span className="text-foreground">{feature.text}</span>
+                      {feature.detail && (
+                        <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{feature.detail}</p>
+                      )}
+                    </div>
                   </li>
                 ))}
               </ul>

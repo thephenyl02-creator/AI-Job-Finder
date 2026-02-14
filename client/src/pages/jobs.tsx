@@ -14,7 +14,6 @@ import { JobLocation } from "@/components/job-location";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
@@ -185,8 +184,8 @@ export default function Jobs() {
   const handleSmartSearch = useCallback(() => {
     if (!smartQuery.trim()) return;
     if (!isAuthenticated) {
-      toast({ title: "Create a free account to save jobs, see your match %, get alerts, and track applications." });
-      setLocation("/auth?returnTo=/jobs");
+      setFilterText(smartQuery.trim());
+      setSmartQuery("");
       return;
     }
     if (canUseGuidedSearch) {
@@ -198,13 +197,13 @@ export default function Jobs() {
     } else {
       searchMutation.mutate(smartQuery);
     }
-  }, [smartQuery, canUseGuidedSearch]);
+  }, [smartQuery, canUseGuidedSearch, isAuthenticated]);
 
   const handleQuickSearch = useCallback(() => {
     if (!smartQuery.trim()) return;
     if (!isAuthenticated) {
-      toast({ title: "Create a free account to save jobs, see your match %, get alerts, and track applications." });
-      setLocation("/auth?returnTo=/jobs");
+      setFilterText(smartQuery.trim());
+      setSmartQuery("");
       return;
     }
     setGuidedStep("idle");
@@ -368,16 +367,16 @@ export default function Jobs() {
 
         <Card className="card-elev" data-testid="card-smart-search">
           <CardContent className="p-3 sm:p-4">
-            <div className="flex items-end gap-2">
-              <div className="flex-1 min-w-0">
-                <Textarea
-                  placeholder={searchPlaceholder}
-                  className="resize-none border-0 text-sm sm:text-base focus-visible:ring-0 shadow-none min-h-[52px] max-h-[100px] placeholder:text-muted-foreground/50 leading-relaxed"
-                  rows={2}
+            <div className="flex items-center gap-2">
+              <div className="flex-1 min-w-0 relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
+                <Input
+                  placeholder={isAuthenticated ? searchPlaceholder : "Search by keyword, role, or company..."}
+                  className="border-0 text-sm sm:text-base focus-visible:ring-0 shadow-none pl-9 placeholder:text-muted-foreground/50"
                   value={smartQuery}
                   onChange={(e) => setSmartQuery(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
+                    if (e.key === "Enter") {
                       e.preventDefault();
                       handleSmartSearch();
                     }
@@ -392,7 +391,7 @@ export default function Jobs() {
                 data-testid="button-smart-search"
               >
                 {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-                <span className="hidden sm:inline">Search</span>
+                <span className="hidden sm:inline">{isAuthenticated ? "Search" : "Find"}</span>
               </Button>
             </div>
 

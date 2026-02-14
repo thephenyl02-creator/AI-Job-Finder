@@ -911,7 +911,7 @@ export default function JobDetail() {
       </main>
 
       <div
-        className={`fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background/95 backdrop-blur-lg sm:top-14 sm:bottom-auto transition-transform duration-300 ${showStickyBar ? "translate-y-0" : "translate-y-full sm:-translate-y-full"}`}
+        className={`fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-background/95 backdrop-blur-lg transition-transform duration-300 ${showStickyBar ? "translate-y-0" : "translate-y-full"}`}
         data-testid="sticky-apply-bar"
       >
         <div className="max-w-3xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
