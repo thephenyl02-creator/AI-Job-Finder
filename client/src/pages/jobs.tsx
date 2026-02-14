@@ -35,6 +35,7 @@ import {
   Upload,
   FileText,
   Sparkles,
+  Lock,
 } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { queryClient } from "@/lib/queryClient";
@@ -1063,13 +1064,58 @@ export default function Jobs() {
           <div className="grid gap-3">
             {resumeMatches && resumeMatches.length > 0 && (
               <div className="grid gap-3 mb-2" data-testid="section-resume-matches">
-                {resumeMatches.map((match) => {
+                {resumeMatches.map((match, idx) => {
+                  const freeLimit = !isAuthenticated ? 3 : 5;
+                  const isGated = !isPro && idx >= freeLimit;
                   const scoreColor = match.matchScore >= 75 ? "text-emerald-600 dark:text-emerald-400" :
                     match.matchScore >= 55 ? "text-amber-600 dark:text-amber-400" :
                     "text-muted-foreground";
                   const scoreBg = match.matchScore >= 75 ? "bg-emerald-500/10 border-emerald-500/20" :
                     match.matchScore >= 55 ? "bg-amber-500/10 border-amber-500/20" :
                     "bg-muted/50 border-border/60";
+
+                  if (isGated) {
+                    if (idx === freeLimit) {
+                      return (
+                        <div
+                          key={`match-${match.jobId}`}
+                          className="p-3 sm:p-4 rounded-lg border bg-card relative overflow-hidden"
+                          data-testid={`card-match-gated-${match.jobId}`}
+                        >
+                          <div className="flex gap-3 opacity-[0.08] select-none pointer-events-none blur-[2px]" aria-hidden="true">
+                            <div className="flex flex-col items-center justify-center rounded-md border px-2 py-1.5 shrink-0 bg-muted/50 border-border/60">
+                              <span className="text-lg font-bold leading-none text-muted-foreground">--</span>
+                              <span className="text-[9px] text-muted-foreground mt-0.5">match</span>
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="h-4 w-40 bg-muted rounded mb-1.5" />
+                              <div className="h-3 w-24 bg-muted rounded" />
+                            </div>
+                          </div>
+                          <div className="absolute inset-0 flex items-center justify-center" data-testid="overlay-pro-gate">
+                            <div className="text-center px-4">
+                              <Lock className="h-5 w-5 text-muted-foreground mx-auto mb-2" />
+                              <p className="text-sm font-medium text-foreground mb-1">
+                                {!isAuthenticated ? "Sign up to see more matches" : "Upgrade for full match analysis"}
+                              </p>
+                              <p className="text-xs text-muted-foreground mb-3">
+                                {!isAuthenticated
+                                  ? `${resumeMatches.length - freeLimit} more matches found`
+                                  : `${resumeMatches.length - freeLimit} more matches with detailed scoring`}
+                              </p>
+                              <Link href={!isAuthenticated ? "/auth" : "/pricing"}>
+                                <Button size="sm" data-testid="button-unlock-matches">
+                                  {!isAuthenticated ? "Create Free Account" : "Upgrade to Pro"}
+                                </Button>
+                              </Link>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    }
+                    return null;
+                  }
+
                   return (
                     <div
                       key={`match-${match.jobId}`}

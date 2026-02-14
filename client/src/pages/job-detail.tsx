@@ -45,12 +45,46 @@ import {
   AlertTriangle,
   Flag,
   X,
+  Lock,
+  Eye,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
+
+const ANON_VIEW_LIMIT = 3;
+const ANON_VIEWS_KEY = "ltc_anon_job_views";
+
+function getAnonViewCount(): number {
+  try {
+    const stored = sessionStorage.getItem(ANON_VIEWS_KEY);
+    if (!stored) return 0;
+    const parsed = JSON.parse(stored);
+    return Array.isArray(parsed) ? parsed.length : 0;
+  } catch { return 0; }
+}
+
+function recordAnonView(jobId: string): number {
+  try {
+    const stored = sessionStorage.getItem(ANON_VIEWS_KEY);
+    const views: string[] = stored ? JSON.parse(stored) : [];
+    if (!views.includes(jobId)) {
+      views.push(jobId);
+      sessionStorage.setItem(ANON_VIEWS_KEY, JSON.stringify(views));
+    }
+    return views.length;
+  } catch { return 0; }
+}
+
+function hasViewedJob(jobId: string): boolean {
+  try {
+    const stored = sessionStorage.getItem(ANON_VIEWS_KEY);
+    if (!stored) return false;
+    return JSON.parse(stored).includes(jobId);
+  } catch { return false; }
+}
 
 function cleanDescription(text: string): string {
   let cleaned = decodeHtmlEntities(text);
@@ -305,11 +339,15 @@ export default function JobDetail() {
   const [showReportDialog, setShowReportDialog] = useState(false);
   const [reportType, setReportType] = useState<string>("broken_link");
   const [reportDetails, setReportDetails] = useState("");
+  const [showSignupGate, setShowSignupGate] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return !hasViewedJob(jobId || '') && getAnonViewCount() >= ANON_VIEW_LIMIT;
+  });
   const authReturnUrl = `/auth?returnTo=${encodeURIComponent(`/jobs/${jobId}`)}`;
 
   const { data: publicJob, isLoading: publicLoading } = useQuery<Job>({
     queryKey: ['/api/public/jobs', jobId],
-    enabled: !isAuthenticated && !authLoading && !!jobId,
+    enabled: !isAuthenticated && !authLoading && !!jobId && !showSignupGate,
   });
 
   const { data: authJob, isLoading: authJobLoading } = useQuery<Job>({
@@ -347,6 +385,17 @@ export default function JobDetail() {
     if (el) observer.observe(el);
     return () => { if (el) observer.unobserve(el); };
   }, [job]);
+
+  useEffect(() => {
+    if (!isAuthenticated && !authLoading && jobId && job && !hasViewedJob(jobId)) {
+      const viewCount = getAnonViewCount();
+      if (viewCount >= ANON_VIEW_LIMIT) {
+        setShowSignupGate(true);
+      } else {
+        recordAnonView(jobId);
+      }
+    }
+  }, [isAuthenticated, authLoading, jobId, job]);
 
   const { data: savedJobIds = [] } = useQuery<number[]>({
     queryKey: ["/api/saved-jobs/ids"],
@@ -463,6 +512,54 @@ export default function JobDetail() {
             <span className="text-sm text-muted-foreground">Loading job details...</span>
           </div>
         </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated && !authLoading && showSignupGate) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <main className="max-w-xl mx-auto px-4 sm:px-6 py-12 sm:py-20">
+          <Link href="/jobs" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-8" data-testid="button-back-jobs-gate">
+            <ArrowLeft className="h-4 w-4" />
+            Back to Jobs
+          </Link>
+          <Card>
+            <CardContent className="p-6 sm:p-8 text-center">
+              <div className="inline-flex items-center justify-center w-12 h-12 rounded-md bg-primary/10 mb-4">
+                <Eye className="h-6 w-6 text-primary" />
+              </div>
+              <h2 className="text-xl font-serif font-medium text-foreground mb-2" data-testid="text-signup-gate-title">
+                You've previewed {ANON_VIEW_LIMIT} jobs
+              </h2>
+              <p className="text-sm text-muted-foreground mb-6 max-w-sm mx-auto">
+                Create a free account to keep exploring job details, save favorites, and get personalized recommendations.
+              </p>
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                <Link href={authReturnUrl}>
+                  <Button data-testid="button-signup-gate-create">
+                    Create Free Account
+                  </Button>
+                </Link>
+                <Link href={authReturnUrl}>
+                  <Button variant="outline" data-testid="button-signup-gate-signin">
+                    Sign In
+                  </Button>
+                </Link>
+              </div>
+              <div className="mt-6 pt-5 border-t space-y-2">
+                <p className="text-xs text-muted-foreground font-medium">Free accounts include:</p>
+                <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                  <span className="flex items-center gap-1"><CheckCircle2 className="h-3 w-3 text-primary" /> Unlimited job browsing</span>
+                  <span className="flex items-center gap-1"><CheckCircle2 className="h-3 w-3 text-primary" /> Save favorite jobs</span>
+                  <span className="flex items-center gap-1"><CheckCircle2 className="h-3 w-3 text-primary" /> Resume upload</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </main>
+        <Footer />
       </div>
     );
   }
