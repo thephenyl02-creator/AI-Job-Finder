@@ -14,7 +14,7 @@ import { JobLocation } from "@/components/job-location";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-
+import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
@@ -118,8 +118,10 @@ export default function Jobs() {
   const [refinedSummary, setRefinedSummary] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [resumeMatches, setResumeMatches] = useState<ResumeMatchResult[] | null>(null);
   const [resumeMatchStep, setResumeMatchStep] = useState<"idle" | "uploading" | "matching">("idle");
+  const [profileSummary, setProfileSummary] = useState<string | null>(null);
 
   const { data: usageLimits } = useQuery<{
     isPro: boolean;
@@ -201,6 +203,37 @@ export default function Jobs() {
     onError: () => {
       toast({ title: "Refined search failed", description: "Showing regular results instead.", variant: "destructive" });
       searchMutation.mutate(smartQuery);
+    },
+  });
+
+  const semanticSearchMutation = useMutation({
+    mutationFn: async (text: string) => {
+      const response = await fetch("/api/search/semantic", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text }),
+        credentials: "include",
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({ error: "Search failed" }));
+        throw new Error(err.error || "Search failed");
+      }
+      return response.json() as Promise<{ profileSummary: string; matches: JobWithScore[] }>;
+    },
+    onSuccess: (data) => {
+      setProfileSummary(data.profileSummary);
+      setSearchResults(data.matches);
+      setSearchQuery("Profile match");
+      setSmartQuery("");
+      setGuidedStep("idle");
+      if (textareaRef.current) {
+        textareaRef.current.style.height = "auto";
+      }
+      track({ eventType: "search", metadata: { type: "semantic", resultCount: data.matches.length } });
+    },
+    onError: (error: any) => {
+      toast({ title: "Couldn't analyze your text", description: error.message || "Please try again.", variant: "destructive" });
+      setGuidedStep("idle");
     },
   });
 
@@ -308,6 +341,14 @@ export default function Jobs() {
 
   const handleSmartSearch = useCallback(() => {
     if (!smartQuery.trim()) return;
+    const wordCount = smartQuery.trim().split(/\s+/).length;
+    if (wordCount >= 40) {
+      setProfileSummary(null);
+      setSearchResults(null);
+      setGuidedStep("refining");
+      semanticSearchMutation.mutate(smartQuery.trim());
+      return;
+    }
     if (!isAuthenticated) {
       setFilterText(smartQuery.trim());
       setSmartQuery("");
@@ -360,10 +401,11 @@ export default function Jobs() {
     setAnalysis(null);
     setAnswers({});
     setRefinedSummary(null);
+    setProfileSummary(null);
   }, []);
 
   const allQuestionsAnswered = analysis?.questions?.every(q => answers[q.id]);
-  const isSearching = searchMutation.isPending || analyzeMutation.isPending || refinedSearchMutation.isPending;
+  const isSearching = searchMutation.isPending || analyzeMutation.isPending || refinedSearchMutation.isPending || semanticSearchMutation.isPending;
 
   useEffect(() => { track({ eventType: "page_view", pagePath: "/jobs" }); }, []);
 
@@ -500,22 +542,31 @@ export default function Jobs() {
         />
 
         <div data-testid="card-smart-search">
-          <div className="relative flex items-center rounded-xl border-2 border-foreground/20 py-5 px-3">
-            <Search className="absolute left-5 h-5 w-5 text-muted-foreground pointer-events-none" />
-            <Input
-              placeholder="What kind of role are you looking for?"
-              className="border-0 shadow-none text-lg pl-12 pr-28 h-auto focus-visible:ring-0 bg-transparent placeholder:text-muted-foreground/60"
-              value={smartQuery}
-              onChange={(e) => setSmartQuery(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  handleSmartSearch();
-                }
-              }}
-              data-testid="input-smart-search"
-            />
-            <div className="absolute right-4 flex items-center gap-1.5">
+          <div className="relative rounded-xl border-2 border-foreground/20 px-3 py-3">
+            <div className="flex items-start gap-2">
+              <Search className="h-5 w-5 text-muted-foreground mt-1.5 shrink-0 ml-1" />
+              <Textarea
+                ref={textareaRef}
+                placeholder="What kind of role are you looking for? Or paste your resume..."
+                className="border-0 shadow-none text-lg min-h-[40px] resize-none overflow-hidden pr-24 focus-visible:ring-0 bg-transparent placeholder:text-muted-foreground/60"
+                value={smartQuery}
+                onChange={(e) => {
+                  setSmartQuery(e.target.value);
+                  const el = e.target;
+                  el.style.height = "auto";
+                  el.style.height = Math.min(el.scrollHeight, 200) + "px";
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSmartSearch();
+                  }
+                }}
+                rows={1}
+                data-testid="input-smart-search"
+              />
+            </div>
+            <div className="absolute right-4 top-4 flex items-center gap-1.5">
               <Button
                 variant="ghost"
                 size="icon"
@@ -658,8 +709,12 @@ export default function Jobs() {
             <CardContent className="p-5 flex items-center gap-3">
               <Loader2 className="h-4 w-4 animate-spin text-primary shrink-0" />
               <div>
-                <p className="text-sm font-medium text-foreground">Understanding your search...</p>
-                <p className="text-xs text-muted-foreground">Preparing a few questions to find the best matches</p>
+                <p className="text-sm font-medium text-foreground">
+                  {semanticSearchMutation.isPending ? "Analyzing your background..." : "Understanding your search..."}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {semanticSearchMutation.isPending ? "Extracting skills and experience to find the best matches" : "Preparing a few questions to find the best matches"}
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -771,6 +826,37 @@ export default function Jobs() {
               <div className="flex items-center gap-2">
                 <Target className="h-4 w-4 text-primary shrink-0" />
                 <p className="text-sm text-muted-foreground">{refinedSummary}</p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {profileSummary && searchResults && (
+          <Card className="bg-muted/40 border-border/60" data-testid="card-profile-summary">
+            <CardContent className="p-3 sm:p-4">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Target className="h-4 w-4 text-primary shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium text-foreground">What we understood</p>
+                    <p className="text-sm text-muted-foreground mt-0.5">{profileSummary}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Badge variant="outline" className="text-xs" data-testid="badge-match-count">
+                    {searchResults.length} {searchResults.length === 1 ? "match" : "matches"}
+                  </Badge>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleClearSearch}
+                    className="gap-1 text-xs"
+                    data-testid="button-clear-profile-search"
+                  >
+                    <X className="h-3 w-3" />
+                    Clear
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>

@@ -903,6 +903,150 @@ Only include jobs with a score above 40. Sort by score descending.`;
     }
   });
 
+  app.post("/api/search/semantic", async (req, res) => {
+    try {
+      const { text } = req.body;
+
+      if (!text || typeof text !== "string" || text.trim().length < 50) {
+        return res.status(400).json({ error: "Please provide more text to analyze (at least 50 characters)." });
+      }
+
+      const jobs = await storage.getActiveJobs();
+      if (jobs.length === 0) {
+        return res.json({ profileSummary: "No jobs available to match against.", matches: [] });
+      }
+
+      const extractionPrompt = `You are a career profile analyzer for a legal tech careers platform. Analyze the following text (which could be a resume, career summary, LinkedIn bio, or freeform description) and extract a structured career profile.
+
+Return ONLY valid JSON in this format:
+{
+  "profileSummary": "A 1-2 sentence summary of who this person is and what they're looking for (written in second person, e.g. 'You have 5+ years in compliance...')",
+  "skills": ["skill1", "skill2"],
+  "experienceLevel": "entry|mid|senior|lead|director",
+  "interests": ["area1", "area2"],
+  "preferredWorkStyle": "remote|hybrid|onsite|flexible",
+  "searchQuery": "A concise search query (under 30 words) that captures what kind of role this person should be looking for"
+}`;
+
+      let profileResponse;
+      try {
+        profileResponse = await getOpenAIClient().chat.completions.create({
+          model: "gpt-4o-mini",
+          messages: [
+            { role: "system", content: extractionPrompt },
+            { role: "user", content: text.substring(0, 8000) },
+          ],
+          response_format: { type: "json_object" },
+          max_tokens: 512,
+        });
+      } catch (aiError) {
+        console.error("AI profile extraction failed:", aiError);
+        return res.status(500).json({ error: "Could not analyze your text. Please try again." });
+      }
+
+      const profileContent = profileResponse.choices[0]?.message?.content;
+      if (!profileContent) {
+        return res.status(500).json({ error: "Could not analyze your text. Please try again." });
+      }
+
+      let profile: { profileSummary: string; skills: string[]; experienceLevel: string; interests: string[]; preferredWorkStyle: string; searchQuery: string };
+      try {
+        profile = JSON.parse(profileContent);
+      } catch {
+        return res.status(500).json({ error: "Could not parse profile. Please try again." });
+      }
+
+      const jobSummaries = jobs.map((job, index) => ({
+        index,
+        title: job.title,
+        company: job.company,
+        location: job.location,
+        isRemote: job.isRemote,
+        salaryMin: job.salaryMin,
+        salaryMax: job.salaryMax,
+        experienceMin: job.experienceMin,
+        experienceMax: job.experienceMax,
+        roleType: job.roleType,
+        category: job.roleCategory,
+        description: job.description.substring(0, 200),
+      }));
+
+      const matchPrompt = `You are a job matching assistant. Match the following candidate profile against job listings.
+
+Candidate profile:
+- Summary: ${profile.profileSummary}
+- Skills: ${profile.skills?.join(", ") || "Not specified"}
+- Experience level: ${profile.experienceLevel || "Not specified"}
+- Interests: ${profile.interests?.join(", ") || "Not specified"}
+- Work style preference: ${profile.preferredWorkStyle || "flexible"}
+
+For each job, score from 0-100 based on how well it matches this profile. Consider skills alignment, experience level fit, interest overlap, and work style match.
+
+Return ONLY valid JSON:
+{
+  "matches": [
+    {"index": 0, "score": 85, "reason": "Strong match for your compliance background and remote preference"}
+  ]
+}
+
+Only include jobs scoring above 40. Sort by score descending. Max 15 results.`;
+
+      let matchResponse;
+      try {
+        matchResponse = await getOpenAIClient().chat.completions.create({
+          model: "gpt-4o-mini",
+          messages: [
+            { role: "system", content: matchPrompt },
+            { role: "user", content: `Available jobs:\n${JSON.stringify(jobSummaries, null, 2)}` },
+          ],
+          response_format: { type: "json_object" },
+          max_tokens: 2048,
+        });
+      } catch (aiError) {
+        console.error("AI job matching failed:", aiError);
+        return res.status(500).json({ error: "Matching failed. Please try again." });
+      }
+
+      const matchContent = matchResponse.choices[0]?.message?.content;
+      if (!matchContent) {
+        return res.json({ profileSummary: profile.profileSummary, matches: [] });
+      }
+
+      let matchResults: { matches: Array<{ index: number; score: number; reason: string }> };
+      try {
+        matchResults = JSON.parse(matchContent);
+      } catch {
+        return res.json({ profileSummary: profile.profileSummary, matches: [] });
+      }
+
+      const scoredJobs = matchResults.matches
+        .filter(match => match.index >= 0 && match.index < jobs.length)
+        .map(match => ({
+          ...jobs[match.index],
+          matchScore: match.score,
+          matchReason: match.reason,
+        }))
+        .sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0));
+
+      const currentUser = req.user as any;
+      if (currentUser?.id) {
+        storage.logActivity({
+          userId: currentUser.id,
+          eventType: "search",
+          metadata: { type: "semantic", resultCount: scoredJobs.length },
+        }).catch(console.error);
+      }
+
+      res.json({
+        profileSummary: profile.profileSummary,
+        matches: scoredJobs,
+      });
+    } catch (error) {
+      console.error("Error in semantic search:", error);
+      res.status(500).json({ error: "Search failed. Please try again." });
+    }
+  });
+
   // Guided search - analyze query and generate clarifying questions
   // Free users get 7 guided searches total (server-side enforced), Pro users get unlimited
   app.post("/api/search/analyze", isAuthenticated, async (req, res) => {
