@@ -1,15 +1,8 @@
-import Stripe from 'stripe';
+import { getUncachableStripeClient } from '../stripeClient';
 
 async function seedProducts() {
-  const secretKey = process.env.STRIPE_SECRET_KEY;
-  if (!secretKey) {
-    console.error('STRIPE_SECRET_KEY environment variable is required');
-    process.exit(1);
-  }
-
-  const stripe = new Stripe(secretKey, {
-    apiVersion: '2025-08-27.basil' as any,
-  });
+  console.log('Connecting to Stripe via Replit integration...');
+  const stripe = await getUncachableStripeClient();
 
   const existingProducts = await stripe.products.search({ query: "name:'Legal Tech Careers Pro'" });
   if (existingProducts.data.length > 0) {

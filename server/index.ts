@@ -7,6 +7,8 @@ import { startEnrichmentWorker } from "./workers/enrichment-worker";
 import { startReliabilityWorker } from "./workers/reliability-worker";
 import { runScheduledScrape } from "./lib/scheduled-scraper";
 import { storage } from "./storage";
+import { runMigrations } from 'stripe-replit-sync';
+import { getStripeSync } from './stripeClient';
 
 const app = express();
 const httpServer = createServer(app);
@@ -123,6 +125,37 @@ app.use((req, res, next) => {
     },
     () => {
       log(`serving on port ${port}`);
+
+      (async () => {
+        try {
+          const databaseUrl = process.env.DATABASE_URL;
+          if (databaseUrl) {
+            log('Initializing Stripe schema...');
+            await runMigrations({ databaseUrl });
+            log('Stripe schema ready');
+
+            try {
+              const stripeSync = await getStripeSync();
+
+              const webhookBaseUrl = `https://${process.env.REPLIT_DOMAINS?.split(',')[0]}`;
+              const { webhook } = await stripeSync.findOrCreateManagedWebhook(
+                `${webhookBaseUrl}/api/stripe/webhook`
+              );
+              log(`Stripe webhook configured: ${webhook.url}`);
+
+              stripeSync.syncBackfill()
+                .then(() => log('Stripe data synced'))
+                .catch((err: any) => log(`Stripe sync skipped: ${err.message}`));
+            } catch (syncErr: any) {
+              log(`Stripe sync/webhook setup skipped: ${syncErr.message}`);
+              log('Core Stripe checkout will still work via direct API calls');
+            }
+          }
+        } catch (err: any) {
+          console.error('Stripe init error (non-fatal):', err.message);
+        }
+      })();
+
       startEventLinkValidation();
       startEnrichmentWorker();
       startReliabilityWorker();

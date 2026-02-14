@@ -5734,16 +5734,17 @@ ${matchDetails}`;
     try {
       const { getUncachableStripeClient } = await import("./stripeClient");
       const stripe = await getUncachableStripeClient();
-      const products = await stripe.products.search({ query: "name:'Legal Tech Careers Pro'" });
-      if (products.data.length === 0) {
+      const products = await stripe.products.list({ active: true, limit: 100 });
+      const proProduct = products.data.find(p => p.name === 'Legal Tech Careers Pro');
+      if (!proProduct) {
         return res.json({ prices: [] });
       }
-      const prices = await stripe.prices.list({ product: products.data[0].id, active: true });
+      const prices = await stripe.prices.list({ product: proProduct.id, active: true });
       res.json({
         product: {
-          id: products.data[0].id,
-          name: products.data[0].name,
-          description: products.data[0].description,
+          id: proProduct.id,
+          name: proProduct.name,
+          description: proProduct.description,
         },
         prices: prices.data.map(p => ({
           id: p.id,

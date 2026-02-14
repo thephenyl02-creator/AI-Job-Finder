@@ -1,5 +1,5 @@
 import Stripe from 'stripe';
-import { getUncachableStripeClient } from './stripeClient';
+import { getStripeSync } from './stripeClient';
 import { storage } from './storage';
 
 export async function processWebhook(payload: Buffer, signature: string): Promise<void> {
@@ -11,17 +11,16 @@ export async function processWebhook(payload: Buffer, signature: string): Promis
     );
   }
 
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-  if (!webhookSecret) {
-    throw new Error('STRIPE_WEBHOOK_SECRET environment variable is not set');
+  const sync = await getStripeSync();
+  const verifiedEvent = await sync.processWebhook(payload, signature) as Stripe.Event | undefined;
+
+  if (!verifiedEvent) {
+    return;
   }
 
-  const stripe = await getUncachableStripeClient();
-  const event = stripe.webhooks.constructEvent(payload, signature, webhookSecret);
-
-  switch (event.type) {
+  switch (verifiedEvent.type) {
     case 'checkout.session.completed': {
-      const session = event.data.object as Stripe.Checkout.Session;
+      const session = verifiedEvent.data.object as Stripe.Checkout.Session;
       const userId = session.metadata?.userId;
       if (userId && session.subscription) {
         await storage.updateUserSubscription(userId, {
@@ -36,7 +35,7 @@ export async function processWebhook(payload: Buffer, signature: string): Promis
     }
 
     case 'customer.subscription.updated': {
-      const subscription = event.data.object as Stripe.Subscription;
+      const subscription = verifiedEvent.data.object as Stripe.Subscription;
       const customerId = subscription.customer as string;
       const user = await storage.getUserByStripeCustomerId(customerId);
       if (user) {
@@ -51,7 +50,7 @@ export async function processWebhook(payload: Buffer, signature: string): Promis
     }
 
     case 'customer.subscription.deleted': {
-      const subscription = event.data.object as Stripe.Subscription;
+      const subscription = verifiedEvent.data.object as Stripe.Subscription;
       const customerId = subscription.customer as string;
       const user = await storage.getUserByStripeCustomerId(customerId);
       if (user) {
@@ -65,6 +64,6 @@ export async function processWebhook(payload: Buffer, signature: string): Promis
     }
 
     default:
-      console.log(`Unhandled Stripe event: ${event.type}`);
+      break;
   }
 }
