@@ -542,7 +542,7 @@ export default function Jobs() {
         />
 
         <div data-testid="card-smart-search">
-          <div className="relative rounded-xl border-2 border-foreground/20 px-3 py-3">
+          <div className="relative rounded-xl border-2 border-primary/40 bg-primary/[0.03] shadow-sm px-3 py-3 transition-colors focus-within:border-primary/60 focus-within:shadow-md">
             <div className="flex items-start gap-2">
               <Search className="h-5 w-5 text-muted-foreground mt-1.5 shrink-0 ml-1" />
               <Textarea
