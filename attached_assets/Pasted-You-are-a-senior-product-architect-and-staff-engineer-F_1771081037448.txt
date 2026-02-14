@@ -1,0 +1,124 @@
+You are a senior product architect and staff engineer. Fix the Admin vs User job count mismatch PERMANENTLY. This is a data + query consistency problem, not a UI patch.
+
+GOAL
+- Admin “Live” count and User job feed count must match EXACTLY at all times.
+- There must be ONE canonical visibility rule for jobs.
+- Remove conflicting status flags and unify pipeline state.
+
+NON-NEGOTIABLE RULES
+1) User job feed must ONLY show jobs where pipeline_status = 'LIVE'
+2) Admin “Live” tab must use the exact same query/function as the user feed
+3) No other flags (published/approved/active/status) may control visibility
+4) Add a debug panel that shows DB identity + pipeline counts + user-feed count
+5) If there are multiple databases (dev vs prod), show which one is active
+
+STEP 1 — INVENTORY CURRENT STATE
+- Search the codebase for all job visibility filters and status fields:
+  - "published", "approved", "status", "is_active", "active", "pipeline", "live", "ready", "rejected"
+- Identify every endpoint/query used by:
+  A) User job list/feed/search
+  B) Admin job table and admin “Live” view
+  C) Any background scheduler/scraper writing jobs
+
+STEP 2 — DEFINE SINGLE SOURCE OF TRUTH
+Create/standardize one field: pipeline_status (string enum)
+Allowed values:
+- RAW (scraped but not cleaned)
+- ENRICHING (optional, if you enrich)
+- READY (passed gate, awaiting publish)
+- LIVE (visible to users)
+- REJECTED (failed quality gate)
+- ARCHIVED (no longer active)
+
+Define canonical rule:
+- USER_VISIBLE(job) := job.pipeline_status === 'LIVE'
+
+If the DB already contains other flags like is_published/is_approved/status:
+- DO NOT delete immediately if risky
+- Stop using them for visibility
+- Optionally compute them from pipeline_status OR deprecate them safely
+
+STEP 3 — CREATE ONE CANONICAL QUERY FUNCTION
+Implement a single shared function that both admin and user must call:
+
+getLiveJobs(params):
+  - filters: keyword, location, company, role_family, seniority, tags
+  - always applies pipeline_status = 'LIVE'
+  - supports pagination
+  - returns { jobs, totalCount }
+
+Then:
+- Replace user feed query to call getLiveJobs
+- Replace admin “Live” tab query to call getLiveJobs
+- Confirm both screens hit the same route/controller/service
+
+STEP 4 — NORMALIZE EXISTING DATA (MIGRATION)
+Create a one-time migration (safe, idempotent) that sets pipeline_status consistently:
+- If job is currently considered user-visible by old logic (published+approved+active etc), set pipeline_status='LIVE'
+- Else if it’s in review queue, set 'READY'
+- Else if failed gate, set 'REJECTED'
+- Else default 'RAW'
+
+Log how many rows were changed.
+
+IMPORTANT:
+- If you cannot confidently map old flags, do NOT guess.
+- Create a mapping table and mark uncertain ones as READY for admin review.
+
+STEP 5 — STOP DUPLICATE LOGIC IN FRONTEND
+- Remove any frontend-only filtering like “hide unpublished” that might differ from backend.
+- User feed should never “filter in the browser” to decide what is live.
+- Admin “Live” should never filter differently than user feed.
+
+STEP 6 — ADD DEBUG PANEL (MANDATORY)
+Add an Admin page or widget visible only to admin users:
+Title: “Pipeline Debug”
+Display:
+1) Database identity
+   - DB host/name OR sqlite file path OR neon/project id, etc
+   - environment variables summary: NODE_ENV, DATABASE_URL (masked), app version hash
+2) Pipeline counts from DB (single query):
+   - RAW: #
+   - READY: #
+   - LIVE: #
+   - REJECTED: #
+   - ARCHIVED: #
+   - TOTAL: #
+3) User feed count using the same function:
+   - getLiveJobs({ pageSize: 1 }) should return totalCount = LIVE count
+4) A red warning banner if:
+   - LIVE_count_from_pipeline != totalCount_from_getLiveJobs
+   - Show “Mismatch detected” and print both numbers
+
+STEP 7 — TESTS + SAFETY CHECKS
+Add automated checks:
+- A small unit/integration test that asserts:
+  - adminLiveCount == userFeedCount
+- Add a runtime health check endpoint:
+  GET /health/pipeline
+  returns:
+    { liveCount, userFeedCount, ok: liveCount===userFeedCount }
+
+STEP 8 — REMOVE/DERIVE CONFLICTING FLAGS (SAFE DEPRECATION)
+If the codebase has fields like published/approved/status:
+- Update write paths so they are either:
+  A) derived from pipeline_status, or
+  B) no longer written at all
+- Add comments: “DEPRECATED: do not use for visibility”
+
+DELIVERABLES
+1) A single canonical pipeline_status model used across the system
+2) User feed and Admin “Live” use the same query/service
+3) Debug panel shows DB identity + counts + mismatch warning
+4) One-time migration to normalize old rows
+5) Health check endpoint + (at least) one test preventing regressions
+
+DO NOT
+- Do not “fix” by adjusting UI labels only
+- Do not add a second LIVE definition
+- Do not keep both old and new visibility logic in parallel
+
+After implementing, print:
+- Where the canonical query lives (file + function name)
+- The exact SQL/ORM filter used for LIVE
+- Screenshot-equivalent logs showing counts match (LIVE count == userFeedCount)
