@@ -117,15 +117,63 @@ export default function Pricing() {
   const checkoutCanceled = searchParams.get("canceled") === "true";
 
   useEffect(() => {
-    if (checkoutSuccess) {
-      const timeout = setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ["/api/stripe/subscription"] });
-        queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-        window.history.replaceState({}, "", "/pricing");
-      }, 100);
-      return () => clearTimeout(timeout);
-    }
-  }, [checkoutSuccess]);
+    if (!checkoutSuccess || !isAuthenticated) return;
+
+    let cancelled = false;
+    const syncSubscription = async () => {
+      try {
+        const syncRes = await fetch("/api/stripe/sync-subscription", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+        });
+        const syncData = await syncRes.json();
+
+        if (!cancelled && syncData.tier === "pro") {
+          queryClient.invalidateQueries({ queryKey: ["/api/stripe/subscription"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+          window.history.replaceState({}, "", "/pricing");
+          return;
+        }
+
+        let attempts = 0;
+        const poll = setInterval(async () => {
+          if (cancelled || attempts >= 10) {
+            clearInterval(poll);
+            if (!cancelled) {
+              queryClient.invalidateQueries({ queryKey: ["/api/stripe/subscription"] });
+              queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+              window.history.replaceState({}, "", "/pricing");
+            }
+            return;
+          }
+          attempts++;
+          try {
+            const res = await fetch("/api/stripe/sync-subscription", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              credentials: "include",
+            });
+            const data = await res.json();
+            if (!cancelled && data.tier === "pro") {
+              clearInterval(poll);
+              queryClient.invalidateQueries({ queryKey: ["/api/stripe/subscription"] });
+              queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+              window.history.replaceState({}, "", "/pricing");
+            }
+          } catch {}
+        }, 2000);
+      } catch {
+        if (!cancelled) {
+          queryClient.invalidateQueries({ queryKey: ["/api/stripe/subscription"] });
+          window.history.replaceState({}, "", "/pricing");
+        }
+      }
+    };
+
+    syncSubscription();
+    return () => { cancelled = true; };
+  }, [checkoutSuccess, isAuthenticated]);
 
   const { data: pricingData, isLoading: pricesLoading } = useQuery<PricingResponse>({
     queryKey: ["/api/stripe/prices"],
@@ -155,7 +203,10 @@ export default function Pricing() {
         credentials: "include",
         body: JSON.stringify({ priceId }),
       });
-      if (!res.ok) throw new Error("Failed to create checkout session");
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to create checkout session");
+      }
       return res.json();
     },
     onSuccess: (data) => {
@@ -163,8 +214,8 @@ export default function Pricing() {
         window.location.href = data.url;
       }
     },
-    onError: () => {
-      toast({ title: "Error", description: "Something went wrong. Please try again.", variant: "destructive" });
+    onError: (error: Error) => {
+      toast({ title: "Checkout Error", description: error.message || "Something went wrong. Please try again.", variant: "destructive" });
     },
   });
 

@@ -5960,7 +5960,7 @@ ${matchDetails}`;
       let customerId = subData?.stripeCustomerId;
 
       if (!customerId) {
-        const userEmail = user?.claims?.email;
+        const userEmail = user?.email || user?.claims?.email;
         const customer = await stripe.customers.create({
           email: userEmail || undefined,
           metadata: { userId },
@@ -5982,8 +5982,11 @@ ${matchDetails}`;
 
       res.json({ url: session.url });
     } catch (error: any) {
-      console.error("Checkout session error:", error);
-      res.status(500).json({ error: "Failed to create checkout session" });
+      console.error("Checkout session error:", error?.message, error?.type, error?.statusCode);
+      const message = error?.type === 'StripeInvalidRequestError'
+        ? `Stripe error: ${error.message}`
+        : "Failed to create checkout session";
+      res.status(500).json({ error: message });
     }
   });
 
