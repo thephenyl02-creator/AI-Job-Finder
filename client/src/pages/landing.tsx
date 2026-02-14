@@ -320,8 +320,8 @@ export default function Landing() {
                 <div className="flex items-start gap-3 p-4 rounded-lg bg-muted/30">
                   <Search className="h-4 w-4 text-foreground shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-sm font-medium text-foreground">Guided Search</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">Describe what you want in plain English. We'll ask a few questions and find your best-fit roles.</p>
+                    <p className="text-sm font-medium text-foreground">Smart Search</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Describe what you're looking for in plain English and we'll find your best-fit roles.</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3 p-4 rounded-lg bg-muted/30">

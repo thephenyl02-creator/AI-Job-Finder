@@ -330,7 +330,7 @@ export default function Auth() {
 
   const valueProps = [
     { icon: Briefcase, text: "Curated legal tech opportunities" },
-    { icon: Scale, text: "Built for lawyers & law students" },
+    { icon: Scale, text: "Built for legal professionals" },
     { icon: TrendingUp, text: "Resume matching & career insights" },
   ];
 

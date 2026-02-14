@@ -61,7 +61,7 @@ const FREE_FEATURES = [
   { text: "Market insights & analytics", included: false },
   { text: "Job alerts & notifications", included: false },
   { text: "Multi-resume management", included: false },
-  { text: "Guided search with refinement", included: false },
+  { text: "Smart search with follow-up questions", included: false },
 ];
 
 const PRO_FEATURES = [
@@ -73,7 +73,7 @@ const PRO_FEATURES = [
   { text: "Market insights & analytics", included: true, detail: "Salary data, hiring trends, and demand by category" },
   { text: "Job alerts & notifications", included: true, detail: "Get notified when roles matching your profile are posted" },
   { text: "Up to 5 resumes", included: true, detail: "Tailor different resumes for different role types" },
-  { text: "Guided search with refinement", included: true, detail: "Describe what you want and we find your best matches" },
+  { text: "Smart search with follow-up questions", included: true, detail: "Describe what you want and we find your best matches" },
   { text: "Priority support", included: true },
 ];
 

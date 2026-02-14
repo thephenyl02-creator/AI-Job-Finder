@@ -42,7 +42,7 @@ function MetaBadges({ data, compact }: { data: StructuredDescription; compact?: 
       {data.lawyerTransitionFriendly && (
         <Badge variant="outline" className={`${badgeSize} border-green-500/30 text-green-700 dark:text-green-400`} data-testid="badge-lawyer-friendly">
           <Scale className={`${iconSize} mr-1`} />
-          Lawyer-Friendly Transition
+          Career Transition Friendly
         </Badge>
       )}
     </div>
@@ -68,7 +68,7 @@ export function StructuredDescriptionView({ data, compact }: { data: StructuredD
     { key: "minimumQualifications", title: "Requirements", items: safeArray(data.minimumQualifications), text: null, icon: CheckCircle2, alwaysShow: true },
     { key: "preferredQualifications", title: "Nice to Have", items: safeArray(data.preferredQualifications), text: null, icon: Star, alwaysShow: true },
     { key: "skillsRequired", title: "Key Skills", items: safeArray(data.skillsRequired), text: null, icon: Hash, renderAsBadges: true, alwaysShow: true },
-    { key: "lawyerTransitionNotes", title: "For Lawyers Considering This Role", items: safeArray(data.lawyerTransitionNotes), text: null, icon: Scale },
+    { key: "lawyerTransitionNotes", title: "Career Transition Notes", items: safeArray(data.lawyerTransitionNotes), text: null, icon: Scale },
   ];
 
   if (compact) {

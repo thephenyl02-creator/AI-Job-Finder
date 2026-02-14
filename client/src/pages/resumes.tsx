@@ -1139,7 +1139,7 @@ export default function Resumes() {
             <div className="flex-1 min-w-0">
               <h3 className="text-sm font-semibold text-foreground">Resume Builder</h3>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Build ATS-optimized resumes from scratch or import your uploaded resume. Get real-time scoring and AI-powered suggestions.
+                Build ATS-optimized resumes from scratch or import your uploaded resume. Get real-time scoring and smart suggestions.
               </p>
             </div>
             <Button

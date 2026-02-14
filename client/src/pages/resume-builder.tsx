@@ -1456,7 +1456,7 @@ function ResumeEditorView({
         </Button>
         <UpgradePrompt
           feature="AI Resume Assistant"
-          description="Unlock AI-powered resume optimization, smart bullet point suggestions, and ATS score improvements with Pro."
+          description="Unlock resume optimization, smart bullet point suggestions, and ATS score improvements with Pro."
         />
       </div>
     );

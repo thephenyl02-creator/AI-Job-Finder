@@ -157,7 +157,7 @@ export function AssistantWidget() {
   }, [hasPersona, persona, hasResume, currentJobId]);
 
   const GUEST_CHIPS = [
-    { label: "What roles exist for corporate lawyers?", icon: Briefcase, requiresResume: false },
+    { label: "What roles exist in legal tech?", icon: Briefcase, requiresResume: false },
     { label: "How do I get started in legal tech?", icon: FileText, requiresResume: false },
     { label: "What does a legal ops role involve?", icon: Sparkles, requiresResume: false },
   ];
