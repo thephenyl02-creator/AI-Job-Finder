@@ -500,11 +500,11 @@ export default function Jobs() {
         />
 
         <div data-testid="card-smart-search">
-          <div className="relative flex items-center gap-0 rounded-2xl bg-muted/40 py-6 transition-colors focus-within:bg-muted/60">
-            <Search className="absolute left-5 h-5 w-5 text-muted-foreground/50 pointer-events-none" />
+          <div className="relative flex items-center rounded-lg border border-border py-1">
+            <Search className="absolute left-4 h-4 w-4 text-muted-foreground pointer-events-none" />
             <Input
               placeholder="What kind of role are you looking for?"
-              className="border-0 shadow-none text-lg pl-14 pr-28 h-auto focus-visible:ring-0 bg-transparent placeholder:text-muted-foreground/50"
+              className="border-0 shadow-none text-base pl-11 pr-24 h-10 focus-visible:ring-0 bg-transparent placeholder:text-muted-foreground/60"
               value={smartQuery}
               onChange={(e) => setSmartQuery(e.target.value)}
               onKeyDown={(e) => {
@@ -515,11 +515,11 @@ export default function Jobs() {
               }}
               data-testid="input-smart-search"
             />
-            <div className="absolute right-4 flex items-center gap-1.5">
+            <div className="absolute right-2 flex items-center gap-1">
               <Button
                 variant="ghost"
                 size="icon"
-                className="text-muted-foreground/40"
+                className="text-muted-foreground"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={resumeMatchStep !== "idle"}
                 data-testid="button-upload-resume"
