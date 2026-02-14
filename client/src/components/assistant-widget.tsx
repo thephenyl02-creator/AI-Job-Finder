@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from "react";
-import { useLocation, useParams, Link } from "wouter";
+import { useLocation, Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { usePersona } from "@/hooks/use-persona";
 import { useQuery } from "@tanstack/react-query";
@@ -7,8 +7,6 @@ import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { AnimatePresence, motion } from "framer-motion";
 import {
   MessageCircle,
   X,
@@ -17,11 +15,9 @@ import {
   FileText,
   Briefcase,
   Sparkles,
-  ArrowDown,
   TrendingUp,
   MapPin,
   Target,
-  Crown,
 } from "lucide-react";
 
 interface ChatMessage {
@@ -118,7 +114,7 @@ export function AssistantWidget() {
   const dynamicChips = useMemo(() => {
     const chips = BASE_CHIPS.filter((chip) => {
       if (chip.requiresResume && !hasResume) return false;
-      if (chip.requiresJob && !currentJobId) return false;
+      if ((chip as any).requiresJob && !currentJobId) return false;
       return true;
     });
 
@@ -132,7 +128,6 @@ export function AssistantWidget() {
           label: `What's trending in ${categories[0]}?`,
           icon: TrendingUp,
           requiresResume: false,
-          requiresJob: false,
         } as any);
       }
       if (locations?.length && persona.remotePreference !== "strong") {
@@ -140,7 +135,6 @@ export function AssistantWidget() {
           label: `Best opportunities in ${locations[0]}?`,
           icon: MapPin,
           requiresResume: false,
-          requiresJob: false,
         } as any);
       }
       if (companies?.length && companies.length >= 2) {
@@ -148,7 +142,6 @@ export function AssistantWidget() {
           label: `Compare ${companies[0]} vs ${companies[1]}`,
           icon: Target,
           requiresResume: false,
-          requiresJob: false,
         } as any);
       }
       if (persona.remotePreference === "strong") {
@@ -156,7 +149,6 @@ export function AssistantWidget() {
           label: "Best remote legal tech roles?",
           icon: MapPin,
           requiresResume: false,
-          requiresJob: false,
         } as any);
       }
     }
@@ -208,7 +200,7 @@ export function AssistantWidget() {
           id: `error-${Date.now()}`,
           role: "assistant",
           content: isLimitError
-            ? "You've used your 3 free messages for today. Upgrade to Pro for unlimited conversations and deeper career guidance."
+            ? "You've reached today's free message limit. Your messages reset tomorrow, or you can upgrade for unlimited access."
             : "Something went wrong. Please try again in a moment.",
           isLimitReached: isLimitError,
         },
@@ -235,173 +227,160 @@ export function AssistantWidget() {
 
   return (
     <>
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: 20, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
-            className="fixed bottom-20 right-2 sm:right-4 z-50 w-[calc(100vw-1rem)] sm:w-[380px] sm:max-w-[calc(100vw-2rem)]"
-          >
-            <Card className="flex flex-col shadow-lg border overflow-visible" style={{ height: "500px", maxHeight: "calc(100vh - 8rem)" }}>
-              <div className="flex items-center justify-between gap-3 px-4 py-3 border-b bg-muted/30">
-                <div className="flex items-center gap-2 min-w-0">
-                  <MessageCircle className="h-4 w-4 text-foreground shrink-0" />
-                  <span className="font-semibold text-sm text-foreground truncate">Career Assistant</span>
-                  {contextLabel && (
-                    <Badge variant="secondary" className="text-xs shrink-0">{contextLabel}</Badge>
+      {isOpen && (
+        <div className="fixed bottom-16 right-2 sm:right-4 z-50 w-[calc(100vw-1rem)] sm:w-[380px] sm:max-w-[calc(100vw-2rem)]">
+          <Card className="flex flex-col shadow-lg border overflow-visible" style={{ height: "500px", maxHeight: "calc(100vh - 8rem)" }}>
+            <div className="flex items-center justify-between gap-3 px-4 py-3 border-b bg-muted/30">
+              <div className="flex items-center gap-2 min-w-0">
+                <MessageCircle className="h-4 w-4 text-foreground shrink-0" />
+                <span className="font-semibold text-sm text-foreground truncate">Career Assistant</span>
+                {contextLabel && (
+                  <Badge variant="secondary" className="text-xs shrink-0">{contextLabel}</Badge>
+                )}
+              </div>
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={() => setIsOpen(false)}
+                data-testid="button-close-assistant"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+              {messages.length === 0 && (
+                <div className="flex flex-col items-center text-center py-6 space-y-4">
+                  <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                    <MessageCircle className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-foreground text-sm">
+                      {hasPersona ? "Welcome back. How can I help today?" : "How can I help?"}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {currentJobId
+                        ? "Ask me anything about this job posting. I'll explain it in plain language."
+                        : hasPersona && persona?.personaSummary
+                        ? "I know your interests and can give you personalized recommendations."
+                        : hasResume
+                        ? "Ask about jobs that match your resume, or anything about legal tech careers."
+                        : "Ask about any job listing, career advice, or legal tech in general."}
+                    </p>
+                  </div>
+                  {dynamicChips.length > 0 && (
+                    <div className="flex flex-wrap gap-2 justify-center">
+                      {dynamicChips.map((chip) => (
+                        <Badge
+                          key={chip.label}
+                          variant="outline"
+                          onClick={() => sendMessage(chip.label)}
+                          className="cursor-pointer flex items-center gap-1.5 text-xs"
+                          data-testid={`button-chip-${chip.label.slice(0, 20).replace(/\s+/g, '-').toLowerCase()}`}
+                        >
+                          <chip.icon className="h-3 w-3" />
+                          {chip.label}
+                        </Badge>
+                      ))}
+                    </div>
                   )}
                 </div>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  onClick={() => setIsOpen(false)}
-                  data-testid="button-close-assistant"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
+              )}
 
-              <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
-                {messages.length === 0 && (
-                  <div className="flex flex-col items-center text-center py-6 space-y-4">
-                    <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-                      <MessageCircle className="h-5 w-5 text-muted-foreground" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-foreground text-sm">
-                        {hasPersona ? "Welcome back. How can I help today?" : "How can I help?"}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {currentJobId
-                          ? "Ask me anything about this job posting. I'll explain it in plain language."
-                          : hasPersona && persona?.personaSummary
-                          ? "I know your interests and can give you personalized recommendations."
-                          : hasResume
-                          ? "Ask about jobs that match your resume, or anything about legal tech careers."
-                          : "Ask about any job listing, career advice, or legal tech in general."}
-                      </p>
-                    </div>
-                    {dynamicChips.length > 0 && (
-                      <div className="flex flex-wrap gap-2 justify-center">
-                        {dynamicChips.map((chip) => (
-                          <Badge
-                            key={chip.label}
-                            variant="outline"
-                            onClick={() => sendMessage(chip.label)}
-                            className="cursor-pointer flex items-center gap-1.5 text-xs"
-                            data-testid={`button-chip-${chip.label.slice(0, 20).replace(/\s+/g, '-').toLowerCase()}`}
-                          >
-                            <chip.icon className="h-3 w-3" />
-                            {chip.label}
-                          </Badge>
-                        ))}
+              {messages.map((msg) => (
+                <div
+                  key={msg.id}
+                  className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                  data-testid={`message-${msg.role}-${msg.id}`}
+                >
+                  <div
+                    className={`max-w-[85%] rounded-lg px-3 py-2 text-sm ${
+                      msg.role === "user"
+                        ? "bg-primary text-primary-foreground"
+                        : msg.isLimitReached
+                        ? "bg-muted/50 border border-border text-foreground"
+                        : "bg-muted text-foreground"
+                    }`}
+                  >
+                    {msg.isLimitReached ? (
+                      <div className="space-y-2.5">
+                        <p className="text-sm text-muted-foreground">{msg.content}</p>
+                        <Link href="/pricing">
+                          <Button variant="outline" size="sm" className="w-full" data-testid="link-assistant-pricing">
+                            See pricing options
+                          </Button>
+                        </Link>
                       </div>
+                    ) : msg.role === "assistant" ? (
+                      <div className="space-y-1">{formatMarkdown(msg.content)}</div>
+                    ) : (
+                      msg.content
                     )}
                   </div>
-                )}
-
-                {messages.map((msg) => (
-                  <div
-                    key={msg.id}
-                    className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-                    data-testid={`message-${msg.role}-${msg.id}`}
-                  >
-                    <div
-                      className={`max-w-[85%] rounded-lg px-3 py-2 text-sm ${
-                        msg.role === "user"
-                          ? "bg-primary text-primary-foreground"
-                          : msg.isLimitReached
-                          ? "bg-muted/50 border border-border text-foreground"
-                          : "bg-muted text-foreground"
-                      }`}
-                    >
-                      {msg.isLimitReached ? (
-                        <div className="space-y-2.5">
-                          <p className="text-sm text-muted-foreground">{msg.content}</p>
-                          <Link href="/pricing">
-                            <Button size="sm" className="w-full gap-1.5" data-testid="button-assistant-upgrade">
-                              <Crown className="h-3.5 w-3.5" />
-                              Upgrade to Pro
-                            </Button>
-                          </Link>
-                          <p className="text-[10px] text-muted-foreground text-center">Your free messages reset tomorrow</p>
-                        </div>
-                      ) : msg.role === "assistant" ? (
-                        <div className="space-y-1">{formatMarkdown(msg.content)}</div>
-                      ) : (
-                        msg.content
-                      )}
-                    </div>
-                  </div>
-                ))}
-
-                {isLoading && (
-                  <div className="flex justify-start">
-                    <div className="bg-muted rounded-lg px-3 py-2 flex items-center gap-2">
-                      <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
-                      <span className="text-xs text-muted-foreground">Thinking...</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className="border-t px-3 py-2">
-                <div className="flex items-end gap-2">
-                  <textarea
-                    ref={inputRef}
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    placeholder={
-                      currentJobId
-                        ? "Ask about this job..."
-                        : "Ask me anything..."
-                    }
-                    rows={1}
-                    className="flex-1 resize-none bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none min-h-[44px] max-h-[80px] py-3"
-                    style={{ height: "44px" }}
-                    onInput={(e) => {
-                      const target = e.target as HTMLTextAreaElement;
-                      target.style.height = "44px";
-                      target.style.height = Math.min(target.scrollHeight, 80) + "px";
-                    }}
-                    data-testid="input-assistant-message"
-                  />
-                  <Button
-                    size="icon"
-                    onClick={() => sendMessage()}
-                    disabled={!input.trim() || isLoading}
-                    data-testid="button-send-assistant"
-                  >
-                    <Send className="h-4 w-4" />
-                  </Button>
                 </div>
-              </div>
-            </Card>
-          </motion.div>
-        )}
-      </AnimatePresence>
+              ))}
 
-      <motion.div
-        className="fixed bottom-4 right-4 z-50"
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-      >
+              {isLoading && (
+                <div className="flex justify-start">
+                  <div className="bg-muted rounded-lg px-3 py-2 flex items-center gap-2">
+                    <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground">Thinking...</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="border-t px-3 py-2">
+              <div className="flex items-end gap-2">
+                <textarea
+                  ref={inputRef}
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder={
+                    currentJobId
+                      ? "Ask about this job..."
+                      : "Ask me anything..."
+                  }
+                  rows={1}
+                  className="flex-1 resize-none bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none min-h-[44px] max-h-[80px] py-3"
+                  style={{ height: "44px" }}
+                  onInput={(e) => {
+                    const target = e.target as HTMLTextAreaElement;
+                    target.style.height = "44px";
+                    target.style.height = Math.min(target.scrollHeight, 80) + "px";
+                  }}
+                  data-testid="input-assistant-message"
+                />
+                <Button
+                  size="icon"
+                  onClick={() => sendMessage()}
+                  disabled={!input.trim() || isLoading}
+                  data-testid="button-send-assistant"
+                >
+                  <Send className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      <div className="fixed bottom-4 right-4 z-50">
         <Button
-          size="lg"
+          size="icon"
+          variant="outline"
           onClick={() => setIsOpen(!isOpen)}
-          className="rounded-full h-14 w-14 shadow-lg"
+          className="rounded-full h-10 w-10 shadow-md bg-background"
           data-testid="button-open-assistant"
         >
           {isOpen ? (
-            <ArrowDown className="h-5 w-5" />
+            <X className="h-4 w-4" />
           ) : (
-            <MessageCircle className="h-5 w-5" />
+            <MessageCircle className="h-4 w-4" />
           )}
         </Button>
-      </motion.div>
+      </div>
     </>
   );
 }

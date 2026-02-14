@@ -22,39 +22,29 @@ import { ResumeRewriteDialog } from "@/components/resume-rewrite-dialog";
 import { ResumeStrategyDialog } from "@/components/resume-strategy-dialog";
 import { NextStepCard } from "@/components/next-step-card";
 import { Link } from "wouter";
-import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowLeft,
   ExternalLink,
-  MapPin,
   Building2,
   Briefcase,
   DollarSign,
   Loader2,
-  MessageCircle,
-  Send,
   FileText,
   Bookmark,
   Award,
   GraduationCap,
   Clock,
-  Target,
-  Users,
-  Gift,
-  Star,
-  Zap,
   Scale,
   Handshake,
   Hash,
   TrendingUp,
   Sparkles,
-  Globe,
   CalendarDays,
   CheckCircle2,
-  Upload,
   ShieldCheck,
   AlertTriangle,
   Flag,
+  X,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -258,194 +248,6 @@ function DescriptionContent({ text, testId, compact, isPro }: { text?: string | 
 }
 
 
-interface ChatMsg {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-}
-
-function formatChatMarkdown(text: string) {
-  const lines = text.split("\n");
-  let key = 0;
-  return lines.map((line) => {
-    if (line.trim().startsWith("- ")) {
-      return (
-        <div key={key++} className="flex gap-2 pl-2 py-0.5">
-          <span className="text-muted-foreground shrink-0">&bull;</span>
-          <span>{renderBoldText(line.trim().slice(2), key)}</span>
-        </div>
-      );
-    }
-    if (line.trim() === "") return <div key={key++} className="h-1.5" />;
-    return <p key={key++} className="leading-relaxed">{renderBoldText(line, key)}</p>;
-  });
-}
-
-function renderBoldText(text: string, pk: number) {
-  const parts: (string | JSX.Element)[] = [];
-  let last = 0;
-  let i = 0;
-  const re = /\*\*(.*?)\*\*/g;
-  let m;
-  while ((m = re.exec(text)) !== null) {
-    if (m.index > last) parts.push(text.slice(last, m.index));
-    parts.push(<strong key={`${pk}-${i++}`} className="font-semibold">{m[1]}</strong>);
-    last = m.index + m[0].length;
-  }
-  if (last < text.length) parts.push(text.slice(last));
-  return parts.length === 1 && typeof parts[0] === "string" ? parts[0] : <>{parts}</>;
-}
-
-const JOB_QUESTION_CHIPS = [
-  "Break down what this role does day-to-day",
-  "Which parts of legal experience are typically useful in this role?",
-  "What skills does this role require?",
-  "Explain the technical requirements in plain language",
-  "Define unfamiliar terms in this job description",
-];
-
-function JobChat({ jobId }: { jobId: string }) {
-  const [messages, setMessages] = useState<ChatMsg[]>([]);
-  const [input, setInput] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
-
-  useEffect(() => {
-    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-  }, [messages]);
-
-  const sendMessage = async (text?: string) => {
-    const msgText = text || input.trim();
-    if (!msgText || isLoading) return;
-
-    const userMsg: ChatMsg = { id: `u-${Date.now()}`, role: "user", content: msgText };
-    setMessages((prev) => [...prev, userMsg]);
-    setInput("");
-    setIsLoading(true);
-
-    try {
-      const history = [...messages, userMsg].map((m) => ({ role: m.role, content: m.content }));
-      const res = await apiRequest("POST", "/api/assistant/chat", {
-        message: msgText,
-        history,
-        context: { jobId },
-      });
-      const data = await res.json();
-      setMessages((prev) => [
-        ...prev,
-        { id: `a-${Date.now()}`, role: "assistant", content: data.reply || "Sorry, please try again." },
-      ]);
-    } catch {
-      setMessages((prev) => [
-        ...prev,
-        { id: `e-${Date.now()}`, role: "assistant", content: "Something went wrong. Please try again." },
-      ]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  return (
-    <Card data-testid="section-job-chat">
-      <CardContent className="p-5">
-        <div className="flex items-center gap-2.5 mb-1">
-          <div className="w-7 h-7 rounded-md bg-muted flex items-center justify-center shrink-0">
-            <MessageCircle className="h-3.5 w-3.5 text-muted-foreground" />
-          </div>
-          <h2 className="text-base font-semibold text-foreground" data-testid="heading-job-chat">
-            Understand This Role (Plain-English)
-          </h2>
-        </div>
-        <p className="text-sm text-muted-foreground mb-4 pl-[2.375rem]">
-          Get clear explanations of the role and its requirements — no resume edits here.
-        </p>
-
-        <div ref={scrollRef} className="max-h-72 overflow-y-auto space-y-2 mb-4">
-          {messages.length === 0 && (
-            <div className="flex flex-wrap gap-2">
-              {JOB_QUESTION_CHIPS.map((q) => (
-                <Button
-                  key={q}
-                  variant="outline"
-                  size="sm"
-                  onClick={() => sendMessage(q)}
-                  className="text-xs text-left h-auto py-2 px-3 whitespace-normal"
-                  data-testid={`button-job-chip-${q.slice(0, 15).replace(/\s+/g, '-').toLowerCase()}`}
-                >
-                  <MessageCircle className="h-3 w-3 mr-1.5 shrink-0" />
-                  {q}
-                </Button>
-              ))}
-            </div>
-          )}
-
-          {messages.map((msg) => (
-            <div key={msg.id} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-              <div
-                className={`max-w-[90%] rounded-lg px-3 py-2 text-sm ${
-                  msg.role === "user"
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-foreground"
-                }`}
-                data-testid={`message-job-${msg.role}-${msg.id}`}
-              >
-                {msg.role === "assistant" ? (
-                  <div className="space-y-0.5">{formatChatMarkdown(msg.content)}</div>
-                ) : (
-                  msg.content
-                )}
-              </div>
-            </div>
-          ))}
-
-          {isLoading && (
-            <div className="flex justify-start">
-              <div className="bg-muted rounded-lg px-3 py-2 flex items-center gap-2">
-                <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
-                <span className="text-xs text-muted-foreground">Thinking...</span>
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="flex items-end gap-2">
-          <textarea
-            ref={inputRef}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                sendMessage();
-              }
-            }}
-            placeholder="Type your question..."
-            rows={1}
-            className="flex-1 resize-none bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none min-h-[40px] max-h-[80px] py-2 border-b border-border focus:border-foreground transition-colors"
-            style={{ height: "40px" }}
-            onInput={(e) => {
-              const t = e.target as HTMLTextAreaElement;
-              t.style.height = "40px";
-              t.style.height = Math.min(t.scrollHeight, 80) + "px";
-            }}
-            data-testid="input-job-chat"
-          />
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={() => sendMessage()}
-            disabled={!input.trim() || isLoading}
-            data-testid="button-send-job-chat"
-          >
-            <Send className="h-4 w-4" />
-          </Button>
-        </div>
-
-      </CardContent>
-    </Card>
-  );
-}
 
 function getPostedDateLabel(date: Date | string | null | undefined): string | null {
   if (!date) return null;
@@ -648,9 +450,7 @@ export default function JobDetail() {
     apiRequest("POST", `/api/jobs/${job.id}/apply-click`).catch((e) =>
       console.error("Failed to track apply click", e)
     );
-    if (!isPro) {
-      setShowApplyNudge(true);
-    }
+    setShowApplyNudge(true);
   };
 
   if (authLoading || isLoading) {
@@ -885,38 +685,6 @@ export default function JobDetail() {
               </Button>
             )}
             {isAuthenticated ? (
-              <Link href="/resumes">
-                <Button
-                  variant="outline"
-                  className="gap-1.5 w-full sm:w-auto"
-                  data-testid="button-resume-match"
-                >
-                  {userResumes.length > 0 ? (
-                    <>
-                      <FileText className="h-4 w-4" />
-                      View Resume Match
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="h-4 w-4" />
-                      Upload Resume
-                    </>
-                  )}
-                </Button>
-              </Link>
-            ) : (
-              <Link href={authReturnUrl}>
-                <Button
-                  variant="outline"
-                  className="gap-1.5 w-full sm:w-auto"
-                  data-testid="button-resume-match-signin"
-                >
-                  <Upload className="h-4 w-4" />
-                  Upload Resume
-                </Button>
-              </Link>
-            )}
-            {isAuthenticated ? (
               <Button
                 variant="outline"
                 onClick={() => saveJobMutation.mutate()}
@@ -941,58 +709,20 @@ export default function JobDetail() {
             )}
           </div>
 
-          <AnimatePresence>
-            {showApplyNudge && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: 0.3 }}
-                className="mt-3"
-                data-testid="section-apply-nudge"
+          {showApplyNudge && (
+            <div className="mt-3 flex items-center gap-2" data-testid="section-apply-nudge">
+              <p className="text-sm text-muted-foreground">Good luck with your application!</p>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 shrink-0"
+                onClick={() => setShowApplyNudge(false)}
+                data-testid="button-apply-nudge-dismiss"
               >
-                <div className="rounded-md border border-primary/20 bg-primary/5 p-3">
-                  <div className="flex items-start gap-3">
-                    <div className="p-1.5 rounded-md bg-primary/10 shrink-0">
-                      <Target className="h-3.5 w-3.5 text-primary" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-foreground">Applied? Track this application and get reminders.</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        Create a free account to save jobs, see your match %, get alerts, and track applications.
-                      </p>
-                      <div className="flex items-center gap-2 mt-2 flex-wrap">
-                        {isAuthenticated ? (
-                          <Link href="/dashboard">
-                            <Button size="sm" className="gap-1.5 text-xs" data-testid="button-apply-nudge-track">
-                              <Target className="h-3 w-3" />
-                              Track Application
-                            </Button>
-                          </Link>
-                        ) : (
-                          <Link href={authReturnUrl}>
-                            <Button size="sm" className="gap-1.5 text-xs" data-testid="button-apply-nudge-track">
-                              <Target className="h-3 w-3" />
-                              Track Application
-                            </Button>
-                          </Link>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-xs text-muted-foreground"
-                          onClick={() => setShowApplyNudge(false)}
-                          data-testid="button-apply-nudge-dismiss"
-                        >
-                          Dismiss
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+                <X className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* === UNIFIED JOB DETAILS CARD === */}
@@ -1117,12 +847,6 @@ export default function JobDetail() {
           </CardContent>
         </Card>
 
-        {isAuthenticated && (
-          <div className="mb-8">
-            <JobChat jobId={jobId || ""} />
-          </div>
-        )}
-
         {similarJobs.length > 0 && (
           <div className="mb-8" data-testid="section-similar-jobs">
             <h2 className="text-lg font-serif font-medium text-foreground mb-4 tracking-tight">
@@ -1186,84 +910,57 @@ export default function JobDetail() {
         )}
       </main>
 
-      {/* === STICKY APPLY BAR === */}
-      <AnimatePresence>
-        {showStickyBar && (
-          <motion.div
-            initial={{ y: 100, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 100, opacity: 0 }}
-            transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background/95 backdrop-blur-lg sm:top-14 sm:bottom-auto"
-            data-testid="sticky-apply-bar"
-          >
-            <div className="max-w-3xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
-              <div className="min-w-0 flex-1 hidden sm:block">
-                <div className="flex items-center gap-2">
-                  <p className="text-sm font-medium text-foreground truncate">{job.title}</p>
-                  {resumeFit && resumeFit.length > 0 && (() => {
-                    const pf = resumeFit.find(r => r.isPrimary) || resumeFit[0];
-                    return pf ? (
-                      <Badge
-                        variant="secondary"
-                        className={`text-[10px] shrink-0 ${
-                          pf.score >= 60 ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400" :
-                          pf.score >= 30 ? "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400" :
-                          ""
-                        }`}
-                        data-testid="badge-sticky-match"
-                      >
-                        {pf.score}% match
-                      </Badge>
-                    ) : null;
-                  })()}
-                </div>
-                <p className="text-xs text-muted-foreground truncate">{job.company}</p>
-              </div>
-              <div className="flex items-center gap-2 w-full sm:w-auto">
-                {isAuthenticated && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => saveJobMutation.mutate()}
-                    disabled={saveJobMutation.isPending}
-                    className={`gap-1.5 ${jobIsSaved ? "text-primary" : ""}`}
-                    data-testid="button-save-sticky"
-                  >
-                    <Bookmark className={`h-4 w-4 ${jobIsSaved ? "fill-current" : ""}`} />
-                    <span className="hidden sm:inline">{jobIsSaved ? "Saved" : "Save"}</span>
-                  </Button>
-                )}
-                {!isAuthenticated && (
-                  <Link href={authReturnUrl}>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="gap-1.5 text-muted-foreground"
-                      data-testid="button-save-sticky-signin"
-                    >
-                      <Bookmark className="h-4 w-4" />
-                    </Button>
-                  </Link>
-                )}
-                {job?.applyUrl ? (
-                  <a href={job.applyUrl} target="_blank" rel="noopener noreferrer" onClick={handleApplyClick} className="flex-1 sm:flex-none">
-                    <Button className="gap-2 w-full" data-testid="button-apply-sticky">
-                      <ExternalLink className="h-4 w-4" />
-                      Apply Now
-                    </Button>
-                  </a>
-                ) : (
-                  <Button className="gap-2 flex-1 sm:flex-none" disabled data-testid="button-apply-sticky">
-                    <ExternalLink className="h-4 w-4" />
-                    Apply Now
-                  </Button>
-                )}
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <div
+        className={`fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background/95 backdrop-blur-lg sm:top-14 sm:bottom-auto transition-transform duration-300 ${showStickyBar ? "translate-y-0" : "translate-y-full sm:-translate-y-full"}`}
+        data-testid="sticky-apply-bar"
+      >
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
+          <div className="min-w-0 flex-1 hidden sm:block">
+            <p className="text-sm font-medium text-foreground truncate">{job.title}</p>
+            <p className="text-xs text-muted-foreground truncate">{job.company}</p>
+          </div>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            {isAuthenticated && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => saveJobMutation.mutate()}
+                disabled={saveJobMutation.isPending}
+                className={`gap-1.5 ${jobIsSaved ? "text-primary" : ""}`}
+                data-testid="button-save-sticky"
+              >
+                <Bookmark className={`h-4 w-4 ${jobIsSaved ? "fill-current" : ""}`} />
+                <span className="hidden sm:inline">{jobIsSaved ? "Saved" : "Save"}</span>
+              </Button>
+            )}
+            {!isAuthenticated && (
+              <Link href={authReturnUrl}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 text-muted-foreground"
+                  data-testid="button-save-sticky-signin"
+                >
+                  <Bookmark className="h-4 w-4" />
+                </Button>
+              </Link>
+            )}
+            {job?.applyUrl ? (
+              <a href={job.applyUrl} target="_blank" rel="noopener noreferrer" onClick={handleApplyClick} className="flex-1 sm:flex-none">
+                <Button className="gap-2 w-full" data-testid="button-apply-sticky">
+                  <ExternalLink className="h-4 w-4" />
+                  Apply Now
+                </Button>
+              </a>
+            ) : (
+              <Button className="gap-2 flex-1 sm:flex-none" disabled data-testid="button-apply-sticky">
+                <ExternalLink className="h-4 w-4" />
+                Apply Now
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
 
       <Footer />
 

@@ -34,8 +34,6 @@ import Dashboard from "@/pages/dashboard";
 import Events from "@/pages/events";
 import EventDetail from "@/pages/event-detail";
 import { AssistantWidget } from "@/components/assistant-widget";
-import { ExpiringJobsReminder } from "@/components/expiring-jobs-reminder";
-import { OnboardingDialog } from "@/components/onboarding-dialog";
 
 function AppRouter() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -96,9 +94,7 @@ function App() {
       <ThemeProvider defaultTheme="light" storageKey="legal-ai-careers-theme">
         <TooltipProvider>
           <AppRouter />
-          <OnboardingDialog />
           <AssistantWidget />
-          <ExpiringJobsReminder />
           <ScrollToTop />
           <Toaster />
         </TooltipProvider>

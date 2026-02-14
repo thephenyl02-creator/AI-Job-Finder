@@ -2,32 +2,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { DollarSign, Clock, ExternalLink, Sparkles, Building2, Briefcase, Brain, Scale, Zap, Bookmark, GraduationCap } from "lucide-react";
+import { ExternalLink, Bookmark } from "lucide-react";
 import { JobLocation } from "./job-location";
 import type { JobWithScore } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useMutation } from "@tanstack/react-query";
-import { JobComparison } from "./job-comparison";
 import { useToast } from "@/hooks/use-toast";
-import { formatSalary } from "@/lib/format-salary";
-
-function stripHtmlPreview(text: string): string {
-  if (!text) return "";
-  let clean = text;
-  clean = clean
-    .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&')
-    .replace(/&nbsp;/g, ' ').replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'").replace(/&#x27;/g, "'")
-    .replace(/&mdash;/g, '\u2014').replace(/&ndash;/g, '\u2013')
-    .replace(/&ldquo;/g, '\u201C').replace(/&rdquo;/g, '\u201D')
-    .replace(/&lsquo;/g, '\u2018').replace(/&rsquo;/g, '\u2019')
-    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(parseInt(n, 10)))
-    .replace(/&#x([0-9a-fA-F]+);/g, (_, h) => String.fromCharCode(parseInt(h, 16)));
-  clean = clean.replace(/<[^>]+>/g, ' ');
-  clean = clean.replace(/&[a-z]+;/gi, ' ');
-  clean = clean.replace(/\s{2,}/g, ' ');
-  return clean.trim();
-}
+import { Link } from "wouter";
 
 interface JobCardProps {
   job: JobWithScore;
@@ -37,15 +18,8 @@ interface JobCardProps {
   isAuthenticated?: boolean;
 }
 
-export function JobCard({ job, showMatchScore = false, hasResume = false, isSaved = false, isAuthenticated = false }: JobCardProps) {
+export function JobCard({ job, isSaved = false, isAuthenticated = false }: JobCardProps) {
   const { toast } = useToast();
-
-  const formatExperience = (min?: number | null, max?: number | null) => {
-    if (!min && !max) return null;
-    if (min && max) return `${min}-${max} years`;
-    if (min) return `${min}+ years`;
-    return `Up to ${max} years`;
-  };
 
   const getTimeAgo = (date?: Date | string | null) => {
     if (!date) return "Recently";
@@ -56,42 +30,6 @@ export function JobCard({ job, showMatchScore = false, hasResume = false, isSave
     if (days < 30) return `${Math.floor(days / 7)}w ago`;
     return `${Math.floor(days / 30)}m ago`;
   };
-
-  const getMatchScoreColor = (score?: number) => {
-    if (!score) return "bg-muted text-muted-foreground";
-    if (score >= 85) return "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400";
-    if (score >= 70) return "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400";
-    return "bg-muted text-muted-foreground";
-  };
-
-  const getCategoryIcon = (category?: string | null) => {
-    if (category === "Legal AI Jobs") return Brain;
-    if (category === "Legal Tech Startup Roles") return Scale;
-    if (category === "Law Firm Tech & Innovation") return Building2;
-    return Briefcase;
-  };
-
-  const getLegalFitLabel = (score?: number | null) => {
-    if (!score) return null;
-    if (score >= 9) return { label: "JD Preferred", className: "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800" };
-    if (score >= 8) return { label: "Legal Background Valued", className: "bg-sky-100 dark:bg-sky-900/30 text-sky-700 dark:text-sky-400 border-sky-200 dark:border-sky-800" };
-    if (score >= 7) return { label: "Domain Knowledge Helpful", className: "bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-400 border-violet-200 dark:border-violet-800" };
-    return null;
-  };
-
-  const getSeniorityColor = (level?: string | null) => {
-    if (level === "Entry") return "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400";
-    if (level === "Mid") return "bg-slate-100 dark:bg-slate-900/30 text-slate-700 dark:text-slate-400";
-    if (level === "Senior") return "bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400";
-    if (level === "Lead" || level === "Director" || level === "VP") return "bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400";
-    return "bg-muted text-muted-foreground";
-  };
-
-  const CategoryIcon = getCategoryIcon(job.roleCategory);
-  const legalFit = getLegalFitLabel(job.legalRelevanceScore);
-
-  const salary = formatSalary(job.salaryMin, job.salaryMax, (job as any).salaryCurrency);
-  const experience = formatExperience(job.experienceMin, job.experienceMax);
 
   const saveMutation = useMutation({
     mutationFn: async () => {
@@ -118,158 +56,74 @@ export function JobCard({ job, showMatchScore = false, hasResume = false, isSave
 
   return (
     <Card className="group hover:border-primary/50 transition-all duration-200 hover-elevate" data-testid={`card-job-${job.id}`}>
-      <CardContent className="p-5 sm:p-6">
-        <div className="flex flex-col gap-3.5">
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex items-start gap-3 sm:gap-4 flex-1 min-w-0">
-              <Avatar className="h-12 w-12 sm:h-14 sm:w-14 rounded-lg flex-shrink-0">
-                <AvatarImage src={job.companyLogo || undefined} alt={job.company} />
-                <AvatarFallback className="rounded-lg bg-primary/10 text-primary font-semibold">
-                  {job.company.substring(0, 2).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-              
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1 flex-wrap">
-                  <span className="text-sm font-medium text-muted-foreground truncate">
-                    {job.company}
-                  </span>
-                  <span className="text-xs text-muted-foreground/70">
-                    {getTimeAgo(job.postedDate)}
-                  </span>
-                </div>
-                
-                <h3 className="text-lg sm:text-xl font-semibold text-foreground group-hover:text-primary transition-colors truncate" data-testid={`text-job-title-${job.id}`}>
+      <CardContent className="p-4 sm:p-5">
+        <div className="flex items-start gap-3 sm:gap-4">
+          <Link to={`/jobs/${job.id}`} className="flex-shrink-0">
+            <Avatar className="h-10 w-10 sm:h-12 sm:w-12 rounded-lg">
+              <AvatarImage src={job.companyLogo || undefined} alt={job.company} />
+              <AvatarFallback className="rounded-lg bg-primary/10 text-primary font-semibold text-sm">
+                {job.company.substring(0, 2).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+          </Link>
+
+          <div className="flex-1 min-w-0">
+            <div className="flex items-start justify-between gap-2">
+              <Link to={`/jobs/${job.id}`} className="min-w-0 flex-1">
+                <h3 className="text-base font-semibold text-foreground group-hover:text-primary transition-colors truncate" data-testid={`text-job-title-${job.id}`}>
                   {job.title}
                 </h3>
+              </Link>
+
+              <div className="flex items-center gap-1 flex-shrink-0">
+                {isAuthenticated && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); saveMutation.mutate(); }}
+                    disabled={saveMutation.isPending}
+                    data-testid={`button-save-job-${job.id}`}
+                    className={isSaved ? "text-primary" : "text-muted-foreground"}
+                  >
+                    <Bookmark className={`h-4 w-4 ${isSaved ? "fill-current" : ""}`} />
+                  </Button>
+                )}
+                <Button asChild variant="outline" size="sm" className="gap-1.5" data-testid={`button-apply-${job.id}`}>
+                  <a
+                    href={job.applyUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => { e.stopPropagation(); handleApplyClick(); }}
+                  >
+                    Apply
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                </Button>
               </div>
             </div>
-            
-            <div className="flex items-center gap-2 flex-shrink-0">
-              {showMatchScore && job.matchScore && (
-                <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium ${getMatchScoreColor(job.matchScore)}`} data-testid={`badge-match-score-${job.id}`}>
-                  <Sparkles className="h-3.5 w-3.5" />
-                  {job.matchScore}%
-                </div>
-              )}
-              {isAuthenticated && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); saveMutation.mutate(); }}
-                  disabled={saveMutation.isPending}
-                  data-testid={`button-save-job-${job.id}`}
-                  className={isSaved ? "text-primary" : "text-muted-foreground"}
-                >
-                  <Bookmark className={`h-4.5 w-4.5 ${isSaved ? "fill-current" : ""}`} />
-                </Button>
-              )}
-            </div>
+
+            <Link to={`/jobs/${job.id}`}>
+              <div className="flex items-center gap-1.5 text-sm text-muted-foreground mt-0.5">
+                <span className="truncate">{job.company}</span>
+                <span className="flex-shrink-0">·</span>
+                <span className="flex-shrink-0">{getTimeAgo(job.postedDate)}</span>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                <JobLocation
+                  location={job.location}
+                  locationType={job.locationType}
+                  isRemote={job.isRemote}
+                  testIdPrefix={`job-${job.id}`}
+                />
+                {job.roleCategory && (
+                  <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">
+                    {job.roleSubcategory || job.roleCategory}
+                  </Badge>
+                )}
+              </div>
+            </Link>
           </div>
-
-          <div className="flex flex-wrap gap-2">
-            {legalFit && (
-              <Badge variant="secondary" className={`gap-1 ${legalFit.className}`} data-testid={`badge-legal-fit-${job.id}`}>
-                <Scale className="h-3 w-3" />
-                {legalFit.label}
-              </Badge>
-            )}
-            {job.roleCategory && (
-              <Badge variant="secondary" className="gap-1.5 bg-primary/10 text-primary border-primary/20">
-                <CategoryIcon className="h-3 w-3" />
-                {job.roleSubcategory || job.roleCategory}
-              </Badge>
-            )}
-            {job.seniorityLevel && (
-              <Badge variant="secondary" className={getSeniorityColor(job.seniorityLevel)}>
-                {job.seniorityLevel}
-              </Badge>
-            )}
-            <JobLocation
-              location={job.location}
-              locationType={job.locationType}
-              isRemote={job.isRemote}
-              testIdPrefix={`job-${job.id}`}
-            />
-          </div>
-
-          <p className="text-sm text-muted-foreground line-clamp-2" data-testid={`text-job-description-${job.id}`}>
-            {stripHtmlPreview(job.aiSummary || job.description || "")}
-          </p>
-
-          {job.keySkills && job.keySkills.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
-              {job.keySkills.slice(0, 5).map((skill, idx) => (
-                <Badge key={idx} variant="outline" className="text-xs">
-                  {skill}
-                </Badge>
-              ))}
-              {job.keySkills.length > 5 && (
-                <Badge variant="outline" className="text-xs">
-                  +{job.keySkills.length - 5} more
-                </Badge>
-              )}
-            </div>
-          )}
-
-          {job.matchReason && (
-            <div className="bg-primary/5 border border-primary/10 rounded-lg p-3">
-              <p className="text-xs text-primary font-medium mb-1">Why this matches:</p>
-              <p className="text-sm text-foreground">{job.matchReason}</p>
-            </div>
-          )}
-
-          <div className="flex flex-wrap items-center justify-between gap-4 pt-2 border-t border-border">
-            <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-              {salary && (
-                <span className="flex items-center gap-1.5" data-testid={`text-salary-${job.id}`}>
-                  <DollarSign className="h-4 w-4" />
-                  {salary}
-                </span>
-              )}
-              {experience && (
-                <span className="flex items-center gap-1.5">
-                  <Clock className="h-4 w-4" />
-                  {experience}
-                </span>
-              )}
-            </div>
-            
-            <div className="flex items-center gap-2">
-              <JobComparison
-                jobId={job.id}
-                jobTitle={job.title}
-                company={job.company}
-                hasResume={hasResume}
-                isAuthenticated={isAuthenticated}
-              />
-              <Button asChild size="sm" className="gap-2" data-testid={`button-apply-${job.id}`}>
-                <a 
-                  href={job.applyUrl} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  onClick={handleApplyClick}
-                >
-                  Apply Now
-                  <ExternalLink className="h-3.5 w-3.5" />
-                </a>
-              </Button>
-            </div>
-          </div>
-
-          {(job.sourceDomain || job.jobStatus === 'closed') && (
-            <div className="text-[11px] text-muted-foreground pt-2" data-testid={`text-source-attribution-${job.id}`}>
-              {job.sourceDomain && (
-                <span data-testid={`text-source-domain-${job.id}`}>via {job.sourceDomain}</span>
-              )}
-              {job.sourceDomain && job.jobStatus === 'closed' && (
-                <span className="mx-1">·</span>
-              )}
-              {job.jobStatus === 'closed' && (
-                <span className="text-amber-600" data-testid={`text-job-status-closed-${job.id}`}>May be closed</span>
-              )}
-            </div>
-          )}
         </div>
       </CardContent>
     </Card>

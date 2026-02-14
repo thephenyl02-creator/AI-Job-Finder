@@ -11,7 +11,6 @@ import { Loader2, ArrowRight, ArrowLeft, Mail, KeyRound, CheckCircle2, Briefcase
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { GradientOrb } from "@/components/animations";
 
 function GoogleIcon({ className }: { className?: string }) {
   return (
@@ -337,11 +336,9 @@ export default function Auth() {
 
   return (
     <div className="min-h-screen bg-background flex relative">
-      <GradientOrb className="w-[500px] h-[500px] bg-primary -top-32 -left-32" />
-      <GradientOrb className="w-[400px] h-[400px] bg-chart-2 bottom-0 right-0" />
 
       <div className="hidden lg:flex lg:flex-1 items-center justify-center p-12 relative">
-        <div className="max-w-md animate-fade-in">
+        <div className="max-w-md">
           <Logo className="h-10 w-10 text-foreground mb-8" />
           <h2 className="text-3xl font-serif font-medium text-foreground tracking-tight mb-3" data-testid="text-auth-hero">
             Your legal tech career starts here
@@ -351,7 +348,7 @@ export default function Auth() {
           </p>
           <div className="space-y-4">
             {valueProps.map((item, i) => (
-              <div key={i} className={`flex items-center gap-3 animate-fade-in-up opacity-0 stagger-${i + 2}`}>
+              <div key={i} className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
                   <item.icon className="h-4 w-4 text-primary" />
                 </div>
@@ -363,7 +360,7 @@ export default function Auth() {
       </div>
 
       <div className="flex-1 flex items-center justify-center px-4 py-12 relative">
-        <div className="w-full max-w-sm animate-scale-in">
+        <div className="w-full max-w-sm">
           <div className="flex flex-col items-center gap-4 mb-8 lg:hidden">
             <Logo className="h-8 w-8 text-foreground" />
           </div>

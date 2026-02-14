@@ -1,70 +1,40 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { usePageTitle } from "@/hooks/use-page-title";
 import { useLocation, useSearch } from "wouter";
 import { Header } from "@/components/header";
 import { Container } from "@/components/container";
-import { Segmented } from "@/components/segmented";
 import { useAuth } from "@/hooks/use-auth";
 import { useActivityTracker } from "@/hooks/use-activity-tracker";
 import { apiRequest } from "@/lib/queryClient";
 import type { Job, JobWithScore } from "@shared/schema";
 import { JOB_TAXONOMY } from "@shared/schema";
 import { cleanStructuredText } from "@/lib/structured-description";
-import { formatSalary } from "@/lib/format-salary";
-import { JobLocation, JobLocationInline } from "@/components/job-location";
+import { JobLocation } from "@/components/job-location";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { motion, AnimatePresence } from "framer-motion";
-import { ScrollReveal } from "@/components/animations";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
 import {
   Search,
   ArrowLeft,
   ArrowRight,
-  ArrowUp,
   MapPin,
   Building2,
-  Brain,
-  Lightbulb,
-  BookOpen,
-  Settings,
-  FileText,
-  Shield,
-  Scale,
-  TrendingUp,
-  GraduationCap,
-  Newspaper,
-  Landmark,
-  Microscope,
-  Sparkles,
   X,
   Target,
   Loader2,
-  DollarSign,
-  Crown,
-  Briefcase,
   Globe,
   Check,
-  Upload,
-  CheckCircle2,
-  User,
-  Clock,
   ExternalLink,
-  Lock,
   ArrowUpDown,
-  Wrench,
 } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Progress } from "@/components/ui/progress";
-import type { ResumeExtractedData } from "@shared/schema";
 import { queryClient } from "@/lib/queryClient";
-import { useSubscription } from "@/hooks/use-subscription";
 import { Footer } from "@/components/footer";
 
 interface SearchQuestion {
@@ -85,7 +55,6 @@ interface RefinedSearchResult {
 }
 
 type GuidedStep = "idle" | "refining" | "questions" | "searching";
-type JobsMode = "browse" | "resume";
 
 const DEFAULT_SEARCH_SUGGESTIONS = [
   { label: "Compliance & Privacy", query: "compliance or privacy counsel role" },
@@ -93,25 +62,6 @@ const DEFAULT_SEARCH_SUGGESTIONS = [
   { label: "Legal Engineering", query: "legal engineer role" },
   { label: "In-House Counsel", query: "counsel or attorney at legal tech company" },
 ];
-
-const CATEGORY_ICONS: Record<string, typeof Brain> = {
-  "Brain": Brain,
-  "Lightbulb": Lightbulb,
-  "BookOpen": BookOpen,
-  "Settings": Settings,
-  "FileText": FileText,
-  "Shield": Shield,
-  "Scale": Scale,
-  "TrendingUp": TrendingUp,
-  "GraduationCap": GraduationCap,
-  "Newspaper": Newspaper,
-  "Landmark": Landmark,
-  "Microscope": Microscope,
-  "Sparkles": Sparkles,
-  "Wrench": Wrench,
-  "Target": Target,
-  "Briefcase": Briefcase,
-};
 
 const SENIORITY_LEVELS = [
   { value: "all", label: "All Levels" },
@@ -125,7 +75,6 @@ export default function Jobs() {
   usePageTitle("Browse Jobs");
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const { track } = useActivityTracker();
-  const { isPro } = useSubscription();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const searchString = useSearch();
@@ -150,23 +99,6 @@ export default function Jobs() {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [refinedSummary, setRefinedSummary] = useState<string | null>(null);
 
-  const [mode, setMode] = useState<JobsMode>("browse");
-  const [compareIds, setCompareIds] = useState<Set<number>>(new Set());
-  const [showCompare, setShowCompare] = useState(false);
-  const MAX_COMPARE = 3;
-
-  const toggleCompare = (jobId: number) => {
-    setCompareIds(prev => {
-      const next = new Set(prev);
-      if (next.has(jobId)) {
-        next.delete(jobId);
-      } else if (next.size < MAX_COMPARE) {
-        next.add(jobId);
-      }
-      return next;
-    });
-  };
-
   const { data: usageLimits } = useQuery<{
     isPro: boolean;
     guidedSearch: { used: number; limit: number | null };
@@ -178,6 +110,7 @@ export default function Jobs() {
 
   const guidedSearchUsed = usageLimits?.guidedSearch?.used ?? 0;
   const guidedSearchLimit = usageLimits?.guidedSearch?.limit ?? 7;
+  const isPro = usageLimits?.isPro ?? false;
   const guidedTrialsRemaining = isPro ? Infinity : Math.max(0, guidedSearchLimit - guidedSearchUsed);
   const canUseGuidedSearch = isPro || guidedTrialsRemaining > 0;
 
@@ -222,7 +155,7 @@ export default function Jobs() {
         setGuidedStep("idle");
         toast({
           title: "You've used all 7 free guided searches",
-          description: "Guided search helps you find better-fit roles. Upgrade to Pro for unlimited access — just $5/mo.",
+          description: "Guided search helps you find better-fit roles. Upgrade to Pro for unlimited access.",
         });
       } else {
         toast({ title: "Let's try a quick search instead", variant: "default" });
@@ -327,7 +260,6 @@ export default function Jobs() {
     }
   }, [searchString]);
 
-
   useEffect(() => {
     const stored = sessionStorage.getItem("searchResults");
     const query = sessionStorage.getItem("searchQuery");
@@ -338,7 +270,6 @@ export default function Jobs() {
       sessionStorage.removeItem("searchQuery");
     }
   }, []);
-
 
   const jobsQueryParams = useMemo(() => {
     const params = new URLSearchParams();
@@ -373,11 +304,6 @@ export default function Jobs() {
     staleTime: 60000,
   });
 
-  const { data: resumeData } = useQuery<{ hasResume: boolean; filename?: string; extractedData?: ResumeExtractedData }>({
-    queryKey: ["/api/resume"],
-    enabled: isAuthenticated,
-  });
-
   const { data: suggestionsData } = useQuery<{ suggestions: { label: string; query: string }[]; personalized: boolean }>({
     queryKey: ["/api/search/suggestions"],
     enabled: isAuthenticated,
@@ -395,79 +321,23 @@ export default function Jobs() {
     return "Describe what you're looking for, e.g. 'remote compliance role' or 'entry level legal tech in New York'";
   }, [isPersonalized, searchSuggestions]);
 
-  const [isUploadingResume, setIsUploadingResume] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const resumeFileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleResumeUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setIsUploadingResume(true);
-    setUploadProgress(0);
-    const progressInterval = setInterval(() => {
-      setUploadProgress(prev => prev >= 85 ? (clearInterval(progressInterval), 85) : prev + 15);
-    }, 300);
-    try {
-      const formData = new FormData();
-      formData.append("resume", file);
-      const response = await fetch("/api/resume/upload", { method: "POST", body: formData });
-      const data = await response.json();
-      if (response.ok && data.success) {
-        clearInterval(progressInterval);
-        setUploadProgress(100);
-        toast({ title: "Resume uploaded", description: "Your profile has been updated. Searches will now be personalized to your background." });
-        queryClient.invalidateQueries({ queryKey: ["/api/resume"] });
-      } else {
-        throw new Error(data.error || "Upload failed");
-      }
-    } catch (error: any) {
-      toast({ title: "Upload failed", description: error.message || "Please try again.", variant: "destructive" });
-    } finally {
-      setIsUploadingResume(false);
-      setUploadProgress(0);
-      if (resumeFileInputRef.current) resumeFileInputRef.current.value = "";
-    }
-  };
-
-  const handleRemoveResume = async () => {
-    try {
-      await fetch("/api/resume", { method: "DELETE" });
-      queryClient.invalidateQueries({ queryKey: ["/api/resume"] });
-      toast({ title: "Resume removed", description: "You can upload a new one anytime." });
-    } catch (err) {
-      console.error("Failed to remove resume:", err);
-    }
-  };
-
-
-
   if (authLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <motion.div
-          className="flex flex-col items-center gap-3"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-        >
+        <div className="flex flex-col items-center gap-3">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           <span className="text-sm text-muted-foreground">Loading...</span>
-        </motion.div>
+        </div>
       </div>
     );
   }
 
-
   const filteredJobs = searchResults || allJobs;
-
-  const getCategoryIcon = (iconName: string) => {
-    const IconComponent = CATEGORY_ICONS[iconName] || Brain;
-    return IconComponent;
-  };
 
   return (
     <div className="min-h-screen bg-background overflow-x-hidden">
       <Header />
-      
+
       <main className="py-6 overflow-hidden">
         <Container className="space-y-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -477,7 +347,6 @@ export default function Jobs() {
                 variant="ghost"
                 size="sm"
                 onClick={handleClearSearch}
-                className="min-h-[44px]"
                 data-testid="button-back-search"
               >
                 <ArrowLeft className="h-4 w-4 mr-1" />
@@ -488,101 +357,16 @@ export default function Jobs() {
               <h1 className="text-lg sm:text-xl font-semibold text-foreground tracking-tight" data-testid="text-page-title">
                 {searchResults ? `Results for "${searchQuery}"` : "Legal tech roles for lawyers"}
               </h1>
-              <p className="text-sm text-muted-foreground hidden sm:block" data-testid="text-page-subtitle">
+              <p className="text-sm text-muted-foreground" data-testid="text-page-subtitle">
                 {searchResults
                   ? `${searchResults.length} results`
-                  : `${totalJobCount} curated roles \u00B7 Browse or upload your resume to see fit scores`}
+                  : `${totalJobCount} curated roles`}
               </p>
-              <span className="text-sm text-muted-foreground sm:hidden" data-testid="text-job-count">
-                {searchResults ? `${searchResults.length} results` : `${totalJobCount} jobs`}
-              </span>
             </div>
           </div>
-          <Segmented
-            value={mode}
-            onChange={setMode}
-            options={[
-              { label: "Browse Jobs", value: "browse" as JobsMode },
-              { label: "Upload Resume", value: "resume" as JobsMode },
-            ]}
-          />
         </div>
 
-        {mode === "resume" && (
-          <div className="rounded-lg border bg-card p-4 card-elev" data-testid="card-resume-prompt">
-            <div className="space-y-3">
-              <div className="space-y-1">
-                <div className="text-sm font-medium" data-testid="text-resume-prompt-title">Upload your resume</div>
-                <div className="text-sm text-muted-foreground">
-                  {resumeData?.hasResume
-                    ? `Currently using: ${resumeData.filename || "Uploaded resume"}. Searches are personalized to your background.`
-                    : "We'll show where you match, where you don't, and realistic resume tweaks for each role."}
-                </div>
-              </div>
-              <div className="flex items-center gap-2 flex-wrap">
-                {resumeData?.hasResume ? (
-                  <>
-                    <Badge variant="secondary" className="gap-1 text-xs">
-                      <CheckCircle2 className="h-3 w-3" />
-                      Resume uploaded
-                    </Badge>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => resumeFileInputRef.current?.click()}
-                      data-testid="button-replace-resume"
-                    >
-                      <Upload className="h-3.5 w-3.5 mr-1.5" />
-                      Replace
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleRemoveResume}
-                      className="text-muted-foreground"
-                      data-testid="button-remove-resume"
-                    >
-                      Remove
-                    </Button>
-                  </>
-                ) : isAuthenticated ? (
-                  <Button
-                    onClick={() => resumeFileInputRef.current?.click()}
-                    disabled={isUploadingResume}
-                    data-testid="button-upload-resume"
-                  >
-                    {isUploadingResume ? (
-                      <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
-                    ) : (
-                      <Upload className="h-4 w-4 mr-1.5" />
-                    )}
-                    {isUploadingResume ? "Uploading..." : "Upload Resume"}
-                  </Button>
-                ) : (
-                  <Link href="/auth?returnTo=/jobs">
-                    <Button data-testid="button-signin-to-upload">
-                      Sign in to upload
-                    </Button>
-                  </Link>
-                )}
-              </div>
-              {isUploadingResume && (
-                <Progress value={uploadProgress} className="h-1" />
-              )}
-            </div>
-          </div>
-        )}
-
-        <input
-          ref={resumeFileInputRef}
-          type="file"
-          accept=".pdf,.docx,.doc,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword"
-          onChange={handleResumeUpload}
-          className="hidden"
-          data-testid="input-resume-upload"
-        />
-
-        <Card className="mb-4 card-elev" data-testid="card-smart-search">
+        <Card className="card-elev" data-testid="card-smart-search">
           <CardContent className="p-3 sm:p-4">
             <div className="flex items-end gap-2">
               <div className="flex-1 min-w-0">
@@ -637,18 +421,15 @@ export default function Jobs() {
                   variant="ghost"
                   size="sm"
                   onClick={handleQuickSearch}
-                  className="text-muted-foreground gap-1 text-xs min-h-[44px]"
+                  className="text-muted-foreground gap-1 text-xs"
                   data-testid="button-quick-search"
                 >
                   <ArrowRight className="h-3 w-3" />
                   Quick search (skip questions)
                 </Button>
                 {!canUseGuidedSearch && (
-                  <Link href="/pricing">
-                    <Badge variant="secondary" className="gap-1 text-xs cursor-pointer" data-testid="badge-guided-search-pro">
-                      <Crown className="h-3 w-3" />
-                      Unlock guided search — $5/mo
-                    </Badge>
+                  <Link href="/pricing" className="text-xs text-primary font-medium" data-testid="link-guided-search-upgrade">
+                    Upgrade for unlimited
                   </Link>
                 )}
               </div>
@@ -656,148 +437,120 @@ export default function Jobs() {
           </CardContent>
         </Card>
 
-        <AnimatePresence>
-          {guidedStep === "refining" && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              className="mb-6"
-            >
-              <Card className="border-primary/20">
-                <CardContent className="p-5 flex items-center gap-3">
-                  <Loader2 className="h-4 w-4 animate-spin text-primary shrink-0" />
-                  <div>
-                    <p className="text-sm font-medium text-foreground">Understanding your search...</p>
-                    <p className="text-xs text-muted-foreground">Preparing a few questions to find the best matches</p>
+        {guidedStep === "refining" && (
+          <Card className="border-primary/20">
+            <CardContent className="p-5 flex items-center gap-3">
+              <Loader2 className="h-4 w-4 animate-spin text-primary shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-foreground">Understanding your search...</p>
+                <p className="text-xs text-muted-foreground">Preparing a few questions to find the best matches</p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {guidedStep === "questions" && analysis && (
+          <div className="space-y-3">
+            {analysis.refinedIntent && (
+              <Card className="bg-muted/40 border-border/60">
+                <CardContent className="p-3 sm:p-4">
+                  <div className="flex items-start gap-2">
+                    <Target className="h-4 w-4 text-foreground shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-xs font-medium text-foreground">What we understood</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{analysis.refinedIntent}</p>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
-            </motion.div>
-          )}
+            )}
 
-          {guidedStep === "questions" && analysis && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              className="mb-6 space-y-3"
-            >
-              {analysis.refinedIntent && (
-                <Card className="bg-muted/40 border-border/60">
-                  <CardContent className="p-3 sm:p-4">
-                    <div className="flex items-start gap-2">
-                      <Target className="h-4 w-4 text-foreground shrink-0 mt-0.5" />
-                      <div>
-                        <p className="text-xs font-medium text-foreground">What we understood</p>
-                        <p className="text-xs text-muted-foreground mt-0.5">{analysis.refinedIntent}</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
+            {analysis.questions.map((question, idx) => (
+              <Card key={question.id}>
+                <CardContent className="p-3 sm:p-4">
+                  <p className="text-sm font-medium text-foreground mb-2">
+                    {idx + 1}. {question.question}
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {question.options.map((option) => (
+                      <Badge
+                        key={option.value}
+                        variant={answers[question.id] === option.value ? "default" : "outline"}
+                        className={`cursor-pointer py-2 px-3 text-xs transition-all flex items-center ${
+                          answers[question.id] === option.value ? "ring-1 ring-primary/30" : ""
+                        }`}
+                        onClick={() => setAnswers(prev => ({ ...prev, [question.id]: option.value }))}
+                        data-testid={`option-${question.id}-${option.value}`}
+                      >
+                        {answers[question.id] === option.value && <Check className="h-3 w-3 mr-1" />}
+                        {option.label}
+                      </Badge>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
 
-              {analysis.questions.map((question, idx) => (
-                <motion.div
-                  key={question.id}
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: idx * 0.1 }}
-                >
-                  <Card>
-                    <CardContent className="p-3 sm:p-4">
-                      <p className="text-sm font-medium text-foreground mb-2">
-                        {idx + 1}. {question.question}
-                      </p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {question.options.map((option) => (
-                          <Badge
-                            key={option.value}
-                            variant={answers[question.id] === option.value ? "default" : "outline"}
-                            className={`cursor-pointer py-2 px-3 text-xs transition-all min-h-[44px] flex items-center ${
-                              answers[question.id] === option.value ? "ring-1 ring-primary/30" : ""
-                            }`}
-                            onClick={() => setAnswers(prev => ({ ...prev, [question.id]: option.value }))}
-                            data-testid={`option-${question.id}-${option.value}`}
-                          >
-                            {answers[question.id] === option.value && <Check className="h-3 w-3 mr-1" />}
-                            {option.label}
-                          </Badge>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              ))}
-
-              <div className="flex items-center gap-2 justify-between flex-wrap">
+            <div className="flex items-center gap-2 justify-between flex-wrap">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleClearSearch}
+                className="gap-1"
+                data-testid="button-guided-cancel"
+              >
+                <X className="h-3.5 w-3.5" />
+                Cancel
+              </Button>
+              <div className="flex items-center gap-2">
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={handleClearSearch}
-                  className="gap-1 min-h-[44px]"
-                  data-testid="button-guided-cancel"
+                  onClick={handleQuickSearch}
+                  className="text-muted-foreground gap-1"
+                  data-testid="button-skip-questions"
                 >
-                  <X className="h-3.5 w-3.5" />
-                  Cancel
+                  Skip
+                  <ArrowRight className="h-3.5 w-3.5" />
                 </Button>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleQuickSearch}
-                    className="text-muted-foreground gap-1 min-h-[44px]"
-                    data-testid="button-skip-questions"
-                  >
-                    Skip
-                    <ArrowRight className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button
-                    size="sm"
-                    onClick={handleSubmitAnswers}
-                    disabled={!allQuestionsAnswered}
-                    className="gap-1 min-h-[44px]"
-                    data-testid="button-find-matches"
-                  >
-                    <Target className="h-3.5 w-3.5" />
-                    Find Matches
-                  </Button>
-                </div>
+                <Button
+                  size="sm"
+                  onClick={handleSubmitAnswers}
+                  disabled={!allQuestionsAnswered}
+                  className="gap-1"
+                  data-testid="button-find-matches"
+                >
+                  <Target className="h-3.5 w-3.5" />
+                  Find Matches
+                </Button>
               </div>
+            </div>
 
-              {!isPro && (
-                <p className="text-xs text-muted-foreground text-center">
-                  {guidedTrialsRemaining > 0
-                    ? `${guidedTrialsRemaining} of 7 free guided ${guidedTrialsRemaining === 1 ? "search" : "searches"} remaining.`
-                    : "You've used all 7 free guided searches."}
-                  <Link href="/pricing" className="text-primary ml-1 font-medium">Upgrade for unlimited — $5/mo</Link>
-                </p>
-              )}
-            </motion.div>
-          )}
+            {!isPro && (
+              <p className="text-xs text-muted-foreground text-center">
+                {guidedTrialsRemaining > 0
+                  ? `${guidedTrialsRemaining} of 7 free guided ${guidedTrialsRemaining === 1 ? "search" : "searches"} remaining.`
+                  : "You've used all 7 free guided searches."}
+                <Link href="/pricing" className="text-primary ml-1 font-medium">Upgrade for unlimited</Link>
+              </p>
+            )}
+          </div>
+        )}
 
-          {guidedStep === "searching" && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              className="mb-6"
-            >
-              <Card className="border-primary/20">
-                <CardContent className="p-5 flex items-center gap-3">
-                  <Loader2 className="h-4 w-4 animate-spin text-primary shrink-0" />
-                  <div>
-                    <p className="text-sm font-medium text-foreground">Finding your best matches...</p>
-                    <p className="text-xs text-muted-foreground">Searching for roles that fit your criteria</p>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {guidedStep === "searching" && (
+          <Card className="border-primary/20">
+            <CardContent className="p-5 flex items-center gap-3">
+              <Loader2 className="h-4 w-4 animate-spin text-primary shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-foreground">Finding your best matches...</p>
+                <p className="text-xs text-muted-foreground">Searching for roles that fit your criteria</p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {refinedSummary && searchResults && (
-          <Card className="bg-muted/40 border-border/60 mb-6" data-testid="card-refined-summary">
+          <Card className="bg-muted/40 border-border/60" data-testid="card-refined-summary">
             <CardContent className="p-3 sm:p-4">
               <div className="flex items-center gap-2">
                 <Target className="h-4 w-4 text-primary shrink-0" />
@@ -929,19 +682,16 @@ export default function Jobs() {
             {Array.from({ length: 8 }).map((_, i) => (
               <div key={i} className="p-3 sm:p-4 rounded-lg border bg-card">
                 <div className="flex gap-3">
-                  <div className="h-5 w-5 rounded bg-muted animate-pulse shrink-0 mt-0.5" />
+                  <div className="h-8 w-8 rounded-md bg-muted animate-pulse shrink-0" />
                   <div className="flex-1 space-y-2">
                     <div className="flex items-start justify-between gap-2">
                       <div className="h-4 w-3/5 bg-muted animate-pulse rounded" />
                       <div className="h-3 w-12 bg-muted animate-pulse rounded" />
                     </div>
+                    <div className="h-3 w-24 bg-muted animate-pulse rounded" />
                     <div className="flex gap-2">
-                      <div className="h-3 w-24 bg-muted animate-pulse rounded" />
                       <div className="h-3 w-28 bg-muted animate-pulse rounded" />
-                    </div>
-                    <div className="flex gap-1.5">
                       <div className="h-5 w-20 bg-muted animate-pulse rounded-full" />
-                      <div className="h-5 w-14 bg-muted animate-pulse rounded-full" />
                     </div>
                   </div>
                 </div>
@@ -949,11 +699,7 @@ export default function Jobs() {
             ))}
           </div>
         ) : filteredJobs.length === 0 ? (
-          <motion.div
-            className="py-12"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-          >
+          <div className="py-12">
             <Card className="max-w-lg mx-auto">
               <CardContent className="p-6 text-center">
                 <Search className="h-8 w-8 text-muted-foreground/40 mx-auto mb-3" />
@@ -969,7 +715,7 @@ export default function Jobs() {
                       variant="outline"
                       size="sm"
                       onClick={() => { setFilterText(""); setSelectedCategory("all"); setSelectedLevel("all"); setSelectedLocation("all"); setSelectedRegion("all"); }}
-                      className="gap-1 min-h-[44px]"
+                      className="gap-1"
                       data-testid="button-clear-all-filters"
                     >
                       <X className="h-3 w-3" />
@@ -981,7 +727,7 @@ export default function Jobs() {
                       variant="outline"
                       size="sm"
                       onClick={handleClearSearch}
-                      className="gap-1 min-h-[44px]"
+                      className="gap-1"
                       data-testid="button-show-all-jobs"
                     >
                       <ArrowLeft className="h-3 w-3" />
@@ -998,7 +744,7 @@ export default function Jobs() {
                           key={s.label}
                           variant="ghost"
                           size="sm"
-                          className="gap-1 text-xs min-h-[44px]"
+                          className="gap-1 text-xs"
                           onClick={() => { setSmartQuery(s.query); handleClearSearch(); }}
                           data-testid={`empty-chip-${s.label.toLowerCase().replace(/\s+/g, "-")}`}
                         >
@@ -1010,11 +756,10 @@ export default function Jobs() {
                 )}
               </CardContent>
             </Card>
-          </motion.div>
+          </div>
         ) : (
           <div className="grid gap-3">
             {filteredJobs.map((job) => {
-              const salaryDisplay = formatSalary(job.salaryMin, job.salaryMax, (job as any).salaryCurrency);
               const postedAgo = job.postedDate ? (() => {
                 const days = Math.floor((Date.now() - new Date(job.postedDate).getTime()) / 86400000);
                 if (days === 0) return "Today";
@@ -1023,40 +768,21 @@ export default function Jobs() {
                 if (days < 30) return `${Math.floor(days / 7)}w ago`;
                 return `${Math.floor(days / 30)}mo ago`;
               })() : null;
-              const isSelected = compareIds.has(job.id);
-              const canSelect = isSelected || compareIds.size < MAX_COMPARE;
               const taxonomy = job.roleCategory ? JOB_TAXONOMY[job.roleCategory as keyof typeof JOB_TAXONOMY] : null;
-              const CategoryIcon = taxonomy ? getCategoryIcon(taxonomy.icon) : null;
               return (
                 <div
                   key={job.id}
-                  className={`p-3 sm:p-4 rounded-lg border bg-card card-elev transition-colors cursor-pointer ${isSelected ? "ring-1 ring-primary/40" : ""}`}
+                  className="p-3 sm:p-4 rounded-lg border bg-card hover-elevate cursor-pointer"
                   data-testid={`card-job-${job.id}`}
                   onClick={() => setLocation(`/jobs/${job.id}`)}
                 >
-                  <div className="flex gap-2 sm:gap-3">
-                    <button
-                      className={`shrink-0 mt-0.5 w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
-                        isSelected
-                          ? "bg-primary border-primary text-primary-foreground"
-                          : canSelect
-                          ? "border-muted-foreground/30 hover:border-primary/50"
-                          : "border-muted-foreground/10 opacity-40 cursor-not-allowed"
-                      }`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (!isAuthenticated) {
-                          toast({ title: "Create a free account to compare jobs." });
-                          setLocation("/auth?returnTo=/jobs");
-                          return;
-                        }
-                        if (canSelect || isSelected) toggleCompare(job.id);
-                      }}
-                      data-testid={`checkbox-compare-${job.id}`}
-                      aria-label={isSelected ? "Remove from comparison" : "Add to comparison"}
-                    >
-                      {isSelected && <Check className="h-3 w-3" />}
-                    </button>
+                  <div className="flex gap-3">
+                    <Avatar className="h-8 w-8 rounded-md shrink-0 mt-0.5">
+                      <AvatarImage src={job.companyLogo || undefined} alt={job.company} />
+                      <AvatarFallback className="rounded-md bg-primary/10 text-primary text-[10px] font-semibold">
+                        {job.company.substring(0, 2).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-start justify-between gap-2 flex-wrap">
                         <h3 className="font-medium text-foreground text-sm sm:text-base leading-snug" data-testid={`text-job-title-${job.id}`}>
@@ -1068,80 +794,22 @@ export default function Jobs() {
                           </span>
                         )}
                       </div>
-                      <div className="flex flex-wrap items-center gap-x-2 sm:gap-x-3 gap-y-1 mt-1 text-xs sm:text-sm text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <Building2 className="h-3 w-3 shrink-0" />
-                          <span data-testid={`text-job-company-${job.id}`}>{cleanStructuredText(job.company)}</span>
-                        </span>
+                      <p className="text-xs sm:text-sm text-muted-foreground mt-0.5" data-testid={`text-job-company-${job.id}`}>
+                        {cleanStructuredText(job.company)}
+                      </p>
+                      <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
                         <JobLocation
                           location={job.location}
                           locationType={job.locationType}
                           isRemote={job.isRemote}
                           testIdPrefix={`browse-job-${job.id}`}
                         />
-                        {salaryDisplay ? (
-                          <span className="flex items-center gap-1 text-green-600 dark:text-green-400">
-                            <DollarSign className="h-3 w-3 shrink-0" />
-                            <span data-testid={`text-salary-${job.id}`}>{salaryDisplay}</span>
-                          </span>
-                        ) : sortBy === "salary" ? (
-                          <span className="text-xs text-muted-foreground/60 italic" data-testid={`text-no-salary-${job.id}`}>
-                            Salary not listed
-                          </span>
-                        ) : null}
-                      </div>
-                      <div className="flex flex-wrap items-center gap-1.5 mt-2">
-                        {taxonomy && CategoryIcon && (
-                          <Badge variant="secondary" className="text-[10px] gap-1" data-testid={`badge-category-${job.id}`}>
-                            <CategoryIcon className="h-2.5 w-2.5" />
+                        {taxonomy && (
+                          <Badge variant="secondary" className="text-[10px]" data-testid={`badge-category-${job.id}`}>
                             {taxonomy.shortName}
                           </Badge>
                         )}
-                        {job.seniorityLevel && (
-                          <Badge variant="outline" className="text-[10px]">
-                            {job.seniorityLevel}
-                          </Badge>
-                        )}
-                        {job.legalRelevanceScore && job.legalRelevanceScore >= 8 && (
-                          <Badge
-                            variant="secondary"
-                            className={`text-[10px] gap-0.5 ${
-                              job.legalRelevanceScore >= 9
-                                ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400"
-                                : "bg-sky-100 dark:bg-sky-900/30 text-sky-700 dark:text-sky-400"
-                            }`}
-                            data-testid={`badge-legal-fit-${job.id}`}
-                          >
-                            <Scale className="h-2.5 w-2.5" />
-                            {job.legalRelevanceScore >= 9 ? "JD Preferred" : "Legal Background Valued"}
-                          </Badge>
-                        )}
-                        {searchResults && "matchScore" in job && (job as JobWithScore).matchScore && (
-                          <Badge
-                            variant={(job as JobWithScore).matchScore! >= 80 ? "default" : "secondary"}
-                            data-testid={`badge-match-${job.id}`}
-                          >
-                            {(job as JobWithScore).matchScore}% match
-                          </Badge>
-                        )}
                       </div>
-                      {job.aiSummary && (
-                        <p className="text-xs text-muted-foreground mt-2 line-clamp-2">
-                          {cleanStructuredText(job.aiSummary)}
-                        </p>
-                      )}
-                      {job.keySkills && job.keySkills.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-2">
-                          {job.keySkills.slice(0, 4).map((skill, si) => (
-                            <Badge key={si} variant="outline" className="text-[10px]" data-testid={`badge-skill-${job.id}-${si}`}>
-                              {cleanStructuredText(skill)}
-                            </Badge>
-                          ))}
-                          {job.keySkills.length > 4 && (
-                            <span className="text-[10px] text-muted-foreground self-center">+{job.keySkills.length - 4}</span>
-                          )}
-                        </div>
-                      )}
                     </div>
                   </div>
                 </div>
@@ -1181,701 +849,7 @@ export default function Jobs() {
         </Container>
       </main>
 
-      <AnimatePresence>
-        {isAuthenticated && compareIds.size > 0 && !showCompare && (
-          <motion.div
-            initial={{ y: 80, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 80, opacity: 0 }}
-            className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50"
-            data-testid="compare-floating-bar"
-          >
-            <Card className="shadow-lg border-primary/20">
-              <CardContent className="p-3 flex items-center gap-3">
-                <Badge variant="default" className="shrink-0">{compareIds.size}</Badge>
-                <span className="text-sm text-foreground whitespace-nowrap">
-                  {compareIds.size === 1 ? "job selected" : "jobs selected"}
-                </span>
-                <Button
-                  size="sm"
-                  disabled={compareIds.size < 2}
-                  onClick={() => setShowCompare(true)}
-                  className="gap-1.5 shrink-0"
-                  data-testid="button-open-compare"
-                >
-                  <Scale className="h-3.5 w-3.5" />
-                  Compare
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setCompareIds(new Set())}
-                  data-testid="button-clear-compare"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </Button>
-              </CardContent>
-            </Card>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {showCompare && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm"
-            data-testid="compare-overlay"
-          >
-            <motion.div
-              initial={{ y: 40, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: 40, opacity: 0 }}
-              className="fixed inset-x-0 bottom-0 top-16 sm:inset-4 sm:top-auto sm:max-h-[80vh] bg-background border rounded-t-xl sm:rounded-xl shadow-2xl overflow-auto"
-            >
-              <div className="p-4 sm:p-6">
-                <BrowseCompareView
-                  jobs={allJobs.filter(j => compareIds.has(j.id))}
-                  onClose={() => setShowCompare(false)}
-                  onClear={() => { setCompareIds(new Set()); setShowCompare(false); }}
-                />
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       <Footer />
-    </div>
-  );
-}
-
-
-interface ComparisonAIResult {
-  jobs: Array<{
-    jobTitle: string;
-    overallFitSummary?: string;
-    pros?: string[];
-    cons?: string[];
-    transferableSkills?: string[];
-    skillsToDevelop?: string[];
-    legalTechGrowthPotential?: {
-      shortTerm: string;
-      mediumTerm: string;
-      longTerm: string;
-      aiOpportunities: string;
-    };
-    mainResponsibilities: string[];
-    requiredSkills: string[];
-    workType: { structured: number; ambiguous: number; description: string };
-    transitionDifficulty: { level: string; explanation: string };
-    whoSucceeds: string[];
-    fitAnalysis?: {
-      overallFit: number;
-      strengths: string[];
-      gaps: string[];
-      resumePositioning: string[];
-      interviewRisks: string[];
-    };
-  }>;
-  recommendation: {
-    bestFitNow: { jobTitle: string; reason: string };
-    bestLongTerm: { jobTitle: string; reason: string };
-    biggestShift: { jobTitle: string; reason: string };
-  };
-  overallStrategy: string;
-}
-
-function BrowseCompareView({ jobs, onClose, onClear }: { jobs: Job[]; onClose: () => void; onClear: () => void }) {
-  const { isPro } = useSubscription();
-  const { isAuthenticated } = useAuth();
-  const { toast } = useToast();
-  const [aiResult, setAiResult] = useState<ComparisonAIResult | null>(null);
-
-  const { data: resumes } = useQuery<any[]>({
-    queryKey: ["/api/resumes"],
-    enabled: isAuthenticated,
-  });
-
-  const primaryResume = resumes?.find((r: any) => r.isPrimary) || resumes?.[0];
-  const resumeSkills: string[] = useMemo(() => {
-    if (!primaryResume?.extractedData) return [];
-    const ed = primaryResume.extractedData as any;
-    return (ed.skills || []).map((s: string) => s.toLowerCase().trim());
-  }, [primaryResume]);
-
-  const aiAnalysisMutation = useMutation({
-    mutationFn: async () => {
-      const payload = {
-        jobs: jobs.map((j) => ({
-          id: String(j.id),
-          title: j.title,
-          description: j.description || j.aiSummary || j.title,
-        })),
-        includeResume: true,
-      };
-      const res = await apiRequest("POST", "/api/career-advisor/compare", payload);
-      return res.json() as Promise<ComparisonAIResult>;
-    },
-    onSuccess: (data) => {
-      setAiResult(data);
-    },
-    onError: (error: Error) => {
-      toast({ title: "Analysis failed", description: error.message, variant: "destructive" });
-    },
-  });
-
-
-  const getLocationLabel = (job: Job): string => {
-    if (job.locationType === 'remote' || (!job.locationType && job.isRemote)) return 'Remote';
-    if (job.locationType === 'hybrid') return 'Hybrid';
-    if (job.locationType === 'onsite') return 'On-site';
-    return '';
-  };
-
-  const getLegalFitLabel = (score: number | null | undefined): string | null => {
-    if (!score || score < 8) return null;
-    if (score >= 9) return "JD Preferred";
-    return "Legal Background Valued";
-  };
-
-  const getDifficultyColor = (level: string) => {
-    switch (level) {
-      case "Easy": return "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400";
-      case "Moderate": return "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400";
-      case "Challenging": return "bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400";
-      case "Difficult": return "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400";
-      default: return "bg-muted text-muted-foreground";
-    }
-  };
-
-  const differentiators = useMemo(() => {
-    const diffs: string[] = [];
-    const salaries = jobs.map(j => {
-      const mid = j.salaryMin && j.salaryMax ? (j.salaryMin + j.salaryMax) / 2 : j.salaryMin || j.salaryMax;
-      return mid;
-    }).filter(Boolean) as number[];
-    if (salaries.length >= 2) {
-      const gap = Math.max(...salaries) - Math.min(...salaries);
-      if (gap > 0) {
-        const fmt = (n: number) => `$${Math.round(n / 1000)}K`;
-        diffs.push(`Salary gap: ${fmt(gap)}`);
-      }
-    }
-    const locationTypes = new Set(jobs.map(j => getLocationLabel(j)).filter(Boolean));
-    if (locationTypes.size > 1) {
-      diffs.push(`Work style: ${Array.from(locationTypes).join(" vs ")}`);
-    }
-    const levels = new Set(jobs.map(j => j.seniorityLevel).filter(Boolean));
-    if (levels.size > 1) {
-      diffs.push(`Seniority: ${Array.from(levels).join(" vs ")}`);
-    }
-    const categories = new Set(jobs.map(j => j.roleCategory).filter(Boolean));
-    if (categories.size > 1) {
-      diffs.push(`Different focus areas`);
-    }
-    const companies = jobs.map(j => j.company);
-    if (new Set(companies).size === jobs.length) {
-      diffs.push(`${jobs.length} different companies`);
-    }
-    return diffs;
-  }, [jobs]);
-
-  const skillsAnalysis = useMemo(() => {
-    const allSkillSets = jobs.map(j => (j.keySkills || []).map(s => s.toLowerCase().trim()));
-    if (allSkillSets.every(s => s.length === 0)) return null;
-
-    const shared: string[] = [];
-    const uniquePerJob: string[][] = jobs.map(() => []);
-
-    if (allSkillSets.length >= 2) {
-      const firstSet = new Set(allSkillSets[0]);
-      firstSet.forEach(skill => {
-        if (allSkillSets.every(set => set.includes(skill))) {
-          shared.push(skill);
-        }
-      });
-      allSkillSets.forEach((skillSet, idx) => {
-        skillSet.forEach(skill => {
-          if (!shared.includes(skill)) {
-            const isUnique = allSkillSets.every((otherSet, otherIdx) =>
-              otherIdx === idx || !otherSet.includes(skill)
-            );
-            if (isUnique && !uniquePerJob[idx].includes(skill)) {
-              uniquePerJob[idx].push(skill);
-            }
-          }
-        });
-      });
-    }
-
-    return { shared, uniquePerJob };
-  }, [jobs]);
-
-  const resumeMatchScores = useMemo(() => {
-    if (resumeSkills.length === 0) return null;
-    return jobs.map(job => {
-      const jobSkills = (job.keySkills || []).map(s => s.toLowerCase().trim());
-      if (jobSkills.length === 0) return null;
-      const matched = jobSkills.filter(js => {
-        if (js.length < 3) return resumeSkills.some(rs => rs === js);
-        return resumeSkills.some(rs => {
-          if (rs.length < 3) return rs === js;
-          const words1 = js.split(/\s+/);
-          const words2 = rs.split(/\s+/);
-          return js === rs
-            || words1.some(w => w.length >= 3 && words2.includes(w))
-            || words2.some(w => w.length >= 3 && words1.includes(w));
-        });
-      });
-      return Math.round((matched.length / jobSkills.length) * 100);
-    });
-  }, [jobs, resumeSkills]);
-
-  const rows: { label: string; render: (job: Job) => React.ReactNode }[] = [
-    {
-      label: "Company",
-      render: (job) => (
-        <div className="flex items-center gap-2">
-          <Avatar className="h-6 w-6 rounded-md">
-            <AvatarImage src={job.companyLogo || undefined} alt={job.company} />
-            <AvatarFallback className="rounded-md bg-primary/10 text-primary text-[10px] font-semibold">
-              {job.company.substring(0, 2).toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
-          <span className="text-sm font-medium text-foreground">{job.company}</span>
-        </div>
-      ),
-    },
-    {
-      label: "Location",
-      render: (job) => (
-        <div className="space-y-1">
-          <JobLocationInline location={job.location} locationType={job.locationType} isRemote={job.isRemote} className="text-sm text-foreground/80" />
-        </div>
-      ),
-    },
-    {
-      label: "Salary",
-      render: (job) => {
-        const salary = formatSalary(job.salaryMin, job.salaryMax, (job as any).salaryCurrency);
-        return salary
-          ? <span className="text-sm font-medium text-green-600 dark:text-green-400">{salary}</span>
-          : <span className="text-sm text-muted-foreground">Not listed</span>;
-      },
-    },
-    {
-      label: "Level",
-      render: (job) => (
-        <span className="text-sm text-foreground/80">{job.seniorityLevel || "Not specified"}</span>
-      ),
-    },
-    {
-      label: "Legal Fit",
-      render: (job) => {
-        const label = getLegalFitLabel(job.legalRelevanceScore);
-        if (!label) return <span className="text-sm text-muted-foreground">-</span>;
-        return (
-          <Badge variant="secondary" className={`text-[10px] gap-0.5 ${
-            job.legalRelevanceScore! >= 9
-              ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400"
-              : "bg-sky-100 dark:bg-sky-900/30 text-sky-700 dark:text-sky-400"
-          }`}>
-            <Scale className="h-2.5 w-2.5" />
-            {label}
-          </Badge>
-        );
-      },
-    },
-    {
-      label: "Key Skills",
-      render: (job) => (
-        <div className="flex flex-wrap gap-1">
-          {job.keySkills && job.keySkills.length > 0
-            ? job.keySkills.slice(0, 5).map((skill, i) => (
-                <Badge key={i} variant="outline" className="text-[10px]">{cleanStructuredText(skill)}</Badge>
-              ))
-            : <span className="text-sm text-muted-foreground">-</span>
-          }
-        </div>
-      ),
-    },
-  ];
-
-  return (
-    <div className="space-y-4" data-testid="section-browse-compare">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <h2 className="text-lg font-serif font-medium text-foreground" data-testid="heading-browse-compare">
-          Compare {jobs.length} Jobs
-        </h2>
-        <div className="flex items-center gap-2">
-          {isPro && !aiResult && (
-            <Button
-              size="sm"
-              onClick={() => aiAnalysisMutation.mutate()}
-              disabled={aiAnalysisMutation.isPending}
-              className="gap-1.5"
-              data-testid="button-ai-compare"
-            >
-              {aiAnalysisMutation.isPending ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <Brain className="h-3.5 w-3.5" />
-              )}
-              {aiAnalysisMutation.isPending ? "Analyzing..." : "Deep Analysis"}
-            </Button>
-          )}
-          {!isPro && isAuthenticated && (
-            <Link href="/pricing">
-              <Badge variant="secondary" className="text-[10px] gap-1 cursor-pointer" data-testid="badge-deep-analysis-pro">
-                <Crown className="h-3 w-3" />
-                Unlock Deep Analysis — $5/mo
-              </Badge>
-            </Link>
-          )}
-          <Button variant="ghost" size="sm" onClick={onClear} className="gap-1.5 text-muted-foreground" data-testid="button-clear-all-compare">
-            Clear
-          </Button>
-          <Button variant="ghost" size="sm" onClick={onClose} className="gap-1.5" data-testid="button-close-browse-compare">
-            <X className="h-4 w-4" />
-            Close
-          </Button>
-        </div>
-      </div>
-
-      {differentiators.length > 0 && (
-        <Card data-testid="section-differentiators">
-          <CardContent className="py-3 px-4">
-            <div className="flex items-start gap-2">
-              <ArrowUpDown className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
-              <div>
-                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Key Differences</span>
-                <div className="flex flex-wrap gap-2 mt-1.5">
-                  {differentiators.map((diff, i) => (
-                    <Badge key={i} variant="secondary" className="text-xs">{diff}</Badge>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      <Card>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="p-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider w-24 sm:w-32 align-top" />
-                  {jobs.map((job) => (
-                    <th key={job.id} className="p-3 align-top min-w-[180px]">
-                      <Link href={`/jobs/${job.id}`} className="hover:text-primary transition-colors">
-                        <span className="text-sm font-semibold text-foreground leading-snug line-clamp-2" data-testid={`browse-compare-title-${job.id}`}>
-                          {job.title}
-                        </span>
-                      </Link>
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((row, ri) => (
-                  <tr key={row.label} className={ri < rows.length - 1 ? "border-b border-border/50" : ""}>
-                    <td className="p-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider align-top whitespace-nowrap">
-                      {row.label}
-                    </td>
-                    {jobs.map((job) => (
-                      <td key={job.id} className="p-3 align-top">
-                        {row.render(job)}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-
-                {skillsAnalysis && skillsAnalysis.shared.length > 0 && (
-                  <tr className="border-t border-border/50">
-                    <td className="p-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider align-top whitespace-nowrap">
-                      Shared Skills
-                    </td>
-                    <td colSpan={jobs.length} className="p-3 align-top">
-                      <div className="flex flex-wrap gap-1">
-                        {skillsAnalysis.shared.map((skill, i) => (
-                          <Badge key={i} variant="secondary" className="text-[10px] bg-primary/10 text-primary border-primary/20 capitalize">
-                            {skill}
-                          </Badge>
-                        ))}
-                      </div>
-                    </td>
-                  </tr>
-                )}
-
-                {skillsAnalysis && skillsAnalysis.uniquePerJob.some(u => u.length > 0) && (
-                  <tr className="border-t border-border/50">
-                    <td className="p-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider align-top whitespace-nowrap">
-                      Unique Skills
-                    </td>
-                    {jobs.map((job, idx) => (
-                      <td key={job.id} className="p-3 align-top">
-                        <div className="flex flex-wrap gap-1">
-                          {skillsAnalysis.uniquePerJob[idx].length > 0
-                            ? skillsAnalysis.uniquePerJob[idx].map((skill, i) => (
-                                <Badge key={i} variant="outline" className="text-[10px] capitalize">{skill}</Badge>
-                              ))
-                            : <span className="text-xs text-muted-foreground">None unique</span>
-                          }
-                        </div>
-                      </td>
-                    ))}
-                  </tr>
-                )}
-
-                {resumeMatchScores && (
-                  <tr className="border-t border-border">
-                    <td className="p-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider align-top whitespace-nowrap">
-                      Resume Match
-                    </td>
-                    {jobs.map((job, idx) => {
-                      const score = resumeMatchScores[idx];
-                      return (
-                        <td key={job.id} className="p-3 align-top">
-                          {score !== null ? (
-                            <div className="space-y-1.5">
-                              <div className="flex items-center gap-2">
-                                <Progress value={score} className="h-1.5 flex-1" />
-                                <span className="text-xs font-medium text-foreground">{score}%</span>
-                              </div>
-                              <span className="text-[10px] text-muted-foreground">
-                                {score >= 70 ? "Strong skill match" : score >= 40 ? "Partial match" : "Skills gap"}
-                              </span>
-                              {!isPro && (
-                                <Link href="/pricing">
-                                  <span className="text-[10px] text-primary flex items-center gap-1 mt-0.5 cursor-pointer" data-testid={`link-resume-deep-${job.id}`}>
-                                    <Lock className="h-2.5 w-2.5" />
-                                    Full gap analysis with Pro
-                                  </span>
-                                </Link>
-                              )}
-                            </div>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">No skills data</span>
-                          )}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                )}
-
-                {!resumeMatchScores && isAuthenticated && (
-                  <tr className="border-t border-border">
-                    <td className="p-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider align-top whitespace-nowrap">
-                      Resume Match
-                    </td>
-                    <td colSpan={jobs.length} className="p-3 align-top">
-                      <Link href="/resumes">
-                        <span className="text-xs text-primary flex items-center gap-1.5 cursor-pointer" data-testid="link-upload-resume-compare">
-                          <Upload className="h-3 w-3" />
-                          Upload a resume to see skill match scores
-                        </span>
-                      </Link>
-                    </td>
-                  </tr>
-                )}
-
-                <tr className="border-t border-border">
-                  <td className="p-3" />
-                  {jobs.map((job) => (
-                    <td key={job.id} className="p-3">
-                      <Button asChild size="sm" className="gap-1.5 w-full" data-testid={`browse-compare-apply-${job.id}`}>
-                        <a href={job.applyUrl} target="_blank" rel="noopener noreferrer">
-                          Apply
-                          <ExternalLink className="h-3 w-3" />
-                        </a>
-                      </Button>
-                    </td>
-                  ))}
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
-
-      {aiAnalysisMutation.isPending && (
-        <Card>
-          <CardContent className="py-8 flex flex-col items-center gap-3">
-            <Loader2 className="h-6 w-6 animate-spin text-primary" />
-            <p className="text-sm text-muted-foreground">Running deep career analysis...</p>
-            <p className="text-xs text-muted-foreground/60">This may take 15-30 seconds</p>
-          </CardContent>
-        </Card>
-      )}
-
-      {aiResult && (
-        <div className="space-y-4" data-testid="section-ai-analysis">
-          <div className="flex items-center justify-between gap-4 flex-wrap">
-            <h3 className="text-base font-serif font-medium text-foreground flex items-center gap-2">
-              <Brain className="h-4 w-4 text-primary" />
-              Career Analysis
-            </h3>
-            <Button variant="ghost" size="sm" onClick={() => setAiResult(null)} className="text-muted-foreground text-xs" data-testid="button-dismiss-ai">
-              Dismiss
-            </Button>
-          </div>
-
-          {aiResult.overallStrategy && (
-            <Card>
-              <CardContent className="py-4 px-5">
-                <p className="text-sm text-foreground/90 leading-relaxed">{aiResult.overallStrategy}</p>
-              </CardContent>
-            </Card>
-          )}
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {[
-              { label: "Best Fit Now", data: aiResult.recommendation.bestFitNow, icon: Target },
-              { label: "Best Long-Term", data: aiResult.recommendation.bestLongTerm, icon: TrendingUp },
-              { label: "Biggest Shift", data: aiResult.recommendation.biggestShift, icon: Scale },
-            ].map(({ label, data, icon: Icon }) => (
-              <Card key={label}>
-                <CardContent className="py-3 px-4 space-y-1">
-                  <div className="flex items-center gap-1.5">
-                    <Icon className="h-3.5 w-3.5 text-primary" />
-                    <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{label}</span>
-                  </div>
-                  <p className="text-sm font-medium text-foreground">{data.jobTitle}</p>
-                  <p className="text-xs text-foreground/70 leading-relaxed">{data.reason}</p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          <Card>
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left">
-                  <thead>
-                    <tr className="border-b border-border">
-                      <th className="p-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider w-24 sm:w-32 align-top" />
-                      {aiResult.jobs.map((aj, i) => (
-                        <th key={i} className="p-3 align-top min-w-[200px]">
-                          <span className="text-sm font-semibold text-foreground">{aj.jobTitle}</span>
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {aiResult.jobs[0]?.overallFitSummary && (
-                      <tr className="border-b border-border/50">
-                        <td className="p-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider align-top whitespace-nowrap">Summary</td>
-                        {aiResult.jobs.map((aj, i) => (
-                          <td key={i} className="p-3 align-top">
-                            <p className="text-xs text-foreground/80 leading-relaxed">{aj.overallFitSummary}</p>
-                          </td>
-                        ))}
-                      </tr>
-                    )}
-                    <tr className="border-b border-border/50">
-                      <td className="p-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider align-top whitespace-nowrap">Difficulty</td>
-                      {aiResult.jobs.map((aj, i) => (
-                        <td key={i} className="p-3 align-top space-y-1">
-                          <Badge variant="secondary" className={`text-[10px] ${getDifficultyColor(aj.transitionDifficulty.level)}`}>
-                            {aj.transitionDifficulty.level}
-                          </Badge>
-                          <p className="text-xs text-foreground/70">{aj.transitionDifficulty.explanation}</p>
-                        </td>
-                      ))}
-                    </tr>
-                    {aiResult.jobs[0]?.pros && (
-                      <tr className="border-b border-border/50">
-                        <td className="p-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider align-top whitespace-nowrap">Pros</td>
-                        {aiResult.jobs.map((aj, i) => (
-                          <td key={i} className="p-3 align-top">
-                            <ul className="space-y-0.5">
-                              {aj.pros?.map((p, pi) => (
-                                <li key={pi} className="text-xs text-foreground/80 flex gap-1.5">
-                                  <CheckCircle2 className="h-3 w-3 text-green-500 shrink-0 mt-0.5" />
-                                  {p}
-                                </li>
-                              ))}
-                            </ul>
-                          </td>
-                        ))}
-                      </tr>
-                    )}
-                    {aiResult.jobs[0]?.cons && (
-                      <tr className="border-b border-border/50">
-                        <td className="p-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider align-top whitespace-nowrap">Cons</td>
-                        {aiResult.jobs.map((aj, i) => (
-                          <td key={i} className="p-3 align-top">
-                            <ul className="space-y-0.5">
-                              {aj.cons?.map((c, ci) => (
-                                <li key={ci} className="text-xs text-foreground/80 flex gap-1.5">
-                                  <X className="h-3 w-3 text-red-400 shrink-0 mt-0.5" />
-                                  {c}
-                                </li>
-                              ))}
-                            </ul>
-                          </td>
-                        ))}
-                      </tr>
-                    )}
-                    {aiResult.jobs[0]?.transferableSkills && (
-                      <tr className="border-b border-border/50">
-                        <td className="p-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider align-top">Transferable Skills</td>
-                        {aiResult.jobs.map((aj, i) => (
-                          <td key={i} className="p-3 align-top">
-                            <div className="flex flex-wrap gap-1">
-                              {aj.transferableSkills?.map((s, si) => (
-                                <Badge key={si} variant="outline" className="text-[10px]">{s}</Badge>
-                              ))}
-                            </div>
-                          </td>
-                        ))}
-                      </tr>
-                    )}
-                    {aiResult.jobs[0]?.fitAnalysis && (
-                      <tr className="border-b border-border/50">
-                        <td className="p-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider align-top whitespace-nowrap">Resume Fit</td>
-                        {aiResult.jobs.map((aj, i) => (
-                          <td key={i} className="p-3 align-top space-y-2">
-                            {aj.fitAnalysis && (
-                              <>
-                                <div className="flex items-center gap-2">
-                                  <Progress value={aj.fitAnalysis.overallFit} className="h-1.5 flex-1" />
-                                  <span className="text-xs font-medium">{aj.fitAnalysis.overallFit}%</span>
-                                </div>
-                                <div>
-                                  <span className="text-[10px] font-semibold text-muted-foreground uppercase">Strengths</span>
-                                  <ul className="mt-0.5 space-y-0.5">
-                                    {aj.fitAnalysis.strengths.map((s, si) => (
-                                      <li key={si} className="text-xs text-foreground/80">{s}</li>
-                                    ))}
-                                  </ul>
-                                </div>
-                                <div>
-                                  <span className="text-[10px] font-semibold text-muted-foreground uppercase">Gaps</span>
-                                  <ul className="mt-0.5 space-y-0.5">
-                                    {aj.fitAnalysis.gaps.map((g, gi) => (
-                                      <li key={gi} className="text-xs text-foreground/80">{g}</li>
-                                    ))}
-                                  </ul>
-                                </div>
-                              </>
-                            )}
-                          </td>
-                        ))}
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
     </div>
   );
 }
