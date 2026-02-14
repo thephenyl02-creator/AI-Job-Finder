@@ -542,13 +542,13 @@ export default function Jobs() {
         />
 
         <div data-testid="card-smart-search">
-          <div className="relative rounded-2xl border-2 border-primary/30 bg-primary/[0.03] shadow-sm px-5 py-5 transition-all focus-within:border-primary/50 focus-within:shadow-md">
+          <div className="relative rounded-lg border border-border bg-background px-4 py-4 transition-colors focus-within:border-foreground/40">
             <div className="flex items-start gap-3">
-              <Search className="h-6 w-6 text-primary/50 mt-2 shrink-0" />
+              <Search className="h-5 w-5 text-muted-foreground mt-1.5 shrink-0" />
               <Textarea
                 ref={textareaRef}
                 placeholder="What kind of role are you looking for? Or paste your resume..."
-                className="border-0 shadow-none text-xl min-h-[44px] resize-none overflow-hidden pr-28 focus-visible:ring-0 bg-transparent placeholder:text-muted-foreground/50"
+                className="border-0 shadow-none text-base min-h-[36px] resize-none overflow-hidden pr-24 focus-visible:ring-0 bg-transparent placeholder:text-muted-foreground/60"
                 value={smartQuery}
                 onChange={(e) => {
                   setSmartQuery(e.target.value);
@@ -566,7 +566,7 @@ export default function Jobs() {
                 data-testid="input-smart-search"
               />
             </div>
-            <div className="absolute right-5 top-5 flex items-center gap-2">
+            <div className="absolute right-4 top-4 flex items-center gap-1.5">
               <Button
                 variant="ghost"
                 size="icon"
@@ -594,7 +594,7 @@ export default function Jobs() {
           </div>
 
           {!smartQuery && !searchResults && guidedStep === "idle" && (
-            <div className="flex items-center gap-2 mt-3 ml-1 flex-wrap">
+            <div className="flex items-center gap-1.5 mt-2.5 flex-wrap">
               {isPersonalized && (
                 <span className="text-[10px] text-muted-foreground/60 mr-0.5" data-testid="text-personalized-label">Try:</span>
               )}
