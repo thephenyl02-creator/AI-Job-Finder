@@ -542,13 +542,13 @@ export default function Jobs() {
         />
 
         <div data-testid="card-smart-search">
-          <div className="relative rounded-lg border border-foreground/15 bg-muted/40 px-5 py-5 transition-colors focus-within:border-foreground/40">
+          <div className="relative rounded-md border-2 border-foreground/20 bg-muted/30 px-5 py-5 transition-colors focus-within:border-foreground/50">
             <div className="flex items-start gap-3">
-              <Search className="h-5 w-5 text-muted-foreground mt-2 shrink-0" />
+              <Search className="h-5 w-5 text-foreground/40 mt-2 shrink-0" />
               <Textarea
                 ref={textareaRef}
                 placeholder="What kind of role are you looking for? Or paste your resume..."
-                className="border-0 shadow-none text-lg min-h-[42px] resize-none overflow-hidden pr-24 focus-visible:ring-0 bg-transparent placeholder:text-muted-foreground/60"
+                className="border-0 shadow-none text-lg min-h-[42px] resize-none overflow-hidden pr-24 focus-visible:ring-0 bg-transparent placeholder:text-muted-foreground/50"
                 value={smartQuery}
                 onChange={(e) => {
                   setSmartQuery(e.target.value);
