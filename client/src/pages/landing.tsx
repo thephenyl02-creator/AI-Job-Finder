@@ -91,27 +91,27 @@ export default function Landing() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-start">
               <div>
                 <p className="text-xs font-semibold text-muted-foreground tracking-[0.22em] uppercase mb-4" data-testid="text-hero-label">
-                  For lawyers moving into legal tech
+                  Your next career move starts here
                 </p>
 
                 <h1 className="text-4xl sm:text-5xl lg:text-6xl font-semibold text-foreground mb-5 leading-[1.05] tracking-tight max-w-[560px]" data-testid="text-hero-title">
-                  Find legal tech roles that actually fit lawyers.
+                  Legal tech careers, made clear.
                 </h1>
 
                 <p className="text-base sm:text-lg text-muted-foreground mb-7 leading-relaxed max-w-[560px]" data-testid="text-hero-subtitle">
-                  Curated roles, plain-English role clarity, and a fit check &mdash; so you apply with confidence, not guesses.
+                  Curated roles for legal professionals at every level. See where you fit, check your match, and apply with confidence.
                 </p>
 
                 <div className="flex items-start gap-3 mb-3">
                   <Button size="lg" asChild className="text-base px-8" data-testid="button-hero-explore">
                     <a href="/jobs">
-                      Explore roles
+                      Start exploring
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </a>
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground" data-testid="text-hero-trust">
-                  Free to browse &bull; No credit card required
+                  Free to browse &bull; No account needed
                 </p>
               </div>
 
@@ -203,8 +203,11 @@ export default function Landing() {
           <div className="max-w-5xl mx-auto px-4 sm:px-6 py-20 sm:py-24">
             <div className="text-center mb-8">
               <h2 className="text-2xl sm:text-3xl font-serif font-medium text-foreground tracking-tight" data-testid="text-career-paths-title">
-                Explore by career path &mdash; not job title
+                Browse by career path
               </h2>
+              <p className="text-sm text-muted-foreground mt-2 max-w-md mx-auto">
+                Not sure what role to search for? Pick a path that matches your interests.
+              </p>
             </div>
             <div className="flex flex-wrap items-center justify-center gap-2.5" data-testid="career-paths-chips">
               {careerPaths.map((path) => (
@@ -345,14 +348,14 @@ export default function Landing() {
           <div className="max-w-5xl mx-auto px-4 sm:px-6 py-20 sm:py-28">
             <div className="max-w-2xl mx-auto text-center">
               <h2 className="text-3xl sm:text-4xl font-serif font-medium text-foreground mb-4 tracking-tight" data-testid="text-final-cta-title">
-                Stop guessing. Start applying with clarity.
+                Ready to find your next role?
               </h2>
               <p className="text-base text-muted-foreground mb-8 max-w-lg mx-auto">
                 Browse roles for free. Go Pro for resume matching, fit checks, and job alerts the moment a role fits your profile.
               </p>
               <Button size="lg" asChild className="text-base px-10" data-testid="button-cta-explore">
                 <a href="/jobs">
-                  Explore roles
+                  Start exploring
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </a>
               </Button>

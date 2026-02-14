@@ -134,13 +134,13 @@ export default function Events() {
           <ScrollReveal>
             <div className="mb-10">
               <p className="text-sm font-medium text-muted-foreground tracking-wide uppercase mb-3" data-testid="text-events-label">
-                Industry Calendar
+                Stay connected
               </p>
               <h1 className="text-2xl sm:text-3xl font-serif font-medium text-foreground mb-3 tracking-tight" data-testid="text-events-title">
-                Legal Tech Events
+                Upcoming events in legal tech
               </h1>
               <p className="text-muted-foreground leading-relaxed max-w-2xl" data-testid="text-events-subtitle">
-                Conferences, summits, workshops, and networking events for legal technology professionals.
+                Conferences, summits, and networking opportunities. A great way to meet people and learn what's happening in the industry.
               </p>
               <p className="text-xs text-muted-foreground/70 mt-2 max-w-2xl" data-testid="text-events-disclaimer">
                 Event details are sourced from public information and may change. Please verify dates, locations, and registration details directly with event organizers before making plans.

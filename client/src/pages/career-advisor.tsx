@@ -119,15 +119,15 @@ export default function CareerPathAdvisor() {
               </div>
               <div>
                 <h1 className="text-2xl font-bold font-serif text-foreground" data-testid="heading-career-path">
-                  Career Path Advisor
+                  Career path advisor
                 </h1>
                 <p className="text-sm text-muted-foreground">
-                  Career direction and transition steps.
+                  Get personalized guidance for your next move.
                 </p>
               </div>
             </div>
             <p className="text-sm text-muted-foreground mt-2 sm:ml-[3.25rem]">
-              Direction for your next 6–24 months (not job-specific edits).
+              Strategic direction for your next 6-24 months, based on your background and goals.
             </p>
           </div>
         </ScrollReveal>

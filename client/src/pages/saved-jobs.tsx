@@ -266,7 +266,7 @@ export default function SavedJobs() {
         <div className="flex items-center justify-between gap-4 mb-6 flex-wrap">
           <div>
             <h1 className="text-2xl font-bold font-serif text-foreground" data-testid="text-saved-jobs-title">
-              Saved Jobs
+              Your saved roles
             </h1>
             <p className="text-sm text-muted-foreground mt-1">
               {savedJobs.length} {savedJobs.length === 1 ? "job" : "jobs"} saved

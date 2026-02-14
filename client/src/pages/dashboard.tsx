@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { usePageTitle } from "@/hooks/use-page-title";
 import { useActivityTracker } from "@/hooks/use-activity-tracker";
 import { useSubscription } from "@/hooks/use-subscription";
+import { useAuth } from "@/hooks/use-auth";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -245,6 +246,7 @@ export default function DashboardPage() {
   usePageTitle("My Dashboard");
   const { track } = useActivityTracker();
   const { isPro } = useSubscription();
+  const { user } = useAuth();
   const [timeRange, setTimeRange] = useState("30");
 
   useEffect(() => { track({ eventType: "page_view", pagePath: "/dashboard" }); }, []);
@@ -297,10 +299,10 @@ export default function DashboardPage() {
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6">
             <div>
               <h1 className="text-2xl font-serif font-bold tracking-tight text-foreground" data-testid="text-dashboard-title">
-                Your Dashboard
+                {user?.firstName ? `Welcome back, ${user.firstName}` : "Welcome back"}
               </h1>
               <p className="text-sm text-muted-foreground mt-1">
-                Track your job search progress and discover next steps
+                Here's where things stand with your job search
               </p>
             </div>
             <div className="flex items-center gap-3">

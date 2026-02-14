@@ -16,12 +16,12 @@ export default function About() {
       <main className="max-w-3xl mx-auto px-4 sm:px-6 py-12 sm:py-16">
         <div className="mb-12">
           <h1 className="text-3xl sm:text-4xl font-serif font-medium text-foreground mb-4 tracking-tight" data-testid="text-about-title">
-            Why Legal Tech Careers Exists
+            Why we built this
           </h1>
           <p className="text-lg text-muted-foreground leading-relaxed">
             The legal industry is changing faster than the job boards that serve it.
-            Firms are building innovation teams. Startups are hiring lawyers who can bridge
-            the gap between code and courtrooms. But if you're a legal professional looking
+            Firms are building innovation teams. Companies are hiring legal professionals who can bridge
+            the gap between law and technology. But if you're looking
             for those opportunities, you're stuck searching in the wrong places.
           </p>
         </div>

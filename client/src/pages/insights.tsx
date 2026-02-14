@@ -456,10 +456,10 @@ export default function Insights() {
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <div>
               <h1 className="text-2xl sm:text-3xl font-serif font-medium text-foreground tracking-tight mb-2" data-testid="text-insights-title">
-                Market Insights
+                Market insights
               </h1>
               <p className="text-muted-foreground max-w-xl">
-                Live statistics from our legal technology job database. Ask questions or explore the data below.
+                See what's happening in legal tech hiring right now. Ask questions or explore the live data below.
               </p>
             </div>
             {dataUpdatedAt && (

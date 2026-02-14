@@ -457,12 +457,12 @@ export default function Jobs() {
             )}
             <div className="space-y-0.5">
               <h1 className="text-lg sm:text-xl font-semibold text-foreground tracking-tight" data-testid="text-page-title">
-                {searchResults ? `Results for "${searchQuery}"` : "Legal tech roles for lawyers"}
+                {searchResults ? `Results for "${searchQuery}"` : "Find your next role in legal tech"}
               </h1>
               <p className="text-sm text-muted-foreground" data-testid="text-page-subtitle">
                 {searchResults
                   ? `${searchResults.length} results`
-                  : `${totalJobCount} curated roles`}
+                  : `${totalJobCount} curated roles across legal technology`}
               </p>
             </div>
           </div>
@@ -477,15 +477,18 @@ export default function Jobs() {
           data-testid="input-resume-file"
         />
 
-        <Card className="card-elev" data-testid="card-smart-search">
-          <CardContent className="p-4 sm:p-5">
+        <Card className="border-primary/30 shadow-[0_0_0_1px_hsl(var(--primary)/0.1),0_2px_12px_hsl(var(--primary)/0.08)]" data-testid="card-smart-search">
+          <CardContent className="p-4 sm:p-6">
+            <p className="text-xs font-medium text-primary mb-2 tracking-wide" data-testid="text-search-label">
+              Tell us about yourself
+            </p>
             <div className="relative">
               <Search className="absolute left-3.5 top-3.5 h-[18px] w-[18px] text-muted-foreground/40 pointer-events-none" />
               <Textarea
                 placeholder={isAuthenticated
-                  ? "Describe what you're looking for — your background, interests, the kind of role you want...\ne.g. \"I'm a litigation associate with 5 years experience, interested in legal AI or compliance tech roles\""
-                  : "Describe what you're looking for — your background, skills, the kind of role you want..."}
-                className="resize-none border-0 text-base focus-visible:ring-0 shadow-none pl-10 pr-4 min-h-[88px] placeholder:text-muted-foreground/40 placeholder:leading-relaxed"
+                  ? "What's your background? What kind of role interests you?\ne.g. \"Corporate lawyer, 6 years M&A, looking for legal ops or compliance tech roles\""
+                  : "What's your background? What kind of role are you looking for?\ne.g. \"Paralegal with 3 years in litigation, interested in eDiscovery tech\""}
+                className="resize-none border border-border/60 rounded-lg text-base focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary/40 pl-10 pr-4 min-h-[96px] placeholder:text-muted-foreground/50 placeholder:leading-relaxed transition-shadow"
                 rows={3}
                 value={smartQuery}
                 onChange={(e) => setSmartQuery(e.target.value)}
@@ -498,80 +501,78 @@ export default function Jobs() {
                 data-testid="input-smart-search"
               />
             </div>
-            <div className="flex items-center justify-between gap-2 mt-3 flex-wrap">
-              <div className="flex items-center gap-1.5 flex-wrap flex-1 min-w-0">
-                {!smartQuery && !searchResults && guidedStep === "idle" && (
-                  <>
-                    {isPersonalized && (
-                      <span className="text-[10px] text-muted-foreground/60 mr-0.5" data-testid="text-personalized-label">For you:</span>
-                    )}
-                    {searchSuggestions.map((s) => (
-                      <Button
-                        key={s.label}
-                        variant="outline"
-                        size="sm"
-                        className="gap-1 text-xs"
-                        onClick={() => setSmartQuery(s.query)}
-                        data-testid={`chip-${s.label.toLowerCase().replace(/\s+/g, "-")}`}
-                      >
-                        {cleanStructuredText(s.label)}
-                      </Button>
-                    ))}
-                  </>
+
+            {!smartQuery && !searchResults && guidedStep === "idle" && (
+              <div className="flex items-center gap-1.5 mt-3 flex-wrap">
+                {isPersonalized && (
+                  <span className="text-[10px] text-muted-foreground/60 mr-0.5" data-testid="text-personalized-label">Try:</span>
                 )}
-                {smartQuery.trim() && guidedStep === "idle" && !isSearching && !searchResults && (
-                  <>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleQuickSearch}
-                      className="text-muted-foreground gap-1 text-xs"
-                      data-testid="button-quick-search"
-                    >
-                      <ArrowRight className="h-3 w-3" />
-                      Quick search (skip questions)
-                    </Button>
-                    {!canUseGuidedSearch && (
-                      <Link href="/pricing" className="text-xs text-primary font-medium" data-testid="link-guided-search-upgrade">
-                        Upgrade for unlimited
-                      </Link>
-                    )}
-                  </>
+                {searchSuggestions.map((s) => (
+                  <Button
+                    key={s.label}
+                    variant="outline"
+                    size="sm"
+                    className="gap-1 text-xs"
+                    onClick={() => setSmartQuery(s.query)}
+                    data-testid={`chip-${s.label.toLowerCase().replace(/\s+/g, "-")}`}
+                  >
+                    {cleanStructuredText(s.label)}
+                  </Button>
+                ))}
+              </div>
+            )}
+            {smartQuery.trim() && guidedStep === "idle" && !isSearching && !searchResults && (
+              <div className="flex items-center gap-2 mt-3 flex-wrap">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleQuickSearch}
+                  className="text-muted-foreground gap-1 text-xs"
+                  data-testid="button-quick-search"
+                >
+                  <ArrowRight className="h-3 w-3" />
+                  Quick search (skip questions)
+                </Button>
+                {!canUseGuidedSearch && (
+                  <Link href="/pricing" className="text-xs text-primary font-medium" data-testid="link-guided-search-upgrade">
+                    Upgrade for unlimited
+                  </Link>
                 )}
               </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <Button
-                  variant="outline"
-                  className="gap-1.5"
-                  onClick={() => {
-                    if (!isAuthenticated) {
-                      toast({ title: "Sign in to match your resume", description: "Create a free account to see which roles fit your background." });
-                      return;
-                    }
-                    fileInputRef.current?.click();
-                  }}
-                  disabled={resumeMatchStep !== "idle"}
-                  data-testid="button-upload-resume"
-                >
-                  {resumeMatchStep !== "idle" ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Upload className="h-4 w-4" />
-                  )}
-                  <span className="hidden sm:inline">
-                    {resumeMatchStep === "uploading" ? "Reading..." : resumeMatchStep === "matching" ? "Matching..." : "Upload Resume"}
-                  </span>
-                </Button>
-                <Button
-                  onClick={handleSmartSearch}
-                  disabled={!smartQuery.trim() || isSearching}
-                  className="gap-1.5"
-                  data-testid="button-smart-search"
-                >
-                  {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-                  <span className="hidden sm:inline">{isAuthenticated ? "Search" : "Find"}</span>
-                </Button>
-              </div>
+            )}
+
+            <div className="flex items-center justify-end gap-2 mt-3">
+              <Button
+                variant="outline"
+                className="gap-1.5"
+                onClick={() => {
+                  if (!isAuthenticated) {
+                    toast({ title: "Sign in to match your resume", description: "Create a free account to see which roles fit your background." });
+                    return;
+                  }
+                  fileInputRef.current?.click();
+                }}
+                disabled={resumeMatchStep !== "idle"}
+                data-testid="button-upload-resume"
+              >
+                {resumeMatchStep !== "idle" ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Upload className="h-4 w-4" />
+                )}
+                <span className="hidden sm:inline">
+                  {resumeMatchStep === "uploading" ? "Reading..." : resumeMatchStep === "matching" ? "Matching..." : "Upload Resume"}
+                </span>
+              </Button>
+              <Button
+                onClick={handleSmartSearch}
+                disabled={!smartQuery.trim() || isSearching}
+                className="gap-1.5"
+                data-testid="button-smart-search"
+              >
+                {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                <span className="hidden sm:inline">{isAuthenticated ? "Search" : "Find"}</span>
+              </Button>
             </div>
           </CardContent>
         </Card>

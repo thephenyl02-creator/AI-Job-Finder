@@ -342,10 +342,10 @@ export default function Alerts() {
         <div className="flex items-start justify-between gap-4 mb-6">
           <div>
             <h1 className="text-2xl sm:text-3xl font-serif font-medium text-foreground tracking-tight mb-1" data-testid="text-alerts-title">
-              Job Alerts
+              Job alerts
             </h1>
             <p className="text-muted-foreground text-sm">
-              Get notified when new jobs matching your interests are posted.
+              We'll let you know when new roles matching your interests are posted. No spam, just relevant matches.
             </p>
           </div>
           {isPro && !showForm && (

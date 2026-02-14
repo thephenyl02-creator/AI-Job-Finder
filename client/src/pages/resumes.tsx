@@ -1126,11 +1126,11 @@ export default function Resumes() {
             className="text-2xl font-bold text-foreground tracking-tight font-serif"
             data-testid="text-resumes-title"
           >
-            My Resumes
+            Your resumes
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
-            Upload different versions of your resume to see which jobs match each one best.
-            Lawyers often have multiple career angles -- see which path has the strongest opportunities.
+            Upload different versions to see which roles match each one best.
+            Many legal professionals have multiple career angles &mdash; find out which path has the strongest opportunities.
           </p>
         </div>
 
