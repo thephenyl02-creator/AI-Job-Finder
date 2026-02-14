@@ -14,6 +14,7 @@ import { JobLocation } from "@/components/job-location";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
@@ -478,96 +479,100 @@ export default function Jobs() {
 
         <Card className="card-elev" data-testid="card-smart-search">
           <CardContent className="p-4 sm:p-5">
-            <div className="flex items-center gap-2">
-              <div className="flex-1 min-w-0 relative">
-                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-[18px] w-[18px] text-muted-foreground/50" />
-                <Input
-                  placeholder={isAuthenticated ? searchPlaceholder : "Search by keyword, role, or company..."}
-                  className="border-0 text-base focus-visible:ring-0 shadow-none pl-10 min-h-11 placeholder:text-muted-foreground/50"
-                  value={smartQuery}
-                  onChange={(e) => setSmartQuery(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      handleSmartSearch();
-                    }
-                  }}
-                  data-testid="input-smart-search"
-                />
-              </div>
-              <Button
-                variant="outline"
-                size="lg"
-                className="gap-1.5 shrink-0"
-                onClick={() => {
-                  if (!isAuthenticated) {
-                    toast({ title: "Sign in to match your resume", description: "Create a free account to see which roles fit your background." });
-                    return;
+            <div className="relative">
+              <Search className="absolute left-3.5 top-3.5 h-[18px] w-[18px] text-muted-foreground/40 pointer-events-none" />
+              <Textarea
+                placeholder={isAuthenticated
+                  ? "Describe what you're looking for — your background, interests, the kind of role you want...\ne.g. \"I'm a litigation associate with 5 years experience, interested in legal AI or compliance tech roles\""
+                  : "Describe what you're looking for — your background, skills, the kind of role you want..."}
+                className="resize-none border-0 text-base focus-visible:ring-0 shadow-none pl-10 pr-4 min-h-[88px] placeholder:text-muted-foreground/40 placeholder:leading-relaxed"
+                rows={3}
+                value={smartQuery}
+                onChange={(e) => setSmartQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSmartSearch();
                   }
-                  fileInputRef.current?.click();
                 }}
-                disabled={resumeMatchStep !== "idle"}
-                data-testid="button-upload-resume"
-              >
-                {resumeMatchStep !== "idle" ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Upload className="h-4 w-4" />
-                )}
-                <span className="hidden sm:inline">
-                  {resumeMatchStep === "uploading" ? "Reading..." : resumeMatchStep === "matching" ? "Matching..." : "Upload Resume"}
-                </span>
-              </Button>
-              <Button
-                onClick={handleSmartSearch}
-                disabled={!smartQuery.trim() || isSearching}
-                size="lg"
-                className="gap-1.5 shrink-0"
-                data-testid="button-smart-search"
-              >
-                {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-                <span className="hidden sm:inline">{isAuthenticated ? "Search" : "Find"}</span>
-              </Button>
+                data-testid="input-smart-search"
+              />
             </div>
-
-            {!smartQuery && !searchResults && guidedStep === "idle" && (
-              <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-                {isPersonalized && (
-                  <span className="text-[10px] text-muted-foreground/60 mr-0.5" data-testid="text-personalized-label">For you:</span>
+            <div className="flex items-center justify-between gap-2 mt-3 flex-wrap">
+              <div className="flex items-center gap-1.5 flex-wrap flex-1 min-w-0">
+                {!smartQuery && !searchResults && guidedStep === "idle" && (
+                  <>
+                    {isPersonalized && (
+                      <span className="text-[10px] text-muted-foreground/60 mr-0.5" data-testid="text-personalized-label">For you:</span>
+                    )}
+                    {searchSuggestions.map((s) => (
+                      <Button
+                        key={s.label}
+                        variant="outline"
+                        size="sm"
+                        className="gap-1 text-xs"
+                        onClick={() => setSmartQuery(s.query)}
+                        data-testid={`chip-${s.label.toLowerCase().replace(/\s+/g, "-")}`}
+                      >
+                        {cleanStructuredText(s.label)}
+                      </Button>
+                    ))}
+                  </>
                 )}
-                {searchSuggestions.map((s) => (
-                  <Button
-                    key={s.label}
-                    variant="outline"
-                    size="sm"
-                    className="gap-1 text-xs"
-                    onClick={() => setSmartQuery(s.query)}
-                    data-testid={`chip-${s.label.toLowerCase().replace(/\s+/g, "-")}`}
-                  >
-                    {cleanStructuredText(s.label)}
-                  </Button>
-                ))}
+                {smartQuery.trim() && guidedStep === "idle" && !isSearching && !searchResults && (
+                  <>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleQuickSearch}
+                      className="text-muted-foreground gap-1 text-xs"
+                      data-testid="button-quick-search"
+                    >
+                      <ArrowRight className="h-3 w-3" />
+                      Quick search (skip questions)
+                    </Button>
+                    {!canUseGuidedSearch && (
+                      <Link href="/pricing" className="text-xs text-primary font-medium" data-testid="link-guided-search-upgrade">
+                        Upgrade for unlimited
+                      </Link>
+                    )}
+                  </>
+                )}
               </div>
-            )}
-            {smartQuery.trim() && guidedStep === "idle" && !isSearching && !searchResults && (
-              <div className="flex items-center gap-2 mt-2 flex-wrap">
+              <div className="flex items-center gap-2 shrink-0">
                 <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleQuickSearch}
-                  className="text-muted-foreground gap-1 text-xs"
-                  data-testid="button-quick-search"
+                  variant="outline"
+                  className="gap-1.5"
+                  onClick={() => {
+                    if (!isAuthenticated) {
+                      toast({ title: "Sign in to match your resume", description: "Create a free account to see which roles fit your background." });
+                      return;
+                    }
+                    fileInputRef.current?.click();
+                  }}
+                  disabled={resumeMatchStep !== "idle"}
+                  data-testid="button-upload-resume"
                 >
-                  <ArrowRight className="h-3 w-3" />
-                  Quick search (skip questions)
+                  {resumeMatchStep !== "idle" ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Upload className="h-4 w-4" />
+                  )}
+                  <span className="hidden sm:inline">
+                    {resumeMatchStep === "uploading" ? "Reading..." : resumeMatchStep === "matching" ? "Matching..." : "Upload Resume"}
+                  </span>
                 </Button>
-                {!canUseGuidedSearch && (
-                  <Link href="/pricing" className="text-xs text-primary font-medium" data-testid="link-guided-search-upgrade">
-                    Upgrade for unlimited
-                  </Link>
-                )}
+                <Button
+                  onClick={handleSmartSearch}
+                  disabled={!smartQuery.trim() || isSearching}
+                  className="gap-1.5"
+                  data-testid="button-smart-search"
+                >
+                  {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                  <span className="hidden sm:inline">{isAuthenticated ? "Search" : "Find"}</span>
+                </Button>
               </div>
-            )}
+            </div>
           </CardContent>
         </Card>
 
