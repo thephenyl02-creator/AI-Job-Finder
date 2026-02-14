@@ -500,7 +500,7 @@ export default function Jobs() {
         />
 
         <div data-testid="card-smart-search">
-          <div className="relative flex items-center rounded-lg border border-border py-3 px-1">
+          <div className="relative flex items-center rounded-lg border border-border py-5 px-2">
             <Search className="absolute left-5 h-5 w-5 text-muted-foreground pointer-events-none" />
             <Input
               placeholder="What kind of role are you looking for?"
