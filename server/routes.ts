@@ -57,8 +57,8 @@ import { runQAChecks, checkDuplicate } from "./lib/job-qa";
 import { enforceJobDefaults } from "./lib/job-defaults";
 import { generateJobHash } from "./lib/job-hash";
 import { db } from "./db";
-import { jobs } from "@shared/schema";
-import { eq, and } from "drizzle-orm";
+import { jobs, users } from "@shared/schema";
+import { eq, and, sql, desc, count, or } from "drizzle-orm";
 import { JOB_TAXONOMY } from "@shared/schema";
 import {
   startScheduler,
@@ -2200,6 +2200,202 @@ Provide 2-4 recommended paths. Be specific to this candidate's actual experience
       const newSub = await storage.getUserSubscription(targetUserId);
       res.json({ success: true, tier: newSub?.subscriptionTier || "free", status: newSub?.subscriptionStatus || "inactive" });
     } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/admin/users", isAuthenticated, async (req, res) => {
+    if (!(await isAdminCheck(req))) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    try {
+      const search = req.query.search ? String(req.query.search) : undefined;
+      const tier = req.query.tier ? String(req.query.tier) : "all";
+      const page = Math.max(1, parseInt(String(req.query.page || "1")));
+      const limit = Math.min(100, Math.max(1, parseInt(String(req.query.limit || "20"))));
+
+      const conditions: any[] = [];
+
+      if (search) {
+        const term = `%${search.toLowerCase()}%`;
+        conditions.push(
+          sql`(${users.email} ILIKE ${term} OR ${users.firstName} ILIKE ${term} OR ${users.lastName} ILIKE ${term})`
+        );
+      }
+
+      if (tier === "pro") {
+        conditions.push(eq(users.subscriptionTier, "pro"));
+      } else if (tier === "free") {
+        conditions.push(
+          sql`(${users.subscriptionTier} != 'pro' OR ${users.subscriptionTier} IS NULL)`
+        );
+      }
+
+      const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+      const [{ total: totalCount }] = await db
+        .select({ total: count() })
+        .from(users)
+        .where(whereClause);
+      const total = Number(totalCount);
+      const totalPages = Math.ceil(total / limit);
+      const offset = (page - 1) * limit;
+
+      const userList = await db
+        .select({
+          id: users.id,
+          email: users.email,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          isAdmin: users.isAdmin,
+          createdAt: users.createdAt,
+          subscriptionTier: users.subscriptionTier,
+          subscriptionStatus: users.subscriptionStatus,
+          stripeCustomerId: users.stripeCustomerId,
+          stripeSubscriptionId: users.stripeSubscriptionId,
+        })
+        .from(users)
+        .where(whereClause)
+        .orderBy(desc(users.createdAt))
+        .limit(limit)
+        .offset(offset);
+
+      res.json({ users: userList, total, page, totalPages });
+    } catch (error: any) {
+      console.error("Error fetching admin users:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/admin/users/:id/payment-history", isAuthenticated, async (req, res) => {
+    if (!(await isAdminCheck(req))) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    try {
+      const targetUserId = req.params.id as string;
+      const [user] = await db
+        .select({
+          stripeCustomerId: users.stripeCustomerId,
+          stripeSubscriptionId: users.stripeSubscriptionId,
+        })
+        .from(users)
+        .where(eq(users.id, targetUserId));
+
+      if (!user?.stripeCustomerId) {
+        return res.json({ payments: [], subscription: null, message: "No Stripe customer found" });
+      }
+
+      const { getUncachableStripeClient } = await import("./stripeClient");
+      const stripe = await getUncachableStripeClient();
+
+      const [invoices, charges, subscriptions] = await Promise.all([
+        stripe.invoices.list({ customer: user.stripeCustomerId, limit: 50 }),
+        stripe.charges.list({ customer: user.stripeCustomerId, limit: 50 }),
+        stripe.subscriptions.list({ customer: user.stripeCustomerId, limit: 1, status: "all" as any }),
+      ]);
+
+      const payments = charges.data.map((charge: any) => ({
+        id: charge.id,
+        amount: charge.amount,
+        currency: charge.currency,
+        status: charge.status,
+        created: charge.created,
+        description: charge.description || charge.statement_descriptor || null,
+        invoiceUrl: null as string | null,
+        receiptUrl: charge.receipt_url || null,
+      }));
+
+      for (const inv of invoices.data) {
+        const existing = payments.find((p: any) => p.id === (inv as any).charge);
+        if (existing) {
+          existing.invoiceUrl = inv.hosted_invoice_url || null;
+          if (!existing.description && inv.description) {
+            existing.description = inv.description;
+          }
+        } else {
+          payments.push({
+            id: inv.id,
+            amount: inv.amount_paid || 0,
+            currency: inv.currency,
+            status: inv.status || "unknown",
+            created: inv.created,
+            description: inv.description || null,
+            invoiceUrl: inv.hosted_invoice_url || null,
+            receiptUrl: null,
+          });
+        }
+      }
+
+      let subscription = null;
+      if (subscriptions.data.length > 0) {
+        const sub = subscriptions.data[0] as any;
+        subscription = {
+          id: sub.id,
+          status: sub.status,
+          currentPeriodStart: sub.current_period_start,
+          currentPeriodEnd: sub.current_period_end,
+          cancelAtPeriodEnd: sub.cancel_at_period_end,
+          plan: sub.items?.data?.[0]?.price
+            ? {
+                interval: sub.items.data[0].price.recurring?.interval || null,
+                amount: sub.items.data[0].price.unit_amount || 0,
+              }
+            : null,
+        };
+      }
+
+      res.json({ payments, subscription });
+    } catch (error: any) {
+      console.error("Error fetching payment history:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/admin/subscription-stats", isAuthenticated, async (req, res) => {
+    if (!(await isAdminCheck(req))) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    try {
+      const [{ total: totalUsers }] = await db.select({ total: count() }).from(users);
+      const [{ total: proUsers }] = await db
+        .select({ total: count() })
+        .from(users)
+        .where(eq(users.subscriptionTier, "pro"));
+
+      const totalUsersNum = Number(totalUsers);
+      const proUsersNum = Number(proUsers);
+      const freeUsers = totalUsersNum - proUsersNum;
+
+      let monthlyRevenue = 0;
+      let recentCharges = 0;
+
+      try {
+        const { getUncachableStripeClient } = await import("./stripeClient");
+        const stripe = await getUncachableStripeClient();
+        const thirtyDaysAgo = Math.floor((Date.now() - 30 * 24 * 60 * 60 * 1000) / 1000);
+        const chargesResult = await stripe.charges.list({
+          limit: 100,
+          created: { gte: thirtyDaysAgo },
+        });
+        for (const charge of chargesResult.data) {
+          if (charge.status === "succeeded") {
+            monthlyRevenue += charge.amount;
+            recentCharges++;
+          }
+        }
+      } catch (stripeErr: any) {
+        console.error("Stripe not available for subscription stats:", stripeErr.message);
+      }
+
+      res.json({
+        totalUsers: totalUsersNum,
+        proUsers: proUsersNum,
+        freeUsers,
+        monthlyRevenue,
+        recentCharges,
+      });
+    } catch (error: any) {
+      console.error("Error fetching subscription stats:", error);
       res.status(500).json({ error: error.message });
     }
   });

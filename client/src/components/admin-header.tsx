@@ -11,6 +11,7 @@ import {
   ShieldAlert,
   Upload,
   ClipboardCheck,
+  Users,
 } from "lucide-react";
 
 const ADMIN_NAV = [
@@ -21,6 +22,7 @@ const ADMIN_NAV = [
   { href: "/admin/reports", label: "Reports", icon: ShieldAlert, testId: "link-admin-reports-nav" },
   { href: "/admin/import-jobs", label: "Import", icon: Upload, testId: "link-admin-import" },
   { href: "/admin/review-jobs", label: "Review", icon: ClipboardCheck, testId: "link-admin-review" },
+  { href: "/admin/users", label: "Users", icon: Users, testId: "link-admin-users" },
 ];
 
 interface AdminHeaderProps {
