@@ -617,7 +617,7 @@ export default function Jobs() {
               <Search className="h-5 w-5 sm:h-6 sm:w-6 text-foreground/40 mt-2 sm:mt-2.5 shrink-0" />
               <Textarea
                 ref={textareaRef}
-                placeholder="What kind of role are you looking for?"
+                placeholder="What kind of role are you looking for? Or paste your resume..."
                 className="border-0 shadow-none text-base sm:text-xl min-h-[42px] sm:min-h-[52px] resize-none overflow-hidden pr-20 sm:pr-28 focus-visible:ring-0 bg-transparent placeholder:text-muted-foreground/50"
                 value={smartQuery}
                 onChange={(e) => {
