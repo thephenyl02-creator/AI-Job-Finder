@@ -126,6 +126,17 @@ export default function Jobs() {
   const [proNudgeDismissed, setProNudgeDismissed] = useState(() => {
     try { return localStorage.getItem("ltc_pro_nudge_dismissed") === "1"; } catch { return false; }
   });
+  const [welcomeSkipped, setWelcomeSkipped] = useState(() => {
+    try { return localStorage.getItem("ltc_welcome_skipped") === "1"; } catch { return false; }
+  });
+  const welcomeFileRef = useRef<HTMLInputElement>(null);
+  const [welcomeUploading, setWelcomeUploading] = useState(false);
+
+  const { data: userResumes = [] } = useQuery<any[]>({
+    queryKey: ["/api/resumes"],
+    enabled: isAuthenticated,
+    staleTime: 1000 * 60,
+  });
 
   const { data: usageLimits } = useQuery<{
     isPro: boolean;
@@ -330,6 +341,61 @@ export default function Jobs() {
       fileInputRef.current.value = "";
     }
   }, [handleResumeUpload]);
+
+  const handleWelcomeUpload = useCallback(async (file: File) => {
+    try {
+      setWelcomeUploading(true);
+      const formData = new FormData();
+      formData.append("resume", file);
+      formData.append("label", file.name.replace(/\.[^/.]+$/, ""));
+
+      const uploadRes = await fetch("/api/resumes/upload", {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+      });
+
+      if (!uploadRes.ok) {
+        const err = await uploadRes.json().catch(() => ({ error: "Upload failed" }));
+        throw new Error(err.error || "Upload failed");
+      }
+
+      const uploadData = await uploadRes.json();
+      const resumeId = uploadData.resume?.id;
+      if (!resumeId) throw new Error("Upload succeeded but couldn't start matching.");
+
+      queryClient.invalidateQueries({ queryKey: ["/api/resumes"] });
+
+      const matchRes = await apiRequest("POST", `/api/resumes/${resumeId}/match-jobs`);
+      const matchData = await matchRes.json();
+      const matches = matchData.matches || [];
+
+      setResumeMatches(matches);
+      setWelcomeUploading(false);
+
+      track({ eventType: "resume_match", metadata: { resumeId, matchCount: matches.length, source: "welcome_card" } });
+
+      if (matches.length > 0) {
+        const top = matches[0];
+        toast({
+          title: `${matches.length} roles match your background`,
+          description: `Top match: ${top.title} at ${top.company} (${top.matchScore}% fit)`,
+        });
+      } else {
+        toast({
+          title: "Resume uploaded successfully",
+          description: "We couldn't find strong matches right now, but we'll notify you when new roles appear.",
+        });
+      }
+    } catch (error: any) {
+      setWelcomeUploading(false);
+      toast({
+        title: "Couldn't process your resume",
+        description: error.message || "Please try again with a different file.",
+        variant: "destructive",
+      });
+    }
+  }, [track, toast]);
 
   const handleClearResumeMatches = useCallback(() => {
     setResumeMatches(null);
@@ -1065,7 +1131,73 @@ export default function Jobs() {
           </div>
         ) : (
           <div className="grid gap-3">
-            {isAuthenticated && !isPro && !proNudgeDismissed && !resumeMatches && !searchResults && (
+            {isAuthenticated && userResumes.length === 0 && !welcomeSkipped && !resumeMatches && !searchResults && (
+              <Card className="border-primary/20" data-testid="card-welcome-upload">
+                <CardContent className="p-5 sm:p-6">
+                  <div className="flex items-start gap-4">
+                    <div className="shrink-0 w-10 h-10 rounded-md bg-primary/10 flex items-center justify-center">
+                      <Target className="h-5 w-5 text-primary" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="text-sm font-semibold text-foreground mb-1">
+                        Welcome! Find roles that match your background.
+                      </h3>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        Upload your resume and we'll instantly show you which open roles are the best fit for your experience.
+                      </p>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <input
+                          ref={welcomeFileRef}
+                          type="file"
+                          accept=".pdf,.docx"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleWelcomeUpload(file);
+                            if (welcomeFileRef.current) welcomeFileRef.current.value = "";
+                          }}
+                          data-testid="input-welcome-file"
+                        />
+                        <Button
+                          size="sm"
+                          onClick={() => welcomeFileRef.current?.click()}
+                          disabled={welcomeUploading}
+                          data-testid="button-welcome-upload"
+                        >
+                          {welcomeUploading ? (
+                            <>
+                              <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                              {resumeMatchStep === "matching" ? "Finding matches..." : "Processing..."}
+                            </>
+                          ) : (
+                            <>
+                              <Upload className="h-3.5 w-3.5 mr-1.5" />
+                              Upload Resume
+                            </>
+                          )}
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            setWelcomeSkipped(true);
+                            try { localStorage.setItem("ltc_welcome_skipped", "1"); } catch {}
+                          }}
+                          data-testid="button-welcome-skip"
+                        >
+                          Skip for now
+                        </Button>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        PDF or DOCX. Your resume is parsed securely and never shared.
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+            {isAuthenticated && !isPro && userResumes.length > 0 && !proNudgeDismissed && !resumeMatches && !searchResults && (
               <div
                 className="flex items-center gap-3 p-3 sm:p-4 rounded-lg border border-primary/15 bg-primary/[0.02]"
                 data-testid="banner-pro-nudge"
