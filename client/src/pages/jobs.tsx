@@ -611,14 +611,14 @@ export default function Jobs() {
           data-testid="input-resume-file"
         />
 
-        <div data-testid="card-smart-search">
-          <div className="relative rounded-md border-2 border-foreground/20 bg-muted/30 px-5 py-5 transition-colors focus-within:border-foreground/50">
-            <div className="flex items-start gap-3">
-              <Search className="h-5 w-5 text-foreground/40 mt-2 shrink-0" />
+        <div data-testid="card-smart-search" className="mt-2">
+          <div className="relative rounded-md border-2 border-foreground/20 bg-muted/30 px-6 py-6 sm:px-8 sm:py-7 transition-colors focus-within:border-foreground/50">
+            <div className="flex items-start gap-4">
+              <Search className="h-6 w-6 text-foreground/40 mt-2.5 shrink-0" />
               <Textarea
                 ref={textareaRef}
                 placeholder="What kind of role are you looking for? Or paste your resume..."
-                className="border-0 shadow-none text-lg min-h-[42px] resize-none overflow-hidden pr-24 focus-visible:ring-0 bg-transparent placeholder:text-muted-foreground/50"
+                className="border-0 shadow-none text-lg sm:text-xl min-h-[52px] resize-none overflow-hidden pr-28 focus-visible:ring-0 bg-transparent placeholder:text-muted-foreground/50"
                 value={smartQuery}
                 onChange={(e) => {
                   setSmartQuery(e.target.value);
@@ -636,7 +636,7 @@ export default function Jobs() {
                 data-testid="input-smart-search"
               />
             </div>
-            <div className="absolute right-5 top-5 flex items-center gap-1.5">
+            <div className="absolute right-6 sm:right-8 top-6 sm:top-7 flex items-center gap-1.5">
               <Button
                 variant="ghost"
                 size="icon"
@@ -664,7 +664,7 @@ export default function Jobs() {
           </div>
 
           {!smartQuery && !searchResults && guidedStep === "idle" && (
-            <div className="flex items-center gap-1.5 mt-2.5 flex-wrap">
+            <div className="flex items-center gap-2 mt-3 flex-wrap">
               {isPersonalized && (
                 <span className="text-[10px] text-muted-foreground/60 mr-0.5" data-testid="text-personalized-label">Try:</span>
               )}
@@ -682,7 +682,7 @@ export default function Jobs() {
             </div>
           )}
           {smartQuery.trim() && guidedStep === "idle" && !isSearching && !searchResults && (
-            <div className="flex items-center gap-2 mt-2.5 flex-wrap">
+            <div className="flex items-center gap-2 mt-3 flex-wrap">
               <Button
                 variant="ghost"
                 size="sm"
