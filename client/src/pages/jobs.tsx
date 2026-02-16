@@ -123,6 +123,9 @@ export default function Jobs() {
   const [resumeMatches, setResumeMatches] = useState<ResumeMatchResult[] | null>(null);
   const [resumeMatchStep, setResumeMatchStep] = useState<"idle" | "uploading" | "matching">("idle");
   const [profileSummary, setProfileSummary] = useState<string | null>(null);
+  const [proNudgeDismissed, setProNudgeDismissed] = useState(() => {
+    try { return localStorage.getItem("ltc_pro_nudge_dismissed") === "1"; } catch { return false; }
+  });
 
   const { data: usageLimits } = useQuery<{
     isPro: boolean;
@@ -1062,6 +1065,35 @@ export default function Jobs() {
           </div>
         ) : (
           <div className="grid gap-3">
+            {isAuthenticated && !isPro && !proNudgeDismissed && !resumeMatches && !searchResults && (
+              <div
+                className="flex items-center gap-3 p-3 sm:p-4 rounded-lg border border-primary/15 bg-primary/[0.02]"
+                data-testid="banner-pro-nudge"
+              >
+                <Sparkles className="h-4 w-4 text-primary shrink-0" />
+                <p className="text-sm text-muted-foreground flex-1">
+                  <span className="font-medium text-foreground">Get more from your search.</span>{" "}
+                  Pro members get unlimited resume matching, tailored recommendations, and market insights.
+                </p>
+                <Link href="/pricing" onClick={(e: any) => e.stopPropagation()}>
+                  <Button size="sm" variant="outline" className="shrink-0" data-testid="button-pro-nudge-upgrade">
+                    View Plans
+                  </Button>
+                </Link>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="shrink-0"
+                  onClick={() => {
+                    setProNudgeDismissed(true);
+                    try { localStorage.setItem("ltc_pro_nudge_dismissed", "1"); } catch {}
+                  }}
+                  data-testid="button-pro-nudge-dismiss"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            )}
             {resumeMatches && resumeMatches.length > 0 && (
               <div className="grid gap-3 mb-2" data-testid="section-resume-matches">
                 {resumeMatches.map((match, idx) => {
@@ -1170,7 +1202,7 @@ export default function Jobs() {
               </div>
             )}
 
-            {filteredJobs.map((job) => {
+            {filteredJobs.map((job, index) => {
               const postedAgo = job.postedDate ? (() => {
                 const days = Math.floor((Date.now() - new Date(job.postedDate).getTime()) / 86400000);
                 if (days === 0) return "Today";
@@ -1181,57 +1213,95 @@ export default function Jobs() {
               })() : null;
               const taxonomy = job.roleCategory ? JOB_TAXONOMY[job.roleCategory as keyof typeof JOB_TAXONOMY] : null;
               const matchData = resumeMatchMap?.get(job.id);
+              const showMatchNudge = index === 3 && !resumeMatches && !searchResults && currentPage === 1;
               return (
-                <div
-                  key={job.id}
-                  className="p-3 sm:p-4 rounded-lg border bg-card hover-elevate cursor-pointer"
-                  data-testid={`card-job-${job.id}`}
-                  onClick={() => setLocation(`/jobs/${job.id}`)}
-                >
-                  <div className="flex gap-3">
-                    <Avatar className="h-8 w-8 rounded-md shrink-0 mt-0.5">
-                      <AvatarImage src={job.companyLogo || undefined} alt={job.company} />
-                      <AvatarFallback className="rounded-md bg-primary/10 text-primary text-[10px] font-semibold">
-                        {job.company.substring(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-start justify-between gap-2 flex-wrap">
-                        <h3 className="font-medium text-foreground text-sm sm:text-base leading-snug" data-testid={`text-job-title-${job.id}`}>
-                          {cleanStructuredText(job.title)}
-                        </h3>
-                        <div className="flex items-center gap-2 shrink-0">
-                          {matchData && (
-                            <Badge
-                              variant="secondary"
-                              className={`text-[10px] ${matchData.matchScore >= 75 ? "text-emerald-600 dark:text-emerald-400" : matchData.matchScore >= 55 ? "text-amber-600 dark:text-amber-400" : ""}`}
-                              data-testid={`badge-match-${job.id}`}
-                            >
-                              {matchData.matchScore}% fit
+                <div key={job.id}>
+                  {showMatchNudge && (
+                    <div
+                      className="p-3 sm:p-4 rounded-lg border border-primary/20 bg-primary/[0.03] mb-2 flex items-center gap-3"
+                      data-testid="card-match-nudge"
+                    >
+                      <div className="shrink-0 w-8 h-8 rounded-md bg-primary/10 flex items-center justify-center">
+                        <FileText className="h-4 w-4 text-primary" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm text-foreground font-medium">
+                          See which roles fit your background
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Upload your resume to get personalized match scores for every listing.
+                        </p>
+                      </div>
+                      {isAuthenticated ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="shrink-0"
+                          onClick={(e) => { e.stopPropagation(); setLocation("/resumes"); }}
+                          data-testid="button-match-nudge-upload"
+                        >
+                          <Upload className="h-3.5 w-3.5 mr-1.5" />
+                          Upload
+                        </Button>
+                      ) : (
+                        <Link href="/auth?returnTo=/jobs" onClick={(e: any) => e.stopPropagation()}>
+                          <Button size="sm" variant="outline" className="shrink-0" data-testid="button-match-nudge-signup">
+                            Get Started
+                          </Button>
+                        </Link>
+                      )}
+                    </div>
+                  )}
+                  <div
+                    className="p-3 sm:p-4 rounded-lg border bg-card hover-elevate cursor-pointer"
+                    data-testid={`card-job-${job.id}`}
+                    onClick={() => setLocation(`/jobs/${job.id}`)}
+                  >
+                    <div className="flex gap-3">
+                      <Avatar className="h-8 w-8 rounded-md shrink-0 mt-0.5">
+                        <AvatarImage src={job.companyLogo || undefined} alt={job.company} />
+                        <AvatarFallback className="rounded-md bg-primary/10 text-primary text-[10px] font-semibold">
+                          {job.company.substring(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-start justify-between gap-2 flex-wrap">
+                          <h3 className="font-medium text-foreground text-sm sm:text-base leading-snug" data-testid={`text-job-title-${job.id}`}>
+                            {cleanStructuredText(job.title)}
+                          </h3>
+                          <div className="flex items-center gap-2 shrink-0">
+                            {matchData && (
+                              <Badge
+                                variant="secondary"
+                                className={`text-[10px] ${matchData.matchScore >= 75 ? "text-emerald-600 dark:text-emerald-400" : matchData.matchScore >= 55 ? "text-amber-600 dark:text-amber-400" : ""}`}
+                                data-testid={`badge-match-${job.id}`}
+                              >
+                                {matchData.matchScore}% fit
+                              </Badge>
+                            )}
+                            {postedAgo && (
+                              <span className="text-xs text-muted-foreground mt-0.5" data-testid={`text-posted-${job.id}`}>
+                                {postedAgo}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <p className="text-xs sm:text-sm text-muted-foreground mt-0.5" data-testid={`text-job-company-${job.id}`}>
+                          {cleanStructuredText(job.company)}
+                        </p>
+                        <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                          <JobLocation
+                            location={job.location}
+                            locationType={job.locationType}
+                            isRemote={job.isRemote}
+                            testIdPrefix={`browse-job-${job.id}`}
+                          />
+                          {taxonomy && (
+                            <Badge variant="secondary" className="text-[10px]" data-testid={`badge-category-${job.id}`}>
+                              {taxonomy.shortName}
                             </Badge>
                           )}
-                          {postedAgo && (
-                            <span className="text-xs text-muted-foreground mt-0.5" data-testid={`text-posted-${job.id}`}>
-                              {postedAgo}
-                            </span>
-                          )}
                         </div>
-                      </div>
-                      <p className="text-xs sm:text-sm text-muted-foreground mt-0.5" data-testid={`text-job-company-${job.id}`}>
-                        {cleanStructuredText(job.company)}
-                      </p>
-                      <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
-                        <JobLocation
-                          location={job.location}
-                          locationType={job.locationType}
-                          isRemote={job.isRemote}
-                          testIdPrefix={`browse-job-${job.id}`}
-                        />
-                        {taxonomy && (
-                          <Badge variant="secondary" className="text-[10px]" data-testid={`badge-category-${job.id}`}>
-                            {taxonomy.shortName}
-                          </Badge>
-                        )}
                       </div>
                     </div>
                   </div>

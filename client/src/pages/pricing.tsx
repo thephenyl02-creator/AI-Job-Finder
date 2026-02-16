@@ -112,9 +112,8 @@ export default function Pricing() {
   const [billingInterval, setBillingInterval] = useState<"month" | "year">("month");
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
-  const searchParams = new URLSearchParams(window.location.search);
-  const checkoutSuccess = searchParams.get("success") === "true";
-  const checkoutCanceled = searchParams.get("canceled") === "true";
+  const [checkoutSuccess] = useState(() => new URLSearchParams(window.location.search).get("success") === "true");
+  const [checkoutCanceled] = useState(() => new URLSearchParams(window.location.search).get("canceled") === "true");
 
   useEffect(() => {
     if (!checkoutSuccess || !isAuthenticated) return;
@@ -329,6 +328,7 @@ export default function Pricing() {
 
         <div className="flex items-center justify-center gap-1 mb-10 bg-muted rounded-md p-1 w-fit mx-auto" data-testid="billing-toggle">
           <button
+            type="button"
             onClick={() => setBillingInterval("month")}
             className={`text-sm font-medium px-4 py-2.5 rounded-md transition-colors min-h-[44px] ${
               billingInterval === "month"
@@ -340,6 +340,7 @@ export default function Pricing() {
             Monthly
           </button>
           <button
+            type="button"
             onClick={() => setBillingInterval("year")}
             className={`text-sm font-medium px-4 py-2.5 rounded-md transition-colors flex items-center gap-2 min-h-[44px] ${
               billingInterval === "year"

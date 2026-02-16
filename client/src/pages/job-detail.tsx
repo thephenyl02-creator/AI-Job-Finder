@@ -944,6 +944,111 @@ export default function JobDetail() {
           </CardContent>
         </Card>
 
+        {/* === RESUME MATCH TEASER === */}
+        {(() => {
+          const hasResumes = userResumes.length > 0;
+          const hasMatchData = !!(resumeFit && resumeFit.length > 0);
+
+          if (isPro && hasMatchData) return null;
+
+          if (!isAuthenticated) {
+            return (
+              <Card className="mb-6 border-primary/20" data-testid="card-match-teaser-anon">
+                <CardContent className="p-5 sm:p-6">
+                  <div className="flex items-start gap-4">
+                    <div className="shrink-0 w-10 h-10 rounded-md bg-primary/10 flex items-center justify-center">
+                      <FileText className="h-5 w-5 text-primary" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="text-sm font-semibold text-foreground mb-1">
+                        How well do you match this role?
+                      </h3>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        Upload your resume and instantly see which skills align with this position and where to focus your preparation.
+                      </p>
+                      <Link href={`/auth?returnTo=/jobs/${jobId}`}>
+                        <Button size="sm" data-testid="button-match-teaser-signup">
+                          Create Free Account
+                        </Button>
+                      </Link>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          }
+
+          if (!hasResumes) {
+            return (
+              <Card className="mb-6 border-primary/20" data-testid="card-match-teaser-no-resume">
+                <CardContent className="p-5 sm:p-6">
+                  <div className="flex items-start gap-4">
+                    <div className="shrink-0 w-10 h-10 rounded-md bg-primary/10 flex items-center justify-center">
+                      <FileText className="h-5 w-5 text-primary" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="text-sm font-semibold text-foreground mb-1">
+                        See your match score
+                      </h3>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        Upload your resume to see how your skills and experience align with this role.
+                      </p>
+                      <Button size="sm" onClick={() => setLocation("/resumes")} data-testid="button-match-teaser-upload">
+                        Upload Resume
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          }
+
+          if (!isPro && hasMatchData) {
+            const topFit = resumeFit![0];
+            return (
+              <Card className="mb-6 border-primary/20" data-testid="card-match-teaser-upgrade">
+                <CardContent className="p-5 sm:p-6">
+                  <div className="flex items-start gap-4">
+                    <div className="shrink-0 w-10 h-10 rounded-md bg-primary/10 flex items-center justify-center">
+                      <Lock className="h-5 w-5 text-primary" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="text-sm font-semibold text-foreground mb-1">
+                        Your resume match is ready
+                      </h3>
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs text-muted-foreground">{topFit.label}</span>
+                            <span className="text-sm font-semibold text-foreground/40 blur-[3px] select-none" aria-hidden="true">
+                              {topFit.score}%
+                            </span>
+                          </div>
+                          <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                            <div
+                              className="h-full rounded-full bg-primary/30"
+                              style={{ width: `${Math.min(topFit.score, 100)}%` }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      <p className="text-xs text-muted-foreground mb-3">
+                        Upgrade to see your full match score, skill gaps, and tailored recommendations.
+                      </p>
+                      <Button size="sm" onClick={() => setLocation("/pricing")} data-testid="button-match-teaser-upgrade">
+                        <Sparkles className="h-3.5 w-3.5 mr-1.5" />
+                        Unlock Full Match
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          }
+
+          return null;
+        })()}
+
         {similarJobs.length > 0 && (
           <div className="mb-8" data-testid="section-similar-jobs">
             <h2 className="text-lg font-serif font-medium text-foreground mb-4 tracking-tight">
