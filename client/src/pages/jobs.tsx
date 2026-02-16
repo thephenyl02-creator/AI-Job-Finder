@@ -612,13 +612,13 @@ export default function Jobs() {
         />
 
         <div data-testid="card-smart-search" className="mt-2">
-          <div className="relative rounded-md border-2 border-foreground/20 bg-muted/30 px-6 py-6 sm:px-8 sm:py-7 transition-colors focus-within:border-foreground/50">
-            <div className="flex items-start gap-4">
-              <Search className="h-6 w-6 text-foreground/40 mt-2.5 shrink-0" />
+          <div className="relative rounded-md border-2 border-foreground/20 bg-muted/30 px-4 py-4 sm:px-8 sm:py-7 transition-colors focus-within:border-foreground/50">
+            <div className="flex items-start gap-2.5 sm:gap-4">
+              <Search className="h-5 w-5 sm:h-6 sm:w-6 text-foreground/40 mt-2 sm:mt-2.5 shrink-0" />
               <Textarea
                 ref={textareaRef}
-                placeholder="What kind of role are you looking for? Or paste your resume..."
-                className="border-0 shadow-none text-lg sm:text-xl min-h-[52px] resize-none overflow-hidden pr-28 focus-visible:ring-0 bg-transparent placeholder:text-muted-foreground/50"
+                placeholder="What kind of role are you looking for?"
+                className="border-0 shadow-none text-base sm:text-xl min-h-[42px] sm:min-h-[52px] resize-none overflow-hidden pr-20 sm:pr-28 focus-visible:ring-0 bg-transparent placeholder:text-muted-foreground/50"
                 value={smartQuery}
                 onChange={(e) => {
                   setSmartQuery(e.target.value);
@@ -636,7 +636,7 @@ export default function Jobs() {
                 data-testid="input-smart-search"
               />
             </div>
-            <div className="absolute right-6 sm:right-8 top-6 sm:top-7 flex items-center gap-1.5">
+            <div className="absolute right-4 sm:right-8 top-4 sm:top-7 flex items-center gap-1">
               <Button
                 variant="ghost"
                 size="icon"
@@ -933,9 +933,9 @@ export default function Jobs() {
         )}
 
         <div className="space-y-2 mb-4" data-testid="filter-bar">
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2">
             <div className="flex items-center gap-2 flex-1 min-w-0">
-              <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+              <Search className="h-4 w-4 text-muted-foreground shrink-0 hidden sm:block" />
               <Input
                 placeholder="Filter by keyword..."
                 value={filterText}
@@ -963,9 +963,9 @@ export default function Jobs() {
               ))}
             </div>
           </div>
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0 sm:overflow-visible sm:flex-wrap scrollbar-none">
             <Select value={selectedCategory} onValueChange={(val) => { setSelectedCategory(val); setCurrentPage(1); track({ eventType: "filter_change", metadata: { filterType: "category", value: val } }); }}>
-              <SelectTrigger className="w-auto min-w-[130px] max-w-[200px]" data-testid="select-category">
+              <SelectTrigger className="w-auto min-w-[110px] sm:min-w-[130px] max-w-[200px] shrink-0" data-testid="select-category">
                 <SelectValue placeholder="Category" />
               </SelectTrigger>
               <SelectContent>
@@ -981,7 +981,7 @@ export default function Jobs() {
               </SelectContent>
             </Select>
             <Select value={selectedLevel} onValueChange={(val) => { setSelectedLevel(val); setCurrentPage(1); track({ eventType: "filter_change", metadata: { filterType: "level", value: val } }); }}>
-              <SelectTrigger className="w-auto min-w-[100px] max-w-[140px]" data-testid="select-level">
+              <SelectTrigger className="w-auto min-w-[90px] sm:min-w-[100px] max-w-[140px] shrink-0" data-testid="select-level">
                 <SelectValue placeholder="Level" />
               </SelectTrigger>
               <SelectContent>
@@ -992,9 +992,9 @@ export default function Jobs() {
                 ))}
               </SelectContent>
             </Select>
-            <div className="sm:hidden">
+            <div className="sm:hidden shrink-0">
               <Select value={selectedLocation} onValueChange={(val) => { setSelectedLocation(val); setCurrentPage(1); track({ eventType: "filter_change", metadata: { filterType: "location", value: val } }); }}>
-                <SelectTrigger className="w-auto min-w-[100px]" data-testid="select-location-mobile">
+                <SelectTrigger className="w-auto min-w-[90px]" data-testid="select-location-mobile">
                   <MapPin className="h-3 w-3 mr-1 shrink-0" />
                   <SelectValue />
                 </SelectTrigger>
@@ -1007,7 +1007,7 @@ export default function Jobs() {
               </Select>
             </div>
             <Select value={selectedRegion} onValueChange={(val) => { setSelectedRegion(val); setCurrentPage(1); track({ eventType: "filter_change", metadata: { filterType: "region", value: val } }); }}>
-              <SelectTrigger className="w-auto min-w-[100px] max-w-[170px]" data-testid="select-region">
+              <SelectTrigger className="w-auto min-w-[90px] sm:min-w-[100px] max-w-[170px] shrink-0" data-testid="select-region">
                 <Globe className="h-3 w-3 mr-1 shrink-0" />
                 <SelectValue placeholder="Region" />
               </SelectTrigger>
@@ -1024,7 +1024,7 @@ export default function Jobs() {
               </SelectContent>
             </Select>
             <Select value={sortBy} onValueChange={(val) => { setSortBy(val); setCurrentPage(1); }}>
-              <SelectTrigger className="w-auto min-w-[110px] max-w-[150px]" data-testid="select-sort">
+              <SelectTrigger className="w-auto min-w-[100px] sm:min-w-[110px] max-w-[150px] shrink-0" data-testid="select-sort">
                 <ArrowUpDown className="h-3 w-3 mr-1 shrink-0" />
                 <SelectValue />
               </SelectTrigger>
@@ -1039,7 +1039,7 @@ export default function Jobs() {
                 variant="ghost"
                 size="sm"
                 onClick={() => { setSelectedCategory("all"); setSelectedLevel("all"); setSelectedLocation("all"); setSelectedRegion("all"); setFilterText(""); }}
-                className="text-xs text-muted-foreground gap-1"
+                className="text-xs text-muted-foreground gap-1 shrink-0"
                 data-testid="button-clear-all-filters"
               >
                 <X className="h-3 w-3" />

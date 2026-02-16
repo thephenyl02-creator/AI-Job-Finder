@@ -834,12 +834,13 @@ export default function JobDetail() {
             </Button>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 mt-4">
+          <div className="flex items-center gap-2 mt-4 flex-wrap">
             {job?.applyUrl ? (
               <a href={job.applyUrl} target="_blank" rel="noopener noreferrer" onClick={handleApplyClick}>
                 <Button className="gap-2" data-testid="button-apply-top">
                   <ExternalLink className="h-4 w-4" />
-                  Apply on Company Website
+                  <span className="hidden sm:inline">Apply on Company Website</span>
+                  <span className="sm:hidden">Apply Now</span>
                 </Button>
               </a>
             ) : (
@@ -857,17 +858,17 @@ export default function JobDetail() {
                 className={`gap-1.5 ${jobIsSaved ? "text-primary" : ""}`}
               >
                 <Bookmark className={`h-4 w-4 ${jobIsSaved ? "fill-current" : ""}`} />
-                {jobIsSaved ? "Saved" : "Save Job"}
+                {jobIsSaved ? "Saved" : "Save"}
               </Button>
             ) : (
               <Link href={authReturnUrl}>
                 <Button
                   variant="outline"
-                  className="gap-1.5 w-full sm:w-auto text-muted-foreground"
+                  className="gap-1.5 text-muted-foreground"
                   data-testid="button-save-signin"
                 >
                   <Bookmark className="h-4 w-4" />
-                  Save Job
+                  Save
                 </Button>
               </Link>
             )}

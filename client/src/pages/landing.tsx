@@ -66,20 +66,22 @@ export default function Landing() {
               </span>
             </div>
           </Link>
-          <div className="flex items-center gap-1 sm:gap-3">
+          <div className="flex items-center gap-0.5 sm:gap-3">
             <Link href="/events">
-              <Button variant="ghost" size="sm" className="text-muted-foreground min-h-[44px]" data-testid="link-landing-events">
+              <Button variant="ghost" size="sm" className="text-muted-foreground min-h-[44px] px-2 sm:px-3" data-testid="link-landing-events">
                 Events
               </Button>
             </Link>
             <Link href="/pricing">
-              <Button variant="ghost" size="sm" className="text-muted-foreground min-h-[44px]" data-testid="link-landing-pricing">
+              <Button variant="ghost" size="sm" className="text-muted-foreground min-h-[44px] px-2 sm:px-3" data-testid="link-landing-pricing">
                 Pricing
               </Button>
             </Link>
-            <ThemeToggle />
+            <div className="hidden sm:block">
+              <ThemeToggle />
+            </div>
             <Link href="/auth">
-              <Button className="min-h-[44px]" data-testid="button-header-login">Sign In</Button>
+              <Button size="sm" className="min-h-[44px]" data-testid="button-header-login">Sign In</Button>
             </Link>
           </div>
         </nav>
