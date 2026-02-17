@@ -39,6 +39,8 @@ Legal Tech Careers is a freemium SaaS job search platform designed for legal pro
 
 ### Payments & Subscription
 - **Provider**: Stripe
+- **Configuration**: Uses STRIPE_SECRET_KEY and STRIPE_PUBLISHABLE_KEY env vars (preferred), with Replit connector API as fallback. stripeClient.ts handles credential resolution.
+- **Product**: "Legal Tech Careers Pro" (prod_TyWsTNJehZTvN8) with monthly ($5, price_1T0Zoa2OnsezISMFIbUjUGoB) and yearly ($30, price_1T0Zob2OnsezISMFgEV5XjCo) prices.
 - **Model**: Freemium SaaS with "Free" and "Pro" tiers, offering enhanced AI features, multi-resume management, job alerts, and market insights for Pro users.
 - **Management**: Stripe Checkout, Billing Portal, and webhooks.
 
