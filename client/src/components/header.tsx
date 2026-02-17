@@ -14,12 +14,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   LogOut, BarChart3, Bell, FileText,
-  Bookmark, LayoutDashboard, Menu, Calendar, Settings, PenLine, Activity, Search, CreditCard,
+  Bookmark, LayoutDashboard, Menu, Calendar, Settings, Activity, Search, CreditCard,
 } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { Link, useLocation } from "wouter";
 import { NotificationBell } from "@/components/notification-bell";
-import { Badge } from "@/components/ui/badge";
 import {
   Sheet,
   SheetContent,
@@ -69,7 +68,8 @@ export function Header() {
 
   const isActive = (path: string) => location === path;
   const isJobsActive = isActive("/jobs") || isActive("/") || location.startsWith("/jobs/");
-  const isEventsActive = isActive("/events") || location.startsWith("/events/");
+  const isDashboardActive = isActive("/dashboard");
+  const isResumesActive = isActive("/resumes") || isActive("/resume-builder") || location.startsWith("/resume-review/");
 
   return (
     <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border/40 header-elev">
@@ -82,10 +82,18 @@ export function Header() {
             </span>
           </Link>
 
-          <div className="hidden md:flex items-center gap-0.5">
-            <NavLink href="/jobs" icon={Search} label="Jobs" isActive={isJobsActive} testId="link-jobs" />
-            <NavLink href="/events" icon={Calendar} label="Events" isActive={isEventsActive} testId="link-events" />
-          </div>
+          {isAuthenticated ? (
+            <div className="hidden md:flex items-center gap-0.5">
+              <NavLink href="/jobs" icon={Search} label="Jobs" isActive={isJobsActive} testId="link-jobs" />
+              <NavLink href="/dashboard" icon={LayoutDashboard} label="Dashboard" isActive={isDashboardActive} testId="link-dashboard" />
+              <NavLink href="/resumes" icon={FileText} label="Resumes" isActive={isResumesActive} testId="link-resumes" />
+            </div>
+          ) : (
+            <div className="hidden md:flex items-center gap-0.5">
+              <NavLink href="/jobs" icon={Search} label="Jobs" isActive={isJobsActive} testId="link-jobs-public" />
+              <NavLink href="/events" icon={Calendar} label="Events" isActive={isActive("/events") || location.startsWith("/events/")} testId="link-events-public" />
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-1.5">
@@ -125,12 +133,13 @@ export function Header() {
 
                     <div className="flex-1 overflow-y-auto py-2 px-3 space-y-0.5">
                       <MobileNavItem href="/jobs" icon={Search} label="Jobs" active={isJobsActive} testId="link-jobs-mobile" />
-                      <MobileNavItem href="/events" icon={Calendar} label="Events" active={isEventsActive} testId="link-events-mobile" />
+                      <MobileNavItem href="/dashboard" icon={LayoutDashboard} label="Dashboard" active={isDashboardActive} testId="link-dashboard-mobile" />
+                      <MobileNavItem href="/resumes" icon={FileText} label="Resumes" active={isResumesActive} testId="link-resumes-mobile" />
+                      <div className="h-px bg-border/40 my-2" />
                       <MobileNavItem href="/saved-jobs" icon={Bookmark} label="Saved Jobs" active={isActive("/saved-jobs")} testId="link-saved-jobs-mobile" />
-                      <MobileNavItem href="/resumes" icon={FileText} label="Resumes" active={isActive("/resumes") || isActive("/resume-builder")} testId="link-resumes-mobile" />
                       <MobileNavItem href="/alerts" icon={Bell} label="Alerts" active={isActive("/alerts")} testId="link-alerts-mobile" />
+                      <MobileNavItem href="/events" icon={Calendar} label="Events" active={isActive("/events")} testId="link-events-mobile" />
                       <MobileNavItem href="/insights" icon={BarChart3} label="Market Insights" active={isActive("/insights")} testId="link-insights-mobile" />
-                      <MobileNavItem href="/dashboard" icon={LayoutDashboard} label="Dashboard" active={isActive("/dashboard")} testId="link-dashboard-mobile" />
                       <MobileNavItem href="/pricing" icon={CreditCard} label="Pricing" active={isActive("/pricing")} testId="link-pricing-mobile" />
                       {isAdmin && (
                         <MobileNavItem href="/admin" icon={Settings} label="Admin" active={isActive("/admin")} testId="link-admin-mobile" />
@@ -186,15 +195,15 @@ export function Header() {
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <Link href="/resumes" className="cursor-pointer" data-testid="link-resumes-dropdown">
-                        <FileText className="mr-2 h-4 w-4" />
-                        <span>Resumes</span>
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
                       <Link href="/alerts" className="cursor-pointer" data-testid="link-alerts-dropdown">
                         <Bell className="mr-2 h-4 w-4" />
                         <span>Alerts</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/events" className="cursor-pointer" data-testid="link-events">
+                        <Calendar className="mr-2 h-4 w-4" />
+                        <span>Events</span>
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
@@ -206,12 +215,6 @@ export function Header() {
                   </DropdownMenuGroup>
                   <DropdownMenuSeparator />
                   <DropdownMenuGroup>
-                    <DropdownMenuItem asChild>
-                      <Link href="/dashboard" className="cursor-pointer" data-testid="link-dashboard">
-                        <LayoutDashboard className="mr-2 h-4 w-4" />
-                        <span>Dashboard</span>
-                      </Link>
-                    </DropdownMenuItem>
                     <DropdownMenuItem asChild>
                       <Link href="/pricing" className="cursor-pointer" data-testid="link-pricing">
                         <CreditCard className="mr-2 h-4 w-4" />
@@ -269,10 +272,6 @@ export function Header() {
             </>
           ) : (
             <>
-              <div className="hidden sm:flex items-center gap-0.5">
-                <NavLink href="/jobs" icon={Search} label="Jobs" isActive={isJobsActive} testId="link-jobs-public" />
-                <NavLink href="/events" icon={Calendar} label="Events" isActive={isEventsActive} testId="link-events-public" />
-              </div>
               <ThemeToggle />
               <Link href="/auth">
                 <Button data-testid="button-login">Sign In</Button>

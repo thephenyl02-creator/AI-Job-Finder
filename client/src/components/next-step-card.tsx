@@ -17,7 +17,6 @@ interface NextStepCardProps {
   hasMatch: boolean;
   matchScore: number | null;
   onUploadResume: () => void;
-  onOpenStrategy: () => void;
   onOpenRewrite: () => void;
   onSignIn: () => void;
   roleCategory?: string | null;
@@ -30,7 +29,6 @@ export function NextStepCard({
   hasMatch,
   matchScore,
   onUploadResume,
-  onOpenStrategy,
   onOpenRewrite,
   onSignIn,
   roleCategory,

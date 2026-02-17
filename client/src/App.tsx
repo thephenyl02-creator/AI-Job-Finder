@@ -36,6 +36,7 @@ import Dashboard from "@/pages/dashboard";
 import Events from "@/pages/events";
 import EventDetail from "@/pages/event-detail";
 import { AssistantWidget } from "@/components/assistant-widget";
+import { OnboardingDialog } from "@/components/onboarding-dialog";
 
 function AdminRoute({ component: Component }: { component: React.ComponentType }) {
   const { isAuthenticated, isAdmin, isLoading } = useAuth();
@@ -106,6 +107,7 @@ function App() {
       <ThemeProvider defaultTheme="light" storageKey="legal-ai-careers-theme">
         <TooltipProvider>
           <AppRouter />
+          <OnboardingDialog />
           <AssistantWidget />
           <ScrollToTop />
           <Toaster />

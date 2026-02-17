@@ -18,7 +18,6 @@ import { decodeHtmlEntities, fixMissingSentenceSpaces, cleanStructuredText, pars
 import { formatSalary } from "@/lib/format-salary";
 import { JobLocation } from "@/components/job-location";
 import { StructuredDescriptionView } from "@/components/structured-description-view";
-import { ResumeStrategyDialog } from "@/components/resume-strategy-dialog";
 import { NextStepCard } from "@/components/next-step-card";
 import { Link } from "wouter";
 import {
@@ -336,7 +335,6 @@ export default function JobDetail() {
   const [inlineMatchResult, setInlineMatchResult] = useState<{ score: number; highlights: string[]; gapSummary: string } | null>(null);
   const [showStickyBar, setShowStickyBar] = useState(false);
   const [showApplyNudge, setShowApplyNudge] = useState(false);
-  const [showStrategyDialog, setShowStrategyDialog] = useState(false);
   const [showReportDialog, setShowReportDialog] = useState(false);
   const [reportType, setReportType] = useState<string>("broken_link");
   const [reportDetails, setReportDetails] = useState("");
@@ -992,7 +990,6 @@ export default function JobDetail() {
                     hasMatch={hasMatch}
                     matchScore={primaryScore}
                     onUploadResume={() => setLocation("/resumes")}
-                    onOpenStrategy={() => setShowStrategyDialog(true)}
                     onOpenRewrite={() => setLocation(`/resume-review/${job?.id}`)}
                     onSignIn={() => setLocation(authReturnUrl)}
                     roleCategory={job?.roleCategory}
@@ -1106,12 +1103,12 @@ export default function JobDetail() {
                             {inlineMatchResult.gapSummary && (
                               <p className="text-xs text-muted-foreground mb-3">{inlineMatchResult.gapSummary}</p>
                             )}
-                            {!isPro && (
-                              <Button size="sm" onClick={() => setLocation("/pricing")} data-testid="button-inline-match-upgrade">
-                                <Sparkles className="h-3.5 w-3.5 mr-1.5" />
-                                Get full analysis
+                            <Link href={`/resume-review/${job?.id}`}>
+                              <Button size="sm" data-testid="button-inline-match-improve">
+                                <FileText className="h-3.5 w-3.5 mr-1.5" />
+                                Improve your resume for this role
                               </Button>
-                            )}
+                            </Link>
                           </>
                         ) : (
                           <>
@@ -1354,16 +1351,6 @@ export default function JobDetail() {
       </div>
 
       <Footer />
-
-      {job && (
-        <ResumeStrategyDialog
-          open={showStrategyDialog}
-          onOpenChange={setShowStrategyDialog}
-          jobId={job.id}
-          jobTitle={job.title}
-          company={job.company}
-        />
-      )}
 
       <Dialog open={showReportDialog} onOpenChange={setShowReportDialog}>
         <DialogContent>

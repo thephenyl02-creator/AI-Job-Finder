@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LogoMark } from "@/components/logo";
-import { ArrowRight, Building2, Search, FileText, Target, Sparkles } from "lucide-react";
+import { ArrowRight, Building2, Search, FileText, Target, ChevronRight, Briefcase, MapPin } from "lucide-react";
 import { JobLocation } from "@/components/job-location";
 import { Footer } from "@/components/footer";
 
@@ -29,18 +29,6 @@ interface FeaturedJob {
   roleCategory: string | null;
   seniorityLevel: string | null;
 }
-
-const careerPaths: { label: string; category: string }[] = [
-  { label: "Legal Operations", category: "Legal Operations" },
-  { label: "Compliance & Privacy", category: "Compliance & Privacy" },
-  { label: "Legal Product", category: "Legal Product Management" },
-  { label: "In-House Counsel", category: "In-House Counsel" },
-  { label: "Contract Management", category: "Contract Management" },
-  { label: "Legal Engineering", category: "Legal Engineering" },
-  { label: "Legal Consulting", category: "Legal Consulting & Advisory" },
-  { label: "Legal Sales", category: "Legal Sales & Client Solutions" },
-  { label: "Legal AI & Analytics", category: "Legal AI & Analytics" },
-];
 
 export default function Landing() {
   usePageTitle();
@@ -67,13 +55,13 @@ export default function Landing() {
             </div>
           </Link>
           <div className="flex items-center gap-0.5 sm:gap-3">
-            <Link href="/events">
-              <Button variant="ghost" size="sm" className="text-muted-foreground min-h-[44px] px-2 sm:px-3" data-testid="link-landing-events">
-                Events
+            <Link href="/jobs">
+              <Button variant="ghost" size="sm" className="text-muted-foreground min-h-[44px] px-2 sm:px-3" data-testid="link-landing-browse">
+                Browse Jobs
               </Button>
             </Link>
             <Link href="/pricing">
-              <Button variant="ghost" size="sm" className="text-muted-foreground min-h-[44px] px-2 sm:px-3" data-testid="link-landing-pricing">
+              <Button variant="ghost" size="sm" className="text-muted-foreground min-h-[44px] px-2 sm:px-3 hidden sm:inline-flex" data-testid="link-landing-pricing">
                 Pricing
               </Button>
             </Link>
@@ -89,140 +77,84 @@ export default function Landing() {
 
       <main className="pt-16 flex-1">
         <section className="relative">
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-10 sm:pt-12 pb-10 sm:pb-12">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-start">
-              <div>
-                <p className="text-xs font-semibold text-muted-foreground tracking-[0.22em] uppercase mb-4" data-testid="text-hero-label">
-                  Your next career move starts here
-                </p>
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-12 sm:pt-16 pb-12 sm:pb-16">
+            <div className="max-w-2xl">
+              <p className="text-xs font-semibold text-muted-foreground tracking-[0.22em] uppercase mb-4" data-testid="text-hero-label">
+                For lawyers and paralegals
+              </p>
 
-                <h1 className="text-4xl sm:text-5xl lg:text-6xl font-semibold text-foreground mb-5 leading-[1.05] tracking-tight max-w-[560px]" data-testid="text-hero-title">
-                  Legal tech careers, made clear.
-                </h1>
+              <h1 className="text-4xl sm:text-5xl lg:text-[3.5rem] font-semibold text-foreground mb-5 leading-[1.08] tracking-tight" data-testid="text-hero-title">
+                Your legal expertise is your advantage in tech.
+              </h1>
 
-                <p className="text-base sm:text-lg text-muted-foreground mb-7 leading-relaxed max-w-[560px]" data-testid="text-hero-subtitle">
-                  Curated roles for legal professionals at every level. See where you fit, check your match, and apply with confidence.
-                </p>
+              <p className="text-base sm:text-lg text-muted-foreground mb-8 leading-relaxed max-w-xl" data-testid="text-hero-subtitle">
+                {stats?.totalJobs ? `${stats.totalJobs}+ curated roles` : "Hundreds of curated roles"} at {stats?.totalCompanies ? `${stats.totalCompanies}+` : ""} legal tech companies where your background isn't just relevant — it's the requirement.
+              </p>
 
-                <div className="flex items-start gap-3 mb-3">
-                  <Button size="lg" asChild className="text-base px-8" data-testid="button-hero-explore">
-                    <a href="/jobs">
-                      Start exploring
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </a>
-                  </Button>
-                </div>
-                <p className="text-xs text-muted-foreground" data-testid="text-hero-trust">
-                  Free to browse &bull; No account needed
-                </p>
+              <div className="flex flex-col sm:flex-row items-start gap-3 mb-3">
+                <Button size="lg" asChild className="text-base px-8" data-testid="button-hero-browse">
+                  <a href="/jobs">
+                    Browse roles
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </a>
+                </Button>
+                <Button size="lg" variant="outline" asChild className="text-base" data-testid="button-hero-signup">
+                  <a href="/auth?returnTo=/jobs">
+                    Create free account
+                  </a>
+                </Button>
               </div>
-
-              <div className="hidden lg:block" data-testid="hero-job-preview">
-                <div className="rounded-2xl border bg-card p-4 shadow-sm">
-                  <div className="flex items-center justify-between gap-2 mb-3">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Live roles</p>
-                    {stats?.totalJobs ? (
-                      <Badge variant="secondary" className="text-xs" data-testid="badge-job-count">
-                        {stats.totalJobs}+ open
-                      </Badge>
-                    ) : null}
-                  </div>
-                  <div className="space-y-2.5">
-                    {featuredJobs?.slice(0, 3).map((job, i) => (
-                      <Card key={job.id} className="border-border/60 bg-background" data-testid={`hero-job-card-${i}`}>
-                        <CardContent className="p-3.5">
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0 flex-1">
-                              <p className="text-sm font-semibold text-foreground truncate">{cleanStructuredText(job.title)}</p>
-                              <div className="flex items-center gap-3 mt-1.5 flex-wrap">
-                                <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                                  <Building2 className="h-3 w-3 shrink-0" />
-                                  <span className="truncate">{cleanStructuredText(job.company)}</span>
-                                </span>
-                                <JobLocation location={job.location} locationType={job.locationType} isRemote={job.isRemote} showTypeBadge={false} size="sm" />
-                              </div>
-                            </div>
-                            {job.roleCategory && (
-                              <Badge variant="outline" className="text-[10px] shrink-0 whitespace-nowrap">
-                                {cleanStructuredText(job.roleCategory)}
-                              </Badge>
-                            )}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                    {(!featuredJobs || featuredJobs.length === 0) && (
-                      <div className="space-y-2.5">
-                        {[...Array(3)].map((_, i) => (
-                          <div key={i} className="h-16 rounded-md bg-muted/40 animate-pulse" />
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="lg:hidden mt-4" data-testid="hero-job-preview-mobile">
-                <div className="flex items-center justify-between gap-2 mb-3">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Live roles</p>
-                  {stats?.totalJobs ? (
-                    <Badge variant="secondary" className="text-xs" data-testid="badge-job-count-mobile">
-                      {stats.totalJobs}+ open
-                    </Badge>
-                  ) : null}
-                </div>
-                <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 snap-x snap-mandatory scrollbar-none">
-                  {featuredJobs?.slice(0, 4).map((job, i) => (
-                    <div key={job.id} className="snap-start shrink-0 w-[260px]">
-                      <Card className="bg-background/80 backdrop-blur-sm border-border/50 h-full" data-testid={`hero-job-card-mobile-${i}`}>
-                        <CardContent className="p-3">
-                          <p className="text-sm font-semibold text-foreground truncate">{cleanStructuredText(job.title)}</p>
-                          <div className="flex items-center gap-2 mt-1.5">
-                            <span className="flex items-center gap-1 text-xs text-muted-foreground truncate">
-                              <Building2 className="h-3 w-3 shrink-0" />
-                              {cleanStructuredText(job.company)}
-                            </span>
-                          </div>
-                          <JobLocation location={job.location} locationType={job.locationType} isRemote={job.isRemote} showTypeBadge={false} size="sm" className="mt-1 text-xs text-muted-foreground" />
-                        </CardContent>
-                      </Card>
-                    </div>
-                  ))}
-                  {(!featuredJobs || featuredJobs.length === 0) && (
-                    <div className="flex gap-3">
-                      {[...Array(3)].map((_, i) => (
-                        <div key={i} className="shrink-0 w-[260px] h-[76px] rounded-md bg-muted/40 animate-pulse" />
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
+              <p className="text-xs text-muted-foreground" data-testid="text-hero-trust">
+                Free to browse. Upload your resume to see your match.
+              </p>
             </div>
           </div>
         </section>
 
-        <section id="career-paths" className="border-t border-border/40">
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-20 sm:py-24">
-            <div className="text-center mb-8">
-              <h2 className="text-2xl sm:text-3xl font-serif font-medium text-foreground tracking-tight" data-testid="text-career-paths-title">
-                Browse by career path
+        <section className="border-t border-border/40 bg-muted/20">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
+            <div className="flex items-center justify-between gap-2 mb-5">
+              <h2 className="text-sm font-semibold text-foreground uppercase tracking-wide" data-testid="text-live-roles-heading">
+                Open now
               </h2>
-              <p className="text-sm text-muted-foreground mt-2 max-w-md mx-auto">
-                Not sure what role to search for? Pick a path that matches your interests.
-              </p>
+              <Link href="/jobs">
+                <Button variant="ghost" size="sm" className="text-xs text-muted-foreground gap-1" data-testid="link-view-all-jobs">
+                  View all
+                  <ChevronRight className="h-3 w-3" />
+                </Button>
+              </Link>
             </div>
-            <div className="flex flex-wrap items-center justify-center gap-2.5" data-testid="career-paths-chips">
-              {careerPaths.map((path) => (
-                <Link key={path.category} href={`/jobs?category=${encodeURIComponent(path.category)}`}>
-                  <Badge
-                    variant="outline"
-                    className="text-sm px-4 py-1.5 cursor-pointer"
-                    data-testid={`chip-career-path-${path.label.toLowerCase().replace(/[\s\/&]+/g, "-")}`}
-                  >
-                    {path.label}
-                  </Badge>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" data-testid="featured-jobs-grid">
+              {featuredJobs?.slice(0, 6).map((job) => (
+                <Link key={job.id} href={`/jobs/${job.id}`}>
+                  <Card className="h-full hover-elevate cursor-pointer" data-testid={`featured-job-card-${job.id}`}>
+                    <CardContent className="p-4">
+                      <p className="text-sm font-semibold text-foreground truncate mb-1.5" data-testid={`text-job-title-${job.id}`}>
+                        {cleanStructuredText(job.title)}
+                      </p>
+                      <div className="flex items-center gap-2 mb-2 flex-wrap">
+                        <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <Building2 className="h-3 w-3 shrink-0" />
+                          <span className="truncate">{cleanStructuredText(job.company)}</span>
+                        </span>
+                        <JobLocation location={job.location} locationType={job.locationType} isRemote={job.isRemote} showTypeBadge={false} size="sm" />
+                      </div>
+                      {job.roleCategory && (
+                        <Badge variant="outline" className="text-[10px]">
+                          {cleanStructuredText(job.roleCategory)}
+                        </Badge>
+                      )}
+                    </CardContent>
+                  </Card>
                 </Link>
               ))}
+              {(!featuredJobs || featuredJobs.length === 0) && (
+                <>
+                  {[...Array(6)].map((_, i) => (
+                    <div key={i} className="h-24 rounded-md bg-muted/40 animate-pulse" />
+                  ))}
+                </>
+              )}
             </div>
           </div>
         </section>
@@ -231,37 +163,48 @@ export default function Landing() {
           <div className="max-w-5xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
             <div className="text-center mb-10">
               <h2 className="text-2xl sm:text-3xl font-serif font-medium text-foreground tracking-tight" data-testid="text-how-it-works-title">
-                How it works
+                Three steps to your next role
               </h2>
+              <p className="text-sm text-muted-foreground mt-2 max-w-md mx-auto">
+                No noise, no guesswork — just a clear path from browsing to applying.
+              </p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 max-w-3xl mx-auto" data-testid="how-it-works-steps">
               <div className="text-center space-y-3">
                 <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mx-auto">
                   <Search className="h-5 w-5 text-foreground" />
                 </div>
-                <h3 className="text-sm font-semibold text-foreground">Browse & Search</h3>
+                <h3 className="text-sm font-semibold text-foreground">Browse curated roles</h3>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  Curated roles from 200+ legal tech companies, organized by career path. No noise, no irrelevant listings.
+                  Every listing is vetted for legal professionals. No dev-only jobs, no irrelevant noise.
                 </p>
               </div>
               <div className="text-center space-y-3">
                 <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mx-auto">
                   <Target className="h-5 w-5 text-foreground" />
                 </div>
-                <h3 className="text-sm font-semibold text-foreground">Check Your Fit</h3>
+                <h3 className="text-sm font-semibold text-foreground">See your fit</h3>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  Upload your resume and see how you match. Get a clear fit score, gap analysis, and suggestions for every role.
+                  Upload your resume and instantly see how you match against any role. Free for everyone.
                 </p>
               </div>
               <div className="text-center space-y-3">
                 <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mx-auto">
                   <FileText className="h-5 w-5 text-foreground" />
                 </div>
-                <h3 className="text-sm font-semibold text-foreground">Apply with Confidence</h3>
+                <h3 className="text-sm font-semibold text-foreground">Improve and apply</h3>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  Tailor your resume, compare offers, and apply knowing exactly where you stand. No guesswork.
+                  Get line-by-line resume suggestions. Accept, reject, and apply with a stronger resume.
                 </p>
               </div>
+            </div>
+            <div className="text-center mt-8">
+              <Button asChild data-testid="button-steps-cta">
+                <a href="/jobs">
+                  Start browsing
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </a>
+              </Button>
             </div>
           </div>
         </section>
@@ -294,73 +237,27 @@ export default function Landing() {
         )}
 
         <section className="border-t border-border/40">
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
-            <div className="max-w-3xl mx-auto">
-              <div className="text-center mb-8">
-                <h2 className="text-2xl sm:text-3xl font-serif font-medium text-foreground tracking-tight" data-testid="text-pro-preview-title">
-                  Go further with Pro
-                </h2>
-                <p className="text-sm text-muted-foreground mt-2 max-w-md mx-auto">
-                  Everything you need to move from browsing to applying, starting at $2.50/mo.
-                </p>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="flex items-start gap-3 p-4 rounded-lg bg-muted/30">
-                  <Target className="h-4 w-4 text-foreground shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium text-foreground">Resume Match Scores</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">See exactly how your experience lines up with each role, with specific gap analysis.</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3 p-4 rounded-lg bg-muted/30">
-                  <Sparkles className="h-4 w-4 text-foreground shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium text-foreground">Resume Tailoring</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">Rewrite your bullet points to match the language and keywords each employer uses.</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3 p-4 rounded-lg bg-muted/30">
-                  <Search className="h-4 w-4 text-foreground shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium text-foreground">Smart Search</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">Describe what you're looking for in plain English and we'll find your best-fit roles.</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3 p-4 rounded-lg bg-muted/30">
-                  <FileText className="h-4 w-4 text-foreground shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium text-foreground">Job Alerts</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">Get notified when roles matching your profile are posted. Never miss the right opportunity.</p>
-                  </div>
-                </div>
-              </div>
-              <div className="text-center mt-6">
-                <Button variant="outline" asChild data-testid="button-landing-pricing">
-                  <Link href="/pricing">
-                    See pricing
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Link>
-                </Button>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="border-t border-border/40">
           <div className="max-w-5xl mx-auto px-4 sm:px-6 py-20 sm:py-28">
             <div className="max-w-2xl mx-auto text-center">
               <h2 className="text-3xl sm:text-4xl font-serif font-medium text-foreground mb-4 tracking-tight" data-testid="text-final-cta-title">
-                Ready to find your next role?
+                Your background is the qualification.
               </h2>
               <p className="text-base text-muted-foreground mb-8 max-w-lg mx-auto">
-                Browse roles for free. Go Pro for resume matching, fit checks, and job alerts the moment a role fits your profile.
+                Legal tech companies need people who understand both law and technology. That's you. See where you fit.
               </p>
-              <Button size="lg" asChild className="text-base px-10" data-testid="button-cta-explore">
-                <a href="/jobs">
-                  Start exploring
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </a>
-              </Button>
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                <Button size="lg" asChild className="text-base px-10" data-testid="button-cta-browse">
+                  <a href="/jobs">
+                    Browse roles
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </a>
+                </Button>
+                <Button size="lg" variant="outline" asChild className="text-base" data-testid="button-cta-signup">
+                  <a href="/auth?returnTo=/jobs">
+                    Create free account
+                  </a>
+                </Button>
+              </div>
             </div>
           </div>
         </section>
