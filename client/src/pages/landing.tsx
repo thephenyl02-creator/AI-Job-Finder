@@ -253,25 +253,25 @@ export default function Landing() {
         </section>
 
         {stats && (
-          <section className="bg-primary text-primary-foreground">
-            <div className="max-w-5xl mx-auto px-4 sm:px-6 py-10 sm:py-14">
-              <div className="flex items-center justify-center gap-12 sm:gap-20 flex-wrap" data-testid="stats-bar">
+          <section className="border-t border-border/30">
+            <div className="max-w-5xl mx-auto px-4 sm:px-6 py-14 sm:py-20">
+              <div className="flex items-center justify-center gap-14 sm:gap-24 flex-wrap" data-testid="stats-bar">
                 {stats.totalJobs > 0 && (
                   <div className="text-center">
-                    <p className="text-3xl sm:text-4xl font-semibold" data-testid="stat-jobs">{stats.totalJobs}+</p>
-                    <p className="text-xs text-primary-foreground/70 mt-1">Curated roles</p>
+                    <p className="text-3xl sm:text-4xl font-semibold text-foreground" data-testid="stat-jobs">{stats.totalJobs}+</p>
+                    <p className="text-xs text-muted-foreground mt-1">Curated roles</p>
                   </div>
                 )}
                 {stats.totalCompanies > 0 && (
                   <div className="text-center">
-                    <p className="text-3xl sm:text-4xl font-semibold" data-testid="stat-companies">{stats.totalCompanies}+</p>
-                    <p className="text-xs text-primary-foreground/70 mt-1">Companies</p>
+                    <p className="text-3xl sm:text-4xl font-semibold text-foreground" data-testid="stat-companies">{stats.totalCompanies}+</p>
+                    <p className="text-xs text-muted-foreground mt-1">Companies</p>
                   </div>
                 )}
                 {stats.totalCategories > 0 && (
                   <div className="text-center">
-                    <p className="text-3xl sm:text-4xl font-semibold" data-testid="stat-categories">{stats.totalCategories}</p>
-                    <p className="text-xs text-primary-foreground/70 mt-1">Career paths</p>
+                    <p className="text-3xl sm:text-4xl font-semibold text-foreground" data-testid="stat-categories">{stats.totalCategories}</p>
+                    <p className="text-xs text-muted-foreground mt-1">Career paths</p>
                   </div>
                 )}
               </div>
