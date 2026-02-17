@@ -4,11 +4,22 @@ import { extractStructuredDescription } from '../lib/description-extractor';
 import { categorizeJob } from '../lib/job-categorizer';
 import { cleanJobDescription } from '../lib/description-cleaner';
 import { generateJobHash } from '../lib/job-hash';
+import { LAW_FIRMS_AND_COMPANIES } from '../lib/law-firms-list';
 import type { Job } from '@shared/schema';
 import { jobs } from '@shared/schema';
 import { db } from '../db';
 import { eq, and, sql } from 'drizzle-orm';
 import axios from 'axios';
+
+const LEGAL_TECH_COMPANIES = new Set(
+  LAW_FIRMS_AND_COMPANIES
+    .filter(f => f.type === 'startup' || f.type === 'tech-legal')
+    .map(f => f.name.toLowerCase())
+);
+
+function isLegalTechCompany(company: string): boolean {
+  return LEGAL_TECH_COMPANIES.has(company.toLowerCase());
+}
 
 async function fetchJobPageContent(url: string): Promise<string | null> {
   try {
@@ -517,6 +528,18 @@ async function enrichJob(job: Job): Promise<void> {
       enrichedData.aiQualifications = catResult.aiQualifications || null;
       enrichedData.aiNiceToHaves = catResult.aiNiceToHaves || null;
       enrichedData.legalRelevanceScore = catResult.legalRelevanceScore;
+
+      if (isLegalTechCompany(job.company)) {
+        const aiScore = catResult.legalRelevanceScore || 0;
+        if (aiScore < 6) {
+          enrichedData.legalRelevanceScore = 6;
+          console.log(`[Enrichment] Boosted relevance for "${job.title}" at ${job.company}: ${aiScore} -> 6 (legal tech company)`);
+        }
+        if (catResult.reviewStatus === 'rejected') {
+          catResult.reviewStatus = 'needs_review';
+        }
+      }
+
       enrichedData.reviewStatus = catResult.reviewStatus;
 
       if (!enrichedData.seniorityLevel || enrichedData.seniorityLevel === 'Not specified') {
