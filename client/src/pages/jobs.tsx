@@ -1317,6 +1317,15 @@ export default function Jobs() {
                                 {match.matchHighlights[0]}
                               </Badge>
                             )}
+                            <Link
+                              href={`/resume-review/${match.jobId}`}
+                              onClick={(e: any) => e.stopPropagation()}
+                            >
+                              <Button variant="ghost" size="sm" className="h-auto py-0.5 px-1.5 text-[11px] text-muted-foreground" data-testid={`link-improve-resume-${match.jobId}`}>
+                                <FileText className="h-3 w-3 mr-0.5" />
+                                Improve resume
+                              </Button>
+                            </Link>
                           </div>
                         </div>
                       </div>

@@ -5,7 +5,6 @@ import { Link } from "wouter";
 import {
   ArrowRight,
   Upload,
-  Compass,
   PenLine,
   Lock,
   LogIn,
@@ -22,6 +21,7 @@ interface NextStepCardProps {
   onOpenRewrite: () => void;
   onSignIn: () => void;
   roleCategory?: string | null;
+  jobId?: number;
 }
 
 export function NextStepCard({
@@ -34,9 +34,11 @@ export function NextStepCard({
   onOpenRewrite,
   onSignIn,
   roleCategory,
+  jobId,
 }: NextStepCardProps) {
 
   const isStretch = hasMatch && matchScore !== null && matchScore < 35;
+  const reviewHref = jobId ? `/resume-review/${jobId}` : "/resumes";
 
   if (!isLoggedIn) {
     return (
@@ -79,7 +81,7 @@ export function NextStepCard({
             <h3 className="text-sm font-semibold text-foreground" data-testid="heading-next-step">Your Next Step</h3>
           </div>
           <p className="text-sm text-muted-foreground mb-3" data-testid="text-next-step-message">
-            Upload your resume to see your fit score for this role.
+            Upload your resume to see your fit score and get tailored suggestions for this role.
           </p>
           <Button size="sm" className="gap-1.5" onClick={onUploadResume} data-testid="button-next-step-upload">
             <Upload className="h-3.5 w-3.5" />
@@ -105,16 +107,18 @@ export function NextStepCard({
             <h3 className="text-sm font-semibold text-foreground" data-testid="heading-next-step">Your Next Step</h3>
           </div>
           <p className="text-sm text-muted-foreground mb-1" data-testid="text-next-step-message">
-            This role is a stretch right now. Start with positioning advice to identify the fastest improvements.
+            This role is a stretch right now, but you can still review what to improve.
           </p>
           <p className="text-xs text-muted-foreground/70 mb-3">
-            See what to emphasize and reorder — no rewrites, just guidance.
+            See specific line-by-line suggestions to strengthen your resume.
           </p>
           <div className="flex items-center gap-2 flex-wrap">
-            <Button size="sm" className="gap-1.5" onClick={onOpenStrategy} data-testid="button-next-step-strategy">
-              <Compass className="h-3.5 w-3.5" />
-              Get Positioning Advice
-            </Button>
+            <Link href={reviewHref}>
+              <Button size="sm" className="gap-1.5" data-testid="button-next-step-review">
+                <PenLine className="h-3.5 w-3.5" />
+                Improve My Resume
+              </Button>
+            </Link>
             <Link href={browseHref}>
               <Button variant="ghost" size="sm" className="text-xs text-muted-foreground" data-testid="link-explore-similar">
                 <Search className="h-3 w-3 mr-1" />
@@ -138,20 +142,22 @@ export function NextStepCard({
             <h3 className="text-sm font-semibold text-foreground" data-testid="heading-next-step">Your Next Step</h3>
           </div>
           <p className="text-sm text-muted-foreground mb-1" data-testid="text-next-step-message">
-            See how to position your background for this role.
+            See exactly what to change in your resume for this role.
           </p>
           <p className="text-xs text-muted-foreground/70 mb-3">
-            What to emphasize, what to reorder — no rewrites, just guidance.
+            Line-by-line suggestions you can accept or reject — like track changes.
           </p>
           <div className="flex items-center gap-2 flex-wrap">
-            <Button size="sm" className="gap-1.5" onClick={onOpenStrategy} data-testid="button-next-step-strategy">
-              <Compass className="h-3.5 w-3.5" />
-              Get Positioning Advice
-            </Button>
+            <Link href={reviewHref}>
+              <Button size="sm" className="gap-1.5" data-testid="button-next-step-review">
+                <PenLine className="h-3.5 w-3.5" />
+                Improve My Resume
+              </Button>
+            </Link>
             <Link href="/pricing">
-              <Button variant="ghost" size="sm" className="text-xs text-muted-foreground gap-1" data-testid="button-next-step-rewrite-locked">
+              <Button variant="ghost" size="sm" className="text-xs text-muted-foreground gap-1" data-testid="button-next-step-pro-hint">
                 <Lock className="h-3 w-3" />
-                Tailor My Resume
+                Full suggestions
                 <Badge variant="secondary" className="text-[10px] ml-0.5">Pro</Badge>
               </Button>
             </Link>
@@ -171,20 +177,18 @@ export function NextStepCard({
           <h3 className="text-sm font-semibold text-foreground" data-testid="heading-next-step">Your Next Step</h3>
         </div>
         <p className="text-sm text-muted-foreground mb-1" data-testid="text-next-step-message">
-          Tailor your resume bullets to match this role's language and priorities.
+          Review line-by-line suggestions to align your resume with this role.
         </p>
         <p className="text-xs text-muted-foreground/70 mb-3">
-          We rewrite for alignment, not exaggeration.
+          Accept or reject each change — like track changes in a document.
         </p>
         <div className="flex items-center gap-2 flex-wrap">
-          <Button size="sm" className="gap-1.5" onClick={onOpenRewrite} data-testid="button-next-step-rewrite">
-            <PenLine className="h-3.5 w-3.5" />
-            Tailor My Resume
-          </Button>
-          <Button variant="ghost" size="sm" className="text-xs text-muted-foreground gap-1" onClick={onOpenStrategy} data-testid="button-next-step-strategy-secondary">
-            <Compass className="h-3 w-3" />
-            Get Positioning Advice
-          </Button>
+          <Link href={reviewHref}>
+            <Button size="sm" className="gap-1.5" data-testid="button-next-step-review">
+              <PenLine className="h-3.5 w-3.5" />
+              Improve My Resume
+            </Button>
+          </Link>
         </div>
       </CardContent>
     </Card>

@@ -18,7 +18,6 @@ import { decodeHtmlEntities, fixMissingSentenceSpaces, cleanStructuredText, pars
 import { formatSalary } from "@/lib/format-salary";
 import { JobLocation } from "@/components/job-location";
 import { StructuredDescriptionView } from "@/components/structured-description-view";
-import { ResumeRewriteDialog } from "@/components/resume-rewrite-dialog";
 import { ResumeStrategyDialog } from "@/components/resume-strategy-dialog";
 import { NextStepCard } from "@/components/next-step-card";
 import { Link } from "wouter";
@@ -337,7 +336,6 @@ export default function JobDetail() {
   const [inlineMatchResult, setInlineMatchResult] = useState<{ score: number; highlights: string[]; gapSummary: string } | null>(null);
   const [showStickyBar, setShowStickyBar] = useState(false);
   const [showApplyNudge, setShowApplyNudge] = useState(false);
-  const [showRewriteDialog, setShowRewriteDialog] = useState(false);
   const [showStrategyDialog, setShowStrategyDialog] = useState(false);
   const [showReportDialog, setShowReportDialog] = useState(false);
   const [reportType, setReportType] = useState<string>("broken_link");
@@ -995,15 +993,10 @@ export default function JobDetail() {
                     matchScore={primaryScore}
                     onUploadResume={() => setLocation("/resumes")}
                     onOpenStrategy={() => setShowStrategyDialog(true)}
-                    onOpenRewrite={() => {
-                      if (isPro) {
-                        setShowRewriteDialog(true);
-                      } else {
-                        setLocation("/pricing");
-                      }
-                    }}
+                    onOpenRewrite={() => setLocation(`/resume-review/${job?.id}`)}
                     onSignIn={() => setLocation(authReturnUrl)}
                     roleCategory={job?.roleCategory}
+                    jobId={job?.id}
                   />
                 </div>
               );
@@ -1361,16 +1354,6 @@ export default function JobDetail() {
       </div>
 
       <Footer />
-
-      {job && (
-        <ResumeRewriteDialog
-          open={showRewriteDialog}
-          onOpenChange={setShowRewriteDialog}
-          jobId={job.id}
-          jobTitle={job.title}
-          company={job.company}
-        />
-      )}
 
       {job && (
         <ResumeStrategyDialog

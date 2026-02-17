@@ -19,6 +19,7 @@ import Insights from "@/pages/insights";
 import Alerts from "@/pages/alerts";
 import Resumes from "@/pages/resumes";
 import ResumeBuilder from "@/pages/resume-builder";
+import ResumeReview from "@/pages/resume-review";
 import SavedJobs from "@/pages/saved-jobs";
 import AdminAnalytics from "@/pages/admin-analytics";
 import AdminScraper from "@/pages/admin-scraper";
@@ -83,6 +84,7 @@ function AppRouter() {
       <Route path="/alerts">{isAuthenticated ? <Alerts /> : <Landing />}</Route>
       <Route path="/resumes">{isAuthenticated ? <Resumes /> : <Landing />}</Route>
       <Route path="/resume-builder">{isAuthenticated ? <ResumeBuilder /> : <Landing />}</Route>
+      <Route path="/resume-review/:id" component={ResumeReview} />
       <Route path="/saved-jobs">{isAuthenticated ? <SavedJobs /> : <Landing />}</Route>
       <Route path="/dashboard">{isAuthenticated ? <Dashboard /> : <Landing />}</Route>
       <Route path="/events" component={Events} />
