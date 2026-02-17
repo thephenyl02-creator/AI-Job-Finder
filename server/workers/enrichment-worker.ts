@@ -299,7 +299,7 @@ function isGenericCareersUrl(url: string): boolean {
 }
 
 function reconcileLocation(location: string | null, enrichedData: Record<string, any>): void {
-  if (!location) return;
+  if (!location || location.trim() === '') return;
   const loc = location.toLowerCase();
 
   const hasRemote = /\bremote\b/i.test(loc);
@@ -575,11 +575,13 @@ async function enrichJob(job: Job): Promise<void> {
     const structuredComplete = isStructuredDescriptionComplete(enrichedData.structuredDescription || job.structuredDescription);
     const relevanceScore = enrichedData.legalRelevanceScore || 0;
 
+    const qualityThreshold = relevanceScore >= 7 ? 55 : 65;
+
     if (catResult?.reviewStatus === 'rejected' || relevanceConfidence < 40) {
       enrichedData.pipelineStatus = 'rejected';
       enrichedData.isPublished = false;
       enrichedData.reviewReasonCode = 'LOW_RELEVANCE';
-    } else if (relevanceConfidence >= 40 && enrichedData.roleCategory && relevanceScore >= 5 && qualityScore >= 65) {
+    } else if (relevanceConfidence >= 40 && enrichedData.roleCategory && relevanceScore >= 5 && qualityScore >= qualityThreshold) {
       const existingDuplicate = await storage.findLiveJobDuplicate(job.title, job.company, job.location, job.id);
       if (existingDuplicate) {
         enrichedData.pipelineStatus = 'rejected';
@@ -708,9 +710,10 @@ async function runLiveJobAudit(): Promise<{ audited: number; flagged: number; pr
       }
 
       let failReason: string | null = null;
+      const auditQualityThreshold = (job.legalRelevanceScore ?? 0) >= 7 ? 55 : 65;
       if (!job.isActive) failReason = 'INACTIVE';
       else if (job.jobStatus !== 'open') failReason = 'JOB_CLOSED';
-      else if ((job.qualityScore ?? 0) < 65) failReason = 'LOW_QUALITY_SCORE';
+      else if ((job.qualityScore ?? 0) < auditQualityThreshold) failReason = 'LOW_QUALITY_SCORE';
       else if ((job.legalRelevanceScore ?? 0) < 5) failReason = 'LOW_RELEVANCE_SCORE';
       else if (!job.roleCategory) failReason = 'MISSING_CATEGORY';
       else if ((job.relevanceConfidence ?? 0) < 40) failReason = 'LOW_CONFIDENCE';
@@ -735,7 +738,8 @@ async function runLiveJobAudit(): Promise<{ audited: number; flagged: number; pr
     );
 
     for (const job of candidates) {
-      const passesGate = (job.qualityScore ?? 0) >= 65
+      const candidateQualityThreshold = (job.legalRelevanceScore ?? 0) >= 7 ? 55 : 65;
+      const passesGate = (job.qualityScore ?? 0) >= candidateQualityThreshold
         && (job.legalRelevanceScore ?? 0) >= 5
         && job.roleCategory !== null
         && (job.relevanceConfidence ?? 0) >= 40

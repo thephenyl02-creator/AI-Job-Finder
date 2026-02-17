@@ -277,7 +277,22 @@ export async function scrapeAshby(ashbyUrl: string, companyName: string): Promis
     });
     
     const jobs: ScrapedJob[] = (response.data.jobs || []).map((job: any) => {
-      const locationName = job.location?.name || job.locationName || '';
+      let locationName = '';
+      if (typeof job.location === 'string') {
+        locationName = job.location;
+      } else if (job.location?.name) {
+        locationName = job.location.name;
+      } else if (job.locationName) {
+        locationName = job.locationName;
+      }
+      if (!locationName && job.address?.postalAddress) {
+        const addr = job.address.postalAddress;
+        const parts = [addr.addressLocality, addr.addressRegion, addr.addressCountry].filter(Boolean);
+        locationName = parts.join(', ');
+      }
+      if (!locationName && job.isRemote) {
+        locationName = 'Remote';
+      }
       const locationType = detectLocationType(locationName + ' ' + (job.descriptionPlain || ''));
       const descText = job.descriptionPlain || job.descriptionHtml || '';
       const salary = parseSalaryFromText(descText);
@@ -1503,10 +1518,19 @@ async function tryAshbyAPI(url: string): Promise<ScrapedJob | null> {
     });
     const matchingJob = (response.data.jobs || []).find((j: any) => j.id === jobId);
     if (matchingJob) {
+      let loc = '';
+      if (typeof matchingJob.location === 'string') loc = matchingJob.location;
+      else if (matchingJob.location?.name) loc = matchingJob.location.name;
+      else if (matchingJob.locationName) loc = matchingJob.locationName;
+      if (!loc && matchingJob.address?.postalAddress) {
+        const addr = matchingJob.address.postalAddress;
+        loc = [addr.addressLocality, addr.addressRegion, addr.addressCountry].filter(Boolean).join(', ');
+      }
+      if (!loc && matchingJob.isRemote) loc = 'Remote';
       return {
         title: matchingJob.title,
         company: companySlug,
-        location: matchingJob.location?.name || matchingJob.locationName || 'Not specified',
+        location: loc || 'Not specified',
         description: cleanDescriptionText(matchingJob.descriptionHtml || matchingJob.descriptionPlain || ''),
         applyUrl: matchingJob.applicationUrl || matchingJob.jobUrl || url,
         postedDate: matchingJob.publishedDate || new Date().toISOString(),
