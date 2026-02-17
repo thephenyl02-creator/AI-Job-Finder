@@ -1012,6 +1012,42 @@ export default function JobDetail() {
           </CardContent>
         </Card>
 
+        {/* === ATS RESUME KEYWORDS === */}
+        {job.keySkills && job.keySkills.length >= 3 && (
+          <Card className="mb-6" data-testid="card-ats-keywords">
+            <CardContent className="p-5 sm:p-6">
+              <div className="flex items-center gap-2 mb-3">
+                <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+                <h3 className="text-sm font-semibold text-foreground">Resume Keywords for This Role</h3>
+              </div>
+              <p className="text-xs text-muted-foreground mb-3">
+                Include these terms in your resume to align with this position. Most applicant tracking systems scan for exact keyword matches.
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {job.keySkills.map((skill, i) => (
+                  <Badge
+                    key={i}
+                    variant="outline"
+                    className="text-xs gap-1 bg-primary/5 border-primary/20"
+                    data-testid={`badge-ats-keyword-${i}`}
+                  >
+                    <CheckCircle2 className="h-2.5 w-2.5 text-primary shrink-0" />
+                    {cleanStructuredText(skill)}
+                  </Badge>
+                ))}
+              </div>
+              {job.experienceText && (
+                <div className="mt-3 pt-3 border-t border-border/40">
+                  <p className="text-xs text-muted-foreground">
+                    <span className="font-medium text-foreground">Experience level:</span>{" "}
+                    {job.experienceText}
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
         {/* === RESUME MATCH TEASER === */}
         {(() => {
           const hasResumes = userResumes.length > 0;

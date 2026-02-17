@@ -27,6 +27,62 @@ function delay(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+const circuitBreaker = new Map<string, { failures: number; lastFailure: number; open: boolean }>();
+const CIRCUIT_BREAKER_THRESHOLD = 3;
+const CIRCUIT_BREAKER_RESET_MS = 30 * 60 * 1000;
+
+function isCircuitOpen(key: string): boolean {
+  const state = circuitBreaker.get(key);
+  if (!state || !state.open) return false;
+  if (Date.now() - state.lastFailure > CIRCUIT_BREAKER_RESET_MS) {
+    state.open = false;
+    state.failures = 0;
+    return false;
+  }
+  return true;
+}
+
+function recordFailure(key: string): void {
+  const state = circuitBreaker.get(key) || { failures: 0, lastFailure: 0, open: false };
+  state.failures++;
+  state.lastFailure = Date.now();
+  if (state.failures >= CIRCUIT_BREAKER_THRESHOLD) state.open = true;
+  circuitBreaker.set(key, state);
+}
+
+function recordSuccess(key: string): void {
+  circuitBreaker.delete(key);
+}
+
+async function fetchWithRetry(url: string, options: any = {}, retries = 2): Promise<any> {
+  const timeout = options.timeout || 20000;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const response = await axios({
+        ...options,
+        url,
+        timeout,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (compatible; LegalTechCareersBot/1.0)',
+          ...options.headers,
+        },
+      });
+      return response;
+    } catch (error: any) {
+      const status = error.response?.status;
+      if (status === 404 || status === 403 || status === 401) {
+        throw error;
+      }
+      if (attempt < retries) {
+        const backoff = Math.min(1000 * Math.pow(2, attempt) + Math.random() * 500, 8000);
+        await delay(backoff);
+        continue;
+      }
+      throw error;
+    }
+  }
+}
+
 function inferCurrencyFromLocation(location: string): string {
   const loc = (location || '').toLowerCase();
   const gbpSignals = ['uk', 'united kingdom', 'london', 'manchester', 'birmingham', 'edinburgh', 'glasgow', 'bristol', 'leeds', 'cambridge', 'oxford', 'england', 'scotland', 'wales', 'northern ireland'];
@@ -192,12 +248,7 @@ function extractGreenhouseLocationType(job: any): 'remote' | 'hybrid' | 'onsite'
 export async function scrapeGreenhouse(companyId: string, companyName: string): Promise<ScrapedJob[]> {
   try {
     const url = `https://boards-api.greenhouse.io/v1/boards/${companyId}/jobs?content=true`;
-    const response = await axios.get(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; LegalAICareersBot/1.0)',
-      },
-      timeout: 15000,
-    });
+    const response = await fetchWithRetry(url, { method: 'GET' });
     
     const jobs: ScrapedJob[] = response.data.jobs.map((job: any) => {
       const salary = extractGreenhouseSalary(job);
@@ -230,12 +281,7 @@ export async function scrapeLever(leverUrl: string, companyName: string): Promis
   try {
     const apiUrl = leverUrl.replace('jobs.lever.co', 'api.lever.co/v0/postings');
     
-    const response = await axios.get(apiUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; LegalAICareersBot/1.0)',
-      },
-      timeout: 15000,
-    });
+    const response = await fetchWithRetry(apiUrl, { method: 'GET' });
     
     const jobs: ScrapedJob[] = response.data.map((job: any) => {
       const salary = extractLeverSalary(job);
@@ -268,12 +314,9 @@ export async function scrapeLever(leverUrl: string, companyName: string): Promis
 
 export async function scrapeAshby(ashbyUrl: string, companyName: string): Promise<ScrapedJob[]> {
   try {
-    const response = await axios.get(ashbyUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; LegalAICareersBot/1.0)',
-        'Accept': 'application/json',
-      },
-      timeout: 15000,
+    const response = await fetchWithRetry(ashbyUrl, {
+      method: 'GET',
+      headers: { 'Accept': 'application/json' },
     });
     
     const jobs: ScrapedJob[] = (response.data.jobs || []).map((job: any) => {
@@ -567,26 +610,77 @@ export function isLegalTechRole(title: string, companyType?: string): boolean {
   ];
   if (traditionalPracticeReject.some(p => p.test(t))) return false;
 
+  const SCRAPER_LEGAL_WHITELIST = [
+    /\blegal engineer\b/i, /\blegal architect\b/i,
+    /\bsolutions?\s*(architect|engineer)\b/i,
+    /\blegal\s+data\b/i, /\bcompliance\s+engineer\b/i,
+    /\bprivacy\s+engineer\b/i, /\btrust\s+engineer\b/i,
+    /\bai\s+quality\s+engineer\b/i, /\blegal\s+ai\b/i,
+    /\bai\s+product\s+engineer\b/i,
+    /\bprofessional\s+services\s+.*engineer\b/i,
+    /\bimplementation\s+(engineer|consultant|specialist)\b/i,
+    /\bcustomer\s+engineer\b/i, /\bfield\s+engineer\b/i,
+    /\bpre-?sales?\s+engineer\b/i, /\bdata\s+security.*engineer\b/i,
+    /\bai\s+safety\b/i,
+  ];
+  const isWhitelisted = SCRAPER_LEGAL_WHITELIST.some(p => p.test(title));
+
+  const SCRAPER_PURE_ENGINEERING = [
+    /\bsoftware\s+(developer|engineer|development)\b/i,
+    /\b(frontend|front-end|front end)\s+(developer|engineer)\b/i,
+    /\b(backend|back-end|back end)\s+(developer|engineer)\b/i,
+    /\b(full[- ]?stack)\s+(developer|engineer)\b/i,
+    /\bweb\s+developer\b/i, /\bmobile\s+(developer|engineer)\b/i,
+    /\bios\s+(developer|engineer)\b/i, /\bandroid\s+(developer|engineer)\b/i,
+    /\breact\s+(developer|engineer|native)\b/i,
+    /\bangular\s+(developer|engineer)\b/i, /\bvue\s+(developer|engineer)\b/i,
+    /\bnode\.?js\s+(developer|engineer)\b/i,
+    /\bpython\s+(developer|engineer)\b/i, /\bjava\s+(developer|engineer)\b/i,
+    /\bruby\s+(developer|engineer|on rails)\b/i,
+    /\bgolang\s+(developer|engineer)\b/i, /\brust\s+(developer|engineer)\b/i,
+    /\b(c\+\+|c#|\.net)\s+(developer|engineer)\b/i,
+    /\bplatform\s+engineer\b/i, /\binfrastructure\s+engineer\b/i,
+    /\bcloud\s+engineer\b/i, /\bsystems?\s+engineer\b/i,
+    /\bnetwork\s+engineer\b/i, /\bsecurity\s+engineer\b/i,
+    /\bcyber\s*security\s+engineer\b/i, /\bendpoint\s+engineer\b/i,
+    /\bdata\s+engineer\b/i, /\bml\s+engineer\b/i,
+    /\bmachine\s+learning\s+engineer\b/i, /\bdeep\s+learning\b/i,
+    /\bcomputer\s+vision\s+engineer\b/i, /\bnlp\s+engineer\b/i,
+    /\bai\s+engineer\b/i, /\bmlops\b/i, /\bdevops\b/i,
+    /\b(SRE|site reliability)\b/i,
+    /\bqa\s+engineer\b/i, /\btest\s+engineer\b/i, /\bsdet\b/i,
+    /\bquality\s+(assurance|engineer)\b/i,
+    /\bfirmware\s+engineer\b/i, /\bembedded\s+engineer\b/i,
+    /\bhardware\s+engineer\b/i, /\belectronics?\s+engineer\b/i,
+    /\brf\s+engineer\b/i, /\bmechanical\s+engineer\b/i,
+    /\bux\s+designer\b/i, /\bui\s+designer\b/i,
+    /\bproduct\s+designer\b/i, /\bgraphic\s+designer\b/i,
+    /\bbrand\s+designer\b/i, /\bvisual\s+designer\b/i,
+    /\bweb\s+designer\b/i, /\bmotion\s+designer\b/i,
+    /\bit\s+(administrator|support|engineer|operations)\b/i,
+    /\bsystem\s+administrator\b/i, /\bdatabase\s+(administrator|engineer)\b/i,
+    /\b(engineering|software\s+development)\s+manager\b/i,
+    /\bengineering\s+(director|lead(er)?|operations)\b/i,
+    /\bdirector\s+of\s+engineering\b/i,
+    /\bhead\s+of\s+(product\s+)?engineering\b/i,
+    /\bvp\s+of?\s+engineering\b/i,
+    /\bproduct\s+engineer\b/i, /\bcst\s+developer\b/i,
+    /\bapplication\s+security\b/i,
+    /\blogging\s+(&|and)\s+detection\s+engineer\b/i,
+    /\bdefensive\s+security\b/i, /\bdetection\s+engineer\b/i,
+    /\bresearch\s+scientist\b/i, /\bforward\s+deployed\s+engineer\b/i,
+    /\bdata\s+migration\s+engineer\b/i, /\banalytics\s+engineer\b/i,
+    /\brelease\s+engineer\b/i, /\bbuild\s+engineer\b/i,
+    /\bperformance\s+engineer\b/i, /\bautomation\s+engineer\b/i,
+    /\bintegration(s)?\s+engineer\b/i,
+    /\b(senior|staff|principal|lead)\s+engineer\b/i,
+    /\barchitect\s+(i|ii|iii|iv|v)\b/i,
+  ];
+
+  if (!isWhitelisted && SCRAPER_PURE_ENGINEERING.some(p => p.test(title))) return false;
+  if (isWhitelisted) return true;
+
   const hardExclude = [
-    'software engineer', 'backend engineer', 'frontend engineer',
-    'full-stack engineer', 'full stack engineer', 'fullstack engineer',
-    'platform engineer', 'infrastructure engineer', 'site reliability',
-    'devops', 'sre ', 'cloud engineer', 'systems engineer',
-    'data engineer', 'ml engineer', 'mlops', 'machine learning engineer',
-    'ai engineer', 'deep learning', 'computer vision engineer',
-    'firmware engineer', 'embedded engineer', 'hardware engineer',
-    'electronics engineer', 'rf engineer', 'optical engineer',
-    'mechanical engineer', 'spacecraft', 'avionics', 'gnc engineer',
-    'remote sensing engineer', 'telecommunications engineer',
-    'qa engineer', 'test engineer', 'quality engineer', 'sdet',
-    'software quality assurance',
-    'ux designer', 'ui designer', 'product designer', 'graphic designer',
-    'brand designer', 'visual designer', 'web designer',
-    'it administrator', 'system administrator', 'it engineer',
-    'network engineer', 'security engineer', 'cyber security engineer',
-    'endpoint engineer', 'it support',
-    'react native', 'react engineer', 'node.js', 'python developer',
-    'java developer', 'golang', 'rust engineer',
     'receptionist', 'office manager', 'janitor', 'facilities',
     'senior accountant', 'accounting manager', 'controller',
     'payroll manager', 'global payroll', 'bookkeeper',
@@ -597,8 +691,6 @@ export function isLegalTechRole(title: string, companyType?: string): boolean {
     'social media manager', 'community manager',
     'commodity manager', 'supply chain',
     'global workplace lead', 'reward manager',
-    'engineering manager', 'engineering operations',
-    'forward deployed engineer', 'research scientist',
     'certification content', 'customer trust lead',
     'head of security risk', 'insider risk investigator',
     'immigration coordinator', 'european tax lead',
@@ -644,10 +736,20 @@ export function isLegalTechRole(title: string, companyType?: string): boolean {
 
   if (hasLegalSignal && hasTechSignal) return true;
 
-  const isLegalTechCompany = companyType === 'startup' || companyType === 'tech-legal';
+  const isLegalTechCompanyType = companyType === 'startup' || companyType === 'tech-legal';
 
-  if (isLegalTechCompany) {
-    return true;
+  if (isLegalTechCompanyType) {
+    const businessRoles = [
+      'manager', 'director', 'head of', 'vp ', 'vice president',
+      'lead', 'senior', 'coordinator', 'specialist', 'associate',
+      'analyst', 'consultant', 'advisor', 'strategist',
+      'operations', 'success', 'support', 'sales', 'marketing',
+      'content', 'writer', 'communications', 'product',
+      'account', 'partner', 'business development',
+      'customer', 'client', 'counsel', 'legal',
+      'paralegal', 'compliance', 'privacy', 'policy',
+    ];
+    return businessRoles.some(k => t.includes(k));
   }
 
   return false;
@@ -870,10 +972,17 @@ export async function scrapeAllLawFirms(): Promise<{
   let totalFiltered = 0;
   let companiesWithJobs = 0;
   
+  let skippedCircuitOpen = 0;
   for (const firm of LAW_FIRMS_AND_COMPANIES) {
+    const atsKey = firm.greenhouseId ? `greenhouse` : firm.leverPostingsUrl ? `lever` : firm.ashbyUrl ? `ashby` : firm.workday ? `workday` : `generic:${firm.careerUrl}`;
+    
+    if (isCircuitOpen(atsKey)) {
+      skippedCircuitOpen++;
+      stats.push({ company: firm.name, found: 0, filtered: 0 });
+      continue;
+    }
+    
     try {
-      console.log(`Scraping ${firm.name}...`);
-      
       let scrapedJobs: ScrapedJob[] = [];
       
       if (firm.greenhouseId) {
@@ -887,6 +996,8 @@ export async function scrapeAllLawFirms(): Promise<{
       } else {
         scrapedJobs = await scrapeGenericCareerPage(firm.careerUrl, firm.name, firm.selectors);
       }
+      
+      recordSuccess(atsKey);
       
       const legalTechJobs = scrapedJobs
         .filter(job => isLegalTechRole(job.title, firm.type))
@@ -910,6 +1021,7 @@ export async function scrapeAllLawFirms(): Promise<{
       await delay(2000);
       
     } catch (error: any) {
+      recordFailure(atsKey);
       console.error(`Error scraping ${firm.name}:`, error.message);
       stats.push({
         company: firm.name,
@@ -917,6 +1029,9 @@ export async function scrapeAllLawFirms(): Promise<{
         filtered: 0,
       });
     }
+  }
+  if (skippedCircuitOpen > 0) {
+    console.log(`[Circuit Breaker] Skipped ${skippedCircuitOpen} companies due to open circuits`);
   }
   
   const funnel = {

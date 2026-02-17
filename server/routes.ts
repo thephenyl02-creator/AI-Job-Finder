@@ -490,6 +490,9 @@ export async function registerRoutes(
       const id = parseInt(req.params.id as string);
       const event = await storage.getEvent(id);
       if (!event) return res.status(404).json({ error: "Event not found" });
+      if (!event.isActive || event.linkStatus === 'broken') {
+        return res.status(404).json({ error: "Event not found" });
+      }
       res.json(event);
     } catch (error) {
       console.error("Error fetching event:", error);

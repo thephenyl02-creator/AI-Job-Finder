@@ -86,20 +86,122 @@ const BATCH_SIZE = 50;
 let intervalId: NodeJS.Timeout | null = null;
 let isRunning = false;
 
-const ALWAYS_REJECT_TITLE_PATTERNS = [
+const LEGAL_TITLE_WHITELIST = [
+  /\blegal engineer\b/i,
+  /\blegal architect\b/i,
+  /\blegal solutions?\s*(architect|engineer)\b/i,
+  /\bsolutions?\s*(architect|engineer)\b.*\blegal\b/i,
+  /\bsolutions?\s*engineer\b/i,
+  /\bsolutions?\s*architect\b/i,
+  /\blegal\s+data\b/i,
+  /\bcompliance\s+engineer\b/i,
+  /\bprivacy\s+engineer\b/i,
+  /\btrust\s+engineer\b/i,
+  /\bai\s+quality\s+engineer\b/i,
+  /\blegal\s+ai\b/i,
+  /\bai\s+product\s+engineer\b/i,
+  /\bprofessional\s+services\s+.*engineer\b/i,
+  /\bimplementation\s+(engineer|consultant|specialist)\b/i,
+  /\bcustomer\s+engineer\b/i,
+  /\bfield\s+engineer\b/i,
+  /\bpre-?sales?\s+engineer\b/i,
+  /\bdata\s+security.*engineer\b/i,
+  /\bai\s+safety\b/i,
+];
+
+function isWhitelistedLegalTitle(title: string): boolean {
+  return LEGAL_TITLE_WHITELIST.some(pattern => pattern.test(title));
+}
+
+const PURE_ENGINEERING_PATTERNS = [
+  /\bsoftware\s+(developer|engineer|development)\b/i,
+  /\b(senior|staff|principal|lead|junior|mid)?\s*software\s+(developer|engineer)\b/i,
+  /\b(frontend|front-end|front end)\s+(developer|engineer)\b/i,
+  /\b(backend|back-end|back end)\s+(developer|engineer)\b/i,
+  /\b(full[- ]?stack)\s+(developer|engineer)\b/i,
+  /\bweb\s+developer\b/i,
+  /\bmobile\s+(developer|engineer)\b/i,
+  /\bios\s+(developer|engineer)\b/i,
+  /\bandroid\s+(developer|engineer)\b/i,
+  /\breact\s+(developer|engineer|native)\b/i,
+  /\bangular\s+(developer|engineer)\b/i,
+  /\bvue\s+(developer|engineer)\b/i,
+  /\bnode\.?js\s+(developer|engineer)\b/i,
+  /\bpython\s+(developer|engineer)\b/i,
+  /\bjava\s+(developer|engineer)\b/i,
+  /\bruby\s+(developer|engineer|on rails)\b/i,
+  /\bgolang\s+(developer|engineer)\b/i,
+  /\brust\s+(developer|engineer)\b/i,
+  /\b(c\+\+|c#|\.net)\s+(developer|engineer)\b/i,
+  /\bplatform\s+engineer\b/i,
+  /\binfrastructure\s+engineer\b/i,
+  /\bcloud\s+engineer\b/i,
+  /\bsystems?\s+engineer\b/i,
+  /\bnetwork\s+engineer\b/i,
+  /\bsecurity\s+engineer\b/i,
+  /\bcyber\s*security\s+engineer\b/i,
+  /\bendpoint\s+engineer\b/i,
+  /\bdata\s+engineer\b/i,
+  /\bml\s+engineer\b/i,
+  /\bmachine\s+learning\s+engineer\b/i,
+  /\bdeep\s+learning\s+engineer\b/i,
+  /\bcomputer\s+vision\s+engineer\b/i,
+  /\bnlp\s+engineer\b/i,
+  /\bai\s+engineer\b/i,
+  /\bmlops\b/i,
   /\bdevops\b/i,
   /\b(SRE|site reliability)\b/i,
-  /\bsenior engineer \(\.net\b/i,
-  /\bdata migration engineer\b/i,
-  /\bsoftware quality assurance\b/i,
-  /\bai\/ml software engineer\b/i,
-  /\bforward deployed engineer\b/i,
-  /\bresearch scientist\b/i,
+  /\bqa\s+engineer\b/i,
+  /\btest\s+engineer\b/i,
+  /\bsdet\b/i,
+  /\bquality\s+(assurance|engineer)\b/i,
+  /\bfirmware\s+engineer\b/i,
+  /\bembedded\s+engineer\b/i,
+  /\bhardware\s+engineer\b/i,
+  /\belectronics?\s+engineer\b/i,
+  /\brf\s+engineer\b/i,
+  /\bmechanical\s+engineer\b/i,
+  /\bux\s+designer\b/i,
+  /\bui\s+designer\b/i,
+  /\bproduct\s+designer\b/i,
+  /\bgraphic\s+designer\b/i,
+  /\bbrand\s+designer\b/i,
+  /\bvisual\s+designer\b/i,
+  /\bweb\s+designer\b/i,
+  /\bmotion\s+designer\b/i,
+  /\bit\s+(administrator|support|engineer|operations)\b/i,
+  /\bsystem\s+administrator\b/i,
+  /\bdatabase\s+(administrator|engineer)\b/i,
+  /\b(engineering|software\s+development)\s+manager\b/i,
+  /\bengineering\s+(director|lead(er)?|operations)\b/i,
+  /\bdirector\s+of\s+engineering\b/i,
+  /\bhead\s+of\s+(product\s+)?engineering\b/i,
+  /\bvp\s+of?\s+engineering\b/i,
+  /\bproduct\s+engineer\b/i,
+  /\bcst\s+developer\b/i,
+  /\bapplication\s+security\b/i,
+  /\blogging\s+(&|and)\s+detection\s+engineer\b/i,
+  /\bdefensive\s+security\b/i,
+  /\bdetection\s+engineer\b/i,
+  /\bresearch\s+scientist\b/i,
+  /\bforward\s+deployed\s+engineer\b/i,
+  /\bdata\s+migration\s+engineer\b/i,
+  /\banalytics\s+engineer\b/i,
+  /\brelease\s+engineer\b/i,
+  /\bbuild\s+engineer\b/i,
+  /\bperformance\s+engineer\b/i,
+  /\bautomation\s+engineer\b/i,
+  /\bintegration(s)?\s+engineer\b/i,
+  /\b(senior|staff|principal|lead)\s+engineer\b/i,
+  /\barchitect\s+(i|ii|iii|iv|v)\b/i,
+];
+
+const ALWAYS_REJECT_TITLE_PATTERNS = [
+  /\bUS-?\s*General\b/i,
+  /\bSKYE TEST\b/i,
   /\bcertification content\b/i,
   /\bthreat intelligence\b/i,
   /\binsider risk investigator\b/i,
-  /\bUS-?\s*General\b/i,
-  /\bSKYE TEST\b/i,
 
   /\bstaff attorney\b/i,
   /\bsupervising attorney\b/i,
@@ -217,6 +319,14 @@ const GENERAL_COMPANY_REJECT_PATTERNS = [
 
 function shouldHardReject(title: string, company?: string): boolean {
   if (ALWAYS_REJECT_TITLE_PATTERNS.some(pattern => pattern.test(title))) {
+    return true;
+  }
+
+  if (isWhitelistedLegalTitle(title)) {
+    return false;
+  }
+
+  if (PURE_ENGINEERING_PATTERNS.some(pattern => pattern.test(title))) {
     return true;
   }
 

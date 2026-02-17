@@ -2,7 +2,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ExternalLink, Bookmark } from "lucide-react";
+import { ExternalLink, Bookmark, DollarSign } from "lucide-react";
 import { JobLocation } from "./job-location";
 import type { JobWithScore } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -18,8 +18,22 @@ interface JobCardProps {
   isAuthenticated?: boolean;
 }
 
+function formatSalary(min?: number | null, max?: number | null, currency?: string | null): string | null {
+  if (!min && !max) return null;
+  const fmt = (n: number) => {
+    if (n >= 1000) return `${Math.round(n / 1000)}k`;
+    return n.toString();
+  };
+  const sym = currency === 'GBP' ? '\u00A3' : currency === 'EUR' ? '\u20AC' : currency === 'CAD' ? 'CA$' : currency === 'AUD' ? 'A$' : '$';
+  if (min && max && min !== max) return `${sym}${fmt(min)}\u2013${sym}${fmt(max)}`;
+  if (min) return `${sym}${fmt(min)}+`;
+  if (max) return `Up to ${sym}${fmt(max)}`;
+  return null;
+}
+
 export function JobCard({ job, isSaved = false, isAuthenticated = false }: JobCardProps) {
   const { toast } = useToast();
+  const salary = formatSalary(job.salaryMin, job.salaryMax, job.salaryCurrency);
 
   const getTimeAgo = (date?: Date | string | null) => {
     if (!date) return "Recently";
@@ -116,6 +130,12 @@ export function JobCard({ job, isSaved = false, isAuthenticated = false }: JobCa
                   isRemote={job.isRemote}
                   testIdPrefix={`job-${job.id}`}
                 />
+                {salary && (
+                  <Badge variant="outline" className="gap-0.5 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800" data-testid={`text-salary-${job.id}`}>
+                    <DollarSign className="h-3 w-3" />
+                    {salary}
+                  </Badge>
+                )}
                 {job.roleCategory && (
                   <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">
                     {job.roleSubcategory || job.roleCategory}
