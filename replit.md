@@ -32,6 +32,8 @@ Legal Tech Careers is a freemium SaaS job search platform designed for legal pro
 ### Authentication
 - **Methods**: Custom email/password and Google OAuth 2.0.
 - **Session Management**: PostgreSQL-backed sessions.
+- **Unified Auth Response**: `/api/auth/user` returns fresh DB data with isAdmin, subscriptionTier, subscriptionStatus, and isPro in a single response. Frontend `useAuth` hook provides all user state; `useSubscription` delegates to `useAuth`. No separate admin or subscription API calls needed.
+- **Cache Strategy**: Global staleTime of 60 seconds, refetchOnWindowFocus enabled. Auth query uses 30-second staleTime for faster updates after state changes.
 
 ### AI Integration
 - **Provider**: OpenAI API

@@ -2,7 +2,12 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { User } from "@shared/models/auth";
 import { apiRequest } from "@/lib/queryClient";
 
-type SafeUser = Omit<User, "password">;
+type SafeUser = Omit<User, "password"> & {
+  isAdmin: boolean;
+  subscriptionTier: string;
+  subscriptionStatus: string;
+  isPro: boolean;
+};
 
 async function fetchUser(): Promise<SafeUser | null> {
   const response = await fetch("/api/auth/user", {
@@ -20,38 +25,14 @@ async function fetchUser(): Promise<SafeUser | null> {
   return response.json();
 }
 
-async function fetchIsAdmin(): Promise<boolean> {
-  const response = await fetch("/api/auth/is-admin", {
-    credentials: "include",
-  });
-
-  if (response.status === 401) {
-    return false;
-  }
-
-  if (!response.ok) {
-    return false;
-  }
-
-  const data = await response.json();
-  return data.isAdmin === true;
-}
-
 export function useAuth() {
   const queryClient = useQueryClient();
   const { data: user, isLoading } = useQuery<SafeUser | null>({
     queryKey: ["/api/auth/user"],
     queryFn: fetchUser,
     retry: false,
-    staleTime: 1000 * 60 * 5,
-  });
-
-  const { data: isAdmin } = useQuery<boolean>({
-    queryKey: ["/api/auth/is-admin"],
-    queryFn: fetchIsAdmin,
-    retry: false,
-    staleTime: 1000 * 60 * 5,
-    enabled: !!user,
+    staleTime: 1000 * 30,
+    refetchOnWindowFocus: true,
   });
 
   const loginMutation = useMutation({
@@ -59,9 +40,8 @@ export function useAuth() {
       const res = await apiRequest("POST", "/api/auth/login", data);
       return res.json() as Promise<SafeUser>;
     },
-    onSuccess: (user) => {
-      queryClient.setQueryData(["/api/auth/user"], user);
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/is-admin"] });
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
     },
   });
 
@@ -70,9 +50,8 @@ export function useAuth() {
       const res = await apiRequest("POST", "/api/auth/register", data);
       return res.json() as Promise<SafeUser>;
     },
-    onSuccess: (user) => {
-      queryClient.setQueryData(["/api/auth/user"], user);
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/is-admin"] });
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
     },
   });
 
@@ -82,7 +61,6 @@ export function useAuth() {
     },
     onSuccess: () => {
       queryClient.setQueryData(["/api/auth/user"], null);
-      queryClient.setQueryData(["/api/auth/is-admin"], false);
       queryClient.clear();
       window.location.href = "/";
     },
@@ -92,7 +70,11 @@ export function useAuth() {
     user,
     isLoading,
     isAuthenticated: !!user,
-    isAdmin: isAdmin === true,
+    isAdmin: user?.isAdmin === true,
+    isPro: user?.isPro === true,
+    isFree: user?.isPro !== true,
+    subscriptionTier: user?.subscriptionTier || "free",
+    subscriptionStatus: user?.subscriptionStatus || "inactive",
     login: loginMutation.mutateAsync,
     loginError: loginMutation.error,
     isLoggingIn: loginMutation.isPending,

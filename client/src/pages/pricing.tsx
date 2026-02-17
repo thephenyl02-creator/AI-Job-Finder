@@ -129,7 +129,6 @@ export default function Pricing() {
         const syncData = await syncRes.json();
 
         if (!cancelled && syncData.tier === "pro") {
-          queryClient.invalidateQueries({ queryKey: ["/api/stripe/subscription"] });
           queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
           window.history.replaceState({}, "", "/pricing");
           return;
@@ -140,7 +139,6 @@ export default function Pricing() {
           if (cancelled || attempts >= 10) {
             clearInterval(poll);
             if (!cancelled) {
-              queryClient.invalidateQueries({ queryKey: ["/api/stripe/subscription"] });
               queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
               window.history.replaceState({}, "", "/pricing");
             }
@@ -156,7 +154,6 @@ export default function Pricing() {
             const data = await res.json();
             if (!cancelled && data.tier === "pro") {
               clearInterval(poll);
-              queryClient.invalidateQueries({ queryKey: ["/api/stripe/subscription"] });
               queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
               window.history.replaceState({}, "", "/pricing");
             }
@@ -164,7 +161,7 @@ export default function Pricing() {
         }, 2000);
       } catch {
         if (!cancelled) {
-          queryClient.invalidateQueries({ queryKey: ["/api/stripe/subscription"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
           window.history.replaceState({}, "", "/pricing");
         }
       }

@@ -46,7 +46,7 @@ export default function Landing() {
   usePageTitle();
   const { data: stats } = useQuery<Stats>({
     queryKey: ["/api/stats"],
-    refetchInterval: 10000,
+    refetchInterval: 30000,
   });
 
   const { data: featuredJobs } = useQuery<FeaturedJob[]>({
