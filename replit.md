@@ -53,13 +53,13 @@ Legal Tech Careers is a freemium SaaS job search platform designed for legal pro
 - **ATS Coverage**: 20 Greenhouse, 8 Lever, 3 Ashby, 3 Workday CXS (Thomson Reuters, Wolters Kluwer, LexisNexis), rest use generic career page scraping
 - **Scheduled Scraper** (every 12 hours): Runs `scrapeAllLawFirms()` from `law-firm-scraper.ts` covering all 200+ companies. Includes scrape lock, job validation, 500-job cap, 30% company success threshold for stale detection. On startup, triggers initial scrape if fewer than 100 published jobs exist.
 - **Enrichment Worker** (every 2 min): Processes 25 raw jobs - cleans descriptions, extracts experience requirements, categorizes with AI, computes quality scores, auto-publishes jobs scoring 65+ with relevanceConfidence ≥40% and legalRelevanceScore ≥5
-- **Reliability Worker** (every 6 hours): Validates apply links for published jobs, unpublishes broken links and stale jobs (45+ days unseen)
+- **Reliability Worker** (every 6 hours): Validates apply links for 200 published jobs per cycle with grace period (2 consecutive failures before unpublishing via `linkFailCount`). Also unpublishes stale jobs (45+ days unseen).
 - **Title Filter**: Company-type-aware — legal tech startups (`startup`/`tech-legal`) use blocklist-only approach (blocks pure engineering, HR, IT, finance) and lets AI enrichment evaluate everything else. General companies keep strict legal-only filtering.
 - **Trust Gate**: Public API only shows jobs with `pipelineStatus='ready'`, `isPublished=true`, `jobStatus='open'`, `isActive=true`
 - **Quality Score** (0-100): Based on category (15pts), structured description completeness (38pts: responsibilities 10, skills 8, qualifications 8, transition notes 6, company desc 6), relevance (15pts), apply URL (10pts), raw description length (8pts), experience data (5pts), seniority (5pts), AI summary quality (3pts)
 - **Audit Worker** (every 4 hours): Checks published jobs against quality gates, skips jobs with pipelineStatus 'raw' or 'enriching' to avoid interfering with re-enrichment
 - **Re-enrichment**: When a job's description changes on re-scrape, pipeline status resets to 'raw' for re-processing
-- **Deduplication**: `jobHash` field prevents duplicate ingestion based on company + title + location + applyUrl
+- **Deduplication**: `jobHash` field prevents exact duplicates (company + title + location + applyUrl). `generateFuzzyJobHash` (company + normalized title) catches near-duplicates during enrichment (e.g., "Sr. Analyst" vs "Senior Analyst"). Normalized titles expand abbreviations and strip location/seniority suffixes.
 - **API**: Paginated `/api/jobs` endpoint with server-side filtering (category, seniority, location, search)
 - **Admin**: `/api/admin/pipeline-stats` shows pipeline health metrics
 - **QA Validation System**: Comprehensive publish-blocking QA with persisted results (qaStatus, qaErrors, qaWarnings, lawyerFirstScore, qaExcludeReason, qaCheckedAt columns). Error codes: E_TITLE_MISSING, E_COMPANY_MISSING, E_SUMMARY_SHORT, E_SKILLS_TOO_FEW, E_ROLECATEGORY_EMPTY, E_ENGINEERING_ONLY, E_MINQ_EMPTY. Statuses: passed/needs_review/failed. Lawyer-first scoring (0-100) from title/description keywords.
@@ -89,7 +89,9 @@ Legal Tech Careers is a freemium SaaS job search platform designed for legal pro
 - **Resume Strategy**: AI-powered recommendations for resume alignment against job postings.
 - **Tailor My Resume**: Enhanced AI-powered resume tailoring for Pro users. Auto-extracts bullet points from uploaded resumes with checkbox selection, or manual entry fallback. Rewrites bullets to align with job posting language and keywords.
 - **Trust & Freshness**: Source attribution, URL canonicalization, last checked timestamps, job status tracking, and user reporting for job quality.
-- **Events Autopilot**: AI-driven discovery and management of legal tech events from global regions.
+- **Events Autopilot**: AI-driven discovery of legal tech events from global regions. URLs are verified through: (1) curated known-event URL database, (2) organizer website content matching, (3) HTTP validation. Events without verified URLs are saved but set inactive. Event link validator runs hourly to re-check links.
+- **Admin Security**: All admin routes use `isAdminCheck` middleware or inline `storage.isUserAdmin()`. Frontend admin routes use `AdminRoute` component checking `isAdmin` from auth hook, redirecting non-admins to /jobs.
+- **Pro Feature Gates**: Backend uses `requirePro` middleware on: ATS review, resume match/tweak/rewrite, job alerts (create), career advisor compare, market insights Q&A, match discussion, resume builder AI/ATS/optimize. Frontend checks `isPro`/`isFree` with upgrade prompts.
 
 ## External Dependencies
 

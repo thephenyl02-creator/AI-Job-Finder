@@ -4,7 +4,7 @@ import http from 'http';
 import { URL } from 'url';
 
 const STALENESS_DAYS = 45;
-const RELIABILITY_INTERVAL_MS = 3 * 60 * 60 * 1000;
+const RELIABILITY_INTERVAL_MS = 6 * 60 * 60 * 1000;
 let intervalId: NodeJS.Timeout | null = null;
 
 const NON_JOB_URL_PATTERNS = [
@@ -118,12 +118,17 @@ async function runApplyLinkValidation(): Promise<{ checked: number; broken: numb
   const publishedJobs = await storage.getPublishedJobsForLinkCheck();
   if (publishedJobs.length === 0) return { checked: 0, broken: 0 };
 
-  const sample = publishedJobs.slice(0, 100);
-  console.log(`[Reliability] Checking apply links for ${sample.length} published jobs...`);
+  const batchSize = Math.min(200, publishedJobs.length);
+  for (let i = publishedJobs.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [publishedJobs[i], publishedJobs[j]] = [publishedJobs[j], publishedJobs[i]];
+  }
+  const sample = publishedJobs.slice(0, batchSize);
+  console.log(`[Reliability] Checking apply links for ${sample.length}/${publishedJobs.length} published jobs...`);
 
   let broken = 0;
-  for (let i = 0; i < sample.length; i += 5) {
-    const batch = sample.slice(i, i + 5);
+  for (let i = 0; i < sample.length; i += 10) {
+    const batch = sample.slice(i, i + 10);
     const results = await Promise.all(
       batch.map(async (job) => {
         const result = await checkApplyUrl(job.applyUrl);
@@ -131,30 +136,41 @@ async function runApplyLinkValidation(): Promise<{ checked: number; broken: numb
       })
     );
 
-    for (const { job, ok, finalCode, finalUrl } of results) {
+    for (const { job, ok, finalCode } of results) {
       if (!ok) {
-        await storage.updateJobWorkerFields(job.id, {
-          isPublished: false,
-          jobStatus: 'closed',
-          reviewReasonCode: 'BROKEN_APPLY_LINK',
-          lastCheckedAt: new Date(),
-        });
-        broken++;
-        console.log(`[Reliability] Broken apply link (HTTP ${finalCode}), unpublishing job ${job.id} "${job.title}" -> ${job.applyUrl}`);
+        const failCount = (job as any).linkFailCount || 0;
+
+        if (failCount >= 1) {
+          await storage.updateJobWorkerFields(job.id, {
+            isPublished: false,
+            jobStatus: 'closed',
+            reviewReasonCode: 'BROKEN_APPLY_LINK',
+            lastCheckedAt: new Date(),
+          });
+          broken++;
+          console.log(`[Reliability] Broken apply link confirmed (HTTP ${finalCode}, fails: ${failCount + 1}), unpublishing job ${job.id} "${job.title}" -> ${job.applyUrl}`);
+        } else {
+          await storage.updateJobWorkerFields(job.id, {
+            lastCheckedAt: new Date(),
+            linkFailCount: 1,
+          });
+          console.log(`[Reliability] First link failure for job ${job.id} "${job.title}" (HTTP ${finalCode}) — will re-check next cycle`);
+        }
       } else {
         await storage.updateJobWorkerFields(job.id, {
           lastCheckedAt: new Date(),
+          linkFailCount: 0,
         });
       }
     }
 
-    if (i + 5 < sample.length) {
-      await new Promise(r => setTimeout(r, 1500));
+    if (i + 10 < sample.length) {
+      await new Promise(r => setTimeout(r, 1000));
     }
   }
 
   if (broken > 0) {
-    console.log(`[Reliability] Found ${broken} broken apply links out of ${sample.length} checked`);
+    console.log(`[Reliability] Found ${broken} broken apply links (confirmed on 2nd check) out of ${sample.length} checked`);
   }
   return { checked: sample.length, broken };
 }
@@ -169,7 +185,7 @@ async function runReliabilityChecks() {
 
 export function startReliabilityWorker() {
   if (intervalId) return;
-  console.log('[Reliability] Starting reliability worker (every 3 hours)');
+  console.log('[Reliability] Starting reliability worker (every 6 hours)');
 
   setTimeout(() => {
     runReliabilityChecks().catch(console.error);

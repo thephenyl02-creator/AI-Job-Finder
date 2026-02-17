@@ -54,6 +54,7 @@ export const jobs = pgTable("jobs", {
   sourceDomain: varchar("source_domain", { length: 255 }),
   sourceUrl: varchar("source_url", { length: 1000 }),
   lastCheckedAt: timestamp("last_checked_at"),
+  linkFailCount: integer("link_fail_count").default(0),
   jobStatus: varchar("job_status", { length: 20 }).default("open"),
   closedReason: varchar("closed_reason", { length: 50 }),
   closedAt: timestamp("closed_at"),

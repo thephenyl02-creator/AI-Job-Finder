@@ -3,7 +3,7 @@ import { extractExperience, determineSeniority } from '../lib/experience-extract
 import { extractStructuredDescription } from '../lib/description-extractor';
 import { categorizeJob } from '../lib/job-categorizer';
 import { cleanJobDescription } from '../lib/description-cleaner';
-import { generateJobHash } from '../lib/job-hash';
+import { generateJobHash, generateFuzzyJobHash } from '../lib/job-hash';
 import { LAW_FIRMS_AND_COMPANIES } from '../lib/law-firms-list';
 import { normalizeLocation } from '../lib/location-normalizer';
 import type { Job } from '@shared/schema';
@@ -639,6 +639,36 @@ async function enrichJob(job: Job): Promise<void> {
       enrichedData.jobHash = generateJobHash(
         job.company, cleanedTitle, job.location || '', job.applyUrl
       );
+    }
+
+    const fuzzyHash = generateFuzzyJobHash(job.company, cleanedTitle);
+    const normalizedCo = normalizeCompanyName(job.company);
+    const companyPattern = `%${job.company.split(/\s+/)[0].toLowerCase()}%`;
+    const candidateJobs = await db
+      .select({ id: jobs.id, title: jobs.title, company: jobs.company })
+      .from(jobs)
+      .where(and(
+        eq(jobs.isPublished, true),
+        eq(jobs.pipelineStatus, 'ready'),
+        sql`lower(${jobs.company}) LIKE ${companyPattern}`,
+      ));
+
+    const matchingCompanyJobs = candidateJobs.filter(
+      j => normalizeCompanyName(j.company) === normalizedCo
+    );
+
+    for (const existing of matchingCompanyJobs) {
+      if (existing.id === job.id) continue;
+      const existingFuzzyHash = generateFuzzyJobHash(existing.company, existing.title);
+      if (existingFuzzyHash === fuzzyHash) {
+        console.log(`[Enrichment] Near-duplicate detected: "${cleanedTitle}" at ${job.company} matches existing job #${existing.id} "${existing.title}" — rejecting`);
+        await storage.updateJobWorkerFields(job.id, {
+          pipelineStatus: 'rejected',
+          reviewReasonCode: 'NEAR_DUPLICATE',
+          reviewStatus: 'rejected',
+        });
+        return;
+      }
     }
 
     const cleanDesc = cleanJobDescription(job.description);

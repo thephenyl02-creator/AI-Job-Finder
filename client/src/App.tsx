@@ -36,6 +36,14 @@ import Events from "@/pages/events";
 import EventDetail from "@/pages/event-detail";
 import { AssistantWidget } from "@/components/assistant-widget";
 
+function AdminRoute({ component: Component }: { component: React.ComponentType }) {
+  const { isAuthenticated, isAdmin, isLoading } = useAuth();
+  if (isLoading) return null;
+  if (!isAuthenticated) return <Landing />;
+  if (isAdmin === false) return <Redirect to="/jobs" />;
+  return <Component />;
+}
+
 function AppRouter() {
   const { isAuthenticated, isLoading } = useAuth();
 
@@ -62,14 +70,14 @@ function AppRouter() {
       <Route path="/">{isAuthenticated ? <Redirect to="/jobs" /> : <Landing />}</Route>
       <Route path="/jobs" component={Jobs} />
       <Route path="/jobs/:id" component={JobDetail} />
-      <Route path="/admin">{isAuthenticated ? <Admin /> : <Landing />}</Route>
-      <Route path="/admin/analytics">{isAuthenticated ? <AdminAnalytics /> : <Landing />}</Route>
-      <Route path="/admin/scraper">{isAuthenticated ? <AdminScraper /> : <Landing />}</Route>
-      <Route path="/admin/events">{isAuthenticated ? <AdminEvents /> : <Landing />}</Route>
-      <Route path="/admin/reports">{isAuthenticated ? <AdminReports /> : <Landing />}</Route>
-      <Route path="/admin/import-jobs">{isAuthenticated ? <AdminImport /> : <Landing />}</Route>
-      <Route path="/admin/review-jobs">{isAuthenticated ? <AdminReview /> : <Landing />}</Route>
-      <Route path="/admin/users">{isAuthenticated ? <AdminUsers /> : <Landing />}</Route>
+      <Route path="/admin"><AdminRoute component={Admin} /></Route>
+      <Route path="/admin/analytics"><AdminRoute component={AdminAnalytics} /></Route>
+      <Route path="/admin/scraper"><AdminRoute component={AdminScraper} /></Route>
+      <Route path="/admin/events"><AdminRoute component={AdminEvents} /></Route>
+      <Route path="/admin/reports"><AdminRoute component={AdminReports} /></Route>
+      <Route path="/admin/import-jobs"><AdminRoute component={AdminImport} /></Route>
+      <Route path="/admin/review-jobs"><AdminRoute component={AdminReview} /></Route>
+      <Route path="/admin/users"><AdminRoute component={AdminUsers} /></Route>
       <Route path="/career-advisor" component={CareerPathAdvisor} />
       <Route path="/insights">{isAuthenticated ? <Insights /> : <Landing />}</Route>
       <Route path="/alerts">{isAuthenticated ? <Alerts /> : <Landing />}</Route>
