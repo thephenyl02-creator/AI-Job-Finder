@@ -5,20 +5,29 @@ import { categorizeJob } from '../lib/job-categorizer';
 import { cleanJobDescription } from '../lib/description-cleaner';
 import { generateJobHash } from '../lib/job-hash';
 import { LAW_FIRMS_AND_COMPANIES } from '../lib/law-firms-list';
+import { normalizeLocation } from '../lib/location-normalizer';
 import type { Job } from '@shared/schema';
 import { jobs } from '@shared/schema';
 import { db } from '../db';
 import { eq, and, sql } from 'drizzle-orm';
 import axios from 'axios';
 
+function normalizeCompanyName(name: string): string {
+  return name.toLowerCase()
+    .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, '')
+    .replace(/\s+(inc|llc|ltd|corp|co|plc|gmbh|ag|sa|bv|pty|limited)\s*$/i, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
 const LEGAL_TECH_COMPANIES = new Set(
   LAW_FIRMS_AND_COMPANIES
     .filter(f => f.type === 'startup' || f.type === 'tech-legal')
-    .map(f => f.name.toLowerCase())
+    .map(f => normalizeCompanyName(f.name))
 );
 
 function isLegalTechCompany(company: string): boolean {
-  return LEGAL_TECH_COMPANIES.has(company.toLowerCase());
+  return LEGAL_TECH_COMPANIES.has(normalizeCompanyName(company));
 }
 
 async function fetchJobPageContent(url: string): Promise<string | null> {
@@ -77,56 +86,18 @@ const BATCH_SIZE = 50;
 let intervalId: NodeJS.Timeout | null = null;
 let isRunning = false;
 
-const HARD_REJECT_TITLE_PATTERNS = [
-  /\baccount executive\b/i,
-  /\bsales engineer\b/i,
-  /\bsales enablement\b/i,
-  /\bsales development\b/i,
-  /\bsales representative\b/i,
-  /\b(SDR|BDR)\b/,
-  /\bGTM\s+(manager|director|enablement|lead)\b/i,
-  /\bgo[- ]to[- ]market\b/i,
-  /\bmarketing manager\b/i,
-  /\bmarketing program\b/i,
-  /\bdemand gen\b/i,
-  /\bcontent marketing\b/i,
-  /\bbilling analyst\b/i,
-  /\bbilling team\b/i,
-  /\bdeal desk\b/i,
-  /\binvestment associate\b/i,
-  /\bproposal specialist\b/i,
-  /\bregional sales\b/i,
-  /\benterprise sales\b/i,
-  /\bpartner development\b/i,
-  /\bfield enablement\b/i,
-  /\brevenue operations\b/i,
-  /\brecruiter\b/i,
-  /\btalent acquisition\b/i,
-  /\btechnical support engineer\b/i,
-  /\bcustomer support (representative|specialist)\b/i,
-  /\btechnical account manager\b/i,
-  /\bdata migration engineer\b/i,
-  /\bchief of staff\b/i,
-  /\bexecutive (assistant|secretary)\b/i,
-  /\boffice manager\b/i,
-  /\bhr manager\b/i,
-  /\bfinance manager\b/i,
-  /\bfinancial audit\b/i,
-  /\bpricing specialist\b/i,
-  /\bsocial worker\b/i,
-  /\bbenefits assistant\b/i,
-  /\btax manager\b/i,
-  /\bdirector of tax\b/i,
-  /\bsenior engineer \(\.net\b/i,
-  /\btechnology coordinator\b/i,
-  /\bsenior product designer\b/i,
-  /\bimplementation partner manager\b/i,
+const ALWAYS_REJECT_TITLE_PATTERNS = [
   /\bdevops\b/i,
   /\b(SRE|site reliability)\b/i,
-  /\bsuccess account manager\b/i,
-  /\bglobal account manager\b/i,
-  /\bcorporate account executive\b/i,
-  /\bstrategic account executive\b/i,
+  /\bsenior engineer \(\.net\b/i,
+  /\bdata migration engineer\b/i,
+  /\bsoftware quality assurance\b/i,
+  /\bai\/ml software engineer\b/i,
+  /\bforward deployed engineer\b/i,
+  /\bresearch scientist\b/i,
+  /\bcertification content\b/i,
+  /\bthreat intelligence\b/i,
+  /\binsider risk investigator\b/i,
   /\bUS-?\s*General\b/i,
   /\bSKYE TEST\b/i,
 
@@ -161,14 +132,63 @@ const HARD_REJECT_TITLE_PATTERNS = [
   /\blaw graduate\b/i,
   /\blegal externship\b/i,
   /\btrademark attorney\b/i,
+  /\bfreelance attorney\b/i,
+  /\bask a lawyer\b/i,
+  /\bclinical counsel\b/i,
+  /\bdisability rights program\b/i,
+  /\bgift planning\b/i,
+  /\bsocial worker\b/i,
+  /\bimmigration coordinator\b/i,
+];
+
+const GENERAL_COMPANY_REJECT_PATTERNS = [
+  /\baccount executive\b/i,
+  /\bsales engineer\b/i,
+  /\bsales enablement\b/i,
+  /\bsales development\b/i,
+  /\bsales representative\b/i,
+  /\b(SDR|BDR)\b/,
+  /\bGTM\s+(manager|director|enablement|lead)\b/i,
+  /\bgo[- ]to[- ]market\b/i,
+  /\bmarketing manager\b/i,
+  /\bmarketing program\b/i,
+  /\bdemand gen\b/i,
+  /\bcontent marketing\b/i,
+  /\bbilling analyst\b/i,
+  /\bbilling team\b/i,
+  /\bdeal desk\b/i,
+  /\binvestment associate\b/i,
+  /\bproposal specialist\b/i,
+  /\bregional sales\b/i,
+  /\benterprise sales\b/i,
+  /\bpartner development\b/i,
+  /\bfield enablement\b/i,
+  /\brevenue operations\b/i,
+  /\brecruiter\b/i,
+  /\btalent acquisition\b/i,
+  /\btechnical support engineer\b/i,
+  /\bcustomer support (representative|specialist)\b/i,
+  /\btechnical account manager\b/i,
+  /\bchief of staff\b/i,
+  /\bexecutive (assistant|secretary)\b/i,
+  /\boffice manager\b/i,
+  /\bhr manager\b/i,
+  /\bfinance manager\b/i,
+  /\bfinancial audit\b/i,
+  /\bpricing specialist\b/i,
+  /\bbenefits assistant\b/i,
+  /\btax manager\b/i,
+  /\bdirector of tax\b/i,
+  /\btechnology coordinator\b/i,
+  /\bsenior product designer\b/i,
+  /\bimplementation partner manager\b/i,
+  /\bsuccess account manager\b/i,
+  /\bglobal account manager\b/i,
+  /\bcorporate account executive\b/i,
+  /\bstrategic account executive\b/i,
   /\bdeputy director\b/i,
-  /\bforward deployed engineer\b/i,
-  /\bresearch scientist\b/i,
-  /\bcertification content\b/i,
   /\bcustomer trust lead\b/i,
   /\bhead of security risk\b/i,
-  /\binsider risk investigator\b/i,
-  /\bimmigration coordinator\b/i,
   /\beuropean tax lead\b/i,
   /\binternational indirect tax\b/i,
   /\broc analyst\b/i,
@@ -176,25 +196,35 @@ const HARD_REJECT_TITLE_PATTERNS = [
   /\bbusiness systems analyst\b/i,
   /\bsecurity workforce\b/i,
   /\bregional state and local affairs\b/i,
-  /\bsoftware quality assurance\b/i,
-  /\bclinical counsel\b/i,
-  /\bthreat intelligence\b/i,
-  /\bgift planning\b/i,
-  /\bdisability rights program\b/i,
   /\bresponsible scaling policy\b/i,
-  /\bai\/ml software engineer\b/i,
   /^paralegal$/i,
   /^account manager$/i,
-  /\bfreelance attorney\b/i,
-  /\bask a lawyer\b/i,
   /^chief of staff$/i,
   /\bdirector of tax\b/i,
   /^gtm (director|team lead)\b/i,
   /\bdeal desk\b/i,
+  /\bbenefits program manager\b/i,
+  /\bpeople business partner\b/i,
+  /\bsales compensation\b/i,
+  /\bglobal workplace operations\b/i,
+  /\binternational accounting\b/i,
+  /\bit operations analyst\b/i,
+  /\bmotion designer\b/i,
+  /\bsocial media marketing\b/i,
+  /\bgrowth marketing\b/i,
+  /\bnotary public\b/i,
 ];
 
-function shouldHardReject(title: string): boolean {
-  return HARD_REJECT_TITLE_PATTERNS.some(pattern => pattern.test(title));
+function shouldHardReject(title: string, company?: string): boolean {
+  if (ALWAYS_REJECT_TITLE_PATTERNS.some(pattern => pattern.test(title))) {
+    return true;
+  }
+
+  if (company && isLegalTechCompany(company)) {
+    return false;
+  }
+
+  return GENERAL_COMPANY_REJECT_PATTERNS.some(pattern => pattern.test(title));
 }
 
 const NON_LEGAL_TECH_COMPANIES: Record<string, 'general-ai' | 'legal-aid' | 'advocacy'> = {
@@ -413,7 +443,7 @@ async function recoverStuckJobs(): Promise<number> {
 }
 
 async function enrichJob(job: Job): Promise<void> {
-  if (shouldHardReject(job.title)) {
+  if (shouldHardReject(job.title, job.company)) {
     console.log(`[Enrichment] Hard-rejecting "${job.title}" at ${job.company} - irrelevant title pattern`);
     await storage.updateJobWorkerFields(job.id, {
       pipelineStatus: 'rejected',
@@ -628,6 +658,11 @@ async function enrichJob(job: Job): Promise<void> {
       }
     }
 
+    const normalizedLocation = normalizeLocation(job.location);
+    if (normalizedLocation && normalizedLocation !== job.location) {
+      enrichedData.location = normalizedLocation;
+    }
+
     await storage.updateJobWorkerFields(job.id, enrichedData);
   } catch (err: any) {
     console.error(`[Enrichment] Failed to enrich job ${job.id}: ${err.message}`);
@@ -703,7 +738,7 @@ async function runLiveJobAudit(): Promise<{ audited: number; flagged: number; pr
         continue;
       }
 
-      if (shouldHardReject(job.title)) {
+      if (shouldHardReject(job.title, job.company)) {
         console.log(`[Audit] Unpublish "${job.title}" at ${job.company} - hard reject title`);
         await storage.updateJobWorkerFields(job.id, { pipelineStatus: 'rejected', isPublished: false, reviewReasonCode: 'AUDIT_TITLE_REJECT' });
         flagged++;
@@ -768,7 +803,7 @@ async function runLiveJobAudit(): Promise<{ audited: number; flagged: number; pr
         && (job.relevanceConfidence ?? 0) >= 40
         && job.applyUrl && job.applyUrl.trim() !== ''
         && !isGenericCareersUrl(job.applyUrl)
-        && !shouldHardReject(job.title)
+        && !shouldHardReject(job.title, job.company)
         && !shouldRejectByCompany(job.title, job.company);
 
       if (!passesGate) continue;
