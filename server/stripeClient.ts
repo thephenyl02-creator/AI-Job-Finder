@@ -1,11 +1,16 @@
 import Stripe from 'stripe';
 
-let connectionSettings: any;
-
 async function getCredentials() {
+  if (process.env.STRIPE_SECRET_KEY && process.env.STRIPE_PUBLISHABLE_KEY) {
+    return {
+      publishableKey: process.env.STRIPE_PUBLISHABLE_KEY,
+      secretKey: process.env.STRIPE_SECRET_KEY,
+    };
+  }
+
   const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
   if (!hostname) {
-    throw new Error('REPLIT_CONNECTORS_HOSTNAME not set. Please configure the Stripe integration.');
+    throw new Error('Stripe not configured. Set STRIPE_SECRET_KEY and STRIPE_PUBLISHABLE_KEY environment variables.');
   }
 
   const xReplitToken = process.env.REPL_IDENTITY
@@ -39,11 +44,10 @@ async function getCredentials() {
   }
 
   const data = await response.json();
-
-  connectionSettings = data.items?.[0];
+  const connectionSettings = data.items?.[0];
 
   if (!connectionSettings || (!connectionSettings.settings.publishable || !connectionSettings.settings.secret)) {
-    throw new Error(`Stripe ${targetEnvironment} connection not found. Please set up Stripe in the Integrations tab.`);
+    throw new Error(`Stripe ${targetEnvironment} connection not found. Set STRIPE_SECRET_KEY and STRIPE_PUBLISHABLE_KEY environment variables.`);
   }
 
   return {
