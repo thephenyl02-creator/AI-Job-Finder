@@ -1,6 +1,6 @@
 import { db } from '../db';
 import { jobs } from '@shared/schema';
-import { isNull, or, eq } from 'drizzle-orm';
+import { isNull, or, eq, inArray } from 'drizzle-orm';
 import { normalizeCountry } from '../lib/country-normalizer';
 
 export async function backfillCountryCodes(): Promise<{ updated: number; errors: number; summary: Record<string, number> }> {
@@ -23,7 +23,9 @@ export async function backfillCountryCodes(): Promise<{ updated: number; errors:
     return { updated: 0, errors: 0, summary: {} };
   }
 
-  console.log(`[Country Backfill] Processing ${allJobs.length} jobs without country codes...`);
+  console.log(`[Country Backfill] Processing ${allJobs.length} jobs...`);
+
+  const batches: Record<string, { countryCode: string; countryName: string; workMode: string; ids: number[] }> = {};
 
   for (const job of allJobs) {
     try {
@@ -35,17 +37,31 @@ export async function backfillCountryCodes(): Promise<{ updated: number; errors:
         workMode = job.locationType as 'remote' | 'hybrid';
       }
 
-      await db.update(jobs).set({
-        countryCode: result.countryCode,
-        countryName: result.countryName,
-        workMode: workMode,
-      }).where(eq(jobs.id, job.id));
+      const key = `${result.countryCode}|${result.countryName}|${workMode}`;
+      if (!batches[key]) {
+        batches[key] = { countryCode: result.countryCode, countryName: result.countryName, workMode, ids: [] };
+      }
+      batches[key].ids.push(job.id);
 
       summary[result.countryCode] = (summary[result.countryCode] || 0) + 1;
       updated++;
     } catch (err: any) {
-      console.error(`[Country Backfill] Error for job ${job.id}:`, err.message);
+      console.error(`[Country Backfill] Error normalizing job ${job.id}:`, err.message);
       errors++;
+    }
+  }
+
+  for (const batch of Object.values(batches)) {
+    try {
+      await db.update(jobs).set({
+        countryCode: batch.countryCode,
+        countryName: batch.countryName,
+        workMode: batch.workMode,
+      }).where(inArray(jobs.id, batch.ids));
+    } catch (err: any) {
+      console.error(`[Country Backfill] Batch update error for ${batch.countryCode}:`, err.message);
+      errors += batch.ids.length;
+      updated -= batch.ids.length;
     }
   }
 
