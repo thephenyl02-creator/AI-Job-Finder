@@ -1,6 +1,6 @@
 import { db } from '../db';
 import { jobs } from '@shared/schema';
-import { isNull, or, eq, inArray } from 'drizzle-orm';
+import { inArray } from 'drizzle-orm';
 import { normalizeCountry } from '../lib/country-normalizer';
 
 export async function backfillCountryCodes(): Promise<{ updated: number; errors: number; summary: Record<string, number> }> {
@@ -14,14 +14,7 @@ export async function backfillCountryCodes(): Promise<{ updated: number; errors:
     isRemote: jobs.isRemote,
     locationType: jobs.locationType,
     countryCode: jobs.countryCode,
-  }).from(jobs).where(
-    or(isNull(jobs.countryCode), eq(jobs.countryCode, ''), eq(jobs.countryCode, 'UN'))
-  );
-
-  if (allJobs.length === 0) {
-    console.log(`[Country Backfill] All jobs already have country codes — nothing to do`);
-    return { updated: 0, errors: 0, summary: {} };
-  }
+  }).from(jobs);
 
   console.log(`[Country Backfill] Processing ${allJobs.length} jobs...`);
 
