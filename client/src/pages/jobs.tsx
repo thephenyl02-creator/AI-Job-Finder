@@ -10,6 +10,7 @@ import { apiRequest } from "@/lib/queryClient";
 import type { Job, JobWithScore } from "@shared/schema";
 import { JOB_TAXONOMY } from "@shared/schema";
 import { cleanStructuredText } from "@/lib/structured-description";
+import { getCountryDisplayName } from "@/lib/country-names";
 import { JobLocation } from "@/components/job-location";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -613,7 +614,7 @@ export default function Jobs() {
           <div className="flex items-center gap-2 mt-2 flex-wrap" data-testid="country-filter-banner">
             <Badge variant="secondary" className="no-default-active-elevate text-xs gap-1">
               <MapPin className="h-3 w-3" />
-              {selectedCountry === "WW" ? "Worldwide Remote" : selectedCountry}
+              {getCountryDisplayName(selectedCountry)}
             </Badge>
             <Button
               variant="ghost"

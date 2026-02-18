@@ -268,35 +268,28 @@ export default function Landing() {
                   <div className="rounded-md border border-border/50 bg-muted/20 dark:bg-muted/10 p-4">
                     <p className="text-[10px] font-semibold text-muted-foreground tracking-wide uppercase mb-3">Top hiring regions</p>
                     <div className="space-y-2">
-                      {[
-                        { flag: "US", name: "United States" },
-                        { flag: "GB", name: "United Kingdom" },
-                        { flag: "SE", name: "Sweden" },
-                        { flag: "CA", name: "Canada" },
-                        { flag: "WW", name: "Worldwide Remote" },
-                      ].map((region) => {
-                        const countryData = density?.byCountry?.find((c) => c.countryCode === region.flag);
-                        const count = countryData?.jobCount || 0;
-                        if (count === 0) return null;
-                        return (
+                      {density?.byCountry
+                        ?.filter((c) => c.jobCount > 0 && c.countryCode !== "UN" && c.countryName !== "Unknown")
+                        .sort((a, b) => b.jobCount - a.jobCount)
+                        .slice(0, 5)
+                        .map((region) => (
                           <a
-                            key={region.flag}
-                            href={`/jobs?country=${region.flag}`}
+                            key={region.countryCode}
+                            href={`/jobs?country=${region.countryCode}`}
                             className="flex items-center justify-between gap-2 text-sm hover-elevate rounded-md px-2 py-1.5 -mx-2 cursor-pointer"
-                            data-testid={`link-region-${region.flag}`}
+                            data-testid={`link-region-${region.countryCode}`}
                           >
                             <span className="flex items-center gap-2">
-                              {region.flag === "WW" ? (
+                              {region.countryCode === "WW" ? (
                                 <Wifi className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                               ) : (
                                 <Globe className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                               )}
-                              <span className="text-foreground text-xs">{region.name}</span>
+                              <span className="text-foreground text-xs">{region.countryName}</span>
                             </span>
-                            <span className="text-muted-foreground text-xs tabular-nums">{count}</span>
+                            <span className="text-muted-foreground text-xs tabular-nums">{region.jobCount}</span>
                           </a>
-                        );
-                      })}
+                        ))}
                     </div>
                   </div>
                 </div>
