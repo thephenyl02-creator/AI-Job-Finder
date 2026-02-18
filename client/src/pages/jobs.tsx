@@ -612,19 +612,19 @@ export default function Jobs() {
         />
 
         <div data-testid="card-smart-search" className="mt-2">
-          <div className="relative rounded-md border-2 border-foreground/20 bg-muted/30 px-4 py-4 sm:px-8 sm:py-7 transition-colors focus-within:border-foreground/50">
-            <div className="flex items-start gap-2.5 sm:gap-4">
+          <div className="rounded-md border-2 border-foreground/20 bg-muted/30 px-4 py-3 sm:px-8 sm:py-7 transition-colors focus-within:border-foreground/50">
+            <div className="flex items-start gap-2 sm:gap-4">
               <Search className="h-5 w-5 sm:h-6 sm:w-6 text-foreground/40 mt-2 sm:mt-2.5 shrink-0" />
               <Textarea
                 ref={textareaRef}
-                placeholder="What kind of role are you looking for? Or paste your resume..."
-                className="border-0 shadow-none text-base sm:text-xl min-h-[42px] sm:min-h-[52px] resize-none overflow-hidden pr-20 sm:pr-28 focus-visible:ring-0 bg-transparent placeholder:text-muted-foreground/50"
+                placeholder="Search roles or paste your resume..."
+                className="border-0 shadow-none text-sm sm:text-xl min-h-[36px] sm:min-h-[52px] resize-none overflow-y-auto max-h-[300px] focus-visible:ring-0 bg-transparent placeholder:text-muted-foreground/50"
                 value={smartQuery}
                 onChange={(e) => {
                   setSmartQuery(e.target.value);
                   const el = e.target;
                   el.style.height = "auto";
-                  el.style.height = Math.min(el.scrollHeight, 200) + "px";
+                  el.style.height = Math.min(el.scrollHeight, 300) + "px";
                 }}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && !e.shiftKey) {
@@ -636,7 +636,7 @@ export default function Jobs() {
                 data-testid="input-smart-search"
               />
             </div>
-            <div className="absolute right-4 sm:right-8 top-4 sm:top-7 flex items-center gap-1">
+            <div className="flex items-center justify-end gap-1 mt-2 sm:mt-3">
               <Button
                 variant="ghost"
                 size="icon"
