@@ -1,0 +1,174 @@
+Implement a permanent, future-proof “Opportunity Density Map → click country → filtered jobs” solution.
+
+TECH STACK CONTEXT
+This app uses a jobs database + existing ingestion/upload. Do NOT create a separate jobs store. Reuse the existing jobs table and jobs list page.
+
+GOAL
+1) Show a world choropleth map shaded by ACTIVE job count per country.
+2) When the user clicks a country, it must permanently and reliably filter to that country’s jobs.
+3) This must keep working as we add new job sources/scrapers and upload jobs from around the world.
+
+NON-NEGOTIABLE PRINCIPLES (Permanent Fix)
+- Location normalization must happen ONLY during ingestion/update/backfill (single source of truth).
+- Jobs filtering logic must be centralized and reused by both the map aggregation endpoint and jobs listing endpoint.
+- Country filtering must be based on ISO-2 country codes (US, IN, GB, etc.) – never based on country names or raw strings.
+- Every job MUST have a country_code (fallback allowed).
+- Remote jobs must be handled consistently, including Worldwide remote.
+
+────────────────────────────────────────────────────────
+1) DATABASE: Normalize Location Fields (Permanent)
+Add/ensure these columns exist on the jobs table:
+
+- country_code TEXT NOT NULL        (ISO-2, e.g., "US", "IN", "GB"; fallbacks: "UN" unknown, "WW" worldwide)
+- country_name TEXT                 (e.g., "United States")
+- city TEXT NULL                    (optional)
+- work_mode TEXT NOT NULL           ("onsite" | "hybrid" | "remote")
+- location_raw TEXT NULL            (original location string from source)
+- location_confidence TEXT NOT NULL ("high" | "medium" | "low")
+- location_updated_at TIMESTAMP NOT NULL DEFAULT now()
+
+Add DB constraints:
+- country_code NOT NULL
+- work_mode must be one of: onsite/hybrid/remote
+- location_confidence must be one of: high/medium/low
+
+If jobs table already has fields, migrate safely and backfill.
+
+────────────────────────────────────────────────────────
+2) LOCATION NORMALIZATION UTILITY (Single Source of Truth)
+Create a server utility function:
+
+normalizeLocation(locationRaw: string | null | undefined) -> {
+  country_code: string,   // ISO-2 or "UN" or "WW"
+  country_name: string,
+  city: string | null,
+  work_mode: "onsite"|"hybrid"|"remote",
+  confidence: "high"|"medium"|"low"
+}
+
+Rules:
+- Detect work_mode from keywords:
+  - "remote", "work from home", "wfh" => remote
+  - "hybrid" => hybrid
+  - else onsite
+- Detect worldwide remote:
+  - "worldwide", "global remote", "anywhere", "remote - global" => country_code="WW", country_name="Worldwide", work_mode="remote"
+- Detect unknown/unspecified:
+  - empty/null/very unclear => country_code="UN", country_name="Unknown", confidence="low"
+- Parse common patterns:
+  - "City, Country" (e.g., "London, UK")
+  - "City, ST, US"
+  - "Remote (US)" => country_code="US", work_mode="remote"
+  - "Hybrid - Toronto, Canada" => country_code="CA", city="Toronto", work_mode="hybrid"
+Use a lightweight country lookup map for ISO-2 conversion (UK->GB, USA->US, etc.).
+Do NOT use paid external geocoding APIs for MVP.
+
+────────────────────────────────────────────────────────
+3) APPLY NORMALIZATION AT INGESTION / UPDATE (Only here)
+Wherever jobs are created or updated (scrapers, uploads, admin import):
+- Always call normalizeLocation(job.location_raw)
+- Store normalized fields on the job record.
+
+Never normalize in query endpoints. Never normalize in the frontend.
+
+────────────────────────────────────────────────────────
+4) ADMIN BACKFILL ENDPOINT (One-time + Safety Net)
+Add an admin-only endpoint:
+
+POST /api/admin/backfill-job-locations
+
+It should:
+- Find all jobs where country_code is missing/NULL or work_mode missing
+- Compute normalizeLocation(location_raw OR existing location field)
+- Update the job record with normalized fields
+- Return a summary count of updated jobs
+
+SECURITY:
+- Create middleware requireAdmin
+- Protect ALL /api/admin/* routes with requireAdmin (not just isAuthenticated)
+
+────────────────────────────────────────────────────────
+5) CENTRALIZED FILTER BUILDER (Used everywhere)
+Create a single function for building the jobs WHERE clause, reused by:
+- jobs listing endpoint
+- map aggregation endpoint
+
+Filters to support:
+- country (ISO-2 code or "WW" or "UN")
+- rangeDays (30/90/365)
+- category (taxonomy) if present
+- workMode (all/onsite/hybrid/remote)
+- status (active only by default)
+
+Implement status:
+- Ensure jobs have status column ("active" | "expired") OR compute active as:
+  created_at within rangeDays AND not explicitly expired
+Prefer explicit status. If missing, add:
+- status TEXT NOT NULL DEFAULT "active"
+And optionally a nightly task later (not required) to expire old jobs.
+
+────────────────────────────────────────────────────────
+6) JOBS LIST ENDPOINT (Stable API Contract)
+Ensure jobs listing endpoint supports query params:
+GET /api/jobs?country=IN&rangeDays=90&category=All&workMode=All&status=active
+
+It must filter server-side using the centralized filter builder.
+
+Also ensure the frontend jobs page reads these params and shows filtered results.
+
+────────────────────────────────────────────────────────
+7) JOB DENSITY ENDPOINT (Map Aggregation)
+Create:
+GET /api/job-density?rangeDays=90&category=All&workMode=All&status=active
+
+Return:
+{
+  "rangeDays": 90,
+  "totalJobs": number,
+  "remoteShare": number,
+  "byCountry": [
+    { "countryCode": "US", "countryName": "United States", "jobCount": 482, "topCategories": ["Legal Ops","Legal Product"] }
+  ],
+  "topCountries": [...],
+  "topCategories": [...]
+}
+
+This must use the same centralized filter builder (except grouped by country_code).
+
+────────────────────────────────────────────────────────
+8) FRONTEND MAP PAGE (Click → Filter Permanently)
+Create route: /opportunity-map
+
+- Show world choropleth map shaded by jobCount per countryCode
+- On country click:
+  - navigate to: /jobs?country=<countryCode>&rangeDays=<rangeDays>&category=<category>&workMode=<workMode>
+- For mobile:
+  - first tap selects and shows right panel
+  - second tap or "View jobs" button navigates
+
+Handle edge cases:
+- If a country has 0 jobs, show:
+  "No active roles found for this country in the selected range."
+  Button: "View all jobs"
+
+Also include a panel toggle for:
+- "Worldwide Remote" (WW)
+- "Unknown location" (UN)
+These should be selectable filters even if not a country on the map.
+
+────────────────────────────────────────────────────────
+9) TESTS (Prevent future breakage)
+Add two automated tests:
+A) Location normalization test:
+- Provide sample raw locations and assert country_code and work_mode are never null.
+B) Filtering contract test:
+- Seed a few jobs with different country_code and ensure /api/jobs?country=IN returns only IN jobs.
+
+DELIVERABLES
+- DB migration for normalized location fields + constraints
+- normalizeLocation utility
+- ingestion integration + admin backfill
+- centralized filter builder reused across endpoints
+- /api/job-density endpoint
+- Map page with click → jobs filter navigation
+- tests
