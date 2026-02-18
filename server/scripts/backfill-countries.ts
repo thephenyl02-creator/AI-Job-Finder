@@ -18,6 +18,11 @@ export async function backfillCountryCodes(): Promise<{ updated: number; errors:
     or(isNull(jobs.countryCode), eq(jobs.countryCode, ''))
   );
 
+  if (allJobs.length === 0) {
+    console.log(`[Country Backfill] All jobs already have country codes — nothing to do`);
+    return { updated: 0, errors: 0, summary: {} };
+  }
+
   console.log(`[Country Backfill] Processing ${allJobs.length} jobs without country codes...`);
 
   for (const job of allJobs) {
@@ -49,10 +54,13 @@ export async function backfillCountryCodes(): Promise<{ updated: number; errors:
   return { updated, errors, summary };
 }
 
-backfillCountryCodes().then((result) => {
-  console.log('Backfill result:', result);
-  process.exit(0);
-}).catch((err) => {
-  console.error('Backfill failed:', err);
-  process.exit(1);
-});
+const isDirectRun = process.argv[1]?.includes('backfill-countries');
+if (isDirectRun) {
+  backfillCountryCodes().then((result) => {
+    console.log('Backfill result:', result);
+    process.exit(0);
+  }).catch((err) => {
+    console.error('Backfill failed:', err);
+    process.exit(1);
+  });
+}

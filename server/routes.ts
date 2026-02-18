@@ -4802,6 +4802,20 @@ Provide 2-4 recommended paths. Be specific to this candidate's actual experience
     }
   });
 
+  app.post("/api/admin/backfill-countries", isAuthenticated, async (req, res) => {
+    if (!(await isAdminCheck(req))) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    try {
+      const { backfillCountryCodes } = await import("./scripts/backfill-countries");
+      const result = await backfillCountryCodes();
+      res.json(result);
+    } catch (error: any) {
+      console.error("Country backfill error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Get specific log file content
   app.get("/api/admin/logs/:filename", isAuthenticated, async (req, res) => {
     if (!(await isAdminCheck(req))) {

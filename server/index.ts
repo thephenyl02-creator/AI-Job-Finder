@@ -162,6 +162,16 @@ app.use((req, res, next) => {
 
       setTimeout(async () => {
         try {
+          const { backfillCountryCodes } = await import('./scripts/backfill-countries');
+          const result = await backfillCountryCodes();
+          if (result.updated > 0) {
+            log(`Country backfill: ${result.updated} jobs updated`);
+          }
+        } catch (err: any) {
+          console.error('[Country Backfill] Startup backfill failed:', err.message);
+        }
+
+        try {
           const published = await storage.getPublishedJobs();
           if (published.length < 100) {
             log(`Only ${published.length} published jobs found — triggering initial full scrape`);
@@ -174,7 +184,7 @@ app.use((req, res, next) => {
         } catch (err: any) {
           console.error('[Startup Scrape] Check failed:', err.message);
         }
-      }, 30000);
+      }, 10000);
     },
   );
 })();
