@@ -2247,7 +2247,6 @@ class DatabaseStorage implements IStorage {
   async getEvents(filters?: { eventType?: string; attendanceType?: string; isFree?: boolean; topic?: string; upcoming?: boolean }): Promise<Event[]> {
     const conditions: any[] = [
       eq(events.isActive, true),
-      sql`(${events.linkStatus} IS NULL OR ${events.linkStatus} != 'broken')`,
     ];
 
     if (filters?.eventType) {

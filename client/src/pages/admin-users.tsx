@@ -50,12 +50,24 @@ interface UsersResponse {
   totalPages: number;
 }
 
+interface ChargeEntry {
+  id: string;
+  amount: number;
+  currency: string;
+  created: number;
+  customerEmail: string | null;
+  description: string | null;
+  status: string;
+}
+
 interface SubStats {
   totalUsers: number;
   proUsers: number;
   freeUsers: number;
   monthlyRevenue: number;
   recentCharges: number;
+  chargeBreakdown?: ChargeEntry[];
+  isLiveMode?: boolean;
 }
 
 interface PaymentEntry {
@@ -147,22 +159,61 @@ function StatsCards() {
   ];
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-      {cards.map((card) => (
-        <Card key={card.label}>
-          <CardContent className="py-4 px-4">
-            <div className="flex items-center justify-between gap-2">
-              <div>
-                <p className="text-xs text-muted-foreground">{card.label}</p>
-                <p className="text-2xl font-semibold mt-0.5" data-testid={card.testId}>
-                  {card.value}
-                </p>
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {cards.map((card) => (
+          <Card key={card.label}>
+            <CardContent className="py-4 px-4">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <p className="text-xs text-muted-foreground">{card.label}</p>
+                  <p className="text-2xl font-semibold mt-0.5" data-testid={card.testId}>
+                    {card.value}
+                  </p>
+                </div>
+                <card.icon className="h-5 w-5 text-muted-foreground/60" />
               </div>
-              <card.icon className="h-5 w-5 text-muted-foreground/60" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {stats.isLiveMode === false && (
+        <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-amber-500/10 border border-amber-500/20" data-testid="test-mode-banner">
+          <Receipt className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
+          <p className="text-xs text-amber-700 dark:text-amber-300">
+            Stripe is in <strong>test mode</strong>. Revenue figures reflect test charges, not real payments.
+          </p>
+        </div>
+      )}
+
+      {stats.chargeBreakdown && stats.chargeBreakdown.length > 0 && (
+        <Card data-testid="charge-breakdown">
+          <CardContent className="py-4 px-4">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+              Charge Details (Last 30 Days)
+            </p>
+            <div className="space-y-2">
+              {stats.chargeBreakdown.map((charge) => (
+                <div key={charge.id} className="flex items-center justify-between gap-2 text-sm border-b border-border/30 pb-2 last:border-0 last:pb-0">
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-foreground font-medium truncate">
+                      {charge.customerEmail || "Unknown customer"}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {formatDate(charge.created)}
+                      {charge.description && ` — ${charge.description}`}
+                    </span>
+                  </div>
+                  <span className="text-foreground font-semibold tabular-nums shrink-0">
+                    {formatCurrency(charge.amount, charge.currency)}
+                  </span>
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>
-      ))}
+      )}
     </div>
   );
 }

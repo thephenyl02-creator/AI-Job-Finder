@@ -2454,6 +2454,8 @@ Provide 2-4 recommended paths. Be specific to this candidate's actual experience
 
       let monthlyRevenue = 0;
       let recentCharges = 0;
+      let chargeBreakdown: Array<{ id: string; amount: number; currency: string; created: number; customerEmail: string | null; description: string | null; status: string }> = [];
+      let isLiveMode = true;
 
       try {
         const { getUncachableStripeClient } = await import("./stripeClient");
@@ -2464,9 +2466,21 @@ Provide 2-4 recommended paths. Be specific to this candidate's actual experience
           created: { gte: thirtyDaysAgo },
         });
         for (const charge of chargesResult.data) {
+          if (charge.livemode === false) {
+            isLiveMode = false;
+          }
           if (charge.status === "succeeded") {
             monthlyRevenue += charge.amount;
             recentCharges++;
+            chargeBreakdown.push({
+              id: charge.id,
+              amount: charge.amount,
+              currency: charge.currency,
+              created: charge.created,
+              customerEmail: charge.billing_details?.email || charge.receipt_email || null,
+              description: charge.description,
+              status: charge.status,
+            });
           }
         }
       } catch (stripeErr: any) {
@@ -2479,6 +2493,8 @@ Provide 2-4 recommended paths. Be specific to this candidate's actual experience
         freeUsers,
         monthlyRevenue,
         recentCharges,
+        chargeBreakdown,
+        isLiveMode,
       });
     } catch (error: any) {
       console.error("Error fetching subscription stats:", error);

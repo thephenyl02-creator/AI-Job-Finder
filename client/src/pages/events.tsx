@@ -21,6 +21,7 @@ import {
   DollarSign,
   Tag,
   ArrowRight,
+  AlertCircle,
 } from "lucide-react";
 import { Link } from "wouter";
 
@@ -176,6 +177,7 @@ export default function Events() {
                 const timeUntil = getRelativeTime(event.startDate);
                 const isPast = timeUntil === "Past";
                 const isSoon = timeUntil === "Today" || timeUntil === "Tomorrow" || timeUntil.startsWith("In") && parseInt(timeUntil.split(" ")[1]) <= 7;
+                const hasVerifiedLink = (event as any).linkStatus !== "broken";
 
                 return (
                   <ScrollReveal key={event.id} delay={index * 0.05} direction="up">
@@ -264,13 +266,19 @@ export default function Events() {
                             )}
                           </div>
 
-                          <div className="sm:shrink-0 sm:self-center">
+                          <div className="sm:shrink-0 sm:self-center flex flex-col items-end gap-1.5">
                             <Link href={`/events/${event.id}`} data-testid={`link-view-event-${event.id}`}>
                               <Button variant="outline" size="sm" data-testid={`button-view-event-${event.id}`}>
                                 View Details
                                 <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
                               </Button>
                             </Link>
+                            {!hasVerifiedLink && !isPast && (
+                              <span className="flex items-center gap-1 text-[10px] text-muted-foreground/70" data-testid={`text-link-status-${event.id}`}>
+                                <AlertCircle className="h-3 w-3" />
+                                Registration link unverified
+                              </span>
+                            )}
                           </div>
                         </div>
                       </CardContent>

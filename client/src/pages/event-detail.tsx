@@ -27,6 +27,7 @@ import {
   Users,
   Share2,
   Tag,
+  AlertCircle,
 } from "lucide-react";
 
 const EVENT_TYPE_STYLES: Record<string, string> = {
@@ -292,15 +293,28 @@ export default function EventDetail() {
 
           <ScrollReveal delay={0.15}>
             <div className="flex flex-wrap gap-3 mb-6">
-              <Button onClick={handleRegisterClick} data-testid="button-register">
-                <ExternalLink className="h-4 w-4 mr-2" />
-                Register
-              </Button>
+              {(event as any).linkStatus === "broken" ? (
+                <Button variant="secondary" disabled data-testid="button-register">
+                  <AlertCircle className="h-4 w-4 mr-2" />
+                  Registration link unavailable
+                </Button>
+              ) : (
+                <Button onClick={handleRegisterClick} data-testid="button-register">
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  Register
+                </Button>
+              )}
               <Button variant="outline" onClick={handleShare} data-testid="button-share">
                 <Share2 className="h-4 w-4 mr-2" />
                 Share
               </Button>
             </div>
+            {(event as any).linkStatus === "broken" && (
+              <p className="text-xs text-amber-600 dark:text-amber-400 mb-2 flex items-center gap-1.5" data-testid="text-broken-link-notice">
+                <AlertCircle className="h-3 w-3 shrink-0" />
+                The registration link for this event could not be verified. Try searching for the event directly on the organizer's website.
+              </p>
+            )}
             <p className="text-xs text-muted-foreground/60 mt-2" data-testid="text-event-disclaimer">
               Event details are sourced from public information and may change. Please verify directly with the organizer before registering.
             </p>

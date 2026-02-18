@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { useCallback, useState, useMemo, useEffect } from "react";
+import { useCallback, useState, useMemo, useEffect, useRef, memo } from "react";
 import { ComposableMap, Geographies, Geography } from "react-simple-maps";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -253,6 +253,51 @@ function interpolateColor(t: number, isDark: boolean): string {
   return `hsl(${h}, ${s}%, ${l}%)`;
 }
 
+interface MemoGeoProps {
+  geo: any;
+  fillColor: string;
+  hoverFill: string;
+  strokeColor: string;
+  activeStroke: string;
+  hasJobs: boolean;
+  isHovered: boolean;
+  onMouseEnter: () => void;
+  onMouseLeave: () => void;
+  onClick: () => void;
+}
+
+const MemoGeography = memo(function MemoGeography({
+  geo, fillColor, hoverFill, strokeColor, activeStroke, hasJobs, isHovered,
+  onMouseEnter, onMouseLeave, onClick,
+}: MemoGeoProps) {
+  return (
+    <Geography
+      geography={geo}
+      fill={isHovered && hasJobs ? hoverFill : fillColor}
+      stroke={hasJobs ? (isHovered ? activeStroke : strokeColor) : strokeColor}
+      strokeWidth={isHovered && hasJobs ? 1.2 : 0.4}
+      style={{
+        default: { outline: "none" },
+        hover: {
+          outline: "none",
+          fill: hoverFill,
+          stroke: hasJobs ? activeStroke : strokeColor,
+          strokeWidth: hasJobs ? 1.2 : 0.4,
+          cursor: hasJobs ? "pointer" : "default",
+        },
+        pressed: { outline: "none" },
+      }}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+      onClick={onClick}
+    />
+  );
+}, (prev, next) =>
+  prev.isHovered === next.isHovered &&
+  prev.fillColor === next.fillColor &&
+  prev.hasJobs === next.hasJobs
+);
+
 export default function OpportunityMap() {
   usePageTitle("Opportunity Map");
   const [, navigate] = useLocation();
@@ -304,9 +349,15 @@ export default function OpportunityMap() {
       .slice(0, 8);
   }, [data]);
 
+  const rafRef = useRef<number>(0);
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     if (isMobile) return;
-    setTooltipPos({ x: e.clientX, y: e.clientY });
+    const x = e.clientX;
+    const y = e.clientY;
+    cancelAnimationFrame(rafRef.current);
+    rafRef.current = requestAnimationFrame(() => {
+      setTooltipPos({ x, y });
+    });
   }, [isMobile]);
 
   const handleGeoHover = useCallback(
@@ -464,23 +515,15 @@ export default function OpportunityMap() {
                               : "hsl(220, 14%, 92%)";
 
                           return (
-                            <Geography
+                            <MemoGeography
                               key={geo.rsmKey}
-                              geography={geo}
-                              fill={isHovered && hasJobs ? hoverFill : fillColor}
-                              stroke={hasJobs ? (isHovered ? activeStroke : strokeColor) : strokeColor}
-                              strokeWidth={isHovered && hasJobs ? 1.2 : 0.4}
-                              style={{
-                                default: { outline: "none" },
-                                hover: {
-                                  outline: "none",
-                                  fill: hoverFill,
-                                  stroke: hasJobs ? activeStroke : strokeColor,
-                                  strokeWidth: hasJobs ? 1.2 : 0.4,
-                                  cursor: hasJobs ? "pointer" : "default",
-                                },
-                                pressed: { outline: "none" },
-                              }}
+                              geo={geo}
+                              fillColor={fillColor}
+                              hoverFill={hoverFill}
+                              strokeColor={strokeColor}
+                              activeStroke={activeStroke}
+                              hasJobs={hasJobs}
+                              isHovered={isHovered}
                               onMouseEnter={() => handleGeoHover(geo)}
                               onMouseLeave={handleGeoLeave}
                               onClick={() => handleGeoClick(geo)}
