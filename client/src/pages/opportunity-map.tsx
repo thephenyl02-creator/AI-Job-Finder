@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
-import { Globe, MapPin, ArrowRight, Wifi, Briefcase, ExternalLink } from "lucide-react";
+import { MapPin, ArrowRight, Wifi, Briefcase } from "lucide-react";
 import { usePageTitle } from "@/hooks/use-page-title";
 
 const GEO_URL = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
@@ -257,9 +257,9 @@ export default function OpportunityMap() {
   usePageTitle("Opportunity Map");
   const [, navigate] = useLocation();
   const [hoveredCode, setHoveredCode] = useState<string | null>(null);
-  const [selectedCountry, setSelectedCountry] = useState<CountryData | null>(null);
+  const [selectedCode, setSelectedCode] = useState<string | null>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
-  const tooltipContentRef = useRef<{ name: string; count: number } | null>(null);
+  const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [isDark, setIsDark] = useState(false);
 
@@ -304,6 +304,20 @@ export default function OpportunityMap() {
       .slice(0, 8);
   }, [data]);
 
+  const setHover = useCallback((code: string | null) => {
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+      hoverTimeoutRef.current = null;
+    }
+    if (code) {
+      setHoveredCode(code);
+    } else {
+      hoverTimeoutRef.current = setTimeout(() => {
+        setHoveredCode(null);
+      }, 80);
+    }
+  }, []);
+
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     if (isMobile) return;
     const el = tooltipRef.current;
@@ -313,8 +327,8 @@ export default function OpportunityMap() {
     }
   }, [isMobile]);
 
-  const hoveredCountry = hoveredCode ? countryMap.get(hoveredCode) ?? null : null;
-  const panelCountry = isMobile ? selectedCountry : hoveredCountry;
+  const activeCode = hoveredCode || selectedCode;
+  const activeCountry = activeCode ? countryMap.get(activeCode) ?? null : null;
   const emptyFill = isDark ? "hsl(220, 10%, 15%)" : "hsl(220, 14%, 96%)";
   const strokeColor = isDark ? "hsl(220, 10%, 20%)" : "hsl(220, 14%, 90%)";
   const activeStroke = isDark ? "hsl(217, 40%, 45%)" : "hsl(217, 50%, 60%)";
@@ -447,34 +461,27 @@ export default function OpportunityMap() {
                               }}
                               onMouseEnter={() => {
                                 if (isMobile) return;
-                                setHoveredCode(code);
+                                setHover(code);
                                 const name = getCountryName(geo);
-                                tooltipContentRef.current = country
-                                  ? { name: country.countryName, count: country.jobCount }
-                                  : name ? { name, count: 0 } : null;
+                                const label = country
+                                  ? `${country.countryName} — ${country.jobCount} roles`
+                                  : name || "";
                                 const el = tooltipRef.current;
-                                if (el && tooltipContentRef.current) {
+                                if (el && label) {
+                                  el.textContent = label;
                                   el.style.opacity = "1";
-                                  el.textContent = tooltipContentRef.current.count > 0
-                                    ? `${tooltipContentRef.current.name} — ${tooltipContentRef.current.count} roles`
-                                    : tooltipContentRef.current.name;
                                 }
                               }}
                               onMouseLeave={() => {
                                 if (isMobile) return;
-                                setHoveredCode(null);
-                                tooltipContentRef.current = null;
+                                setHover(null);
                                 const el = tooltipRef.current;
                                 if (el) el.style.opacity = "0";
                               }}
                               onClick={() => {
-                                if (!country) return;
+                                if (!hasJobs) return;
                                 if (isMobile) {
-                                  if (selectedCountry?.countryCode === code) {
-                                    navigate(`/jobs?country=${code}`);
-                                  } else {
-                                    setSelectedCountry(country);
-                                  }
+                                  setSelectedCode(selectedCode === code ? null : code);
                                 } else {
                                   navigate(`/jobs?country=${code}`);
                                 }
@@ -511,35 +518,99 @@ export default function OpportunityMap() {
             </div>
 
             <div className="lg:w-[320px] shrink-0" data-testid="panel-stats">
-              {panelCountry ? (
-                <Card className="overflow-visible">
-                  <CardContent className="p-4 lg:p-5">
-                    <div className="space-y-4">
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <MapPin className="h-4 w-4 text-primary shrink-0" />
-                          <h2
-                            className="text-base lg:text-lg font-serif font-medium text-foreground"
-                            data-testid="text-panel-title"
-                          >
-                            {panelCountry.countryName}
-                          </h2>
-                        </div>
-                        <p className="text-2xl lg:text-3xl font-semibold text-foreground tabular-nums" data-testid="text-panel-count">
-                          {panelCountry.jobCount}
-                          <span className="text-sm font-normal text-muted-foreground ml-1.5">
-                            active roles
-                          </span>
-                        </p>
-                      </div>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[10px] lg:text-xs font-semibold text-muted-foreground tracking-wide uppercase">
+                    Top Regions
+                  </p>
+                  <p className="text-[10px] text-muted-foreground">
+                    {isMobile ? "Tap to explore" : "Click to view roles"}
+                  </p>
+                </div>
 
-                      {panelCountry.topCategories?.length > 0 && (
+                <div className="space-y-1.5" data-testid="panel-country-list">
+                  {sortedCountries.map((c) => {
+                    const pct = maxCount > 0 ? (c.jobCount / maxCount) * 100 : 0;
+                    const isActive = activeCode === c.countryCode;
+                    return (
+                      <button
+                        key={c.countryCode}
+                        className={`w-full flex items-center gap-3 rounded-md border px-3 py-2.5 text-left hover-elevate cursor-pointer group transition-colors duration-150 ${
+                          isActive
+                            ? "border-primary/40 bg-primary/5 dark:bg-primary/10"
+                            : "border-border/50"
+                        }`}
+                        onClick={() => navigate(`/jobs?country=${c.countryCode}`)}
+                        onMouseEnter={() => {
+                          if (!isMobile) setHover(c.countryCode);
+                        }}
+                        onMouseLeave={() => {
+                          if (!isMobile) setHover(null);
+                        }}
+                        data-testid={`panel-country-${c.countryCode}`}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2 mb-1">
+                            <span className="text-sm font-medium text-foreground truncate">{c.countryName}</span>
+                            <span className="text-xs text-muted-foreground tabular-nums shrink-0">{c.jobCount}</span>
+                          </div>
+                          <div className="h-1 rounded-full bg-muted/50 overflow-hidden">
+                            <div
+                              className="h-full rounded-full transition-all duration-300"
+                              style={{
+                                width: `${Math.max(4, pct)}%`,
+                                backgroundColor: isDark ? "hsl(217, 70%, 55%)" : "hsl(217, 65%, 50%)",
+                              }}
+                            />
+                          </div>
+                        </div>
+                        <ArrowRight className={`h-3.5 w-3.5 shrink-0 transition-opacity ${isActive ? "text-primary opacity-100" : "text-muted-foreground opacity-0 group-hover:opacity-100"} invisible lg:visible`} />
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {data?.byCountry?.some((c) => c.countryCode === "WW") && (
+                  <button
+                    className="w-full flex items-center gap-3 rounded-md border border-dashed border-border/50 px-3 py-2.5 text-left hover-elevate cursor-pointer"
+                    onClick={() => navigate("/jobs?country=WW")}
+                    data-testid="panel-country-WW"
+                  >
+                    <Wifi className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <div className="flex-1 flex items-center justify-between gap-2">
+                      <span className="text-sm font-medium text-foreground">Worldwide Remote</span>
+                      <span className="text-xs text-muted-foreground tabular-nums">
+                        {data.byCountry.find((c) => c.countryCode === "WW")?.jobCount || 0}
+                      </span>
+                    </div>
+                  </button>
+                )}
+
+                {activeCountry && (
+                  <Card className="overflow-visible mt-3">
+                    <CardContent className="p-4">
+                      <div className="space-y-3">
                         <div>
-                          <p className="text-[10px] font-semibold text-muted-foreground tracking-wide uppercase mb-2">
-                            Top Categories
+                          <div className="flex items-center gap-2 mb-1">
+                            <MapPin className="h-3.5 w-3.5 text-primary shrink-0" />
+                            <h2
+                              className="text-sm font-serif font-medium text-foreground"
+                              data-testid="text-panel-title"
+                            >
+                              {activeCountry.countryName}
+                            </h2>
+                          </div>
+                          <p className="text-lg font-semibold text-foreground tabular-nums" data-testid="text-panel-count">
+                            {activeCountry.jobCount}
+                            <span className="text-xs font-normal text-muted-foreground ml-1.5">
+                              active roles
+                            </span>
                           </p>
+                        </div>
+
+                        {activeCountry.topCategories?.length > 0 && (
                           <div className="flex flex-wrap gap-1.5">
-                            {panelCountry.topCategories.slice(0, 5).map((cat) => (
+                            {activeCountry.topCategories.slice(0, 4).map((cat) => (
                               <Badge
                                 key={cat}
                                 variant="outline"
@@ -549,119 +620,45 @@ export default function OpportunityMap() {
                               </Badge>
                             ))}
                           </div>
-                        </div>
-                      )}
+                        )}
 
-                      <Button
-                        className="w-full"
-                        onClick={() => navigate(`/jobs?country=${panelCountry.countryCode}`)}
-                        data-testid="link-view-jobs"
-                      >
-                        View {panelCountry.jobCount} roles
-                        <ArrowRight className="ml-2 h-4 w-4" />
-                      </Button>
-                      {isMobile && (
-                        <p className="text-[10px] text-muted-foreground text-center -mt-2">
-                          Or tap the country again on the map
-                        </p>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="text-[10px] lg:text-xs font-semibold text-muted-foreground tracking-wide uppercase">
-                      Top Regions
-                    </p>
-                    <p className="text-[10px] text-muted-foreground">
-                      {isMobile ? "Tap to explore" : "Click to view roles"}
-                    </p>
-                  </div>
-
-                  <div className="space-y-1.5" data-testid="panel-country-list">
-                    {sortedCountries.map((c) => {
-                      const pct = maxCount > 0 ? (c.jobCount / maxCount) * 100 : 0;
-                      return (
-                        <button
-                          key={c.countryCode}
-                          className="w-full flex items-center gap-3 rounded-md border border-border/50 px-3 py-2.5 text-left hover-elevate cursor-pointer group"
-                          onClick={() => {
-                            if (isMobile) {
-                              setSelectedCountry(c);
-                            } else {
-                              navigate(`/jobs?country=${c.countryCode}`);
-                            }
-                          }}
-                          onMouseEnter={() => {
-                            if (!isMobile) setHoveredCode(c.countryCode);
-                          }}
-                          onMouseLeave={() => {
-                            if (!isMobile) setHoveredCode(null);
-                          }}
-                          data-testid={`panel-country-${c.countryCode}`}
+                        <Button
+                          size="sm"
+                          className="w-full"
+                          onClick={() => navigate(`/jobs?country=${activeCountry.countryCode}`)}
+                          data-testid="link-view-jobs"
                         >
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between gap-2 mb-1">
-                              <span className="text-sm font-medium text-foreground truncate">{c.countryName}</span>
-                              <span className="text-xs text-muted-foreground tabular-nums shrink-0">{c.jobCount}</span>
-                            </div>
-                            <div className="h-1 rounded-full bg-muted/50 overflow-hidden">
-                              <div
-                                className="h-full rounded-full transition-all duration-300"
-                                style={{
-                                  width: `${Math.max(4, pct)}%`,
-                                  backgroundColor: isDark ? "hsl(217, 70%, 55%)" : "hsl(217, 65%, 50%)",
-                                }}
-                              />
-                            </div>
-                          </div>
-                          <ExternalLink className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0 invisible lg:visible" />
-                        </button>
-                      );
-                    })}
-                  </div>
+                          View roles
+                          <ArrowRight className="ml-2 h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
 
-                  {data?.byCountry?.some((c) => c.countryCode === "WW") && (
-                    <button
-                      className="w-full flex items-center gap-3 rounded-md border border-dashed border-border/50 px-3 py-2.5 text-left hover-elevate cursor-pointer"
-                      onClick={() => navigate("/jobs?country=WW")}
-                      data-testid="panel-country-WW"
-                    >
-                      <Wifi className="h-4 w-4 text-muted-foreground shrink-0" />
-                      <div className="flex-1 flex items-center justify-between gap-2">
-                        <span className="text-sm font-medium text-foreground">Worldwide Remote</span>
-                        <span className="text-xs text-muted-foreground tabular-nums">
-                          {data.byCountry.find((c) => c.countryCode === "WW")?.jobCount || 0}
-                        </span>
-                      </div>
-                    </button>
-                  )}
-
-                  {data?.topCategories && data.topCategories.length > 0 && (
-                    <div className="pt-3 border-t border-border/30">
-                      <div className="flex items-center gap-1.5 mb-2">
-                        <Briefcase className="h-3.5 w-3.5 text-muted-foreground" />
-                        <p className="text-[10px] lg:text-xs font-semibold text-muted-foreground tracking-wide uppercase">
-                          Top Categories
-                        </p>
-                      </div>
-                      <div className="flex flex-wrap gap-1.5">
-                        {data.topCategories.slice(0, 5).map((cat) => (
-                          <Badge
-                            key={cat.name}
-                            variant="outline"
-                            className="text-[10px] no-default-active-elevate"
-                          >
-                            {cat.name}
-                            <span className="ml-1 text-muted-foreground">{cat.count}</span>
-                          </Badge>
-                        ))}
-                      </div>
+                {!activeCountry && data?.topCategories && data.topCategories.length > 0 && (
+                  <div className="pt-3 border-t border-border/30">
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <Briefcase className="h-3.5 w-3.5 text-muted-foreground" />
+                      <p className="text-[10px] lg:text-xs font-semibold text-muted-foreground tracking-wide uppercase">
+                        Top Categories
+                      </p>
                     </div>
-                  )}
-                </div>
-              )}
+                    <div className="flex flex-wrap gap-1.5">
+                      {data.topCategories.slice(0, 5).map((cat) => (
+                        <Badge
+                          key={cat.name}
+                          variant="outline"
+                          className="text-[10px] no-default-active-elevate"
+                        >
+                          {cat.name}
+                          <span className="ml-1 text-muted-foreground">{cat.count}</span>
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
