@@ -480,8 +480,8 @@ export default function DashboardPage() {
                       const maxCat = patterns.topCategories[0]?.count || 1;
                       return (
                         <div key={i}>
-                          <div className="flex items-center justify-between text-sm mb-1">
-                            <span className="text-foreground truncate mr-2">{cat.name}</span>
+                          <div className="flex items-center justify-between gap-2 text-sm mb-1">
+                            <span className="text-foreground truncate">{cat.name}</span>
                             <span className="text-muted-foreground text-xs shrink-0">{cat.count} views</span>
                           </div>
                           <div className="h-1.5 bg-muted/40 rounded-full overflow-hidden">
@@ -514,8 +514,8 @@ export default function DashboardPage() {
                 {patterns.topCompanies.length > 0 ? (
                   <div className="space-y-2.5">
                     {patterns.topCompanies.map((comp, i) => (
-                      <div key={i} className="flex items-center justify-between text-sm">
-                        <span className="text-foreground truncate mr-2">{comp.name}</span>
+                      <div key={i} className="flex items-center justify-between gap-2 text-sm">
+                        <span className="text-foreground truncate">{comp.name}</span>
                         <Badge variant="secondary" className="text-xs shrink-0">{comp.count}</Badge>
                       </div>
                     ))}
@@ -606,8 +606,8 @@ export default function DashboardPage() {
                     <div className="space-y-3">
                       {marketAlignment.map((m, i) => (
                         <div key={i}>
-                          <div className="flex items-center justify-between text-sm mb-1">
-                            <span className="text-foreground truncate mr-2">{m.category}</span>
+                          <div className="flex items-center justify-between gap-2 text-sm mb-1">
+                            <span className="text-foreground truncate">{m.category}</span>
                             <span className="text-muted-foreground text-xs shrink-0">{m.availableJobs} jobs</span>
                           </div>
                           <div className="h-1.5 bg-muted/40 rounded-full overflow-hidden">

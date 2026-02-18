@@ -1,8 +1,7 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { usePageTitle } from "@/hooks/use-page-title";
 import { useActivityTracker } from "@/hooks/use-activity-tracker";
-import { useSubscription } from "@/hooks/use-subscription";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { ScrollReveal } from "@/components/animations";
@@ -22,8 +21,6 @@ import {
   DollarSign,
   Tag,
   ArrowRight,
-  Crown,
-  Lock,
 } from "lucide-react";
 import { Link } from "wouter";
 
@@ -117,8 +114,6 @@ function getRelativeTime(dateStr: string | Date): string {
 export default function Events() {
   usePageTitle("Events");
   const { track } = useActivityTracker();
-  const { isPro } = useSubscription();
-
   useEffect(() => { track({ eventType: "page_view", pagePath: "/events" }); }, []);
 
   const { data: events, isLoading } = useQuery<Event[]>({
@@ -169,8 +164,7 @@ export default function Events() {
             const upcomingEvents = events.filter(e => new Date(e.startDate) >= now);
             const pastEvents = events.filter(e => new Date(e.startDate) < now);
             const allSorted = [...upcomingEvents, ...pastEvents];
-            const displayEvents = isPro ? allSorted : allSorted.slice(0, 2);
-            const gatedCount = allSorted.length - 2;
+            const displayEvents = allSorted;
 
             return (
             <div className="space-y-4">
@@ -284,31 +278,6 @@ export default function Events() {
                   </ScrollReveal>
                 );
               })}
-              {!isPro && gatedCount > 0 && (
-                <Card className="relative overflow-visible" data-testid="card-events-pro-gate">
-                  <CardContent className="pt-8 pb-8">
-                    <div className="text-center">
-                      <div className="w-14 h-14 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <Lock className="h-6 w-6 text-primary" />
-                      </div>
-                      <h2 className="text-lg font-medium text-foreground mb-2">
-                        {gatedCount} more event{gatedCount !== 1 ? "s" : ""} available
-                      </h2>
-                      <p className="text-sm text-muted-foreground max-w-md mx-auto mb-5">
-                        Unlock the full events calendar with conferences, workshops, and networking opportunities curated for legal tech professionals.
-                      </p>
-                      <Link href="/pricing">
-                        <Button className="gap-2" data-testid="button-events-upgrade">
-                          <Crown className="h-4 w-4" />
-                          Upgrade to Pro — $5/mo
-                          <ArrowRight className="h-4 w-4" />
-                        </Button>
-                      </Link>
-                      <p className="text-xs text-muted-foreground mt-2">Cancel anytime</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
             </div>
             );
           })()}

@@ -409,7 +409,7 @@ function UploadForm({
     <Card className="overflow-visible" data-testid="card-upload-form">
       <CardContent className="p-4">
         <form onSubmit={handleSubmit} className="space-y-3">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2">
             <h3 className="text-sm font-medium text-foreground">Upload Resume</h3>
             <Button
               size="icon"
@@ -900,9 +900,9 @@ function ATSReviewPanel({ review, onClose }: { review: ATSReview; onClose: () =>
         </Button>
       </div>
 
-      <div className="flex items-center gap-6">
+      <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
         <ATSScoreRing score={review.overallScore} />
-        <div className="flex-1 space-y-1.5">
+        <div className="flex-1 w-full space-y-1.5">
           {review.sections.slice(0, 4).map((s) => (
             <div key={s.name} className="flex items-center gap-2">
               {statusIcon(s.status)}
@@ -990,7 +990,7 @@ function ATSReviewPanel({ review, onClose }: { review: ATSReview; onClose: () =>
         <div>
           <h4 className="text-sm font-medium text-foreground mb-2">Keyword Analysis</h4>
           <p className="text-xs text-muted-foreground mb-2">{review.keywordAnalysis.advice}</p>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <p className="text-xs font-medium text-foreground mb-1">Strong Keywords</p>
               <div className="flex flex-wrap gap-1">
@@ -1154,7 +1154,7 @@ export default function Resumes() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-1 space-y-3">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <h2 className="text-sm font-medium text-foreground">
                 Resumes ({userResumes.length}/{isPro ? 5 : 1})
               </h2>

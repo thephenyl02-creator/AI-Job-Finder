@@ -639,7 +639,7 @@ function RedlineBullet({
         </div>
 
         {bullet.improvementNote && (
-          <div className="flex items-start gap-2 ml-14">
+          <div className="flex items-start gap-2 ml-0 sm:ml-14">
             <p className="text-[11px] text-muted-foreground italic" data-testid={`text-note-${index}`}>
               {bullet.improvementNote}
             </p>
@@ -647,7 +647,7 @@ function RedlineBullet({
         )}
 
         {bullet.matchedKeywords.length > 0 && (
-          <div className="flex items-center gap-1.5 ml-14 flex-wrap">
+          <div className="flex items-center gap-1.5 ml-0 sm:ml-14 flex-wrap">
             {bullet.matchedKeywords.map((kw, i) => (
               <Badge key={i} variant="secondary" className="text-[10px]">
                 {kw}
@@ -656,7 +656,7 @@ function RedlineBullet({
           </div>
         )}
 
-        <div className="flex items-center gap-2 ml-14 pt-1">
+        <div className="flex items-center gap-2 ml-0 sm:ml-14 pt-1">
           <Button
             size="sm"
             variant={decision === "accepted" ? "default" : "outline"}

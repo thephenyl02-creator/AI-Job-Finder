@@ -1187,7 +1187,7 @@ function JobSelector({
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute top-full left-0 mt-1 z-50 w-80 bg-background border border-border rounded-md shadow-lg p-2 max-h-64 overflow-auto">
+          <div className="absolute top-full left-0 mt-1 z-50 w-[calc(100vw-2rem)] sm:w-80 bg-background border border-border rounded-md shadow-lg p-2 max-h-64 overflow-auto">
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}

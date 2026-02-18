@@ -157,8 +157,8 @@ function HorizontalBar({
   const widthPct = Math.max(4, (value / maxValue) * 100);
   return (
     <div className="group" data-testid={testId}>
-      <div className="flex items-center justify-between mb-1.5">
-        <span className="text-sm text-foreground truncate pr-2">{label}</span>
+      <div className="flex items-center justify-between gap-2 mb-1.5">
+        <span className="text-sm text-foreground truncate">{label}</span>
         <div className="flex items-center gap-2 shrink-0">
           <span className="text-sm font-semibold text-foreground tabular-nums">
             {value}
@@ -696,8 +696,8 @@ export default function Insights() {
                     {i + 1}
                   </span>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm text-foreground truncate pr-2" data-testid={`text-skill-name-${i}`}>
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <span className="text-sm text-foreground truncate" data-testid={`text-skill-name-${i}`}>
                         {s.skill}
                       </span>
                       <span className="text-xs text-muted-foreground shrink-0 tabular-nums" data-testid={`text-skill-count-${i}`}>
@@ -782,7 +782,7 @@ export default function Insights() {
             <CardContent data-testid="section-work-arrangement">
               <div className="space-y-5">
                 <div>
-                  <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center justify-between gap-2 mb-2">
                     <span className="text-sm text-foreground flex items-center gap-1.5">
                       <span className="w-2.5 h-2.5 rounded-full bg-green-500 inline-block" />
                       Remote
@@ -792,7 +792,7 @@ export default function Insights() {
                       <span className="text-xs text-muted-foreground tabular-nums w-8 text-right">{overview.remotePercentage}%</span>
                     </div>
                   </div>
-                  <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center justify-between gap-2 mb-2">
                     <span className="text-sm text-foreground flex items-center gap-1.5">
                       <span className="w-2.5 h-2.5 rounded-full bg-blue-500 inline-block" />
                       Hybrid
@@ -802,7 +802,7 @@ export default function Insights() {
                       <span className="text-xs text-muted-foreground tabular-nums w-8 text-right">{overview.hybridPercentage || 0}%</span>
                     </div>
                   </div>
-                  <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center justify-between gap-2 mb-2">
                     <span className="text-sm text-foreground flex items-center gap-1.5">
                       <span className="w-2.5 h-2.5 rounded-full bg-orange-500 inline-block" />
                       On-site
@@ -826,7 +826,7 @@ export default function Insights() {
                       style={{ width: `${overview.onsitePercentage || 0}%` }}
                     />
                   </div>
-                  <div className="flex items-center justify-between mt-1.5">
+                  <div className="flex items-center justify-between gap-2 mt-1.5">
                     <span className="text-[10px] text-muted-foreground">Remote</span>
                     <span className="text-[10px] text-muted-foreground">Hybrid</span>
                     <span className="text-[10px] text-muted-foreground">On-site</span>
