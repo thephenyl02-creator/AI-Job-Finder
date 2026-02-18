@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { useCallback, useState, useMemo, useEffect, useRef, memo } from "react";
+import { useCallback, useState, useMemo, useEffect, useRef } from "react";
 import { ComposableMap, Geographies, Geography } from "react-simple-maps";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -253,58 +253,13 @@ function interpolateColor(t: number, isDark: boolean): string {
   return `hsl(${h}, ${s}%, ${l}%)`;
 }
 
-interface MemoGeoProps {
-  geo: any;
-  fillColor: string;
-  hoverFill: string;
-  strokeColor: string;
-  activeStroke: string;
-  hasJobs: boolean;
-  isHovered: boolean;
-  onMouseEnter: () => void;
-  onMouseLeave: () => void;
-  onClick: () => void;
-}
-
-const MemoGeography = memo(function MemoGeography({
-  geo, fillColor, hoverFill, strokeColor, activeStroke, hasJobs, isHovered,
-  onMouseEnter, onMouseLeave, onClick,
-}: MemoGeoProps) {
-  return (
-    <Geography
-      geography={geo}
-      fill={isHovered && hasJobs ? hoverFill : fillColor}
-      stroke={hasJobs ? (isHovered ? activeStroke : strokeColor) : strokeColor}
-      strokeWidth={isHovered && hasJobs ? 1.2 : 0.4}
-      style={{
-        default: { outline: "none" },
-        hover: {
-          outline: "none",
-          fill: hoverFill,
-          stroke: hasJobs ? activeStroke : strokeColor,
-          strokeWidth: hasJobs ? 1.2 : 0.4,
-          cursor: hasJobs ? "pointer" : "default",
-        },
-        pressed: { outline: "none" },
-      }}
-      onMouseEnter={onMouseEnter}
-      onMouseLeave={onMouseLeave}
-      onClick={onClick}
-    />
-  );
-}, (prev, next) =>
-  prev.isHovered === next.isHovered &&
-  prev.fillColor === next.fillColor &&
-  prev.hasJobs === next.hasJobs
-);
-
 export default function OpportunityMap() {
   usePageTitle("Opportunity Map");
   const [, navigate] = useLocation();
-  const [hoveredCountry, setHoveredCountry] = useState<CountryData | null>(null);
+  const [hoveredCode, setHoveredCode] = useState<string | null>(null);
   const [selectedCountry, setSelectedCountry] = useState<CountryData | null>(null);
-  const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
-  const [tooltipContent, setTooltipContent] = useState<{ name: string; count: number } | null>(null);
+  const tooltipRef = useRef<HTMLDivElement>(null);
+  const tooltipContentRef = useRef<{ name: string; count: number } | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [isDark, setIsDark] = useState(false);
 
@@ -349,62 +304,16 @@ export default function OpportunityMap() {
       .slice(0, 8);
   }, [data]);
 
-  const rafRef = useRef<number>(0);
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     if (isMobile) return;
-    const x = e.clientX;
-    const y = e.clientY;
-    cancelAnimationFrame(rafRef.current);
-    rafRef.current = requestAnimationFrame(() => {
-      setTooltipPos({ x, y });
-    });
+    const el = tooltipRef.current;
+    if (el) {
+      el.style.left = `${Math.min(e.clientX + 12, window.innerWidth - 200)}px`;
+      el.style.top = `${e.clientY - 8}px`;
+    }
   }, [isMobile]);
 
-  const handleGeoHover = useCallback(
-    (geo: any) => {
-      if (isMobile) return;
-      const code = getCountryCode(geo);
-      const country = countryMap.get(code);
-      const name = getCountryName(geo);
-      if (country) {
-        setHoveredCountry(country);
-        setTooltipContent({ name: country.countryName, count: country.jobCount });
-      } else if (name) {
-        setHoveredCountry(null);
-        setTooltipContent({ name, count: 0 });
-      } else {
-        setHoveredCountry(null);
-        setTooltipContent(null);
-      }
-    },
-    [countryMap, isMobile]
-  );
-
-  const handleGeoLeave = useCallback(() => {
-    if (isMobile) return;
-    setHoveredCountry(null);
-    setTooltipContent(null);
-  }, [isMobile]);
-
-  const handleGeoClick = useCallback(
-    (geo: any) => {
-      const code = getCountryCode(geo);
-      const country = countryMap.get(code);
-      if (!country) return;
-
-      if (isMobile) {
-        if (selectedCountry?.countryCode === code) {
-          navigate(`/jobs?country=${code}`);
-        } else {
-          setSelectedCountry(country);
-        }
-      } else {
-        navigate(`/jobs?country=${code}`);
-      }
-    },
-    [countryMap, navigate, isMobile, selectedCountry]
-  );
-
+  const hoveredCountry = hoveredCode ? countryMap.get(hoveredCode) ?? null : null;
   const panelCountry = isMobile ? selectedCountry : hoveredCountry;
   const emptyFill = isDark ? "hsl(220, 10%, 15%)" : "hsl(220, 14%, 96%)";
   const strokeColor = isDark ? "hsl(220, 10%, 20%)" : "hsl(220, 14%, 90%)";
@@ -503,7 +412,6 @@ export default function OpportunityMap() {
                           const country = countryMap.get(code);
                           const hasJobs = !!country;
                           const t = hasJobs ? Math.pow(country.jobCount / maxCount, 0.5) : 0;
-                          const isHovered = panelCountry?.countryCode === code;
                           const fillColor = hasJobs ? interpolateColor(t, isDark) : emptyFill;
 
                           const hoverFill = hasJobs
@@ -514,19 +422,63 @@ export default function OpportunityMap() {
                               ? "hsl(220, 10%, 18%)"
                               : "hsl(220, 14%, 92%)";
 
+                          const isPanelHovered = hoveredCode === code && hasJobs;
+                          const activeFill = isPanelHovered ? hoverFill : fillColor;
+                          const activeStrokeColor = isPanelHovered ? activeStroke : strokeColor;
+                          const activeStrokeWidth = isPanelHovered ? 1.2 : 0.4;
+
                           return (
-                            <MemoGeography
+                            <Geography
                               key={geo.rsmKey}
-                              geo={geo}
-                              fillColor={fillColor}
-                              hoverFill={hoverFill}
-                              strokeColor={strokeColor}
-                              activeStroke={activeStroke}
-                              hasJobs={hasJobs}
-                              isHovered={isHovered}
-                              onMouseEnter={() => handleGeoHover(geo)}
-                              onMouseLeave={handleGeoLeave}
-                              onClick={() => handleGeoClick(geo)}
+                              geography={geo}
+                              fill={activeFill}
+                              stroke={activeStrokeColor}
+                              strokeWidth={activeStrokeWidth}
+                              style={{
+                                default: { outline: "none" },
+                                hover: {
+                                  outline: "none",
+                                  fill: hoverFill,
+                                  stroke: hasJobs ? activeStroke : strokeColor,
+                                  strokeWidth: hasJobs ? 1.2 : 0.4,
+                                  cursor: hasJobs ? "pointer" : "default",
+                                },
+                                pressed: { outline: "none" },
+                              }}
+                              onMouseEnter={() => {
+                                if (isMobile) return;
+                                setHoveredCode(code);
+                                const name = getCountryName(geo);
+                                tooltipContentRef.current = country
+                                  ? { name: country.countryName, count: country.jobCount }
+                                  : name ? { name, count: 0 } : null;
+                                const el = tooltipRef.current;
+                                if (el && tooltipContentRef.current) {
+                                  el.style.opacity = "1";
+                                  el.textContent = tooltipContentRef.current.count > 0
+                                    ? `${tooltipContentRef.current.name} — ${tooltipContentRef.current.count} roles`
+                                    : tooltipContentRef.current.name;
+                                }
+                              }}
+                              onMouseLeave={() => {
+                                if (isMobile) return;
+                                setHoveredCode(null);
+                                tooltipContentRef.current = null;
+                                const el = tooltipRef.current;
+                                if (el) el.style.opacity = "0";
+                              }}
+                              onClick={() => {
+                                if (!country) return;
+                                if (isMobile) {
+                                  if (selectedCountry?.countryCode === code) {
+                                    navigate(`/jobs?country=${code}`);
+                                  } else {
+                                    setSelectedCountry(country);
+                                  }
+                                } else {
+                                  navigate(`/jobs?country=${code}`);
+                                }
+                              }}
                             />
                           );
                         })
@@ -549,19 +501,12 @@ export default function OpportunityMap() {
                 <span className="text-[10px] text-muted-foreground">More roles</span>
               </div>
 
-              {!isMobile && tooltipContent && (
+              {!isMobile && (
                 <div
-                  className="fixed z-50 pointer-events-none px-3 py-1.5 rounded-md text-xs font-medium bg-popover text-popover-foreground border border-border shadow-sm"
-                  style={{
-                    left: Math.min(tooltipPos.x + 12, window.innerWidth - 200),
-                    top: tooltipPos.y - 8,
-                  }}
-                >
-                  {tooltipContent.name}
-                  {tooltipContent.count > 0 && (
-                    <span className="text-muted-foreground ml-1">— {tooltipContent.count} roles</span>
-                  )}
-                </div>
+                  ref={tooltipRef}
+                  className="fixed z-50 pointer-events-none px-3 py-1.5 rounded-md text-xs font-medium bg-popover text-popover-foreground border border-border shadow-sm whitespace-nowrap"
+                  style={{ opacity: 0, transition: "opacity 0.1s ease" }}
+                />
               )}
             </div>
 
@@ -649,10 +594,10 @@ export default function OpportunityMap() {
                             }
                           }}
                           onMouseEnter={() => {
-                            if (!isMobile) setHoveredCountry(c);
+                            if (!isMobile) setHoveredCode(c.countryCode);
                           }}
                           onMouseLeave={() => {
-                            if (!isMobile) setHoveredCountry(null);
+                            if (!isMobile) setHoveredCode(null);
                           }}
                           data-testid={`panel-country-${c.countryCode}`}
                         >
