@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LogoMark } from "@/components/logo";
-import { ArrowRight, Building2, Search, Target, FileText, Sparkles, Bell } from "lucide-react";
+import { ArrowRight, Building2, Search, Target, FileText, Sparkles, Bell, Globe, Wifi } from "lucide-react";
 import { Footer } from "@/components/footer";
 
 interface Stats {
@@ -55,6 +55,10 @@ export default function Landing() {
     refetchInterval: 30000,
   });
 
+  const { data: density } = useQuery<{ totalJobs: number; countriesCount: number; remoteShare: number; byCountry: { countryCode: string; countryName: string; jobCount: number; topCategories: string[] }[] }>({
+    queryKey: ["/api/job-density"],
+  });
+
   const topJobs = featuredJobs?.slice(0, 3);
 
   const careerPaths = stats?.categoryCounts
@@ -77,6 +81,11 @@ export default function Landing() {
             </div>
           </Link>
           <div className="flex items-center gap-1 sm:gap-2">
+            <Link href="/opportunity-map">
+              <Button variant="ghost" size="sm" className="text-muted-foreground hidden sm:inline-flex" data-testid="link-header-map">
+                Map
+              </Button>
+            </Link>
             <Link href="/events">
               <Button variant="ghost" size="sm" className="text-muted-foreground hidden sm:inline-flex" data-testid="link-header-events">
                 Events
@@ -206,6 +215,91 @@ export default function Landing() {
                     </Badge>
                   </Link>
                 ))}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {density && density.countriesCount > 0 && (
+          <section className="border-t border-border/30">
+            <div className="max-w-5xl mx-auto px-4 sm:px-6 py-10 sm:py-20">
+              <div className="flex flex-col sm:flex-row items-center gap-6 sm:gap-12">
+                <div className="flex-1 text-center sm:text-left">
+                  <p className="text-[11px] font-semibold text-muted-foreground tracking-[0.2em] uppercase mb-3">
+                    Global coverage
+                  </p>
+                  <h2
+                    className="text-xl sm:text-3xl font-serif font-medium text-foreground tracking-tight"
+                    data-testid="text-map-teaser-title"
+                  >
+                    See where legal tech is hiring
+                  </h2>
+                  <p className="text-xs sm:text-sm text-muted-foreground mt-2 max-w-md">
+                    Explore opportunities across {density.countriesCount} countries. Click any region to see available roles instantly.
+                  </p>
+                  <div className="flex items-center justify-center sm:justify-start gap-4 sm:gap-6 mt-5">
+                    <div>
+                      <p className="text-xl sm:text-2xl font-semibold text-foreground" data-testid="text-map-teaser-countries">{density.countriesCount}</p>
+                      <p className="text-[10px] sm:text-xs text-muted-foreground">Countries</p>
+                    </div>
+                    <div className="w-px h-8 bg-border/40" />
+                    <div>
+                      <p className="text-xl sm:text-2xl font-semibold text-foreground" data-testid="text-map-teaser-jobs">{density.totalJobs}+</p>
+                      <p className="text-[10px] sm:text-xs text-muted-foreground">Roles</p>
+                    </div>
+                    <div className="w-px h-8 bg-border/40" />
+                    <div className="flex items-center gap-1">
+                      <div>
+                        <p className="text-xl sm:text-2xl font-semibold text-foreground" data-testid="text-map-teaser-remote">{density.remoteShare}%</p>
+                        <p className="text-[10px] sm:text-xs text-muted-foreground">Remote</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-6">
+                    <Button asChild data-testid="button-map-teaser-explore">
+                      <a href="/opportunity-map">
+                        <Globe className="mr-2 h-4 w-4" />
+                        Explore the map
+                      </a>
+                    </Button>
+                  </div>
+                </div>
+                <div className="w-full sm:w-[280px] lg:w-[340px] shrink-0">
+                  <div className="rounded-md border border-border/50 bg-muted/20 dark:bg-muted/10 p-4">
+                    <p className="text-[10px] font-semibold text-muted-foreground tracking-wide uppercase mb-3">Top hiring regions</p>
+                    <div className="space-y-2">
+                      {[
+                        { flag: "US", name: "United States" },
+                        { flag: "GB", name: "United Kingdom" },
+                        { flag: "SE", name: "Sweden" },
+                        { flag: "CA", name: "Canada" },
+                        { flag: "WW", name: "Worldwide Remote" },
+                      ].map((region) => {
+                        const countryData = density?.byCountry?.find((c) => c.countryCode === region.flag);
+                        const count = countryData?.jobCount || 0;
+                        if (count === 0) return null;
+                        return (
+                          <a
+                            key={region.flag}
+                            href={`/jobs?country=${region.flag}`}
+                            className="flex items-center justify-between gap-2 text-sm hover-elevate rounded-md px-2 py-1.5 -mx-2 cursor-pointer"
+                            data-testid={`link-region-${region.flag}`}
+                          >
+                            <span className="flex items-center gap-2">
+                              {region.flag === "WW" ? (
+                                <Wifi className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                              ) : (
+                                <Globe className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                              )}
+                              <span className="text-foreground text-xs">{region.name}</span>
+                            </span>
+                            <span className="text-muted-foreground text-xs tabular-nums">{count}</span>
+                          </a>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </section>

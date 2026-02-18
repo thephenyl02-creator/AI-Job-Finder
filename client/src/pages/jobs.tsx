@@ -610,7 +610,7 @@ export default function Jobs() {
         </div>
 
         {selectedCountry !== "all" && (
-          <div className="flex items-center gap-2 mt-2" data-testid="country-filter-banner">
+          <div className="flex items-center gap-2 mt-2 flex-wrap" data-testid="country-filter-banner">
             <Badge variant="secondary" className="no-default-active-elevate text-xs gap-1">
               <MapPin className="h-3 w-3" />
               {selectedCountry === "WW" ? "Worldwide Remote" : selectedCountry}
@@ -622,7 +622,7 @@ export default function Jobs() {
               onClick={() => { setSelectedCountry("all"); setLocation("/jobs"); }}
               data-testid="button-clear-country"
             >
-              Clear country filter
+              Clear filter
             </Button>
           </div>
         )}
