@@ -369,13 +369,15 @@ export async function registerRoutes(
     try {
       const page = Math.max(1, parseInt(String(req.query.page || '1')));
       const limit = Math.min(100, Math.max(1, parseInt(String(req.query.limit || '20'))));
-      const filters: { category?: string; location?: string; locationType?: string; search?: string; seniority?: string; sort?: string; region?: string } = {};
+      const filters: { category?: string; location?: string; locationType?: string; search?: string; seniority?: string; sort?: string; region?: string; country?: string; workMode?: string } = {};
       if (req.query.category) filters.category = String(req.query.category);
       if (req.query.location) filters.location = String(req.query.location);
       if (req.query.locationType) filters.locationType = String(req.query.locationType);
       if (req.query.search) filters.search = String(req.query.search);
       if (req.query.seniority) filters.seniority = String(req.query.seniority);
       if (req.query.region) filters.region = String(req.query.region);
+      if (req.query.country) filters.country = String(req.query.country);
+      if (req.query.workMode) filters.workMode = String(req.query.workMode);
       if (req.query.sort && ['newest', 'salary', 'company'].includes(String(req.query.sort))) {
         filters.sort = String(req.query.sort);
       }
@@ -405,6 +407,87 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error fetching locations:", error);
       res.status(500).json({ error: "Failed to fetch locations" });
+    }
+  });
+
+  app.get("/api/job-density", async (req, res) => {
+    try {
+      const conditions: any[] = [
+        eq(jobs.isActive, true),
+        eq(jobs.isPublished, true),
+        eq(jobs.pipelineStatus, 'ready'),
+        eq(jobs.jobStatus, 'open'),
+      ];
+
+      const allMatchingJobs = await db.select({
+        countryCode: jobs.countryCode,
+        countryName: jobs.countryName,
+        workMode: jobs.workMode,
+        roleCategory: jobs.roleCategory,
+        company: jobs.company,
+      }).from(jobs).where(and(...conditions));
+
+      const byCountry: Record<string, { countryCode: string; countryName: string; jobCount: number; categories: Record<string, number> }> = {};
+      const categoryCount: Record<string, number> = {};
+      const companyCount: Record<string, number> = {};
+      let remoteCount = 0;
+
+      for (const job of allMatchingJobs) {
+        const cc = job.countryCode || 'UN';
+        const cn = job.countryName || 'Unknown';
+
+        if (!byCountry[cc]) {
+          byCountry[cc] = { countryCode: cc, countryName: cn, jobCount: 0, categories: {} };
+        }
+        byCountry[cc].jobCount++;
+
+        if (job.roleCategory) {
+          byCountry[cc].categories[job.roleCategory] = (byCountry[cc].categories[job.roleCategory] || 0) + 1;
+          categoryCount[job.roleCategory] = (categoryCount[job.roleCategory] || 0) + 1;
+        }
+
+        if (job.company) {
+          companyCount[job.company] = (companyCount[job.company] || 0) + 1;
+        }
+
+        if (job.workMode === 'remote' || cc === 'WW') {
+          remoteCount++;
+        }
+      }
+
+      const countriesData = Object.values(byCountry)
+        .map(c => ({
+          countryCode: c.countryCode,
+          countryName: c.countryName,
+          jobCount: c.jobCount,
+          topCategories: Object.entries(c.categories)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 3)
+            .map(([name]) => name),
+        }))
+        .sort((a, b) => b.jobCount - a.jobCount);
+
+      const topCategories = Object.entries(categoryCount)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([name, count]) => ({ name, count }));
+
+      const topCompanies = Object.entries(companyCount)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([name, count]) => ({ name, count }));
+
+      res.json({
+        totalJobs: allMatchingJobs.length,
+        countriesCount: countriesData.filter(c => c.countryCode !== 'WW' && c.countryCode !== 'UN').length,
+        remoteShare: allMatchingJobs.length > 0 ? Math.round((remoteCount / allMatchingJobs.length) * 100) : 0,
+        byCountry: countriesData,
+        topCategories,
+        topCompanies,
+      });
+    } catch (error) {
+      console.error("Error fetching job density:", error);
+      res.status(500).json({ error: "Failed to fetch job density" });
     }
   });
 

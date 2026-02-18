@@ -100,10 +100,12 @@ export default function Jobs() {
   const urlParams = new URLSearchParams(searchString);
   const levelParam = urlParams.get("level");
   const categoryParam = urlParams.get("category");
+  const countryParam = urlParams.get("country");
   const [selectedCategory, setSelectedCategory] = useState<string>(categoryParam || "all");
   const [selectedLevel, setSelectedLevel] = useState<string>(levelParam && ["student", "entry", "mid", "senior"].includes(levelParam) ? levelParam : "all");
   const [selectedLocation, setSelectedLocation] = useState<string>("all");
   const [selectedRegion, setSelectedRegion] = useState<string>("all");
+  const [selectedCountry, setSelectedCountry] = useState<string>(countryParam || "all");
   const [filterText, setFilterText] = useState("");
   const [debouncedFilterText, setDebouncedFilterText] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -486,13 +488,17 @@ export default function Jobs() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedCategory, selectedLevel, selectedLocation, selectedRegion, debouncedFilterText]);
+  }, [selectedCategory, selectedLevel, selectedLocation, selectedRegion, selectedCountry, debouncedFilterText]);
 
   useEffect(() => {
     const params = new URLSearchParams(searchString);
     const level = params.get("level");
     if (level && ["entry", "mid", "senior"].includes(level)) {
       setSelectedLevel(level);
+    }
+    const country = params.get("country");
+    if (country) {
+      setSelectedCountry(country);
     }
   }, [searchString]);
 
@@ -519,10 +525,11 @@ export default function Jobs() {
       params.set("location", selectedLocation);
     }
     if (selectedRegion !== "all") params.set("region", selectedRegion);
+    if (selectedCountry !== "all") params.set("country", selectedCountry);
     if (debouncedFilterText) params.set("search", debouncedFilterText);
     if (sortBy !== "newest") params.set("sort", sortBy);
     return params.toString();
-  }, [currentPage, selectedCategory, selectedLevel, selectedLocation, selectedRegion, debouncedFilterText, sortBy]);
+  }, [currentPage, selectedCategory, selectedLevel, selectedLocation, selectedRegion, selectedCountry, debouncedFilterText, sortBy]);
 
   const { data: jobsResponse, isLoading: jobsLoading } = useQuery<{ jobs: Job[]; total: number; page: number; totalPages: number }>({
     queryKey: ["/api/jobs", jobsQueryParams],
@@ -601,6 +608,24 @@ export default function Jobs() {
             </div>
           </div>
         </div>
+
+        {selectedCountry !== "all" && (
+          <div className="flex items-center gap-2 mt-2" data-testid="country-filter-banner">
+            <Badge variant="secondary" className="no-default-active-elevate text-xs gap-1">
+              <MapPin className="h-3 w-3" />
+              {selectedCountry === "WW" ? "Worldwide Remote" : selectedCountry}
+            </Badge>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-xs text-muted-foreground"
+              onClick={() => { setSelectedCountry("all"); setLocation("/jobs"); }}
+              data-testid="button-clear-country"
+            >
+              Clear country filter
+            </Button>
+          </div>
+        )}
 
         <input
           ref={fileInputRef}

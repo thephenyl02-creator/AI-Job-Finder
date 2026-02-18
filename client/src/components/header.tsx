@@ -13,7 +13,7 @@ import {
   DropdownMenuGroup,
 } from "@/components/ui/dropdown-menu";
 import {
-  LogOut, BarChart3, Bell, FileText,
+  LogOut, BarChart3, Bell, FileText, Globe,
   Bookmark, LayoutDashboard, Menu, Calendar, Settings, Activity, Search, CreditCard,
 } from "lucide-react";
 import { Logo } from "@/components/logo";
@@ -85,12 +85,14 @@ export function Header() {
           {isAuthenticated ? (
             <div className="hidden md:flex items-center gap-0.5">
               <NavLink href="/jobs" icon={Search} label="Jobs" isActive={isJobsActive} testId="link-jobs" />
+              <NavLink href="/opportunity-map" icon={Globe} label="Map" isActive={isActive("/opportunity-map")} testId="link-map" />
               <NavLink href="/dashboard" icon={LayoutDashboard} label="Dashboard" isActive={isDashboardActive} testId="link-dashboard" />
               <NavLink href="/resumes" icon={FileText} label="Resumes" isActive={isResumesActive} testId="link-resumes" />
             </div>
           ) : (
             <div className="hidden md:flex items-center gap-0.5">
               <NavLink href="/jobs" icon={Search} label="Jobs" isActive={isJobsActive} testId="link-jobs-public" />
+              <NavLink href="/opportunity-map" icon={Globe} label="Map" isActive={isActive("/opportunity-map")} testId="link-map-public" />
               <NavLink href="/events" icon={Calendar} label="Events" isActive={isActive("/events") || location.startsWith("/events/")} testId="link-events-public" />
             </div>
           )}
@@ -133,6 +135,7 @@ export function Header() {
 
                     <div className="flex-1 overflow-y-auto py-2 px-3 space-y-0.5">
                       <MobileNavItem href="/jobs" icon={Search} label="Jobs" active={isJobsActive} testId="link-jobs-mobile" />
+                      <MobileNavItem href="/opportunity-map" icon={Globe} label="Opportunity Map" active={isActive("/opportunity-map")} testId="link-map-mobile" />
                       <MobileNavItem href="/dashboard" icon={LayoutDashboard} label="Dashboard" active={isDashboardActive} testId="link-dashboard-mobile" />
                       <MobileNavItem href="/resumes" icon={FileText} label="Resumes" active={isResumesActive} testId="link-resumes-mobile" />
                       <div className="h-px bg-border/40 my-2" />

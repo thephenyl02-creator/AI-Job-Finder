@@ -4,6 +4,7 @@ import { eq, desc, asc, and, sql, inArray, lt, gte, count } from "drizzle-orm";
 import { cleanJobDescription } from "./lib/description-cleaner";
 import { deriveSourceInfo } from "./lib/url-utils";
 import { generateJobHash } from "./lib/job-hash";
+import { normalizeCountry } from "./lib/country-normalizer";
 
 export interface IStorage {
   // Jobs
@@ -189,6 +190,12 @@ class DatabaseStorage implements IStorage {
       if (sourceInfo.sourceName) (cleaned as any).sourceName = sourceInfo.sourceName;
       if (sourceInfo.sourceUrl) (cleaned as any).sourceUrl = sourceInfo.sourceUrl;
     }
+    if (!cleaned.countryCode) {
+      const loc = normalizeCountry(cleaned.location as string | null, !!cleaned.isRemote);
+      (cleaned as any).countryCode = loc.countryCode;
+      (cleaned as any).countryName = loc.countryName;
+      (cleaned as any).workMode = cleaned.locationType === 'remote' || cleaned.locationType === 'hybrid' ? cleaned.locationType : loc.workMode;
+    }
     const [newJob] = await db.insert(jobs).values(cleaned as InsertJob).returning();
     return newJob;
   }
@@ -250,7 +257,7 @@ class DatabaseStorage implements IStorage {
   async getPublishedJobsPaginated(
     page: number = 1,
     limit: number = 20,
-    filters?: { category?: string; location?: string; locationType?: string; search?: string; seniority?: string; sort?: string; region?: string }
+    filters?: { category?: string; location?: string; locationType?: string; search?: string; seniority?: string; sort?: string; region?: string; country?: string; workMode?: string }
   ): Promise<{ jobs: Job[]; total: number; page: number; totalPages: number }> {
     const conditions: any[] = [
       eq(jobs.isActive, true),
@@ -259,6 +266,16 @@ class DatabaseStorage implements IStorage {
       eq(jobs.jobStatus, 'open'),
     ];
 
+    if (filters?.country) {
+      if (filters.country === 'WW') {
+        conditions.push(eq(jobs.countryCode, 'WW'));
+      } else {
+        conditions.push(eq(jobs.countryCode, filters.country));
+      }
+    }
+    if (filters?.workMode && filters.workMode !== 'all') {
+      conditions.push(eq(jobs.workMode, filters.workMode));
+    }
     if (filters?.category) {
       conditions.push(eq(jobs.roleCategory, filters.category));
     }
@@ -423,6 +440,7 @@ class DatabaseStorage implements IStorage {
     const existing = await this.getJobByExternalId(job.externalId);
     if (existing) {
       const aiFields = ['roleCategory', 'roleSubcategory', 'seniorityLevel', 'keySkills', 'aiSummary', 'matchKeywords', 'aiResponsibilities', 'aiQualifications', 'aiNiceToHaves'] as const;
+      const loc = normalizeCountry((job.location || '').trim(), !!job.isRemote);
       const updateData: Record<string, any> = {
         title: (job.title || '').trim(),
         company: (job.company || '').trim(),
@@ -436,6 +454,9 @@ class DatabaseStorage implements IStorage {
         isActive: true,
         lastScrapedAt: new Date(),
         lastSeenAt: new Date(),
+        countryCode: loc.countryCode,
+        countryName: loc.countryName,
+        workMode: job.locationType === 'remote' || job.locationType === 'hybrid' ? job.locationType : loc.workMode,
       };
 
       if (!existing.jobHash) {

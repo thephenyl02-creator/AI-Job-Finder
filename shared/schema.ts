@@ -76,6 +76,9 @@ export const jobs = pgTable("jobs", {
   lawyerFirstScore: integer("lawyer_first_score"),
   qaExcludeReason: varchar("qa_exclude_reason", { length: 255 }),
   qaCheckedAt: timestamp("qa_checked_at"),
+  countryCode: varchar("country_code", { length: 5 }),
+  countryName: varchar("country_name", { length: 100 }),
+  workMode: varchar("work_mode", { length: 10 }),
 });
 
 export const jobCategories = pgTable("job_categories", {

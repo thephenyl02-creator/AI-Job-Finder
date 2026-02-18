@@ -35,6 +35,7 @@ import CareerPathAdvisor from "@/pages/career-advisor";
 import Dashboard from "@/pages/dashboard";
 import Events from "@/pages/events";
 import EventDetail from "@/pages/event-detail";
+import OpportunityMap from "@/pages/opportunity-map";
 import { AssistantWidget } from "@/components/assistant-widget";
 import { OnboardingDialog } from "@/components/onboarding-dialog";
 
@@ -96,6 +97,7 @@ function AppRouter() {
       <Route path="/privacy" component={Privacy} />
       <Route path="/about" component={About} />
       <Route path="/post-job" component={PostJob} />
+      <Route path="/opportunity-map" component={OpportunityMap} />
       <Route component={NotFound} />
     </Switch>
   );
