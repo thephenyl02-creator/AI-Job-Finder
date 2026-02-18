@@ -191,7 +191,10 @@ class DatabaseStorage implements IStorage {
       if (sourceInfo.sourceUrl) (cleaned as any).sourceUrl = sourceInfo.sourceUrl;
     }
     if (!cleaned.countryCode) {
-      const loc = normalizeCountry(cleaned.location as string | null, !!cleaned.isRemote);
+      const loc = normalizeCountry(cleaned.location as string | null, !!cleaned.isRemote, {
+        applyUrl: cleaned.applyUrl as string | null,
+        title: cleaned.title as string | null,
+      });
       (cleaned as any).countryCode = loc.countryCode;
       (cleaned as any).countryName = loc.countryName;
       (cleaned as any).workMode = cleaned.locationType === 'remote' || cleaned.locationType === 'hybrid' ? cleaned.locationType : loc.workMode;
@@ -440,7 +443,10 @@ class DatabaseStorage implements IStorage {
     const existing = await this.getJobByExternalId(job.externalId);
     if (existing) {
       const aiFields = ['roleCategory', 'roleSubcategory', 'seniorityLevel', 'keySkills', 'aiSummary', 'matchKeywords', 'aiResponsibilities', 'aiQualifications', 'aiNiceToHaves'] as const;
-      const loc = normalizeCountry((job.location || '').trim(), !!job.isRemote);
+      const loc = normalizeCountry((job.location || '').trim(), !!job.isRemote, {
+        applyUrl: job.applyUrl,
+        title: job.title,
+      });
       const updateData: Record<string, any> = {
         title: (job.title || '').trim(),
         company: (job.company || '').trim(),

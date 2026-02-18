@@ -253,10 +253,14 @@ export async function scrapeGreenhouse(companyId: string, companyName: string): 
     const jobs: ScrapedJob[] = response.data.jobs.map((job: any) => {
       const salary = extractGreenhouseSalary(job);
       const locationType = extractGreenhouseLocationType(job);
+      let jobLocation = job.location?.name || '';
+      if (!jobLocation && job.offices?.length > 0) {
+        jobLocation = job.offices.map((o: any) => o.name).filter(Boolean).join(', ');
+      }
       return {
         title: job.title,
         company: companyName,
-        location: job.location?.name || '',
+        location: jobLocation,
         description: job.content || '',
         applyUrl: job.absolute_url,
         postedDate: job.updated_at || new Date().toISOString(),
@@ -402,7 +406,13 @@ export async function scrapeWorkday(
         const externalPath = posting.externalPath || '';
         const applyUrl = externalPath ? `${baseUrl}/${config.site}${externalPath}` : '';
         const jobId = externalPath.split('/').pop() || `${offset}_${postings.indexOf(posting)}`;
-        const locationText = posting.locationsText || (posting.bulletFields || []).find((f: string) => /,/.test(f)) || '';
+        let locationText = posting.locationsText || (posting.bulletFields || []).find((f: string) => /,/.test(f)) || '';
+        if (!locationText && externalPath) {
+          const pathMatch = externalPath.match(/\/job\/([^/]+)\//);
+          if (pathMatch) {
+            locationText = pathMatch[1].replace(/-/g, ' ').replace(/\s+/g, ' ').trim();
+          }
+        }
         const locationType = detectLocationType(locationText + ' ' + (posting.title || ''));
 
         let description = posting.title || '';

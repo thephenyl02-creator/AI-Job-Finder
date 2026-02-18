@@ -105,6 +105,11 @@ const CITY_TO_COUNTRY: Record<string, { code: string; name: string }> = {
   "saint petersburg": { code: "US", name: "United States" },
   "st. petersburg": { code: "US", name: "United States" },
   "st petersburg": { code: "US", name: "United States" },
+  "eagan": { code: "US", name: "United States" },
+  "minnetonka": { code: "US", name: "United States" },
+  "krakow": { code: "PL", name: "Poland" },
+  "kraków": { code: "PL", name: "Poland" },
+  "krakw": { code: "PL", name: "Poland" },
 };
 
 const COUNTRY_NAME_TO_CODE: Record<string, { code: string; name: string }> = {
@@ -172,6 +177,11 @@ const COUNTRY_NAME_TO_CODE: Record<string, { code: string; name: string }> = {
   "qatar": { code: "QA", name: "Qatar" },
   "bahrain": { code: "BH", name: "Bahrain" },
   "kuwait": { code: "KW", name: "Kuwait" },
+  "lesser poland": { code: "PL", name: "Poland" },
+  "nsw": { code: "AU", name: "Australia" },
+  "new south wales": { code: "AU", name: "Australia" },
+  "victoria": { code: "AU", name: "Australia" },
+  "queensland": { code: "AU", name: "Australia" },
 };
 
 const US_STATES: Set<string> = new Set([
@@ -202,8 +212,100 @@ const WORLDWIDE_KEYWORDS = /\b(worldwide|global|anywhere|global remote|remote - 
 const MULTI_LOCATION = /^\d+ locations?$|^multiple locations?$/i;
 const REGION_KEYWORDS = /^(americas|apac|asia-pacific|emea|europe|asia|latin america|middle east|africa)$/i;
 
-export function normalizeCountry(locationRaw: string | null | undefined, isRemoteFlag?: boolean): NormalizedCountry {
+function tryMatchLocation(text: string): { code: string; name: string } | null {
+  const lower = text.toLowerCase().trim();
+  if (!lower) return null;
+
+  if (CITY_TO_COUNTRY[lower]) return CITY_TO_COUNTRY[lower];
+  if (COUNTRY_NAME_TO_CODE[lower]) return COUNTRY_NAME_TO_CODE[lower];
+  if (US_STATES.has(lower)) return { code: "US", name: "United States" };
+  if (CANADIAN_PROVINCES.has(lower)) return { code: "CA", name: "Canada" };
+
+  const parts = lower.split(/[\s,]+/).filter(Boolean);
+  for (const part of parts) {
+    if (CITY_TO_COUNTRY[part]) return CITY_TO_COUNTRY[part];
+    if (COUNTRY_NAME_TO_CODE[part]) return COUNTRY_NAME_TO_CODE[part];
+    if (US_STATES.has(part)) return { code: "US", name: "United States" };
+  }
+
+  for (let i = 0; i < parts.length - 1; i++) {
+    const twoWord = parts[i] + " " + parts[i + 1];
+    if (CITY_TO_COUNTRY[twoWord]) return CITY_TO_COUNTRY[twoWord];
+    if (COUNTRY_NAME_TO_CODE[twoWord]) return COUNTRY_NAME_TO_CODE[twoWord];
+    if (US_STATES.has(twoWord)) return { code: "US", name: "United States" };
+  }
+
+  for (let i = 0; i < parts.length - 2; i++) {
+    const threeWord = parts[i] + " " + parts[i + 1] + " " + parts[i + 2];
+    if (COUNTRY_NAME_TO_CODE[threeWord]) return COUNTRY_NAME_TO_CODE[threeWord];
+  }
+
+  return null;
+}
+
+function extractLocationFromWorkdayUrl(applyUrl: string): string | null {
+  const match = applyUrl.match(/myworkdayjobs\.com\/[^/]+\/job\/([^/]+)\//);
+  if (!match) return null;
+  return match[1].replace(/-/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+const TITLE_COUNTRY_CODES: Record<string, { code: string; name: string }> = {
+  "uk": { code: "GB", name: "United Kingdom" },
+  "us": { code: "US", name: "United States" },
+  "mx": { code: "MX", name: "Mexico" },
+  "apac": { code: "AU", name: "Australia" },
+  "emea": { code: "GB", name: "United Kingdom" },
+};
+
+function extractLocationFromTitle(title: string): { code: string; name: string } | null {
+  const parenMatch = title.match(/\(([^)]+)\)/);
+  if (parenMatch) {
+    const inParens = parenMatch[1];
+    const cleaned = inParens.replace(/\b(or|and|based|preferred)\b/gi, ' ').trim();
+    const found = tryMatchLocation(cleaned);
+    if (found) return found;
+  }
+
+  const dashMatch = title.match(/[-–—]\s*(.+)$/);
+  if (dashMatch) {
+    const afterDash = dashMatch[1].trim();
+    const found = tryMatchLocation(afterDash);
+    if (found) return found;
+  }
+
+  const titleWords = title.toLowerCase();
+
+  const words = titleWords.split(/[\s,]+/);
+  for (const word of words) {
+    if (TITLE_COUNTRY_CODES[word]) return TITLE_COUNTRY_CODES[word];
+  }
+
+  for (const [country, data] of Object.entries(COUNTRY_NAME_TO_CODE)) {
+    if (country.length >= 3) {
+      const regex = new RegExp(`\\b${country}\\b`, 'i');
+      if (regex.test(titleWords)) return data;
+    }
+  }
+  for (const [city, data] of Object.entries(CITY_TO_COUNTRY)) {
+    if (city.length >= 4) {
+      const regex = new RegExp(`\\b${city}\\b`, 'i');
+      if (regex.test(titleWords)) return data;
+    }
+  }
+
+  return null;
+}
+
+export interface NormalizeCountryOptions {
+  applyUrl?: string | null;
+  title?: string | null;
+}
+
+export function normalizeCountry(locationRaw: string | null | undefined, isRemoteFlag?: boolean, options?: NormalizeCountryOptions): NormalizedCountry {
   if (!locationRaw || !locationRaw.trim()) {
+    const fallback = tryFallbackSources(isRemoteFlag, options);
+    if (fallback) return fallback;
+
     return {
       countryCode: isRemoteFlag ? "WW" : "UN",
       countryName: isRemoteFlag ? "Worldwide" : "Unknown",
@@ -226,6 +328,9 @@ export function normalizeCountry(locationRaw: string | null | undefined, isRemot
   }
 
   if (lower === "remote" || lower === "fully remote" || lower === "not specified") {
+    const fallback = tryFallbackSources(isRemoteFlag, options);
+    if (fallback) return { ...fallback, workMode: lower.includes("remote") ? "remote" : fallback.workMode };
+
     return { countryCode: isRemoteFlag ? "WW" : "UN", countryName: isRemoteFlag ? "Worldwide" : "Unknown", workMode: isRemoteFlag ? "remote" : workMode };
   }
 
@@ -238,6 +343,8 @@ export function normalizeCountry(locationRaw: string | null | undefined, isRemot
   }
 
   if (MULTI_LOCATION.test(lower)) {
+    const fallback = tryFallbackSources(isRemoteFlag, options);
+    if (fallback) return fallback;
     return { countryCode: "WW", countryName: "Worldwide", workMode };
   }
 
@@ -319,5 +426,48 @@ export function normalizeCountry(locationRaw: string | null | undefined, isRemot
     }
   }
 
+  const fallback = tryFallbackSources(isRemoteFlag, options);
+  if (fallback) return { ...fallback, workMode };
+
   return { countryCode: "UN", countryName: "Unknown", workMode };
+}
+
+function tryFallbackSources(isRemoteFlag?: boolean, options?: NormalizeCountryOptions): NormalizedCountry | null {
+  if (!options) return null;
+
+  if (options.applyUrl) {
+    const url = options.applyUrl;
+
+    if (url.includes('myworkdayjobs.com')) {
+      const locSegment = extractLocationFromWorkdayUrl(url);
+      if (locSegment) {
+        const locLower = locSegment.toLowerCase();
+
+        const remoteMatch = locLower.match(/^remote\s+(.+)$/);
+        if (remoteMatch) {
+          const regionText = remoteMatch[1];
+          const found = tryMatchLocation(regionText);
+          if (found) return { countryCode: found.code, countryName: found.name, workMode: "remote" };
+          return { countryCode: "WW", countryName: "Worldwide", workMode: "remote" };
+        }
+
+        const usaMatch = locLower.match(/^usa?\s+/i) || locLower.match(/^united states/i);
+        if (usaMatch) return { countryCode: "US", countryName: "United States", workMode: isRemoteFlag ? "remote" : "onsite" };
+
+        const found = tryMatchLocation(locSegment);
+        if (found) return { countryCode: found.code, countryName: found.name, workMode: isRemoteFlag ? "remote" : "onsite" };
+      }
+    }
+
+    if (url.includes('greenhouse.io') || url.includes('lever.co')) {
+      // nothing useful in these URLs
+    }
+  }
+
+  if (options.title) {
+    const found = extractLocationFromTitle(options.title);
+    if (found) return { countryCode: found.code, countryName: found.name, workMode: isRemoteFlag ? "remote" : "onsite" };
+  }
+
+  return null;
 }

@@ -14,6 +14,8 @@ export async function backfillCountryCodes(): Promise<{ updated: number; errors:
     isRemote: jobs.isRemote,
     locationType: jobs.locationType,
     countryCode: jobs.countryCode,
+    applyUrl: jobs.applyUrl,
+    title: jobs.title,
   }).from(jobs);
 
   console.log(`[Country Backfill] Processing ${allJobs.length} jobs...`);
@@ -23,7 +25,10 @@ export async function backfillCountryCodes(): Promise<{ updated: number; errors:
   for (const job of allJobs) {
     try {
       const isRemoteFlag = job.isRemote || job.locationType === 'remote';
-      const result = normalizeCountry(job.location, isRemoteFlag);
+      const result = normalizeCountry(job.location, isRemoteFlag, {
+        applyUrl: job.applyUrl,
+        title: job.title,
+      });
 
       let workMode = result.workMode;
       if (job.locationType === 'remote' || job.locationType === 'hybrid') {
