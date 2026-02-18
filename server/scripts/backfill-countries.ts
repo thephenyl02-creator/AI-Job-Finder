@@ -15,7 +15,7 @@ export async function backfillCountryCodes(): Promise<{ updated: number; errors:
     locationType: jobs.locationType,
     countryCode: jobs.countryCode,
   }).from(jobs).where(
-    or(isNull(jobs.countryCode), eq(jobs.countryCode, ''))
+    or(isNull(jobs.countryCode), eq(jobs.countryCode, ''), eq(jobs.countryCode, 'UN'))
   );
 
   if (allJobs.length === 0) {

@@ -100,10 +100,16 @@ const CITY_TO_COUNTRY: Record<string, { code: string; name: string }> = {
   "pittsburgh": { code: "US", name: "United States" },
   "detroit": { code: "US", name: "United States" },
   "los angeles": { code: "US", name: "United States" },
+  "new york city": { code: "US", name: "United States" },
+  "silicon valley": { code: "US", name: "United States" },
+  "saint petersburg": { code: "US", name: "United States" },
+  "st. petersburg": { code: "US", name: "United States" },
+  "st petersburg": { code: "US", name: "United States" },
 };
 
 const COUNTRY_NAME_TO_CODE: Record<string, { code: string; name: string }> = {
   "united states": { code: "US", name: "United States" },
+  "united states of america": { code: "US", name: "United States" },
   "usa": { code: "US", name: "United States" },
   "us": { code: "US", name: "United States" },
   "united kingdom": { code: "GB", name: "United Kingdom" },
@@ -219,8 +225,16 @@ export function normalizeCountry(locationRaw: string | null | undefined, isRemot
     return { countryCode: "WW", countryName: "Worldwide", workMode: "remote" };
   }
 
-  if (lower === "remote" || lower === "fully remote") {
-    return { countryCode: "WW", countryName: "Worldwide", workMode: "remote" };
+  if (lower === "remote" || lower === "fully remote" || lower === "not specified") {
+    return { countryCode: isRemoteFlag ? "WW" : "UN", countryName: isRemoteFlag ? "Worldwide" : "Unknown", workMode: isRemoteFlag ? "remote" : workMode };
+  }
+
+  const remoteCountryDirect = lower.match(/^remote\s+(us|usa|uk|canada|india|germany|france|australia)$/i);
+  if (remoteCountryDirect) {
+    const country = remoteCountryDirect[1].toLowerCase();
+    if (COUNTRY_NAME_TO_CODE[country]) {
+      return { countryCode: COUNTRY_NAME_TO_CODE[country].code, countryName: COUNTRY_NAME_TO_CODE[country].name, workMode: "remote" };
+    }
   }
 
   if (MULTI_LOCATION.test(lower)) {
@@ -267,26 +281,41 @@ export function normalizeCountry(locationRaw: string | null | undefined, isRemot
     return { countryCode: "CA", countryName: "Canada", workMode };
   }
 
-  const parts = cleaned.split(/[,\s]+/);
-  for (let i = parts.length - 1; i >= 0; i--) {
-    const candidate = parts.slice(i).join(" ").trim();
-    if (COUNTRY_NAME_TO_CODE[candidate]) {
-      const match = COUNTRY_NAME_TO_CODE[candidate];
-      return { countryCode: match.code, countryName: match.name, workMode };
+  const commaParts = cleaned.split(",").map(p => p.trim()).filter(Boolean);
+
+  for (let i = commaParts.length - 1; i >= 0; i--) {
+    const segment = commaParts[i];
+    if (COUNTRY_NAME_TO_CODE[segment]) {
+      return { countryCode: COUNTRY_NAME_TO_CODE[segment].code, countryName: COUNTRY_NAME_TO_CODE[segment].name, workMode };
     }
-    if (US_STATES.has(candidate)) {
+    if (US_STATES.has(segment)) {
       return { countryCode: "US", countryName: "United States", workMode };
     }
-    if (CANADIAN_PROVINCES.has(candidate)) {
+    if (CANADIAN_PROVINCES.has(segment)) {
       return { countryCode: "CA", countryName: "Canada", workMode };
     }
-  }
-
-  for (const part of parts) {
-    const trimmed = part.trim();
-    if (CITY_TO_COUNTRY[trimmed]) {
-      const match = CITY_TO_COUNTRY[trimmed];
-      return { countryCode: match.code, countryName: match.name, workMode };
+    if (CITY_TO_COUNTRY[segment]) {
+      return { countryCode: CITY_TO_COUNTRY[segment].code, countryName: CITY_TO_COUNTRY[segment].name, workMode };
+    }
+    const words = segment.split(/\s+/);
+    if (words.length > 1) {
+      for (let j = words.length - 1; j >= 0; j--) {
+        const sub = words.slice(j).join(" ");
+        if (COUNTRY_NAME_TO_CODE[sub]) {
+          return { countryCode: COUNTRY_NAME_TO_CODE[sub].code, countryName: COUNTRY_NAME_TO_CODE[sub].name, workMode };
+        }
+        if (US_STATES.has(sub)) {
+          return { countryCode: "US", countryName: "United States", workMode };
+        }
+        if (CANADIAN_PROVINCES.has(sub)) {
+          return { countryCode: "CA", countryName: "Canada", workMode };
+        }
+      }
+      for (const w of words) {
+        if (CITY_TO_COUNTRY[w]) {
+          return { countryCode: CITY_TO_COUNTRY[w].code, countryName: CITY_TO_COUNTRY[w].name, workMode };
+        }
+      }
     }
   }
 
