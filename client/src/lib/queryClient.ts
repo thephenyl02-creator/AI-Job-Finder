@@ -41,6 +41,24 @@ export const getQueryFn: <T>(options: {
     return await res.json();
   };
 
+export function invalidateJobRelatedQueries() {
+  queryClient.invalidateQueries({ predicate: (query) => {
+    const key = query.queryKey[0] as string;
+    return key === "/api/job-density"
+      || key === "/api/stats"
+      || key === "/api/featured-jobs"
+      || key.startsWith("/api/jobs")
+      || key.startsWith("/api/admin/jobs")
+      || key === "/api/admin/pipeline-stats"
+      || key === "/api/admin/monitoring"
+      || key === "/api/admin/validation-status"
+      || key.startsWith("/api/admin/analytics")
+      || key.startsWith("/api/admin/reports")
+      || key.startsWith("/api/diagnostics/jobs")
+      || key.startsWith("/api/admin/standardization");
+  }});
+}
+
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {

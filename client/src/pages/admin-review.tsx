@@ -12,7 +12,7 @@ import {
   Send, Eye, Filter,
 } from "lucide-react";
 import { AdminHeader } from "@/components/admin-header";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest, queryClient, invalidateJobRelatedQueries } from "@/lib/queryClient";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface QAItem {
@@ -97,7 +97,7 @@ export default function AdminReview() {
       });
       setSelectedIds(new Set());
       refetch();
-      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
+      invalidateJobRelatedQueries();
     },
     onError: (err: any) => {
       toast({ title: "Publish failed", description: err.message, variant: "destructive" });
@@ -112,7 +112,7 @@ export default function AdminReview() {
     onSuccess: () => {
       toast({ title: "Job published" });
       refetch();
-      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
+      invalidateJobRelatedQueries();
     },
     onError: (err: any) => {
       toast({ title: "Publish failed", description: err.message, variant: "destructive" });
@@ -127,7 +127,7 @@ export default function AdminReview() {
     onSuccess: () => {
       toast({ title: "Job force-published" });
       refetch();
-      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
+      invalidateJobRelatedQueries();
     },
     onError: (err: any) => {
       toast({ title: "Force publish failed", description: err.message, variant: "destructive" });

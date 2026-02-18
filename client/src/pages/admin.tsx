@@ -14,7 +14,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Link } from "wouter";
 import { ArrowLeft, RefreshCw, Building2, Globe, Loader2, CheckCircle, XCircle, Sparkles, Activity, FileText, Play, Square, LinkIcon, Clock, ShieldX, ShieldCheck, Plus, Upload, Pencil, Trash2, RotateCw, ToggleLeft, ToggleRight, Search, Filter, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Save, X as XIcon, ClipboardPaste, ClipboardCheck, Zap, MapPin, DollarSign, Briefcase, GraduationCap, Tag, Eye, Calendar } from "lucide-react";
 import { AdminHeader } from "@/components/admin-header";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest, queryClient, invalidateJobRelatedQueries } from "@/lib/queryClient";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { Job, StructuredDescription } from "@shared/schema";
 import { JOB_TAXONOMY } from "@shared/schema";
@@ -392,8 +392,7 @@ export default function AdminPage() {
         if (!res.ok) throw new Error("Upload failed");
         const data: UploadResponse = await res.json();
         setUploadResults(data.results);
-        queryClient.invalidateQueries({ predicate: (query) => (query.queryKey[0] as string).startsWith("/api/admin/jobs") });
-        queryClient.invalidateQueries({ predicate: (query) => (query.queryKey[0] as string).startsWith("/api/jobs") });
+        invalidateJobRelatedQueries();
         toast({
           title: data.success ? "Upload Complete" : "Upload Had Issues",
           description: data.message,
@@ -420,8 +419,7 @@ export default function AdminPage() {
     onSuccess: () => {
       setEditingJob(null);
       setEditForm({});
-      queryClient.invalidateQueries({ predicate: (query) => (query.queryKey[0] as string).startsWith("/api/admin/jobs") });
-      queryClient.invalidateQueries({ predicate: (query) => (query.queryKey[0] as string).startsWith("/api/jobs") });
+      invalidateJobRelatedQueries();
       toast({ title: "Job updated successfully" });
     },
     onError: (error: Error) => {
@@ -435,8 +433,7 @@ export default function AdminPage() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ predicate: (query) => (query.queryKey[0] as string).startsWith("/api/admin/jobs") });
-      queryClient.invalidateQueries({ predicate: (query) => (query.queryKey[0] as string).startsWith("/api/jobs") });
+      invalidateJobRelatedQueries();
       toast({ title: "Job deleted successfully" });
     },
     onError: (error: Error) => {
@@ -450,8 +447,7 @@ export default function AdminPage() {
       return res.json();
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ predicate: (query) => (query.queryKey[0] as string).startsWith("/api/admin/jobs") });
-      queryClient.invalidateQueries({ predicate: (query) => (query.queryKey[0] as string).startsWith("/api/jobs") });
+      invalidateJobRelatedQueries();
       toast({
         title: "Job recategorized",
         description: data.categorization ? `Category: ${data.categorization.category}` : "Done",
@@ -468,8 +464,7 @@ export default function AdminPage() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ predicate: (query) => (query.queryKey[0] as string).startsWith("/api/admin/jobs") });
-      queryClient.invalidateQueries({ predicate: (query) => (query.queryKey[0] as string).startsWith("/api/jobs") });
+      invalidateJobRelatedQueries();
       toast({ title: "Job status updated" });
     },
     onError: (error: Error) => {
@@ -483,8 +478,7 @@ export default function AdminPage() {
       return res.json();
     },
     onSuccess: (data, variables) => {
-      queryClient.invalidateQueries({ predicate: (query) => (query.queryKey[0] as string).startsWith("/api/admin/jobs") });
-      queryClient.invalidateQueries({ predicate: (query) => (query.queryKey[0] as string).startsWith("/api/jobs") });
+      invalidateJobRelatedQueries();
       toast({ title: variables.action === 'approve' ? "Job approved" : "Job rejected and deactivated" });
     },
     onError: (error: Error) => {
@@ -687,7 +681,7 @@ export default function AdminPage() {
       if (data.success) {
         setQuickAddResults(data.results || []);
         setQuickAddUrls("");
-        queryClient.invalidateQueries({ queryKey: ["/api/admin/jobs"] });
+        invalidateJobRelatedQueries();
         const { added, updated, failed } = data.summary;
         toast({
           title: `${added} added, ${updated} updated${failed > 0 ? `, ${failed} failed` : ''}`,
@@ -753,8 +747,7 @@ export default function AdminPage() {
     onSuccess: (data) => {
       setPreviewJob(null);
       setPreviewEdits({});
-      queryClient.invalidateQueries({ predicate: (query) => (query.queryKey[0] as string).startsWith("/api/admin/jobs") });
-      queryClient.invalidateQueries({ predicate: (query) => (query.queryKey[0] as string).startsWith("/api/jobs") });
+      invalidateJobRelatedQueries();
       toast({ title: data.message || "Job added successfully" });
     },
     onError: (error: Error) => {
@@ -769,7 +762,7 @@ export default function AdminPage() {
     },
     onSuccess: (data) => {
       setLastResult(data);
-      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
+      invalidateJobRelatedQueries();
       toast({
         title: "Scraping Complete",
         description: data.message,
@@ -791,7 +784,7 @@ export default function AdminPage() {
     },
     onSuccess: (data) => {
       setLastResult(data);
-      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
+      invalidateJobRelatedQueries();
       toast({
         title: "AI Scraping Complete",
         description: data.message,
@@ -813,7 +806,7 @@ export default function AdminPage() {
     },
     onSuccess: (data) => {
       setLastResult(data);
-      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
+      invalidateJobRelatedQueries();
       toast({
         title: "YC Scraping Complete",
         description: data.message,
@@ -834,7 +827,7 @@ export default function AdminPage() {
       return res.json() as Promise<ScrapeResult>;
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
+      invalidateJobRelatedQueries();
       toast({
         title: "Company Scraped",
         description: data.message,

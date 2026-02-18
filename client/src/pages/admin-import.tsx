@@ -15,7 +15,7 @@ import {
   CheckCircle, XCircle, AlertTriangle, Plus, Trash2,
 } from "lucide-react";
 import { AdminHeader } from "@/components/admin-header";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest, queryClient, invalidateJobRelatedQueries } from "@/lib/queryClient";
 
 interface NormalizedData {
   title: string;
@@ -192,7 +192,7 @@ export default function AdminImport() {
     },
     onSuccess: (data) => {
       toast({ title: "Draft saved", description: `Job ID: ${data.jobId}` });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/jobs/review-queue"] });
+      invalidateJobRelatedQueries();
     },
     onError: (err: any) => {
       toast({ title: "Failed to save", description: err.message, variant: "destructive" });
@@ -232,7 +232,7 @@ export default function AdminImport() {
       setJobUrl("");
       setNormalized(null);
       setQaResult(null);
-      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
+      invalidateJobRelatedQueries();
     },
     onError: (err: any) => {
       toast({ title: "Publish failed", description: err.message, variant: "destructive" });

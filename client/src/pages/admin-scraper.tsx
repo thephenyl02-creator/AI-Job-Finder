@@ -8,7 +8,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Link } from "wouter";
 import { RefreshCw, Loader2, Play, Square, Clock, CheckCircle, XCircle, AlertTriangle, Activity, Zap, Bell, LinkIcon, Database, Timer, TrendingUp } from "lucide-react";
 import { AdminHeader } from "@/components/admin-header";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest, queryClient, invalidateJobRelatedQueries } from "@/lib/queryClient";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { ScrapeRun } from "@shared/schema";
 
@@ -79,7 +79,7 @@ export default function AdminScraper() {
     },
     onSuccess: (data) => {
       toast({ title: data.message });
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/monitoring'] });
+      invalidateJobRelatedQueries();
       queryClient.invalidateQueries({ queryKey: ['/api/admin/scraper/runs'] });
     },
     onError: (err: any) => {
