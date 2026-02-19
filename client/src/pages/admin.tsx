@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { usePageTitle } from "@/hooks/use-page-title";
 import { Button } from "@/components/ui/button";
@@ -755,71 +755,75 @@ export default function AdminPage() {
     },
   });
 
+  const { data: scraperStatusData, refetch: refetchScraperStatus } = useQuery<{
+    isRunning: boolean;
+    type: string | null;
+    startedAt: string | null;
+    companiesTotal: number;
+    companiesProcessed: number;
+    currentCompany: string | null;
+    result: ScrapeResult | null;
+    error: string | null;
+    completedAt: string | null;
+  }>({
+    queryKey: ["/api/admin/scraper/status"],
+    enabled: isAdmin,
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      return data?.isRunning ? 3000 : false;
+    },
+  });
+
+  const isScraping = scraperStatusData?.isRunning ?? false;
+
   const scrapeAllMutation = useMutation({
     mutationFn: async () => {
       const res = await apiRequest("POST", "/api/admin/scraper/run");
-      return res.json() as Promise<ScrapeResult>;
+      return res.json();
     },
     onSuccess: (data) => {
-      setLastResult(data);
-      invalidateJobRelatedQueries();
-      toast({
-        title: "Scraping Complete",
-        description: data.message,
-      });
+      toast({ title: "Scraping Started", description: data.message });
+      refetchScraperStatus();
     },
     onError: (error: Error) => {
-      toast({
-        title: "Scraping Failed",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Scraping Failed", description: error.message, variant: "destructive" });
     },
   });
 
   const scrapeWithAIMutation = useMutation({
     mutationFn: async () => {
       const res = await apiRequest("POST", "/api/admin/scraper/run-with-ai");
-      return res.json() as Promise<ScrapeResult>;
+      return res.json();
     },
     onSuccess: (data) => {
-      setLastResult(data);
-      invalidateJobRelatedQueries();
-      toast({
-        title: "AI Scraping Complete",
-        description: data.message,
-      });
+      toast({ title: "AI Scraping Started", description: data.message });
+      refetchScraperStatus();
     },
     onError: (error: Error) => {
-      toast({
-        title: "AI Scraping Failed",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "AI Scraping Failed", description: error.message, variant: "destructive" });
     },
   });
 
   const scrapeYCMutation = useMutation({
     mutationFn: async () => {
       const res = await apiRequest("POST", "/api/admin/scraper/yc");
-      return res.json() as Promise<ScrapeResult>;
+      return res.json();
     },
     onSuccess: (data) => {
-      setLastResult(data);
-      invalidateJobRelatedQueries();
-      toast({
-        title: "YC Scraping Complete",
-        description: data.message,
-      });
+      toast({ title: "YC Scraping Started", description: data.message });
+      refetchScraperStatus();
     },
     onError: (error: Error) => {
-      toast({
-        title: "YC Scraping Failed",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "YC Scraping Failed", description: error.message, variant: "destructive" });
     },
   });
+
+  useEffect(() => {
+    if (scraperStatusData && !scraperStatusData.isRunning && scraperStatusData.result) {
+      setLastResult(scraperStatusData.result as ScrapeResult);
+      invalidateJobRelatedQueries();
+    }
+  }, [scraperStatusData?.isRunning, scraperStatusData?.completedAt]);
 
   const scrapeCompanyMutation = useMutation({
     mutationFn: async (companyName: string) => {
@@ -1655,60 +1659,79 @@ export default function AdminPage() {
               <div className="flex flex-wrap gap-3">
                 <Button
                   onClick={() => scrapeAllMutation.mutate()}
-                  disabled={scrapeAllMutation.isPending || scrapeWithAIMutation.isPending}
+                  disabled={isScraping || scrapeAllMutation.isPending}
                   variant="outline"
                   data-testid="button-scrape-all"
                 >
-                  {scrapeAllMutation.isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Scraping...
-                    </>
-                  ) : (
-                    <>
-                      <RefreshCw className="mr-2 h-4 w-4" />
-                      Quick Scrape (No AI)
-                    </>
-                  )}
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Quick Scrape (No AI)
                 </Button>
                 
                 <Button
                   onClick={() => scrapeWithAIMutation.mutate()}
-                  disabled={scrapeAllMutation.isPending || scrapeWithAIMutation.isPending || scrapeYCMutation.isPending}
+                  disabled={isScraping || scrapeWithAIMutation.isPending}
                   data-testid="button-scrape-with-ai"
                 >
-                  {scrapeWithAIMutation.isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      AI Scraping... (This takes a while)
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="mr-2 h-4 w-4" />
-                      Scrape with AI Categorization
-                    </>
-                  )}
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  Scrape with AI Categorization
                 </Button>
 
                 <Button
                   onClick={() => scrapeYCMutation.mutate()}
-                  disabled={scrapeAllMutation.isPending || scrapeWithAIMutation.isPending || scrapeYCMutation.isPending}
+                  disabled={isScraping || scrapeYCMutation.isPending}
                   variant="outline"
                   data-testid="button-scrape-yc"
                 >
-                  {scrapeYCMutation.isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Scraping YC Companies... (5-10 min)
-                    </>
-                  ) : (
-                    <>
-                      <Globe className="mr-2 h-4 w-4" />
-                      Scrape YC Legal Tech Companies
-                    </>
-                  )}
+                  <Globe className="mr-2 h-4 w-4" />
+                  Scrape YC Legal Tech Companies
                 </Button>
               </div>
+
+              {isScraping && scraperStatusData && (
+                <div className="mt-4 p-4 rounded-lg border border-primary/30 bg-primary/5" data-testid="scraper-live-status">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                    <span className="text-sm font-medium text-foreground">
+                      {scraperStatusData.type} in progress...
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Started {scraperStatusData.startedAt ? new Date(scraperStatusData.startedAt).toLocaleTimeString() : ""}
+                    {scraperStatusData.companiesProcessed > 0 && (
+                      <> — {scraperStatusData.companiesProcessed} of {scraperStatusData.companiesTotal} companies processed</>
+                    )}
+                  </p>
+                  {scraperStatusData.currentCompany && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Currently scraping: {scraperStatusData.currentCompany}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {!isScraping && scraperStatusData?.error && (
+                <div className="mt-4 p-4 rounded-lg border border-destructive/30 bg-destructive/5">
+                  <p className="text-sm font-medium text-destructive">Scrape failed</p>
+                  <p className="text-xs text-muted-foreground mt-1">{scraperStatusData.error}</p>
+                  {scraperStatusData.completedAt && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      at {new Date(scraperStatusData.completedAt).toLocaleTimeString()}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {!isScraping && scraperStatusData?.result && !scraperStatusData?.error && (
+                <div className="mt-4 p-4 rounded-lg border border-emerald-500/30 bg-emerald-500/5">
+                  <p className="text-sm font-medium text-emerald-700 dark:text-emerald-400">Scrape completed</p>
+                  <p className="text-xs text-muted-foreground mt-1">{scraperStatusData.result.message}</p>
+                  {scraperStatusData.completedAt && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      at {new Date(scraperStatusData.completedAt).toLocaleTimeString()}
+                    </p>
+                  )}
+                </div>
+              )}
 
               {lastResult && (
                 <div className="mt-4 p-4 bg-muted rounded-lg">

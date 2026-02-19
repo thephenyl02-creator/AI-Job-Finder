@@ -67,6 +67,13 @@ function QAStatusBadge({ status }: { status: string }) {
   }
 }
 
+interface RecentlyPublished {
+  id: number;
+  title: string;
+  company: string;
+  publishedAt: string;
+}
+
 export default function AdminReview() {
   usePageTitle("Review Queue");
   const { toast } = useToast();
@@ -74,6 +81,11 @@ export default function AdminReview() {
   const [, setLocation] = useLocation();
   const [filter, setFilter] = useState<string>("all");
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [recentlyPublished, setRecentlyPublished] = useState<RecentlyPublished[]>([]);
+
+  const addToRecentlyPublished = (items: RecentlyPublished[]) => {
+    setRecentlyPublished((prev) => [...items, ...prev].slice(0, 20));
+  };
 
   const { data, isLoading, refetch } = useQuery<{ total: number; jobs: ReviewJob[] }>({
     queryKey: ["/api/admin/jobs/review-queue", filter],
@@ -87,13 +99,20 @@ export default function AdminReview() {
 
   const bulkPublishMutation = useMutation({
     mutationFn: async (ids: number[]) => {
+      const jobsToPublish = (data?.jobs || []).filter((j) => ids.includes(j.id));
       const res = await apiRequest("POST", "/api/admin/jobs/bulk-qa-publish", { jobIds: ids });
-      return res.json();
+      const result = await res.json();
+      return { result, jobsToPublish };
     },
-    onSuccess: (data) => {
+    onSuccess: ({ result, jobsToPublish }) => {
+      const now = new Date().toISOString();
+      addToRecentlyPublished(
+        jobsToPublish.map((j) => ({ id: j.id, title: j.title, company: j.company, publishedAt: now }))
+      );
       toast({
-        title: "Bulk publish complete",
-        description: `${data.published} of ${data.total} jobs published`,
+        title: `${result.published} jobs published`,
+        description: jobsToPublish.map((j) => `${j.title} at ${j.company}`).slice(0, 3).join(", ") +
+          (jobsToPublish.length > 3 ? ` and ${jobsToPublish.length - 3} more` : ""),
       });
       setSelectedIds(new Set());
       refetch();
@@ -106,11 +125,19 @@ export default function AdminReview() {
 
   const publishSingleMutation = useMutation({
     mutationFn: async (id: number) => {
+      const job = (data?.jobs || []).find((j) => j.id === id);
       const res = await apiRequest("POST", `/api/admin/jobs/${id}/qa-publish`, { forceOverride: false });
-      return res.json();
+      const result = await res.json();
+      return { result, job };
     },
-    onSuccess: () => {
-      toast({ title: "Job published" });
+    onSuccess: ({ result, job }) => {
+      if (job) {
+        addToRecentlyPublished([{ id: job.id, title: job.title, company: job.company, publishedAt: new Date().toISOString() }]);
+      }
+      toast({
+        title: "Job published successfully",
+        description: job ? `"${job.title}" at ${job.company} is now live` : "Job is now live on the site",
+      });
       refetch();
       invalidateJobRelatedQueries();
     },
@@ -121,11 +148,19 @@ export default function AdminReview() {
 
   const forcePublishMutation = useMutation({
     mutationFn: async (id: number) => {
+      const job = (data?.jobs || []).find((j) => j.id === id);
       const res = await apiRequest("POST", `/api/admin/jobs/${id}/qa-publish`, { forceOverride: true });
-      return res.json();
+      const result = await res.json();
+      return { result, job };
     },
-    onSuccess: () => {
-      toast({ title: "Job force-published" });
+    onSuccess: ({ result, job }) => {
+      if (job) {
+        addToRecentlyPublished([{ id: job.id, title: job.title, company: job.company, publishedAt: new Date().toISOString() }]);
+      }
+      toast({
+        title: "Job force-published successfully",
+        description: job ? `"${job.title}" at ${job.company} is now live` : "Job is now live on the site",
+      });
       refetch();
       invalidateJobRelatedQueries();
     },
@@ -241,6 +276,43 @@ export default function AdminReview() {
           )}
         </div>
       </div>
+
+      {recentlyPublished.length > 0 && (
+        <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3" data-testid="recently-published-section">
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <div className="flex items-center gap-2">
+              <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              <span className="text-sm font-medium text-emerald-700 dark:text-emerald-400">
+                Recently Published ({recentlyPublished.length})
+              </span>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setRecentlyPublished([])}
+              className="text-xs text-muted-foreground"
+              data-testid="button-clear-recent"
+            >
+              Clear
+            </Button>
+          </div>
+          <div className="space-y-1">
+            {recentlyPublished.slice(0, 5).map((rp) => (
+              <div key={rp.id} className="flex items-center justify-between text-xs text-muted-foreground">
+                <span className="truncate">
+                  <span className="font-medium text-foreground">{rp.title}</span> at {rp.company}
+                </span>
+                <span className="shrink-0 ml-2">{new Date(rp.publishedAt).toLocaleTimeString()}</span>
+              </div>
+            ))}
+            {recentlyPublished.length > 5 && (
+              <p className="text-xs text-muted-foreground">
+                and {recentlyPublished.length - 5} more...
+              </p>
+            )}
+          </div>
+        </div>
+      )}
 
       {isLoading ? (
         <div className="flex items-center justify-center py-12">

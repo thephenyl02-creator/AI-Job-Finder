@@ -2517,119 +2517,111 @@ Provide 2-4 recommended paths. Be specific to this candidate's actual experience
   });
 
   // Admin: Scrape all companies
+  const scraperStatus: {
+    isRunning: boolean;
+    type: string | null;
+    startedAt: string | null;
+    companiesTotal: number;
+    companiesProcessed: number;
+    currentCompany: string | null;
+    result: { message: string; inserted: number; updated: number; totalScraped: number; stats?: any[] } | null;
+    error: string | null;
+    completedAt: string | null;
+  } = {
+    isRunning: false,
+    type: null,
+    startedAt: null,
+    companiesTotal: 0,
+    companiesProcessed: 0,
+    currentCompany: null,
+    result: null,
+    error: null,
+    completedAt: null,
+  };
+
+  app.get("/api/admin/scraper/status", isAuthenticated, async (req, res) => {
+    if (!(await isAdminCheck(req))) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    res.json(scraperStatus);
+  });
+
+  async function runScrapeInBackground(type: string, scrapeFn: () => Promise<{ jobs: any[]; stats: any[] }>) {
+    if (scraperStatus.isRunning) return;
+    scraperStatus.isRunning = true;
+    scraperStatus.type = type;
+    scraperStatus.startedAt = new Date().toISOString();
+    scraperStatus.companiesTotal = 0;
+    scraperStatus.companiesProcessed = 0;
+    scraperStatus.currentCompany = null;
+    scraperStatus.result = null;
+    scraperStatus.error = null;
+    scraperStatus.completedAt = null;
+
+    try {
+      console.log(`[Scraper] Starting background ${type} scrape...`);
+      const { jobs: scrapedJobs, stats } = await scrapeFn();
+
+      scraperStatus.companiesTotal = stats.length;
+      scraperStatus.companiesProcessed = stats.length;
+      scraperStatus.currentCompany = null;
+
+      if (scrapedJobs.length === 0) {
+        scraperStatus.result = { message: `${type} scraping completed but no jobs found`, inserted: 0, updated: 0, totalScraped: 0, stats };
+      } else {
+        const { inserted, updated, newJobs } = await storage.bulkUpsertJobs(scrapedJobs);
+        if (newJobs.length > 0) {
+          matchNewJobsAgainstAlerts(newJobs).catch(err => console.error("Alert matching error:", err));
+        }
+        scraperStatus.result = {
+          message: `${type} scraping completed. Found ${scrapedJobs.length} jobs. Inserted ${inserted} new, updated ${updated} existing.`,
+          inserted,
+          updated,
+          totalScraped: scrapedJobs.length,
+          stats,
+        };
+      }
+      console.log(`[Scraper] Background ${type} scrape complete:`, scraperStatus.result.message);
+    } catch (error: any) {
+      console.error(`[Scraper] Background ${type} scrape failed:`, error);
+      scraperStatus.error = error.message || "Unknown error";
+    } finally {
+      scraperStatus.isRunning = false;
+      scraperStatus.completedAt = new Date().toISOString();
+    }
+  }
+
   app.post("/api/admin/scraper/run", isAuthenticated, async (req, res) => {
     if (!(await isAdminCheck(req))) {
       return res.status(403).json({ error: "Admin access required" });
     }
-    try {
-      console.log("Starting job scraper...");
-      
-      const { jobs: scrapedJobs, stats } = await scrapeAllLawFirms();
-      
-      if (scrapedJobs.length === 0) {
-        return res.json({
-          success: true,
-          message: "Scraping completed but no jobs found",
-          stats,
-          inserted: 0,
-          updated: 0,
-        });
-      }
-
-      const { inserted, updated, newJobs } = await storage.bulkUpsertJobs(scrapedJobs);
-      if (newJobs.length > 0) {
-        matchNewJobsAgainstAlerts(newJobs).catch(err => console.error("Alert matching error:", err));
-      }
-      
-      res.json({
-        success: true,
-        message: `Scraping completed. Inserted ${inserted} new jobs, updated ${updated} existing jobs.`,
-        stats,
-        inserted,
-        updated,
-        totalScraped: scrapedJobs.length,
-      });
-    } catch (error) {
-      console.error("Error running scraper:", error);
-      res.status(500).json({ error: "Failed to run scraper" });
+    if (scraperStatus.isRunning) {
+      return res.status(409).json({ error: "A scrape is already in progress", status: scraperStatus });
     }
+    runScrapeInBackground("Quick Scrape", scrapeAllLawFirms);
+    res.json({ success: true, message: "Scraping started in background. Check status for progress." });
   });
 
-  // Admin: Scrape all companies with AI categorization
   app.post("/api/admin/scraper/run-with-ai", isAuthenticated, async (req, res) => {
     if (!(await isAdminCheck(req))) {
       return res.status(403).json({ error: "Admin access required" });
     }
-    try {
-      console.log("Starting AI-powered job scraper...");
-      
-      const { jobs: scrapedJobs, stats } = await scrapeAllLawFirmsWithAI();
-      
-      if (scrapedJobs.length === 0) {
-        return res.json({
-          success: true,
-          message: "Scraping completed but no jobs found",
-          stats,
-          inserted: 0,
-          updated: 0,
-        });
-      }
-
-      const { inserted, updated, newJobs } = await storage.bulkUpsertJobs(scrapedJobs);
-      if (newJobs.length > 0) {
-        matchNewJobsAgainstAlerts(newJobs).catch(err => console.error("Alert matching error:", err));
-      }
-      
-      res.json({
-        success: true,
-        message: `AI scraping completed. Inserted ${inserted} new jobs, updated ${updated} existing jobs.`,
-        stats,
-        inserted,
-        updated,
-        totalScraped: scrapedJobs.length,
-      });
-    } catch (error) {
-      console.error("Error running AI scraper:", error);
-      res.status(500).json({ error: "Failed to run AI scraper" });
+    if (scraperStatus.isRunning) {
+      return res.status(409).json({ error: "A scrape is already in progress", status: scraperStatus });
     }
+    runScrapeInBackground("AI Scrape", scrapeAllLawFirmsWithAI);
+    res.json({ success: true, message: "AI scraping started in background. Check status for progress." });
   });
 
   app.post("/api/admin/scraper/yc", isAuthenticated, async (req, res) => {
     if (!(await isAdminCheck(req))) {
       return res.status(403).json({ error: "Admin access required" });
     }
-    try {
-      console.log("Starting YC legal tech companies scraper...");
-
-      const { jobs: scrapedJobs, stats } = await scrapeYCCompanies();
-
-      if (scrapedJobs.length === 0) {
-        return res.json({
-          success: true,
-          message: "YC scraping completed but no jobs found",
-          stats,
-          inserted: 0,
-          updated: 0,
-        });
-      }
-
-      const { inserted, updated, newJobs } = await storage.bulkUpsertJobs(scrapedJobs);
-      if (newJobs.length > 0) {
-        matchNewJobsAgainstAlerts(newJobs).catch(err => console.error("Alert matching error:", err));
-      }
-
-      res.json({
-        success: true,
-        message: `YC scraping completed. Found ${scrapedJobs.length} jobs from ${stats.filter(s => s.status === 'success').length} companies. Inserted ${inserted} new, updated ${updated} existing.`,
-        stats,
-        inserted,
-        updated,
-        totalScraped: scrapedJobs.length,
-      });
-    } catch (error) {
-      console.error("Error running YC scraper:", error);
-      res.status(500).json({ error: "Failed to run YC scraper" });
+    if (scraperStatus.isRunning) {
+      return res.status(409).json({ error: "A scrape is already in progress", status: scraperStatus });
     }
+    runScrapeInBackground("YC Companies", scrapeYCCompanies);
+    res.json({ success: true, message: "YC scraping started in background. Check status for progress." });
   });
 
   // Admin: Scrape a single job URL

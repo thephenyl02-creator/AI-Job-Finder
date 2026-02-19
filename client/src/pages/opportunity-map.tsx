@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
-import { MapPin, ArrowRight, Wifi, Briefcase } from "lucide-react";
+import { MapPin, ArrowRight, Wifi, Briefcase, ZoomIn, ZoomOut, RotateCcw } from "lucide-react";
 import { usePageTitle } from "@/hooks/use-page-title";
 
 const GEO_URL = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
@@ -260,8 +260,67 @@ export default function OpportunityMap() {
   const [selectedCode, setSelectedCode] = useState<string | null>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
   const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mapContainerRef = useRef<HTMLDivElement>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [isDark, setIsDark] = useState(false);
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const isPanning = useRef(false);
+  const panStart = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
+
+  const MIN_ZOOM = 1;
+  const MAX_ZOOM = 6;
+  const ZOOM_STEP = 0.5;
+
+  const handleZoomIn = useCallback(() => {
+    setZoom((z) => Math.min(MAX_ZOOM, z + ZOOM_STEP));
+  }, []);
+
+  const handleZoomOut = useCallback(() => {
+    setZoom((z) => {
+      const next = Math.max(MIN_ZOOM, z - ZOOM_STEP);
+      if (next <= 1) setPan({ x: 0, y: 0 });
+      return next;
+    });
+  }, []);
+
+  const handleZoomReset = useCallback(() => {
+    setZoom(1);
+    setPan({ x: 0, y: 0 });
+  }, []);
+
+  useEffect(() => {
+    const el = mapContainerRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? -ZOOM_STEP : ZOOM_STEP;
+      setZoom((z) => {
+        const next = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, z + delta));
+        if (next <= 1) setPan({ x: 0, y: 0 });
+        return next;
+      });
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, []);
+
+  const handlePanStart = useCallback((e: React.MouseEvent) => {
+    if (zoom <= 1) return;
+    isPanning.current = true;
+    panStart.current = { x: e.clientX, y: e.clientY, panX: pan.x, panY: pan.y };
+  }, [zoom, pan]);
+
+  const handlePanMove = useCallback((e: React.MouseEvent) => {
+    if (!isPanning.current) return;
+    const dx = e.clientX - panStart.current.x;
+    const dy = e.clientY - panStart.current.y;
+    setPan({ x: panStart.current.panX + dx, y: panStart.current.panY + dy });
+  }, []);
+
+  const handlePanEnd = useCallback(() => {
+    isPanning.current = false;
+  }, []);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 1024);
@@ -403,9 +462,26 @@ export default function OpportunityMap() {
             <div
               className="lg:flex-1 relative"
               data-testid="map-container"
-              onMouseMove={handleMouseMove}
+              onMouseMove={(e) => {
+                handleMouseMove(e);
+                handlePanMove(e);
+              }}
+              onMouseUp={handlePanEnd}
+              onMouseLeave={handlePanEnd}
             >
-              <div className="rounded-md border border-border/50 overflow-hidden bg-muted/10 dark:bg-muted/5">
+              <div
+                ref={mapContainerRef}
+                className="rounded-md border border-border/50 overflow-hidden bg-muted/10 dark:bg-muted/5"
+                onMouseDown={handlePanStart}
+                style={{ cursor: zoom > 1 ? (isPanning.current ? "grabbing" : "grab") : "default" }}
+              >
+                <div
+                  style={{
+                    transform: `scale(${zoom}) translate(${pan.x / zoom}px, ${pan.y / zoom}px)`,
+                    transformOrigin: "center center",
+                    transition: isPanning.current ? "none" : "transform 0.2s ease-out",
+                  }}
+                >
                 <ComposableMap
                   projection="geoNaturalEarth1"
                   projectionConfig={{
@@ -492,7 +568,50 @@ export default function OpportunityMap() {
                     }
                   </Geographies>
                 </ComposableMap>
+                </div>
               </div>
+
+              <div className="absolute top-2 right-2 flex flex-col gap-1 z-10" data-testid="zoom-controls">
+                <Button
+                  size="icon"
+                  variant="outline"
+                  onClick={handleZoomIn}
+                  disabled={zoom >= MAX_ZOOM}
+                  className="bg-background/80 backdrop-blur-sm"
+                  data-testid="button-zoom-in"
+                >
+                  <ZoomIn className="h-4 w-4" />
+                </Button>
+                <Button
+                  size="icon"
+                  variant="outline"
+                  onClick={handleZoomOut}
+                  disabled={zoom <= MIN_ZOOM}
+                  className="bg-background/80 backdrop-blur-sm"
+                  data-testid="button-zoom-out"
+                >
+                  <ZoomOut className="h-4 w-4" />
+                </Button>
+                {zoom > 1 && (
+                  <Button
+                    size="icon"
+                    variant="outline"
+                    onClick={handleZoomReset}
+                    className="bg-background/80 backdrop-blur-sm"
+                    data-testid="button-zoom-reset"
+                  >
+                    <RotateCcw className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+
+              {zoom > 1 && (
+                <div className="absolute bottom-12 left-2 z-10">
+                  <Badge variant="secondary" className="text-[10px] bg-background/80 backdrop-blur-sm no-default-active-elevate">
+                    {Math.round(zoom * 100)}%
+                  </Badge>
+                </div>
+              )}
 
               <div className="flex items-center justify-between gap-3 mt-2 px-1">
                 <span className="text-[10px] text-muted-foreground">Fewer roles</span>
