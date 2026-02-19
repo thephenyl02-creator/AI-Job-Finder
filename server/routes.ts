@@ -3799,6 +3799,8 @@ Provide 2-4 recommended paths. Be specific to this candidate's actual experience
           pipelineStatus: j.pipelineStatus,
           qualityScore: j.qualityScore,
           legalRelevanceScore: j.legalRelevanceScore,
+          relevanceConfidence: j.relevanceConfidence,
+          reviewReasonCode: j.reviewReasonCode,
           structuredStatus: j.structuredStatus,
           qa: j.qa,
           createdAt: j.postedDate,
@@ -3807,6 +3809,50 @@ Provide 2-4 recommended paths. Be specific to this candidate's actual experience
     } catch (error: any) {
       console.error("[Review Queue] Error:", error);
       res.status(500).json({ error: "Failed to load review queue" });
+    }
+  });
+
+  app.post("/api/admin/jobs/publish-all-eligible", isAuthenticated, async (req, res) => {
+    if (!(await isAdminCheck(req))) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    try {
+      const candidates = await db.select().from(jobs).where(
+        and(
+          eq(jobs.pipelineStatus, 'ready'),
+          eq(jobs.isPublished, false),
+          eq(jobs.isActive, true),
+          eq(jobs.jobStatus, 'open')
+        )
+      );
+
+      let published = 0;
+      let skipped = 0;
+      const publishedJobs: Array<{ id: number; title: string; company: string }> = [];
+
+      for (const job of candidates) {
+        const qualityThreshold = (job.legalRelevanceScore ?? 0) >= 7 ? 40 : 50;
+        const passesGate = (job.qualityScore ?? 0) >= qualityThreshold
+          && (job.legalRelevanceScore ?? 0) >= 3
+          && job.roleCategory !== null
+          && (job.relevanceConfidence ?? 0) >= 40
+          && job.applyUrl && job.applyUrl.trim() !== '';
+
+        if (!passesGate) { skipped++; continue; }
+
+        const dup = await storage.findLiveJobDuplicate(job.title, job.company, job.location, job.id);
+        if (dup) { skipped++; continue; }
+
+        await storage.updateJobWorkerFields(job.id, { isPublished: true, reviewReasonCode: null });
+        publishedJobs.push({ id: job.id, title: job.title, company: job.company });
+        published++;
+      }
+
+      console.log(`[Admin] Publish All Eligible: ${published} published, ${skipped} skipped out of ${candidates.length} candidates`);
+      res.json({ published, skipped, total: candidates.length, publishedJobs: publishedJobs.slice(0, 50) });
+    } catch (error: any) {
+      console.error("[Admin] Publish All Eligible error:", error);
+      res.status(500).json({ error: "Failed to publish eligible jobs" });
     }
   });
 

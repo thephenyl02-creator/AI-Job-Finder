@@ -31,6 +31,8 @@ interface ReviewJob {
   pipelineStatus: string | null;
   qualityScore: number | null;
   legalRelevanceScore: number | null;
+  relevanceConfidence: number | null;
+  reviewReasonCode: string | null;
   structuredStatus: string | null;
   createdAt: string | null;
   qa: {
@@ -169,6 +171,30 @@ export default function AdminReview() {
     },
   });
 
+  const publishAllEligibleMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/admin/jobs/publish-all-eligible", {});
+      return res.json();
+    },
+    onSuccess: (result: any) => {
+      const now = new Date().toISOString();
+      if (result.publishedJobs?.length > 0) {
+        addToRecentlyPublished(
+          result.publishedJobs.map((j: any) => ({ id: j.id, title: j.title, company: j.company, publishedAt: now }))
+        );
+      }
+      toast({
+        title: `${result.published} jobs published`,
+        description: `${result.skipped} skipped (didn't meet quality gates). ${result.total} total candidates checked.`,
+      });
+      refetch();
+      invalidateJobRelatedQueries();
+    },
+    onError: (err: any) => {
+      toast({ title: "Publish all eligible failed", description: err.message, variant: "destructive" });
+    },
+  });
+
   if (authLoading) return null;
   if (!user || !isAdmin) {
     return (
@@ -226,6 +252,19 @@ export default function AdminReview() {
             >
               <RefreshCw className={`w-4 h-4 mr-1 ${isLoading ? "animate-spin" : ""}`} />
               Refresh
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => publishAllEligibleMutation.mutate()}
+              disabled={publishAllEligibleMutation.isPending}
+              data-testid="button-publish-all-eligible"
+            >
+              {publishAllEligibleMutation.isPending ? (
+                <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+              ) : (
+                <CheckCircle className="w-4 h-4 mr-1" />
+              )}
+              Publish All Eligible
             </Button>
           </div>
         </div>
@@ -356,7 +395,12 @@ export default function AdminReview() {
                         {job.location && <span>{job.location}</span>}
                         {job.roleCategory && <Badge variant="secondary">{job.roleCategory}</Badge>}
                         {job.source && <Badge variant="outline">{job.source}</Badge>}
-                        <span>Score: {job.qa.lawyerFirstScore}/100</span>
+                        {job.qualityScore != null && <span>Q:{job.qualityScore}</span>}
+                        {job.legalRelevanceScore != null && <span>R:{job.legalRelevanceScore}</span>}
+                        {job.relevanceConfidence != null && <span>C:{job.relevanceConfidence}%</span>}
+                        {job.reviewReasonCode && (
+                          <Badge variant="outline" className="text-xs">{job.reviewReasonCode}</Badge>
+                        )}
                       </div>
 
                       {job.qa.errors.length > 0 && (
@@ -398,7 +442,7 @@ export default function AdminReview() {
                           Publish
                         </Button>
                       )}
-                      {job.qa.qaStatus === "needs_review" && (
+                      {(job.qa.qaStatus === "needs_review" || job.qa.qaStatus === "failed") && (
                         <Button
                           size="sm"
                           variant="outline"

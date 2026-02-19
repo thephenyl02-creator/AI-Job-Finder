@@ -58,9 +58,9 @@ async function revalidateBrokenLinks() {
     const isWorking = await checkUrl(job.applyUrl);
     
     if (isWorking) {
-      const qualityThreshold = (job.legalRelevanceScore ?? 0) >= 7 ? 55 : 65;
+      const qualityThreshold = (job.legalRelevanceScore ?? 0) >= 7 ? 40 : 50;
       const passesGate = (job.qualityScore ?? 0) >= qualityThreshold
-        && (job.legalRelevanceScore ?? 0) >= 5
+        && (job.legalRelevanceScore ?? 0) >= 3
         && job.roleCategory !== null
         && (job.relevanceConfidence ?? 0) >= 40;
       
