@@ -10,6 +10,8 @@ export interface LawFirmConfig {
     instance: string;
     site: string;
   };
+  rippling?: string;
+  icims?: string;
   selectors?: {
     jobList?: string;
     title?: string;
@@ -122,6 +124,7 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   {
     name: 'LegalOn Technologies',
     careerUrl: 'https://www.legalon.ai/careers',
+    rippling: 'legalontech-inc',
     type: 'startup',
   },
   {
@@ -271,6 +274,7 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   {
     name: 'Smokeball',
     careerUrl: 'https://www.smokeball.com/careers/',
+    rippling: 'smokeballcareers',
     type: 'tech-legal',
   },
   {
@@ -293,7 +297,7 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   {
     name: 'Ironclad',
     careerUrl: 'https://ironcladapp.com/careers/',
-    ashbyUrl: 'https://api.ashbyhq.com/posting-api/job-board/ironclad',
+    ashbyUrl: 'https://api.ashbyhq.com/posting-api/job-board/ironcladhq',
     type: 'tech-legal',
   },
   {
@@ -519,11 +523,13 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   {
     name: 'Kirkland & Ellis',
     careerUrl: 'https://staffjobsus.kirkland.com/',
+    workday: { company: 'kirkland', instance: 'wd1', site: 'Kirkland' },
     type: 'biglaw',
   },
   {
     name: 'Latham & Watkins',
     careerUrl: 'https://www.lw.com/careers',
+    icims: 'lw',
     type: 'biglaw',
   },
   {
@@ -715,21 +721,25 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   {
     name: 'Clifford Chance',
     careerUrl: 'https://www.cliffordchance.com/careers.html',
+    workday: { company: 'cliffordchance', instance: 'wd1', site: 'CliffordChance' },
     type: 'biglaw',
   },
   {
     name: 'Allen & Overy (A&O Shearman)',
     careerUrl: 'https://www.aoshearman.com/careers',
+    workday: { company: 'aoshearman', instance: 'wd3', site: 'AOShearman' },
     type: 'biglaw',
   },
   {
     name: 'Freshfields',
     careerUrl: 'https://www.freshfields.com/en-gb/careers/',
+    workday: { company: 'freshfields', instance: 'wd3', site: 'Freshfields' },
     type: 'biglaw',
   },
   {
     name: 'Linklaters',
     careerUrl: 'https://www.linklaters.com/en/careers',
+    workday: { company: 'linklaters', instance: 'wd3', site: 'Linklaters' },
     type: 'biglaw',
   },
   {
@@ -1076,7 +1086,7 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   {
     name: 'Axiom',
     careerUrl: 'https://www.axiomlaw.com/careers',
-    greenhouseId: 'axiom',
+    greenhouseId: 'axiomtalentplatform',
     type: 'alsp',
   },
   {
@@ -1097,6 +1107,7 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   {
     name: 'Integreon',
     careerUrl: 'https://www.integreon.com/careers/',
+    icims: 'integreon',
     type: 'alsp',
   },
   {
@@ -1138,6 +1149,14 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
     name: 'Adaptive',
     careerUrl: 'https://www.yourflexiblelawyers.com/careers',
     type: 'alsp',
+  },
+
+  // --- DiliTrust ---
+  {
+    name: 'DiliTrust',
+    careerUrl: 'https://www.dilitrust.com/careers/',
+    leverPostingsUrl: 'https://jobs.lever.co/dilitrust',
+    type: 'tech-legal',
   },
 
   // ===================================================
@@ -1674,6 +1693,22 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   {
     name: 'LegalSight',
     careerUrl: 'https://www.legalsight.com.br/careers',
+    type: 'startup',
+  },
+
+  // ===================================================
+  // ADDITIONAL STARTUPS (ATS-confirmed)
+  // ===================================================
+  {
+    name: 'Haast',
+    careerUrl: 'https://jobs.ashbyhq.com/haast',
+    ashbyUrl: 'https://api.ashbyhq.com/posting-api/job-board/haast',
+    type: 'startup',
+  },
+  {
+    name: 'Plexus',
+    careerUrl: 'https://jobs.lever.co/plexus',
+    leverPostingsUrl: 'https://jobs.lever.co/plexus',
     type: 'startup',
   },
 ];
