@@ -1,0 +1,331 @@
+BUILD: A clean, minimal, end-to-end feature:
+“Upload Resume → Match Jobs → Choose My Resume or Model Resume → Review Redlines → Download → Apply”.
+
+PRODUCT INTENT
+This is NOT a generic resume rewriter.
+This is a guided, job-specific resume alignment flow with lawyer-friendly Track Changes review.
+
+CORE USER FLOW
+1) User uploads a resume (PDF/DOCX) OR provides a portfolio website URL.
+2) Platform parses and structures the resume into sections.
+3) Platform shows matched jobs (fit score + top gaps).
+4) User clicks “Apply” on any job and chooses:
+   A) Use My Resume (light tailoring)
+   B) Use Optimized Version (Model Resume framework; job-standardized structure)
+5) System generates line-level suggestions and shows a Track-Changes style review:
+   - Accept / Reject / Edit each change
+   - Reasons + evidence mapping to job requirements
+6) User exports tailored resume (DOCX required; PDF optional).
+7) User clicks “Go to Application” (opens employer apply_url) with a final checklist.
+
+NON-NEGOTIABLES (Trust + Minimalism)
+- One clear flow: Match → Transform → Review → Download → Apply (no overlapping buttons).
+- Never auto-apply changes without user review.
+- Never fabricate facts. If AI proposes content that is not explicitly supported by resume, mark it Optional and require user confirmation.
+- Avoid “ATS guarantee” language. Use “alignment” language.
+- Keep UI clean: fewer controls, lots of whitespace, one decision at a time.
+
+TECH STACK ASSUMPTION
+- Client: React + React Query + existing router
+- Server: Express + DB + existing auth
+- Use existing OpenAI/LLM helper if present
+
+────────────────────────────────────────────────────────
+A) DATABASE / DATA MODEL (Permanent & Future-proof)
+
+1) resumes
+- id (pk)
+- user_id (fk)
+- source_type ENUM: "file" | "url"
+- original_file_url (nullable)
+- original_url (nullable)
+- extracted_data JSONB (structured sections)
+- extraction_status ENUM: "pending" | "ready" | "failed"
+- extraction_error TEXT (nullable)
+- created_at, updated_at
+
+2) resume_versions (NEW)  // never overwrite originals
+- id (pk)
+- user_id (fk)
+- resume_id (fk)
+- job_id (nullable fk)
+- version_type ENUM: "original" | "my_resume" | "model"
+- content_json JSONB (the current structured resume content for this version)
+- export_docx_url TEXT (nullable)
+- export_pdf_url TEXT (nullable)
+- created_at
+
+3) model_templates (MVP: server-side constants; DB optional)
+If DB table:
+- template_id (pk)
+- name
+- section_order JSONB
+- section_rules JSONB
+- style_rules JSONB
+- keyword_focus JSONB
+- created_at
+
+4) resume_edit_suggestions (NEW)
+- id (pk)
+- user_id (fk)
+- resume_version_id (fk)
+- job_id (fk)
+- suggestions JSONB  // array of edits including evidence + optional flag + status per edit
+- status ENUM: "pending_review" | "finalized"
+- created_at, updated_at
+
+5) tasks (NEW)  // for async processing; avoids timeouts
+- id (pk)
+- user_id
+- type ENUM: "extract_resume" | "match_jobs" | "transform_resume" | "export_resume"
+- status ENUM: "queued" | "running" | "succeeded" | "failed"
+- input JSONB
+- output JSONB (nullable)
+- error TEXT (nullable)
+- created_at, updated_at
+
+6) jobs (existing)
+Ensure at least:
+- id, title, description, category/taxonomy, apply_url, location, created_at
+Optional:
+- status ENUM: "active" | "expired"
+
+────────────────────────────────────────────────────────
+B) INGESTION: Resume Upload + URL Safety (Permanent Fix)
+
+1) POST /api/resumes/upload  (PDF/DOCX)
+- Auth required
+- Validate file type: pdf/docx only
+- Max size: 10MB
+- Create resumes row with extraction_status="pending"
+- Create tasks row type="extract_resume"
+- Return: { resumeId, taskId }
+
+2) POST /api/resumes/upload-url  (portfolio URL)
+- Auth required
+- SECURITY (SSRF protection):
+  - allow only http/https
+  - block localhost / private IP ranges / internal hostnames
+  - enforce timeout (e.g., 5s)
+  - enforce max bytes (e.g., 1–2MB)
+  - strip scripts, sanitize html, extract readable text only
+- Create resumes row source_type="url", extraction_status="pending"
+- Create task "extract_resume" with the URL
+- Return: { resumeId, taskId }
+
+3) GET /api/tasks/:taskId
+- Auth required (owner only)
+- Returns: { status, output?, error? }
+
+Extraction task output must produce structured JSON:
+{
+  "header": {...},
+  "summary": "...",
+  "experience": [{ "company":"", "title":"", "dates":"", "bullets":["..."] }],
+  "skills": ["..."],
+  "education": ["..."],
+  "links": ["..."]
+}
+
+If extraction fails:
+- extraction_status="failed"
+- Provide fallback in UI: “Paste text” or “Manually edit sections” (minimal form)
+
+────────────────────────────────────────────────────────
+C) MATCHING: Resume → Jobs
+
+1) GET /api/resumes/:resumeId/matches
+- Auth required (owner only)
+- If extraction_status != ready, return 409 with status info
+- Return small payload:
+[
+  {
+    "jobId": "...",
+    "title": "...",
+    "company": "...",
+    "fitScore": 0-100,
+    "topReasons": ["...","...","..."],
+    "keyGaps": ["...","..."],
+    "recommendedTemplateId": "legal_ops_manager" (optional)
+  }
+]
+
+Fit score must be consistent across the product (one definition).
+Do not claim ATS. Use “fit/alignment”.
+
+────────────────────────────────────────────────────────
+D) APPLY FLOW (Minimal, Single Entry Point)
+
+1) POST /api/apply/start
+Body: { resumeId, jobId }
+Return:
+{
+  "job": { id,title,company,description,apply_url,category },
+  "resume": { id, extraction_status },
+  "options": ["my_resume","model"],
+  "recommendedOption": "my_resume"|"model",
+  "recommendedTemplateId": "..."
+}
+
+UI must show only TWO options:
+- “Use My Resume”
+- “Use Optimized Version” (this is the model resume framework; do not call it “model” in UI)
+
+────────────────────────────────────────────────────────
+E) TRANSFORM: Generate Suggestions + Structured Resume Version (Async)
+
+IMPORTANT: All AI outputs MUST be strict JSON.
+
+1) POST /api/resume-transform/my-resume
+Body: { resumeId, jobId }
+- Creates resume_versions row version_type="my_resume"
+- Creates task type="transform_resume"
+- Return: { resumeVersionId, taskId }
+
+2) POST /api/resume-transform/model
+Body: { resumeId, jobId, templateId }
+- Creates resume_versions row version_type="model"
+- Creates task type="transform_resume"
+- Return: { resumeVersionId, taskId }
+
+Transform task output must return:
+{
+  "resumeVersionId": "...",
+  "content_json": { ...structured resume in final order... },
+  "suggestions": [
+    {
+      "editId": "uuid",
+      "section": "experience[2].bullets[1]",
+      "originalText": "...",
+      "suggestedText": "...",
+      "reason": "One sentence max.",
+      "impactTag": "Clarifies scope|Improves alignment|Adds keyword|Strengthens metrics",
+      "evidence": "Short snippet or requirement label from job description",
+      "optional": true|false
+    }
+  ],
+  "scoreImpact": { "before": 72, "afterEstimate": 85 }
+}
+
+RULES:
+- Do not invent achievements or tools.
+- If suggestedText adds a claim not supported by resume, set optional=true and phrase as a placeholder that requires user confirmation.
+- Keep tone professional and consistent.
+
+────────────────────────────────────────────────────────
+F) REVIEW: Track Changes UI + Accept/Reject/Edit
+
+1) GET /api/resume-versions/:resumeVersionId
+Return:
+{
+  "resumeVersion": { id, version_type, content_json, job_id },
+  "suggestions": [...],
+  "job": {...},
+  "scoreImpact": { before, afterEstimate }
+}
+
+2) POST /api/resume-transform/apply-edits
+Body:
+{
+  "resumeVersionId": "...",
+  "acceptedEditIds": ["..."],
+  "rejectedEditIds": ["..."],
+  "manualEdits": { "editId": "user edited text" }
+}
+Server updates:
+- resume_versions.content_json accordingly
+- resume_edit_suggestions statuses per edit
+Return updated:
+{ content_json, suggestions, scoreImpactUpdated? }
+
+UI RULES (Minimal):
+- One Review screen with:
+  - Top bar: “Review suggested changes”
+  - Two-pane diff (Original vs Updated) OR single-pane with inline diff
+  - Each suggestion row: Accept / Reject / Edit
+  - Show reason + evidence (collapsed by default; expand on click)
+- Do not show 10 analytics widgets.
+
+────────────────────────────────────────────────────────
+G) EXPORT: DOCX First, PDF Optional (Consistent Formatting)
+
+1) POST /api/resume-transform/export
+Body: { resumeVersionId, format: "docx"|"pdf"|"both" }
+- Create task type="export_resume" to avoid timeouts
+Return: { taskId }
+
+Export task output:
+{ docxUrl, pdfUrl? }
+
+EXPORT RULES:
+- Use a single consistent DOCX template (simple, professional).
+- Do not attempt to preserve original fancy formatting; standardize to your template.
+- Ensure contact/header and links are included.
+
+2) GET /api/resumes/:resumeId/versions
+Return list of versions:
+[{ id, version_type, job_id, created_at, export_docx_url }]
+
+Allow user to re-download any prior version.
+
+────────────────────────────────────────────────────────
+H) APPLY: Open employer URL + Checklist + No false claims
+
+1) GET /api/apply/final?jobId=...&resumeVersionId=...
+Return:
+{
+  "applyUrl": "...",
+  "checklist": [
+    "Review final resume language",
+    "Confirm optional items are verified",
+    "Save a copy of this tailored version"
+  ],
+  "disclaimer": "We will open the employer application page in a new tab."
+}
+
+Frontend:
+- Button “Go to Application” opens applyUrl in a new tab.
+- Do NOT attempt to submit applications automatically.
+
+────────────────────────────────────────────────────────
+I) MODEL TEMPLATES (MVP: 6)
+Implement as server-side JSON constants:
+1) legal_ops_manager
+2) legal_product_manager
+3) legal_innovation_manager
+4) compliance_regtech_analyst
+5) ediscovery_lit_tech_pm
+6) clm_contract_tech
+
+Each template includes:
+- section_order
+- bullet structure rules (action + impact + tools)
+- summary framing rules
+- keyword focus list
+- what to emphasize/de-emphasize
+
+Template selection:
+- recommendedTemplateId returned from match endpoint based on job category/taxonomy.
+
+────────────────────────────────────────────────────────
+J) PERMANENT QUALITY GUARDRAILS
+- Rate-limit uploads and transforms per user/day.
+- Log AI outputs + errors for debugging (server-side only).
+- Ensure authorization checks on every resume/resumeVersion/job relation.
+- Strict JSON validation for AI outputs; if invalid, fail gracefully.
+- Deduplicate job matching requests; cache matches per resume for 24h.
+
+────────────────────────────────────────────────────────
+K) ACCEPTANCE CRITERIA
+DONE WHEN:
+- User uploads PDF/DOCX or URL → extraction runs async → structured resume stored.
+- Matches page loads and shows fitScore + gaps.
+- Apply flow lets user choose My Resume or Optimized Version.
+- Transform runs async and produces suggestions + mapped structured resume.
+- Review screen supports Accept/Reject/Edit per line with reason + evidence.
+- Export produces DOCX (PDF optional) and stores URLs under resume_versions.
+- Apply opens employer apply_url with checklist and disclaimer.
+- No fabricated content is inserted without being flagged optional + user approval.
+- The UI remains minimal and avoids overlapping “Tailor/Optimize/Strategy” features; everything routes into this Apply flow.
+
+BUILD USING EXISTING CODE PATTERNS, KEEP IT MINIMAL, AND DO NOT INTRODUCE DUPLICATE FEATURES.
