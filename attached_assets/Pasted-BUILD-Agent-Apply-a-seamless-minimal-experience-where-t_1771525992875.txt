@@ -1,0 +1,405 @@
+BUILD: “Agent Apply” — a seamless, minimal experience where the platform finds/matches jobs after resume upload, prepares a job-specific “perfect” resume version (within evidence), shows line-level redlines with optional user editing, and then the user clicks Apply (opens employer apply_url).
+
+KEY PROMISE (be truthful)
+- The agent prepares a “ready-to-apply” resume version for each job.
+- Users can review/edit any line.
+- We DO NOT auto-submit applications on external ATS sites; Apply opens the employer application URL in a new tab.
+
+NON-NEGOTIABLES (No overlap + Minimal UI)
+- ONE place where resume content changes: the “Review Changes” drawer/page inside Agent Apply.
+- Remove/disable/redirect any other “Tailor/Optimize/ATS Review/Resume Strategy” actions so they route into Agent Apply.
+- The default experience is simple: Ready jobs → Apply.
+- Only force review when there are “Needs Confirmation” items.
+- Never fabricate facts. Any line that introduces new claims/tools/metrics must be marked “Needs Confirmation” and cannot be auto-applied.
+
+────────────────────────────────────────────────────────
+1) USER EXPERIENCE (End-to-end)
+
+A) Upload Resume
+- User uploads PDF/DOCX OR pastes a portfolio URL.
+- System extracts resume into structured JSON.
+
+B) Agent Mode (Auto-Prep)
+- If Agent Mode is ON, system automatically:
+  1) finds relevant jobs (from your DB; later from external sources)
+  2) matches jobs to resume
+  3) selects top N jobs (daily limit)
+  4) generates an optimized resume version per job (job-specific model framework)
+  5) auto-applies SAFE edits
+  6) flags “Needs Confirmation” edits that add unsupported claims
+- User sees a “Ready-to-Apply Queue”.
+
+C) Ready-to-Apply Queue
+Each job card shows:
+- Fit/Alignment score
+- Status:
+  ✅ Ready (no confirmation needed)
+  ⚠ Needs Review (X items)
+  ⏳ Preparing
+  ❌ Failed (Retry)
+Buttons:
+- Primary:
+  - Ready → Apply
+  - Needs Review → Review (X)
+- Secondary:
+  - Download Resume
+  - Skip
+
+D) Review Changes (Only editing surface)
+- Shows line-level redlines:
+  - Added text highlighted (green)
+  - Removed text struck (red)
+- Each change has:
+  ✓ Accept   ✕ Reject   ✎ Edit
+- Each change shows:
+  - Reason (1 sentence)
+  - Evidence mapping (job requirement snippet/label)
+  - Badge: SAFE or NEEDS CONFIRMATION
+Rules:
+- SAFE edits can be auto-applied.
+- NEEDS CONFIRMATION edits must be explicitly accepted before status becomes Ready.
+
+E) Download + Apply
+- Download DOCX (required) + PDF optional.
+- Apply opens the employer apply_url in a new tab.
+- Show a tiny checklist: “Confirm optional items are accurate”.
+
+────────────────────────────────────────────────────────
+2) CORE “PERFECT LINE” PRINCIPLE (How to be confident without lying)
+
+Implement a two-tier edit system:
+A) SAFE (auto-applied):
+- grammar, clarity, conciseness
+- rephrasing using existing facts only
+- restructure bullet to stronger format without adding claims
+- reorder sections into a model framework
+
+B) NEEDS CONFIRMATION (must review):
+- adds metrics not present
+- adds tools/tech not present
+- adds ownership claims (“led/owned/managed”) not clearly supported
+- introduces new projects/clients not in resume
+
+In UI:
+- If ANY NEEDS CONFIRMATION exists, job is “Needs Review” and Apply is locked until resolved.
+- If only SAFE edits, job is “Ready” and user can Apply immediately (still can open Review to edit optionally).
+
+────────────────────────────────────────────────────────
+3) DATABASE / DATA MODEL (Future-proof)
+
+Create/ensure these tables:
+
+A) user_settings
+- user_id (pk)
+- agent_mode_enabled boolean default false
+- daily_prep_limit int default 20
+- created_at, updated_at
+
+B) resumes
+- id (pk)
+- user_id (fk)
+- source_type enum: "file"|"url"
+- original_file_url nullable
+- original_url nullable
+- extracted_data jsonb
+- extraction_status enum: "pending"|"ready"|"failed"
+- extraction_error text nullable
+- created_at, updated_at
+
+C) jobs (existing)
+Ensure fields:
+- id, title, company, description, apply_url, category, location, created_at
+Optional:
+- status enum: "active"|"expired"
+
+D) job_matches
+- id (pk)
+- user_id
+- resume_id
+- job_id
+- fit_score int 0-100
+- top_reasons jsonb
+- key_gaps jsonb
+- recommended_template_id text
+- created_at
+Unique: (resume_id, job_id)
+
+E) resume_versions
+- id (pk)
+- user_id
+- resume_id
+- job_id nullable
+- version_type enum: "original"|"agent_model"
+- content_json jsonb
+- export_docx_url text nullable
+- export_pdf_url text nullable
+- export_url_expires_at timestamp nullable
+- created_at
+
+F) resume_suggestions
+- id (pk)
+- user_id
+- resume_version_id
+- job_id
+- suggestions jsonb  // includes per-edit status + safe/needs_confirmation
+- status enum: "pending_review"|"finalized"
+- created_at, updated_at
+
+G) apply_queue
+- id (pk)
+- user_id
+- resume_id
+- job_id
+- match_id
+- resume_version_id nullable
+- queue_status enum:
+  "queued"|"prepping"|"needs_review"|"ready"|"applied_clicked"|"skipped"|"failed"
+- safe_edits_applied_count int default 0
+- needs_confirmation_count int default 0
+- last_error text nullable
+- created_at, updated_at
+Unique: (user_id, resume_id, job_id)
+
+H) tasks (async processing)
+- id (pk)
+- user_id
+- type enum: "extract_resume"|"find_jobs"|"match_jobs"|"prep_resume"|"export_resume"
+- status enum: "queued"|"running"|"succeeded"|"failed"
+- input jsonb
+- output jsonb nullable
+- error text nullable
+- attempts int default 0
+- created_at, updated_at
+
+────────────────────────────────────────────────────────
+4) SECURITY REQUIREMENTS (Minimal but real)
+
+A) File upload
+- allow PDF/DOCX only
+- max size 10MB
+- malware/virus scan before parsing (use any available library/service; if not available, at minimum block executables and enforce strict MIME checks)
+
+B) Portfolio URL upload (SSRF protection)
+- allow only http/https
+- block localhost, private IP ranges, internal DNS
+- timeout 5s
+- max bytes 1–2MB
+- sanitize HTML and extract readable text only
+
+C) Authorization
+- Every resume/task/version/queue endpoint must verify the requesting user owns the resource.
+- Any /api/admin/* endpoints must require admin role.
+
+D) Signed export URLs
+- export links must be signed and expire (24–72h)
+
+────────────────────────────────────────────────────────
+5) SERVER ENDPOINTS (API Contracts)
+
+A) Agent mode toggle
+POST /api/agent/toggle
+Body: { enabled: boolean }
+Return: { enabled }
+
+B) Resume upload
+POST /api/resumes/upload
+Return: { resumeId, taskId }
+
+POST /api/resumes/upload-url
+Return: { resumeId, taskId }
+
+C) Task status
+GET /api/tasks/:taskId
+Return: { status, output?, error? }
+
+D) Start agent pipeline (manual trigger)
+POST /api/agent/start
+Body: { resumeId }
+Return: { started: true, resumeId, findJobsTaskId }
+
+E) Find jobs (MVP: from DB)
+- Implement as a task runner step:
+  - select jobs where status="active" and created_at within last 30/90 days
+  - optionally filter by taxonomy relevant to legal tech
+
+F) Match jobs
+GET /api/resumes/:resumeId/matches
+Return top matches:
+[{ jobId, fitScore, topReasons, keyGaps, recommendedTemplateId }]
+
+G) Build apply queue
+POST /api/agent/build-queue
+Body: { resumeId, limit }
+Return: { queued: number }
+
+H) Prep each queued job (agent “perfect lines”)
+POST /api/agent/prep
+Body: { resumeId, jobId, templateId }
+Return: { resumeVersionId, taskId }
+
+Prep task output MUST be STRICT JSON:
+{
+  "resumeVersionId": "...",
+  "content_json": {...final structured resume...},
+  "suggestions": [
+    {
+      "editId": "uuid",
+      "path": "experience[2].bullets[1]",
+      "originalText": "...",
+      "suggestedText": "...",
+      "classification": "SAFE" | "NEEDS_CONFIRMATION",
+      "reason": "One sentence max.",
+      "evidence": "Short job requirement snippet/label",
+      "impactTag": "Clarifies scope|Improves alignment|Adds keyword|Strengthens metrics",
+      "status": "applied" | "pending" | "rejected"
+    }
+  ],
+  "scoreImpact": { "before": 72, "afterEstimate": 85 }
+}
+
+SERVER RULE:
+- Auto-apply all SAFE edits (status="applied")
+- Set NEEDS_CONFIRMATION edits to status="pending"
+- Update apply_queue:
+  - if needs_confirmation_count > 0 => queue_status="needs_review"
+  - else queue_status="ready"
+
+I) Queue listing for UI
+GET /api/agent/queue?resumeId=...
+Return:
+{
+  "summary": { "total": N, "ready": X, "needsReview": Y, "prepping": Z, "failed": F },
+  "items": [
+    { "job": {...}, "fitScore": 0-100, "queueStatus": "...", "resumeVersionId": "...",
+      "safeEditsAppliedCount": 5, "needsConfirmationCount": 2 }
+  ]
+}
+
+J) Review payload
+GET /api/agent/review?resumeVersionId=...
+Return:
+{ "resumeVersion": {...}, "suggestions": [...], "job": {...}, "scoreImpact": {...} }
+
+K) Apply / reject / manual edit suggestions
+POST /api/agent/apply-edits
+Body:
+{
+  "resumeVersionId": "...",
+  "acceptedEditIds": ["..."],
+  "rejectedEditIds": ["..."],
+  "manualEdits": { "editId": "edited text" }
+}
+Return updated: { content_json, suggestions, queueStatus }
+
+Rule:
+- When all NEEDS_CONFIRMATION are resolved (accepted/rejected), set queue_status="ready".
+
+L) Export
+POST /api/agent/export
+Body: { resumeVersionId, format: "docx"|"pdf"|"both" }
+Return: { taskId }
+
+M) Apply clicked
+POST /api/agent/apply-clicked
+Body: { resumeId, jobId }
+Return: { ok: true }
+Client then opens apply_url in new tab.
+
+N) Skip / retry
+POST /api/agent/skip
+Body: { resumeId, jobId }
+
+POST /api/agent/retry
+Body: { resumeId, jobId }
+
+────────────────────────────────────────────────────────
+6) FRONTEND PAGES (Minimal, Seamless)
+
+A) /upload
+- upload resume file or URL
+- if Agent Mode ON, auto-redirect to /agent-apply?resumeId=...
+
+B) /agent-apply?resumeId=...
+Title: “Ready-to-Apply Queue”
+Subtitle: “We prepared your resume for each role. Review only when needed.”
+
+- List job cards with status + buttons
+- Primary button logic:
+  - Ready → Apply
+  - Needs Review → Review (X)
+  - Prepping → Preparing…
+  - Failed → Retry
+
+Review opens a right-side drawer:
+- Shows NEEDS_CONFIRMATION edits first
+- Allow Accept/Reject/Edit each
+- Show reason + evidence (collapsed by default)
+- Once resolved, the job becomes Ready
+
+Download button:
+- if export not generated, trigger export task then show link
+- keep formatting consistent
+
+Apply button:
+- calls apply-clicked
+- opens apply_url in a new tab
+- shows small checklist modal
+
+DO NOT add any other resume editing CTAs across the site.
+If existing “Optimize/Tailor/ATS Review” buttons exist, redirect them here.
+
+────────────────────────────────────────────────────────
+7) MODEL RESUME FRAMEWORK (Templates)
+
+Implement 6 server-side JSON templates:
+1) legal_ops_manager
+2) legal_product_manager
+3) legal_innovation_manager
+4) compliance_regtech_analyst
+5) ediscovery_lit_tech_pm
+6) clm_contract_tech
+
+Each template defines:
+- section_order
+- bullet style rules (Action + Scope + Outcome + Tools)
+- summary framing rules
+- keyword focus
+- emphasis/de-emphasis guidance
+
+Template selection:
+- derived from job.category/taxonomy
+- user never has to pick a template in MVP (keep minimal)
+- only show template picker as “Advanced” if needed
+
+────────────────────────────────────────────────────────
+8) QUALITY GUARDRAILS (Make “perfect lines” consistent)
+
+- Enforce bullet length limit (1–2 lines)
+- Enforce tense rules
+- Avoid buzzword stuffing
+- If the resume lacks metrics, do NOT invent numbers; propose optional placeholders like “[X%]” and mark NEEDS_CONFIRMATION.
+- Show “No unverified claims detected” when needs_confirmation_count == 0.
+
+────────────────────────────────────────────────────────
+9) TESTS (Prevent regressions)
+
+Add automated tests:
+- Resume extraction creates structured JSON and never crashes on empty sections
+- URL upload blocks SSRF (private IP)
+- Prep task returns valid JSON schema; invalid => failed with retry
+- SAFE vs NEEDS_CONFIRMATION classification works for a few sample edits
+- Queue status transitions: queued → prepping → needs_review/ready
+- Apply-clicked records event but does not submit external applications
+
+────────────────────────────────────────────────────────
+10) ACCEPTANCE CRITERIA
+
+DONE WHEN:
+- User uploads resume, turns Agent Mode ON, and gets a queue of matched jobs.
+- System auto-preps a tailored resume version per job with “perfect lines” within evidence.
+- SAFE edits are auto-applied; NEEDS_CONFIRMATION edits gate Apply until reviewed.
+- User can edit any line via Review drawer.
+- User can download tailored DOCX and then click Apply which opens apply_url in new tab.
+- There are no overlapping resume optimization surfaces; all “optimize/tailor” CTAs route into Agent Apply.
+
+BUILD THIS USING THE EXISTING CODE PATTERNS, KEEP IT MINIMAL, AND DO NOT INTRODUCE DUPLICATE FEATURES.
