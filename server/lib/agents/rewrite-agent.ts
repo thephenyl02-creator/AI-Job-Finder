@@ -51,28 +51,26 @@ Include these in a "generatedBullets" array (separate from the "bullets" array w
       messages: [
         {
           role: "system",
-          content: `You are an elite legal tech career strategist. A candidate wants their resume rewritten for a specific role. You must rewrite EVERYTHING — summary, every single bullet point across every job, and suggest additional skills.
+          content: `You are an elite legal tech career strategist. A candidate wants their resume tailored for a specific role. Be SELECTIVE — only change what matters.
 
 APPROACH:
-- Think like a hiring manager at a legal tech company reading this resume. Make them stop scrolling.
-- Bridge the candidate's legal background to the tech role. Legal expertise IS an asset — frame it that way.
+- Think like a hiring manager at a legal tech company. Focus on the 5-8 most impactful improvements.
+- Bridge the candidate's legal background to the tech role. Legal expertise IS an asset.
 - Use the EXACT language of the job posting. If they say "legal operations," don't write "legal management."
-- Every bullet should start with a strong action verb and include measurable impact where the original implies scale.
 
-REWRITE RULES:
-1. NEVER invent employers, job titles, degrees, dates, or certifications not in the original
-2. Rewrite EVERY bullet point — even if the improvement is small. Sharpen language, add job-relevant keywords, quantify impact where implied.
-3. Write a compelling 2-3 sentence summary positioning this candidate as a natural fit for THIS specific role.
-4. For bullets where you infer metrics not explicitly stated (e.g., "managed team" → "Led cross-functional team of 8"), set grounded=false so the user can verify.
-5. Suggest 3-8 skills from the job posting the candidate should add (only if relevant to their background).
-6. Note 1-3 genuine strengths this candidate brings to the role.
-
-ACTION VERBS: Spearheaded, Orchestrated, Negotiated, Streamlined, Implemented, Championed, Advised, Drove, Architected, Transformed, Accelerated, Optimized
+SELECTIVE REWRITE RULES:
+1. NEVER invent employers, job titles, degrees, dates, or certifications not in the original.
+2. ALWAYS rewrite the summary — position the candidate as a natural fit for THIS specific role (2-3 sentences).
+3. Only rewrite bullets that DIRECTLY relate to the job's key requirements or where the improvement is substantial. SKIP bullets that are already strong or only tangentially related. Return them in the experience array but with their original text unchanged — omit them from the bullets array entirely.
+4. Focus rewrites on: adding job-relevant keywords, quantifying impact where implied, and strengthening weak language.
+5. For bullets where you infer metrics not explicitly stated, set grounded=false so the user can verify.
+6. Suggest 3-6 skills from the job posting the candidate should add (only if relevant to their background).
+7. Note 1-3 genuine strengths this candidate brings to the role.
 
 Return valid JSON:
 {
   "summary": "new tailored summary",
-  "summaryReason": "why this summary is better",
+  "summaryReason": "why this summary positions them well",
   "summaryGrounded": true,
   "experience": [
     {
@@ -92,7 +90,10 @@ Return valid JSON:
   "strengthNotes": ["Strength 1", "Strength 2"]
 }
 
-IMPORTANT: Include ALL experience entries and ALL bullets. Do not skip any.${emptyBulletsInstruction}`
+IMPORTANT:
+- Include ALL experience entries in the array (one per originalIndex).
+- For each entry, ONLY include bullets you actually changed in the "bullets" array. Skip unchanged bullets — they will be preserved as-is.
+- Aim for 5-8 total bullet rewrites across all experience, not every single bullet.${emptyBulletsInstruction}`
         },
         {
           role: "user",

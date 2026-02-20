@@ -31,9 +31,62 @@ function formatSalary(min?: number | null, max?: number | null, currency?: strin
   return null;
 }
 
+const COMPANY_DESCRIPTORS: Record<string, string> = {
+  "Harvey AI": "Legal AI",
+  "Clio": "Legal Practice Management",
+  "Spellbook": "AI Contract Drafting",
+  "Hebbia": "AI Research Platform",
+  "Filevine": "Legal Case Management",
+  "Legora": "Legal Intelligence",
+  "MarqVision": "IP Protection Tech",
+  "Eve Legal": "Legal Workflow Automation",
+  "Lawhive": "Legal Services Platform",
+  "Mitratech": "Legal GRC Software",
+  "OneTrust": "Privacy & Compliance",
+  "Anthropic": "AI Safety Research",
+  "NetDocuments": "Legal Document Management",
+  "Rocket Lawyer": "Online Legal Services",
+  "Checkbox": "Legal Automation",
+  "DISCO": "eDiscovery Technology",
+  "Factor": "Legal Staffing Tech",
+  "Notabene": "Legal Tech",
+  "Thomson Reuters": "Legal Information Services",
+  "Wolters Kluwer": "Legal & Regulatory Tech",
+  "LexisNexis": "Legal Research & Analytics",
+  "Ironclad": "Contract Lifecycle Management",
+  "Relativity": "eDiscovery & Data",
+  "Everlaw": "Litigation Technology",
+  "Luminance": "AI Legal Intelligence",
+  "Kira Systems": "Contract Analysis AI",
+  "iManage": "Knowledge Management",
+  "Litera": "Legal Document Technology",
+  "Lex Machina": "Legal Analytics",
+  "Legatics": "Legal Transaction Management",
+};
+
+function getCompanyColor(company: string): string {
+  let hash = 0;
+  for (let i = 0; i < company.length; i++) {
+    hash = company.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const colors = [
+    "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
+    "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
+    "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300",
+    "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
+    "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300",
+    "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-300",
+    "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300",
+    "bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-300",
+  ];
+  return colors[Math.abs(hash) % colors.length];
+}
+
 export function JobCard({ job, isSaved = false, isAuthenticated = false }: JobCardProps) {
   const { toast } = useToast();
   const salary = formatSalary(job.salaryMin, job.salaryMax, job.salaryCurrency);
+  const companyDescriptor = COMPANY_DESCRIPTORS[job.company] || null;
+  const avatarColor = getCompanyColor(job.company);
 
   const getTimeAgo = (date?: Date | string | null) => {
     if (!date) return "Recently";
@@ -75,7 +128,7 @@ export function JobCard({ job, isSaved = false, isAuthenticated = false }: JobCa
           <Link to={`/jobs/${job.id}`} className="flex-shrink-0">
             <Avatar className="h-10 w-10 sm:h-12 sm:w-12 rounded-lg">
               <AvatarImage src={job.companyLogo || undefined} alt={job.company} />
-              <AvatarFallback className="rounded-lg bg-primary/10 text-primary font-semibold text-sm">
+              <AvatarFallback className={`rounded-lg font-semibold text-sm ${avatarColor}`}>
                 {job.company.substring(0, 2).toUpperCase()}
               </AvatarFallback>
             </Avatar>
@@ -102,28 +155,36 @@ export function JobCard({ job, isSaved = false, isAuthenticated = false }: JobCa
                     <Bookmark className={`h-4 w-4 ${isSaved ? "fill-current" : ""}`} />
                   </Button>
                 )}
-                <Button asChild variant="outline" size="sm" className="gap-1.5" data-testid={`button-apply-${job.id}`}>
-                  <a
-                    href={job.applyUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={(e) => { e.stopPropagation(); handleApplyClick(); }}
-                  >
-                    Apply
-                    <ExternalLink className="h-3 w-3" />
-                  </a>
-                </Button>
+                {job.applyUrl && (
+                  <Button asChild variant="outline" size="sm" className="gap-1.5" data-testid={`button-apply-${job.id}`}>
+                    <a
+                      href={job.applyUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => { e.stopPropagation(); handleApplyClick(); }}
+                    >
+                      Apply
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
+                  </Button>
+                )}
               </div>
             </div>
 
             <Link to={`/jobs/${job.id}`}>
-              <div className="flex items-center gap-1.5 text-sm text-muted-foreground mt-0.5">
-                <span className="truncate">{job.company}</span>
-                <span className="flex-shrink-0">·</span>
-                <span className="flex-shrink-0">{getTimeAgo(job.postedDate)}</span>
+              <div className="flex items-center gap-1.5 text-sm text-muted-foreground mt-0.5" data-testid={`text-job-company-${job.id}`}>
+                <span className="truncate font-medium">{job.company}</span>
+                {companyDescriptor && (
+                  <>
+                    <span className="flex-shrink-0 text-muted-foreground/40">·</span>
+                    <span className="flex-shrink-0 text-xs text-muted-foreground/70">{companyDescriptor}</span>
+                  </>
+                )}
+                <span className="flex-shrink-0 text-muted-foreground/40">·</span>
+                <span className="flex-shrink-0 text-xs">{getTimeAgo(job.postedDate)}</span>
               </div>
 
-              <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+              <div className="flex flex-wrap items-center gap-1.5 mt-2">
                 <JobLocation
                   location={job.location}
                   locationType={job.locationType}
@@ -136,9 +197,9 @@ export function JobCard({ job, isSaved = false, isAuthenticated = false }: JobCa
                     {salary}
                   </Badge>
                 )}
-                {job.roleCategory && (
-                  <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">
-                    {job.roleSubcategory || job.roleCategory}
+                {job.roleSubcategory && (
+                  <Badge variant="secondary" className="bg-primary/5 text-primary/80 border-primary/10 text-xs">
+                    {job.roleSubcategory}
                   </Badge>
                 )}
               </div>

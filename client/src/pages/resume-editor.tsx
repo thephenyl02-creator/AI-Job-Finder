@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { useParams, useLocation, Link } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { usePageTitle } from "@/hooks/use-page-title";
@@ -18,15 +18,17 @@ import {
 import {
   Loader2, ArrowLeft, CheckCircle, AlertTriangle, Undo2, Redo2,
   Download, FileText, FileDown, Package, RotateCcw, X, Sparkles,
-  Plus, Diff, Info,
+  Plus, Diff, Info, PanelRightClose, PanelRightOpen, ChevronLeft,
+  ChevronRight, CircleCheck, CircleDashed, CircleMinus, Shield,
+  Wrench, Star, Eye, EyeOff, ExternalLink,
 } from "lucide-react";
-import type { EditorSections, EditorBullet, EditorSkill, EditorExperience, EditorEducation } from "@shared/schema";
+import type { EditorSections, EditorBullet, EditorSkill, EditorExperience, EditorEducation, RequirementItem } from "@shared/schema";
 
 type SaveStatus = "saved" | "saving" | "unsaved" | "error" | "conflict";
 
 interface EditorData {
   sections: EditorSections;
-  jobRequirements: unknown[];
+  jobRequirements: RequirementItem[];
   toConfirmItems: unknown[];
   readyToApply: "yes" | "almost" | "not_yet";
   counts: { improvementsApplied: number; needsConfirmation: number; missingRequirements: number };
@@ -40,12 +42,12 @@ function generateId(): string {
 
 const LOADING_STAGES = [
   "Reading your resume...",
-  "Analyzing the role...",
-  "Rewriting your experience...",
+  "Analyzing the role requirements...",
+  "Tailoring your experience...",
   "Final polish...",
 ];
 
-function StagedLoading() {
+function StagedLoading({ job }: { job?: { title: string; company: string } }) {
   const [stage, setStage] = useState(0);
 
   useEffect(() => {
@@ -58,15 +60,23 @@ function StagedLoading() {
   const progress = ((stage + 1) / LOADING_STAGES.length) * 100;
 
   return (
-    <div className="flex items-center justify-center min-h-screen" data-testid="editor-loading">
-      <Card className="w-full max-w-sm">
-        <CardContent className="p-8 text-center space-y-6">
-          <Loader2 className="w-8 h-8 animate-spin mx-auto text-muted-foreground" />
+    <div className="flex items-center justify-center min-h-screen bg-muted/30" data-testid="editor-loading">
+      <Card className="w-full max-w-md border-0 shadow-lg">
+        <CardContent className="p-10 text-center space-y-6">
+          <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+            <Loader2 className="w-6 h-6 animate-spin text-primary" />
+          </div>
+          {job && (
+            <div>
+              <p className="text-base font-semibold text-foreground">{job.title}</p>
+              <p className="text-sm text-muted-foreground">{job.company}</p>
+            </div>
+          )}
           <p className="text-sm text-foreground font-medium transition-opacity duration-500" key={stage}>
             {LOADING_STAGES[stage]}
           </p>
-          <Progress value={progress} className="h-1" />
-          <p className="text-xs text-muted-foreground">This usually takes 10-15 seconds</p>
+          <Progress value={progress} className="h-1.5" />
+          <p className="text-xs text-muted-foreground">This usually takes 10–15 seconds</p>
         </CardContent>
       </Card>
     </div>
@@ -76,15 +86,15 @@ function StagedLoading() {
 function SaveIndicator({ status }: { status: SaveStatus }) {
   switch (status) {
     case "saving":
-      return <span className="text-xs text-muted-foreground flex items-center gap-1" data-testid="save-status"><Loader2 className="w-3 h-3 animate-spin" />Saving...</span>;
+      return <span className="text-xs text-muted-foreground flex items-center gap-1" data-testid="save-status"><Loader2 className="w-3 h-3 animate-spin" />Saving</span>;
     case "saved":
       return <span className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1" data-testid="save-status"><CheckCircle className="w-3 h-3" />Saved</span>;
     case "unsaved":
-      return <span className="text-xs text-muted-foreground" data-testid="save-status">Unsaved changes</span>;
+      return <span className="text-xs text-muted-foreground" data-testid="save-status">Unsaved</span>;
     case "error":
       return <span className="text-xs text-red-500 flex items-center gap-1" data-testid="save-status"><AlertTriangle className="w-3 h-3" />Save failed</span>;
     case "conflict":
-      return <span className="text-xs text-red-500 flex items-center gap-1" data-testid="save-status"><AlertTriangle className="w-3 h-3" />Conflict - refresh</span>;
+      return <span className="text-xs text-red-500 flex items-center gap-1" data-testid="save-status"><AlertTriangle className="w-3 h-3" />Conflict</span>;
   }
 }
 
@@ -135,7 +145,7 @@ function ChangeIndicator({
     <Popover>
       <PopoverTrigger asChild>
         <button
-          className="inline-flex items-center justify-center w-5 h-5 rounded-full shrink-0 text-primary opacity-70 hover:opacity-100 transition-opacity"
+          className="inline-flex items-center justify-center w-6 h-6 rounded-full shrink-0 bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
           data-testid="button-view-change"
           onClick={(e) => e.stopPropagation()}
         >
@@ -145,18 +155,18 @@ function ChangeIndicator({
       <PopoverContent className="w-80 space-y-3" align="start" data-testid="change-popover">
         <div>
           <p className="text-xs font-medium text-muted-foreground mb-1">Original</p>
-          <p className="text-sm text-muted-foreground italic">{originalText}</p>
+          <p className="text-sm text-muted-foreground italic line-through">{originalText}</p>
         </div>
         {reason && (
           <div>
-            <p className="text-xs font-medium text-muted-foreground mb-1">Why it changed</p>
+            <p className="text-xs font-medium text-muted-foreground mb-1">Why changed</p>
             <p className="text-sm">{reason}</p>
           </div>
         )}
         {grounded === false && (
           <div className="flex items-start gap-2 p-2 rounded-md bg-amber-50 dark:bg-amber-950/30">
             <AlertTriangle className="w-3.5 h-3.5 text-amber-500 mt-0.5 shrink-0" />
-            <p className="text-xs text-amber-700 dark:text-amber-300">We added details -- please verify accuracy</p>
+            <p className="text-xs text-amber-700 dark:text-amber-300">Added details — please verify accuracy</p>
           </div>
         )}
         {isReverted ? (
@@ -165,7 +175,7 @@ function ChangeIndicator({
           </Button>
         ) : (
           <Button variant="outline" size="sm" onClick={onRevert} data-testid="button-revert-item">
-            <RotateCcw className="w-3 h-3 mr-1" />Revert
+            <RotateCcw className="w-3 h-3 mr-1" />Revert to original
           </Button>
         )}
       </PopoverContent>
@@ -173,23 +183,177 @@ function ChangeIndicator({
   );
 }
 
-function ImprovementsBar({ sections }: { sections: EditorSections }) {
-  const breakdown = sections.changeBreakdown;
-  if (!breakdown) {
-    const count = sections.changedCount || 0;
-    if (count === 0) return <span className="text-muted-foreground" data-testid="text-improvements">No changes yet</span>;
-    return <span className="text-muted-foreground" data-testid="text-improvements">{count} improvements made</span>;
+function ReadinessBar({ requirements, sections }: { requirements: RequirementItem[]; sections: EditorSections }) {
+  const mustHaves = requirements.filter(r => r.category === "must_have");
+  const covered = mustHaves.filter(r => r.coverage === "covered").length;
+  const partial = mustHaves.filter(r => r.coverage === "partial").length;
+  const total = mustHaves.length;
+  const ungroundedCount = countUngrounded(sections);
+
+  if (total === 0) return null;
+
+  const score = Math.round(((covered + partial * 0.5) / total) * 100);
+  const label = score >= 80 ? "Strong match" : score >= 50 ? "Good foundation" : "Building your case";
+  const color = score >= 80 ? "text-emerald-600 dark:text-emerald-400" : score >= 50 ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground";
+
+  return (
+    <div className="flex items-center gap-3 text-xs" data-testid="readiness-bar">
+      <div className="flex items-center gap-1.5">
+        <span className={`font-medium ${color}`}>{label}</span>
+        <span className="text-muted-foreground">·</span>
+        <span className="text-muted-foreground">{covered} of {total} key requirements covered</span>
+      </div>
+      {ungroundedCount > 0 && (
+        <>
+          <span className="text-muted-foreground">·</span>
+          <span className="text-amber-600 dark:text-amber-400" data-testid="text-ungrounded">
+            {ungroundedCount} to verify
+          </span>
+        </>
+      )}
+    </div>
+  );
+}
+
+function RequirementCoverageIcon({ coverage }: { coverage: string }) {
+  if (coverage === "covered") return <CircleCheck className="w-4 h-4 text-emerald-500 shrink-0" />;
+  if (coverage === "partial") return <CircleMinus className="w-4 h-4 text-amber-500 shrink-0" />;
+  return <CircleDashed className="w-4 h-4 text-muted-foreground/50 shrink-0" />;
+}
+
+function RequirementCategoryIcon({ category }: { category: string }) {
+  if (category === "must_have") return <Shield className="w-3 h-3 text-red-400" />;
+  if (category === "tools_keywords") return <Wrench className="w-3 h-3 text-blue-400" />;
+  return <Star className="w-3 h-3 text-muted-foreground" />;
+}
+
+function RequirementsPanel({ requirements, isOpen, onToggle }: { requirements: RequirementItem[]; isOpen: boolean; onToggle: () => void }) {
+  const mustHaves = requirements.filter(r => r.category === "must_have");
+  const niceToHaves = requirements.filter(r => r.category === "nice_to_have");
+  const tools = requirements.filter(r => r.category === "tools_keywords");
+
+  const coveredCount = requirements.filter(r => r.coverage === "covered").length;
+  const partialCount = requirements.filter(r => r.coverage === "partial").length;
+  const missingCount = requirements.filter(r => r.coverage === "missing").length;
+
+  if (!isOpen) {
+    return (
+      <button
+        onClick={onToggle}
+        className="fixed right-0 top-1/2 -translate-y-1/2 z-20 bg-card border border-r-0 rounded-l-lg p-2 shadow-md hover:bg-muted transition-colors"
+        data-testid="button-open-requirements"
+      >
+        <PanelRightOpen className="w-4 h-4 text-muted-foreground" />
+      </button>
+    );
   }
 
-  const parts: string[] = [];
-  if (breakdown.summaryRewritten) parts.push("Summary rewritten");
-  if (breakdown.bulletsSharpened > 0) parts.push(`${breakdown.bulletsSharpened} bullet${breakdown.bulletsSharpened === 1 ? "" : "s"} sharpened`);
-  if (breakdown.bulletsGenerated > 0) parts.push(`${breakdown.bulletsGenerated} bullet${breakdown.bulletsGenerated === 1 ? "" : "s"} generated`);
-  if (breakdown.skillsAdded > 0) parts.push(`${breakdown.skillsAdded} skill${breakdown.skillsAdded === 1 ? "" : "s"} added`);
+  return (
+    <div className="w-80 xl:w-96 border-l bg-card flex flex-col h-full shrink-0" data-testid="requirements-panel">
+      <div className="p-4 border-b flex items-center justify-between">
+        <div>
+          <h3 className="text-sm font-semibold">Job Requirements</h3>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            <span className="text-emerald-600 dark:text-emerald-400">{coveredCount} covered</span>
+            {partialCount > 0 && <> · <span className="text-amber-600 dark:text-amber-400">{partialCount} partial</span></>}
+            {missingCount > 0 && <> · <span className="text-muted-foreground">{missingCount} gaps</span></>}
+          </p>
+        </div>
+        <Button variant="ghost" size="icon" onClick={onToggle} className="h-7 w-7" data-testid="button-close-requirements">
+          <PanelRightClose className="w-4 h-4" />
+        </Button>
+      </div>
 
-  if (parts.length === 0) return <span className="text-muted-foreground" data-testid="text-improvements">No changes yet</span>;
+      <div className="flex-1 overflow-y-auto p-4 space-y-5">
+        {mustHaves.length > 0 && (
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-red-500/80 mb-2 flex items-center gap-1.5">
+              <Shield className="w-3 h-3" /> Must Have
+            </p>
+            <div className="space-y-2">
+              {mustHaves.map(r => (
+                <div key={r.id} className="flex items-start gap-2" data-testid={`requirement-${r.id}`}>
+                  <RequirementCoverageIcon coverage={r.coverage} />
+                  <p className={`text-sm leading-snug ${r.coverage === "missing" ? "text-muted-foreground" : "text-foreground"}`}>
+                    {r.text}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
-  return <span className="text-muted-foreground" data-testid="text-improvements">{parts.join(", ")}</span>;
+        {niceToHaves.length > 0 && (
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5">
+              <Star className="w-3 h-3" /> Nice to Have
+            </p>
+            <div className="space-y-2">
+              {niceToHaves.map(r => (
+                <div key={r.id} className="flex items-start gap-2" data-testid={`requirement-${r.id}`}>
+                  <RequirementCoverageIcon coverage={r.coverage} />
+                  <p className={`text-sm leading-snug ${r.coverage === "missing" ? "text-muted-foreground" : "text-foreground"}`}>
+                    {r.text}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {tools.length > 0 && (
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-blue-500/80 mb-2 flex items-center gap-1.5">
+              <Wrench className="w-3 h-3" /> Tools & Skills
+            </p>
+            <div className="space-y-2">
+              {tools.map(r => (
+                <div key={r.id} className="flex items-start gap-2" data-testid={`requirement-${r.id}`}>
+                  <RequirementCoverageIcon coverage={r.coverage} />
+                  <p className={`text-sm leading-snug ${r.coverage === "missing" ? "text-muted-foreground" : "text-foreground"}`}>
+                    {r.text}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ChangeReviewBar({ sections, currentIdx, onNavigate, onToggle, isVisible }: {
+  sections: EditorSections;
+  currentIdx: number;
+  onNavigate: (idx: number) => void;
+  onToggle: () => void;
+  isVisible: boolean;
+}) {
+  const changes = useMemo(() => getChanges(sections), [sections]);
+  const total = changes.length;
+
+  if (total === 0) return null;
+
+  return (
+    <div className="flex items-center gap-2 text-xs" data-testid="change-review-bar">
+      <Button variant="ghost" size="sm" className="h-6 gap-1 text-xs px-2" onClick={onToggle} data-testid="button-toggle-changes">
+        {isVisible ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+        {total} {total === 1 ? "change" : "changes"}
+      </Button>
+      {isVisible && total > 0 && (
+        <div className="flex items-center gap-1">
+          <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => onNavigate(Math.max(0, currentIdx - 1))} disabled={currentIdx <= 0} data-testid="button-prev-change">
+            <ChevronLeft className="w-3 h-3" />
+          </Button>
+          <span className="text-muted-foreground tabular-nums min-w-[3ch] text-center">{currentIdx + 1}/{total}</span>
+          <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => onNavigate(Math.min(total - 1, currentIdx + 1))} disabled={currentIdx >= total - 1} data-testid="button-next-change">
+            <ChevronRight className="w-3 h-3" />
+          </Button>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function ResumeEditor() {
@@ -209,6 +373,11 @@ export default function ResumeEditor() {
   const [skillInput, setSkillInput] = useState("");
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hasUnsavedRef = useRef(false);
+  const [requirementsPanelOpen, setRequirementsPanelOpen] = useState(true);
+  const [changesVisible, setChangesVisible] = useState(true);
+  const [changeIdx, setChangeIdx] = useState(0);
+  const [showPostExport, setShowPostExport] = useState(false);
+  const [similarJobs, setSimilarJobs] = useState<any[]>([]);
 
   usePageTitle("Resume Editor");
 
@@ -244,6 +413,12 @@ export default function ResumeEditor() {
     retry: 1,
     retryDelay: 2000,
   });
+
+  const jobRequirements: RequirementItem[] = useMemo(() => {
+    const raw = editorQuery.data?.jobRequirements;
+    if (!Array.isArray(raw)) return [];
+    return raw;
+  }, [editorQuery.data?.jobRequirements]);
 
   useEffect(() => {
     if (editorQuery.data?.sections) {
@@ -395,23 +570,11 @@ export default function ResumeEditor() {
       a.click();
       URL.revokeObjectURL(url);
 
-      const job = editorQuery.data?.job;
-      toast({
-        title: "Download complete",
-        description: "Your resume has been downloaded.",
-        action: (
-          <div className="flex items-center gap-2">
-            {(job as any)?.applyUrl && (
-              <Button size="sm" variant="default" onClick={() => window.open((job as any).applyUrl, "_blank")} data-testid="button-apply-now">
-                Apply Now
-              </Button>
-            )}
-            <Button size="sm" variant="outline" onClick={() => setLocation("/jobs")} data-testid="button-tailor-another">
-              Another role
-            </Button>
-          </div>
-        ),
-      });
+      fetch(`/api/jobs/${jobId}/similar`, { credentials: "include" })
+        .then(r => r.ok ? r.json() : [])
+        .then(jobs => setSimilarJobs(jobs || []))
+        .catch(() => {});
+      setShowPostExport(true);
     } catch (err: any) {
       toast({ title: "Download failed", description: err.message, variant: "destructive" });
     }
@@ -506,12 +669,11 @@ export default function ResumeEditor() {
   }, [updateSections]);
 
   const job = editorQuery.data?.job;
-  const ungroundedCount = sections ? countUngrounded(sections) : 0;
 
   if (!isAuthenticated) {
     return (
-      <div className="flex items-center justify-center min-h-screen" data-testid="editor-auth-required">
-        <Card><CardContent className="p-8 text-center">
+      <div className="flex items-center justify-center min-h-screen bg-muted/30" data-testid="editor-auth-required">
+        <Card className="border-0 shadow-lg"><CardContent className="p-8 text-center">
           <p className="text-muted-foreground">Please sign in to use the resume editor.</p>
           <Button className="mt-4" onClick={() => setLocation("/auth")} data-testid="button-sign-in">Sign In</Button>
         </CardContent></Card>
@@ -523,8 +685,8 @@ export default function ResumeEditor() {
     const msg = editorQuery.error?.message || "We couldn't load the editor. Please try again.";
     const isParseError = msg.includes("couldn't read");
     return (
-      <div className="flex items-center justify-center min-h-screen" data-testid="editor-error">
-        <Card><CardContent className="p-8 text-center max-w-md space-y-4">
+      <div className="flex items-center justify-center min-h-screen bg-muted/30" data-testid="editor-error">
+        <Card className="border-0 shadow-lg"><CardContent className="p-8 text-center max-w-md space-y-4">
           <AlertTriangle className="w-8 h-8 mx-auto text-muted-foreground" />
           <p className="text-sm text-foreground font-medium">Something went wrong</p>
           <p className="text-sm text-muted-foreground">{msg}</p>
@@ -542,38 +704,43 @@ export default function ResumeEditor() {
   }
 
   if (editorQuery.isLoading || !sections) {
-    return <StagedLoading />;
+    return <StagedLoading job={job ? { title: job.title, company: job.company } : undefined} />;
   }
 
   return (
-    <div className="flex flex-col h-screen bg-background" data-testid="resume-editor">
-      <div className="border-b bg-card sticky top-0 z-30" data-testid="editor-header">
-        <div className="flex items-center justify-between gap-3 px-4 py-2 flex-wrap">
-          <div className="flex items-center gap-3 flex-wrap">
+    <div className="flex flex-col h-screen bg-muted/30" data-testid="resume-editor">
+      <div className="border-b bg-card sticky top-0 z-30 shadow-sm" data-testid="editor-header">
+        <div className="flex items-center justify-between gap-3 px-4 h-12">
+          <div className="flex items-center gap-3 min-w-0">
             <Link href={job ? `/jobs/${job.id}` : "/jobs"}>
-              <Button variant="ghost" size="icon" data-testid="button-back"><ArrowLeft className="w-4 h-4" /></Button>
+              <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" data-testid="button-back"><ArrowLeft className="w-4 h-4" /></Button>
             </Link>
             {job && (
-              <div className="min-w-0">
-                <p className="text-sm font-medium truncate" data-testid="text-job-title">Resume for {job.title} at {job.company}</p>
+              <div className="min-w-0 hidden sm:block">
+                <p className="text-sm font-medium truncate" data-testid="text-job-title">
+                  Tailoring for <span className="text-primary">{job.title}</span> at {job.company}
+                </p>
               </div>
             )}
           </div>
 
-          <div className="flex items-center gap-2 flex-wrap">
-            <Button variant="ghost" size="icon" onClick={undo} disabled={undoStack.length === 0} data-testid="button-undo">
-              <Undo2 className="w-4 h-4" />
-            </Button>
-            <Button variant="ghost" size="icon" onClick={redo} disabled={redoStack.length === 0} data-testid="button-redo">
-              <Redo2 className="w-4 h-4" />
-            </Button>
-            <Separator orientation="vertical" className="h-6" />
+          <div className="flex items-center gap-1.5">
+            <div className="hidden sm:flex items-center gap-1">
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={undo} disabled={undoStack.length === 0} data-testid="button-undo">
+                <Undo2 className="w-3.5 h-3.5" />
+              </Button>
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={redo} disabled={redoStack.length === 0} data-testid="button-redo">
+                <Redo2 className="w-3.5 h-3.5" />
+              </Button>
+              <Separator orientation="vertical" className="h-5 mx-1" />
+            </div>
             <SaveIndicator status={saveStatus} />
-            <Separator orientation="vertical" className="h-6" />
+            <Separator orientation="vertical" className="h-5 mx-1 hidden sm:block" />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" data-testid="button-export">
-                  <Download className="w-4 h-4 mr-1" />Export
+                <Button variant="default" size="sm" className="gap-1.5 h-8" data-testid="button-export">
+                  <Download className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Export</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
@@ -593,156 +760,274 @@ export default function ResumeEditor() {
           </div>
         </div>
 
-        <div className="flex items-center justify-between gap-3 px-4 py-1.5 bg-muted/30 text-xs flex-wrap" data-testid="status-bar">
-          <div className="flex items-center gap-4 flex-wrap">
-            <ImprovementsBar sections={sections} />
-            {ungroundedCount > 0 && (
-              <span className="text-amber-600 dark:text-amber-400" data-testid="text-ungrounded">
-                {ungroundedCount} {ungroundedCount === 1 ? "item" : "items"} to verify
-              </span>
+        <div className="flex items-center justify-between gap-3 px-4 py-1.5 bg-muted/40 border-t" data-testid="status-bar">
+          <div className="flex items-center gap-3 flex-wrap">
+            {jobRequirements.length > 0 && sections && (
+              <ReadinessBar requirements={jobRequirements} sections={sections} />
+            )}
+            {sections && (
+              <ChangeReviewBar
+                sections={sections}
+                currentIdx={changeIdx}
+                onNavigate={setChangeIdx}
+                onToggle={() => setChangesVisible(!changesVisible)}
+                isVisible={changesVisible}
+              />
             )}
           </div>
-          <Button variant="ghost" size="sm" onClick={revertAll} data-testid="button-revert-all">
+          <Button variant="ghost" size="sm" className="h-6 text-xs px-2 text-muted-foreground" onClick={revertAll} data-testid="button-revert-all">
             <RotateCcw className="w-3 h-3 mr-1" />Revert All
           </Button>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
-        <div className="max-w-3xl mx-auto py-8 px-4 sm:px-6 space-y-8">
-          {sections.rewriteWarning && (
-            <div className="p-4 rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900" data-testid="rewrite-warning">
-              <div className="flex items-start gap-2">
-                <Info className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
-                <p className="text-sm text-amber-800 dark:text-amber-300">{sections.rewriteWarning}</p>
-              </div>
-            </div>
-          )}
+      <div className="flex-1 flex overflow-hidden">
+        <div className="flex-1 overflow-y-auto">
+          <div className="max-w-3xl mx-auto py-6 sm:py-8 px-4 sm:px-6">
+            <div className="bg-white dark:bg-card rounded-lg shadow-sm border p-6 sm:p-10 space-y-6" data-testid="resume-document">
+              {sections.rewriteWarning && (
+                <div className="p-3 rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900" data-testid="rewrite-warning">
+                  <div className="flex items-start gap-2">
+                    <Info className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+                    <p className="text-sm text-amber-800 dark:text-amber-300">{sections.rewriteWarning}</p>
+                  </div>
+                </div>
+              )}
 
-          {sections.strengthNotes && sections.strengthNotes.length > 0 && (
-            <div className="p-4 rounded-md bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900" data-testid="strength-notes">
-              <p className="text-xs font-medium text-emerald-800 dark:text-emerald-300 mb-1">Your strengths for this role</p>
-              {sections.strengthNotes.map((note, i) => (
-                <p key={i} className="text-xs text-emerald-700 dark:text-emerald-400">{note}</p>
-              ))}
-            </div>
-          )}
+              {sections.strengthNotes && sections.strengthNotes.length > 0 && (
+                <div className="p-3 rounded-md bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900" data-testid="strength-notes">
+                  <p className="text-xs font-medium text-emerald-800 dark:text-emerald-300 mb-1">Your strengths for this role</p>
+                  {sections.strengthNotes.map((note, i) => (
+                    <p key={i} className="text-xs text-emerald-700 dark:text-emerald-400">· {note}</p>
+                  ))}
+                </div>
+              )}
 
-          <section data-testid="section-contact">
-            <EditableText
-              value={sections.contact.fullName}
-              onChange={v => updateSections(s => ({ ...s, contact: { ...s.contact, fullName: v } }))}
-              tag="h1"
-              className="text-2xl font-serif font-bold mb-1"
-              testId="editable-name"
-              placeholder="Your Name"
-            />
-            <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
-              <EditableText value={sections.contact.email} onChange={v => updateSections(s => ({ ...s, contact: { ...s.contact, email: v } }))} tag="span" testId="editable-email" placeholder="email@example.com" />
-              <EditableText value={sections.contact.phone} onChange={v => updateSections(s => ({ ...s, contact: { ...s.contact, phone: v } }))} tag="span" testId="editable-phone" placeholder="Phone" />
-              <EditableText value={sections.contact.location} onChange={v => updateSections(s => ({ ...s, contact: { ...s.contact, location: v } }))} tag="span" testId="editable-location" placeholder="Location" />
-              <EditableText value={sections.contact.linkedin || ""} onChange={v => updateSections(s => ({ ...s, contact: { ...s.contact, linkedin: v } }))} tag="span" testId="editable-linkedin" placeholder="LinkedIn" />
-            </div>
-          </section>
-
-          <Separator />
-
-          <section data-testid="section-summary">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-2">Summary</h2>
-            <SummaryBlock sections={sections} onUpdate={updateSections} />
-          </section>
-
-          <Separator />
-
-          <section data-testid="section-experience">
-            <div className="flex items-center justify-between gap-2 mb-4 flex-wrap">
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Experience</h2>
-              <Button variant="ghost" size="sm" onClick={addExperience} data-testid="button-add-experience">
-                <Plus className="w-3 h-3 mr-1" />Add
-              </Button>
-            </div>
-            {sections.experience.length === 0 && (
-              <p className="text-sm text-muted-foreground italic" data-testid="text-no-experience">No experience entries yet. Click Add to create one.</p>
-            )}
-            {sections.experience.map(exp => (
-              <ExperienceBlock
-                key={exp.id}
-                exp={exp}
-                onUpdate={updateSections}
-                onAddBullet={addBullet}
-                onRemoveBullet={removeBullet}
-              />
-            ))}
-          </section>
-
-          <Separator />
-
-          <section data-testid="section-education">
-            <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Education</h2>
-              <Button variant="ghost" size="sm" onClick={addEducation} data-testid="button-add-education">
-                <Plus className="w-3 h-3 mr-1" />Add
-              </Button>
-            </div>
-            {sections.education.length === 0 && (
-              <p className="text-sm text-muted-foreground italic" data-testid="text-no-education">No education entries yet.</p>
-            )}
-            {sections.education.map(edu => (
-              <EducationBlock key={edu.id} edu={edu} onUpdate={updateSections} />
-            ))}
-          </section>
-
-          <Separator />
-
-          <section data-testid="section-skills">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3">Skills</h2>
-            <div className="flex flex-wrap gap-2 mb-3">
-              {sections.skills.map((skill, idx) => (
-                <SkillBadge
-                  key={`${skill.name}-${idx}`}
-                  skill={skill}
-                  onRemove={() => updateSections(s => ({ ...s, skills: s.skills.filter((_, i) => i !== idx) }))}
+              <section data-testid="section-contact">
+                <EditableText
+                  value={sections.contact.fullName}
+                  onChange={v => updateSections(s => ({ ...s, contact: { ...s.contact, fullName: v } }))}
+                  tag="h1"
+                  className="text-2xl font-serif font-bold mb-1"
+                  testId="editable-name"
+                  placeholder="Your Name"
                 />
-              ))}
-            </div>
-            <div className="flex items-center gap-2" data-testid="skill-input-group">
-              <Input
-                value={skillInput}
-                onChange={e => setSkillInput(e.target.value)}
-                placeholder="Add a skill..."
-                className="max-w-xs"
-                data-testid="input-add-skill"
-                onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addSkill(skillInput); } }}
-              />
-              <Button variant="outline" size="sm" onClick={() => addSkill(skillInput)} disabled={!skillInput.trim()} data-testid="button-add-skill">
-                <Plus className="w-3 h-3 mr-1" />Add
-              </Button>
-            </div>
-          </section>
+                <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                  <EditableText value={sections.contact.email} onChange={v => updateSections(s => ({ ...s, contact: { ...s.contact, email: v } }))} tag="span" testId="editable-email" placeholder="email@example.com" />
+                  <EditableText value={sections.contact.phone} onChange={v => updateSections(s => ({ ...s, contact: { ...s.contact, phone: v } }))} tag="span" testId="editable-phone" placeholder="Phone" />
+                  <EditableText value={sections.contact.location} onChange={v => updateSections(s => ({ ...s, contact: { ...s.contact, location: v } }))} tag="span" testId="editable-location" placeholder="Location" />
+                  <EditableText value={sections.contact.linkedin || ""} onChange={v => updateSections(s => ({ ...s, contact: { ...s.contact, linkedin: v } }))} tag="span" testId="editable-linkedin" placeholder="LinkedIn" />
+                </div>
+              </section>
 
-          <Separator />
+              <Separator />
 
-          <section data-testid="section-certifications">
-            <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Certifications</h2>
-              <Button variant="ghost" size="sm" onClick={addCertification} data-testid="button-add-certification">
-                <Plus className="w-3 h-3 mr-1" />Add
-              </Button>
+              <section data-testid="section-summary">
+                <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Summary</h2>
+                <SummaryBlock sections={sections} onUpdate={updateSections} showChanges={changesVisible} />
+              </section>
+
+              <Separator />
+
+              <section data-testid="section-experience">
+                <div className="flex items-center justify-between gap-2 mb-4">
+                  <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Experience</h2>
+                  <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={addExperience} data-testid="button-add-experience">
+                    <Plus className="w-3 h-3 mr-1" />Add
+                  </Button>
+                </div>
+                {sections.experience.length === 0 && (
+                  <p className="text-sm text-muted-foreground italic" data-testid="text-no-experience">No experience entries yet. Click Add to create one.</p>
+                )}
+                {sections.experience.map(exp => (
+                  <ExperienceBlock
+                    key={exp.id}
+                    exp={exp}
+                    onUpdate={updateSections}
+                    onAddBullet={addBullet}
+                    onRemoveBullet={removeBullet}
+                    showChanges={changesVisible}
+                  />
+                ))}
+              </section>
+
+              <Separator />
+
+              <section data-testid="section-education">
+                <div className="flex items-center justify-between gap-2 mb-3">
+                  <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Education</h2>
+                  <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={addEducation} data-testid="button-add-education">
+                    <Plus className="w-3 h-3 mr-1" />Add
+                  </Button>
+                </div>
+                {sections.education.length === 0 && (
+                  <p className="text-sm text-muted-foreground italic" data-testid="text-no-education">No education entries yet.</p>
+                )}
+                {sections.education.map(edu => (
+                  <EducationBlock key={edu.id} edu={edu} onUpdate={updateSections} />
+                ))}
+              </section>
+
+              <Separator />
+
+              <section data-testid="section-skills">
+                <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Skills</h2>
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {sections.skills.map((skill, idx) => (
+                    <SkillBadge
+                      key={`${skill.name}-${idx}`}
+                      skill={skill}
+                      onRemove={() => updateSections(s => ({ ...s, skills: s.skills.filter((_, i) => i !== idx) }))}
+                      showChanges={changesVisible}
+                    />
+                  ))}
+                </div>
+                <div className="flex items-center gap-2" data-testid="skill-input-group">
+                  <Input
+                    value={skillInput}
+                    onChange={e => setSkillInput(e.target.value)}
+                    placeholder="Add a skill..."
+                    className="max-w-xs h-8 text-sm"
+                    data-testid="input-add-skill"
+                    onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addSkill(skillInput); } }}
+                  />
+                  <Button variant="outline" size="sm" className="h-8" onClick={() => addSkill(skillInput)} disabled={!skillInput.trim()} data-testid="button-add-skill">
+                    <Plus className="w-3 h-3 mr-1" />Add
+                  </Button>
+                </div>
+              </section>
+
+              <Separator />
+
+              <section data-testid="section-certifications">
+                <div className="flex items-center justify-between gap-2 mb-3">
+                  <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Certifications</h2>
+                  <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={addCertification} data-testid="button-add-certification">
+                    <Plus className="w-3 h-3 mr-1" />Add
+                  </Button>
+                </div>
+                {sections.certifications.length === 0 && (
+                  <p className="text-sm text-muted-foreground italic" data-testid="text-no-certifications">No certifications yet.</p>
+                )}
+                {sections.certifications.map(cert => (
+                  <CertificationBlock key={cert.id} cert={cert} onUpdate={updateSections} />
+                ))}
+              </section>
             </div>
-            {sections.certifications.length === 0 && (
-              <p className="text-sm text-muted-foreground italic" data-testid="text-no-certifications">No certifications yet.</p>
-            )}
-            {sections.certifications.map(cert => (
-              <CertificationBlock key={cert.id} cert={cert} onUpdate={updateSections} />
-            ))}
-          </section>
+          </div>
+        </div>
+
+        <div className="hidden lg:block">
+          {jobRequirements.length > 0 && (
+            <RequirementsPanel
+              requirements={jobRequirements}
+              isOpen={requirementsPanelOpen}
+              onToggle={() => setRequirementsPanelOpen(!requirementsPanelOpen)}
+            />
+          )}
         </div>
       </div>
+
+      <div className="lg:hidden border-t bg-card px-4 py-2 flex items-center justify-between" data-testid="mobile-toolbar">
+        <div className="flex items-center gap-1">
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={undo} disabled={undoStack.length === 0}>
+            <Undo2 className="w-4 h-4" />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={redo} disabled={redoStack.length === 0}>
+            <Redo2 className="w-4 h-4" />
+          </Button>
+        </div>
+        {jobRequirements.length > 0 && (
+          <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs" onClick={() => setRequirementsPanelOpen(!requirementsPanelOpen)} data-testid="button-mobile-requirements">
+            <Shield className="w-3 h-3" />
+            Requirements
+          </Button>
+        )}
+      </div>
+
+      {requirementsPanelOpen && jobRequirements.length > 0 && (
+        <div className="lg:hidden fixed inset-0 z-40 flex" data-testid="mobile-requirements-overlay">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setRequirementsPanelOpen(false)} />
+          <div className="ml-auto relative bg-card w-80 h-full shadow-xl overflow-y-auto">
+            <RequirementsPanel
+              requirements={jobRequirements}
+              isOpen={true}
+              onToggle={() => setRequirementsPanelOpen(false)}
+            />
+          </div>
+        </div>
+      )}
+
+      {showPostExport && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" data-testid="dialog-post-export">
+          <div className="bg-card rounded-xl shadow-2xl max-w-md w-full mx-4 p-6 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+                <CheckCircle className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-foreground">Resume downloaded</h3>
+                <p className="text-sm text-muted-foreground">Tailored for {editorQuery.data?.job?.company || "this role"}</p>
+              </div>
+            </div>
+
+            {(editorQuery.data?.job as any)?.applyUrl && (
+              <Button
+                className="w-full gap-2"
+                onClick={() => {
+                  window.open((editorQuery.data?.job as any).applyUrl, "_blank");
+                  setShowPostExport(false);
+                }}
+                data-testid="button-apply-now"
+              >
+                Apply Now
+                <ExternalLink className="h-4 w-4" />
+              </Button>
+            )}
+
+            {similarJobs.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Tailor for another role</p>
+                {similarJobs.slice(0, 3).map((sj: any) => (
+                  <Link key={sj.id} to={`/resume-editor/${resumeId}?jobId=${sj.id}`} onClick={() => setShowPostExport(false)}>
+                    <div className="flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors cursor-pointer" data-testid={`card-suggestion-${sj.id}`}>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground truncate">{sj.title}</p>
+                        <p className="text-xs text-muted-foreground truncate">{sj.company} · {sj.location}</p>
+                      </div>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+
+            <div className="flex items-center gap-2 pt-1">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => { setShowPostExport(false); setLocation("/jobs"); }}
+                data-testid="button-browse-jobs"
+              >
+                Browse all jobs
+              </Button>
+              <Button
+                variant="ghost"
+                className="flex-1"
+                onClick={() => setShowPostExport(false)}
+                data-testid="button-close-post-export"
+              >
+                Keep editing
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-function SummaryBlock({ sections, onUpdate }: { sections: EditorSections; onUpdate: (updater: (prev: EditorSections) => EditorSections) => void }) {
+function SummaryBlock({ sections, onUpdate, showChanges }: { sections: EditorSections; onUpdate: (updater: (prev: EditorSections) => EditorSections) => void; showChanges: boolean }) {
   const isChanged = !!sections.originalSummary && !sections.summaryReverted;
   const isReverted = !!sections.originalSummary && !!sections.summaryReverted;
   const displayText = sections.summaryReverted && sections.originalSummary ? sections.originalSummary : sections.summary;
@@ -750,9 +1035,17 @@ function SummaryBlock({ sections, onUpdate }: { sections: EditorSections; onUpda
   const handleRevert = () => onUpdate(s => ({ ...s, summaryReverted: true }));
   const handleUnrevert = () => onUpdate(s => ({ ...s, summaryReverted: false }));
 
+  const changeStyle = showChanges
+    ? isChanged
+      ? "border-l-2 border-primary/60 bg-primary/[0.03] pl-3 py-1 rounded-r"
+      : isReverted
+        ? "border-l-2 border-muted-foreground/20 pl-3 py-1 opacity-70 rounded-r"
+        : ""
+    : "";
+
   return (
     <div className="flex items-start gap-2">
-      <div className={`flex-1 ${isChanged ? "border-l-2 border-primary bg-primary/5 pl-3 py-1" : isReverted ? "border-l-2 border-muted-foreground/30 pl-3 py-1 opacity-80" : ""}`}>
+      <div className={`flex-1 ${changeStyle}`}>
         <EditableText
           value={displayText}
           onChange={v => onUpdate(s => ({ ...s, summary: v, summaryReverted: false }))}
@@ -761,7 +1054,7 @@ function SummaryBlock({ sections, onUpdate }: { sections: EditorSections; onUpda
           placeholder="Write a professional summary..."
         />
       </div>
-      {sections.originalSummary && (
+      {showChanges && sections.originalSummary && (
         <ChangeIndicator
           originalText={sections.originalSummary}
           reason={sections.summaryRewriteReason}
@@ -776,12 +1069,13 @@ function SummaryBlock({ sections, onUpdate }: { sections: EditorSections; onUpda
 }
 
 function ExperienceBlock({
-  exp, onUpdate, onAddBullet, onRemoveBullet,
+  exp, onUpdate, onAddBullet, onRemoveBullet, showChanges,
 }: {
   exp: EditorExperience;
   onUpdate: (updater: (prev: EditorSections) => EditorSections) => void;
   onAddBullet: (expId: string) => void;
   onRemoveBullet: (expId: string, bulletId: string) => void;
+  showChanges: boolean;
 }) {
   return (
     <div className="mb-6" data-testid={`experience-${exp.id}`}>
@@ -813,7 +1107,7 @@ function ExperienceBlock({
             testId={`editable-startdate-${exp.id}`}
             placeholder="Start"
           />
-          <span>-</span>
+          <span>–</span>
           <EditableText
             value={exp.current ? "Present" : exp.endDate}
             onChange={v => onUpdate(s => ({ ...s, experience: s.experience.map(e => e.id === exp.id ? { ...e, endDate: v, current: v === "Present" } : e) }))}
@@ -847,24 +1141,26 @@ function ExperienceBlock({
               }));
             }}
             onRemove={() => onRemoveBullet(exp.id, bullet.id)}
+            showChanges={showChanges}
           />
         ))}
       </ul>
       {exp.bullets.length === 0 && (
         <p className="text-xs text-muted-foreground italic ml-4" data-testid={`text-no-bullets-${exp.id}`}>No bullet points yet.</p>
       )}
-      <Button variant="ghost" size="sm" className="mt-2 text-xs" onClick={() => onAddBullet(exp.id)} data-testid={`button-add-bullet-${exp.id}`}>
+      <Button variant="ghost" size="sm" className="mt-2 text-xs h-6" onClick={() => onAddBullet(exp.id)} data-testid={`button-add-bullet-${exp.id}`}>
         <Plus className="w-3 h-3 mr-1" />Add bullet
       </Button>
     </div>
   );
 }
 
-function BulletItem({ bullet, expId, onUpdate, onRemove }: {
+function BulletItem({ bullet, expId, onUpdate, onRemove, showChanges }: {
   bullet: EditorBullet;
   expId: string;
   onUpdate: (updater: (b: EditorBullet) => EditorBullet) => void;
   onRemove: () => void;
+  showChanges: boolean;
 }) {
   const isChanged = !!(bullet.originalText || bullet.addedByAI) && !bullet.reverted;
   const isReverted = !!(bullet.originalText) && !!bullet.reverted;
@@ -873,10 +1169,18 @@ function BulletItem({ bullet, expId, onUpdate, onRemove }: {
   const handleRevert = () => onUpdate(b => ({ ...b, reverted: true }));
   const handleUnrevert = () => onUpdate(b => ({ ...b, reverted: false }));
 
+  const changeStyle = showChanges
+    ? isChanged
+      ? "border-l-2 border-primary/60 bg-primary/[0.03] pl-3 py-0.5 rounded-r"
+      : isReverted
+        ? "border-l-2 border-muted-foreground/20 pl-3 py-0.5 opacity-70 rounded-r"
+        : ""
+    : "";
+
   return (
     <li className="flex items-start gap-2 group" data-testid={`bullet-${bullet.id}`}>
-      <span className="text-muted-foreground mt-1.5 shrink-0 text-xs select-none">-</span>
-      <div className={`flex-1 ${isChanged ? "border-l-2 border-primary bg-primary/5 pl-3 py-0.5" : isReverted ? "border-l-2 border-muted-foreground/30 pl-3 py-0.5 opacity-80" : ""}`}>
+      <span className="text-muted-foreground mt-1.5 shrink-0 text-xs select-none">•</span>
+      <div className={`flex-1 ${changeStyle}`}>
         <EditableText
           value={displayText}
           onChange={v => onUpdate(b => ({ ...b, text: v, reverted: false }))}
@@ -885,7 +1189,7 @@ function BulletItem({ bullet, expId, onUpdate, onRemove }: {
           placeholder="Describe an accomplishment..."
         />
       </div>
-      {(bullet.originalText || bullet.addedByAI) && (
+      {showChanges && (bullet.originalText || bullet.addedByAI) && (
         <ChangeIndicator
           originalText={bullet.originalText || "(AI generated)"}
           reason={bullet.rewriteReason}
@@ -937,7 +1241,7 @@ function EducationBlock({ edu, onUpdate }: { edu: EditorEducation; onUpdate: (up
           testId={`editable-institution-${edu.id}`}
           placeholder="Institution"
         />
-        <span className="text-sm text-muted-foreground">-</span>
+        <span className="text-sm text-muted-foreground">–</span>
         <EditableText
           value={edu.graduationDate}
           onChange={v => onUpdate(s => ({ ...s, education: s.education.map(e => e.id === edu.id ? { ...e, graduationDate: v } : e) }))}
@@ -981,7 +1285,7 @@ function CertificationBlock({ cert, onUpdate }: { cert: { id: string; name: stri
           testId={`editable-certissuer-${cert.id}`}
           placeholder="Issuer"
         />
-        <span className="text-xs text-muted-foreground">-</span>
+        <span className="text-xs text-muted-foreground">–</span>
         <EditableText
           value={cert.date}
           onChange={v => onUpdate(s => ({ ...s, certifications: s.certifications.map(c => c.id === cert.id ? { ...c, date: v } : c) }))}
@@ -995,16 +1299,41 @@ function CertificationBlock({ cert, onUpdate }: { cert: { id: string; name: stri
   );
 }
 
-function SkillBadge({ skill, onRemove }: { skill: EditorSkill; onRemove: () => void }) {
+function SkillBadge({ skill, onRemove, showChanges }: { skill: EditorSkill; onRemove: () => void; showChanges: boolean }) {
+  const isAI = skill.addedByAI && showChanges;
   return (
-    <Badge variant={skill.addedByAI ? "secondary" : "outline"} data-testid={`skill-${skill.name}`}>
-      {skill.addedByAI && <Sparkles className="w-3 h-3 mr-1 text-primary" />}
+    <Badge
+      variant={isAI ? "secondary" : "outline"}
+      className={isAI ? "border-primary/30 bg-primary/5" : ""}
+      data-testid={`skill-${skill.name}`}
+    >
+      {isAI && <Sparkles className="w-3 h-3 mr-1 text-primary" />}
       {skill.name}
       <button onClick={onRemove} className="ml-1.5 opacity-70 hover:opacity-100" data-testid={`button-remove-skill-${skill.name}`}>
         <X className="w-3 h-3" />
       </button>
     </Badge>
   );
+}
+
+function getChanges(sections: EditorSections): Array<{ type: string; id: string }> {
+  const changes: Array<{ type: string; id: string }> = [];
+  if (sections.originalSummary && !sections.summaryReverted) {
+    changes.push({ type: "summary", id: "summary" });
+  }
+  for (const exp of sections.experience) {
+    for (const b of exp.bullets) {
+      if ((b.originalText || b.addedByAI) && !b.reverted) {
+        changes.push({ type: "bullet", id: b.id });
+      }
+    }
+  }
+  for (const s of sections.skills) {
+    if (s.addedByAI) {
+      changes.push({ type: "skill", id: s.name });
+    }
+  }
+  return changes;
 }
 
 function countUngrounded(sections: EditorSections): number {
