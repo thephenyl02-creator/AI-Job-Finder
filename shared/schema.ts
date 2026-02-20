@@ -722,11 +722,10 @@ export type InsertResumeEditorVersion = z.infer<typeof insertResumeEditorVersion
 export interface EditorBullet {
   id: string;
   text: string;
-  suggestion?: string;
-  status: "pending" | "accepted" | "rejected" | "edited" | "needs_confirmation";
-  grounded: boolean;
-  evidenceRefs?: string[];
-  improvementNote?: string;
+  originalText?: string;
+  rewriteReason?: string;
+  grounded?: boolean;
+  reverted?: boolean;
 }
 
 export interface EditorExperience {
@@ -749,6 +748,11 @@ export interface EditorEducation {
   honors?: string;
 }
 
+export interface EditorSkill {
+  name: string;
+  addedByAI?: boolean;
+}
+
 export interface EditorSections {
   contact: {
     fullName: string;
@@ -759,25 +763,21 @@ export interface EditorSections {
     website?: string;
   };
   summary: string;
-  summarySuggestion?: string;
-  summarySuggestionStatus?: "pending" | "accepted" | "rejected" | "edited" | "needs_confirmation";
-  summarySuggestionGrounded?: boolean;
+  originalSummary?: string;
+  summaryRewriteReason?: string;
+  summaryGrounded?: boolean;
+  summaryReverted?: boolean;
   experience: EditorExperience[];
   education: EditorEducation[];
-  skills: string[];
+  skills: EditorSkill[];
   certifications: Array<{
     id: string;
     name: string;
     issuer: string;
     date: string;
   }>;
-  projects?: Array<{
-    id: string;
-    name: string;
-    description: string;
-    bullets: EditorBullet[];
-  }>;
   strengthNotes?: string[];
+  changedCount?: number;
 }
 
 export interface RequirementItem {

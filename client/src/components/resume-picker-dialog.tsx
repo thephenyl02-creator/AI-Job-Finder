@@ -48,7 +48,7 @@ export function ResumePickerDialog({
   const handleContinue = () => {
     if (!selectedResumeId) return;
     onOpenChange(false);
-    setLocation(`/resume-editor/${selectedResumeId}?jobId=${jobId}&mode=my`);
+    setLocation(`/resume-editor/${selectedResumeId}?jobId=${jobId}`);
   };
 
   const handleUpload = () => {
@@ -62,7 +62,7 @@ export function ResumePickerDialog({
       setAutoRedirecting(true);
       const timer = setTimeout(() => {
         onOpenChange(false);
-        setLocation(`/resume-editor/${resumes[0].id}?jobId=${jobId}&mode=my`);
+        setLocation(`/resume-editor/${resumes[0].id}?jobId=${jobId}`);
       }, 600);
       return () => clearTimeout(timer);
     }

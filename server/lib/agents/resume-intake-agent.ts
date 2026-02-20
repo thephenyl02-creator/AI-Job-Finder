@@ -1,4 +1,4 @@
-import type { EditorSections, EditorBullet, ToConfirmItem } from "@shared/schema";
+import type { EditorSections, EditorBullet, EditorSkill, ToConfirmItem } from "@shared/schema";
 import { getOpenAIClient } from "../openai-client";
 
 function generateId(): string {
@@ -22,10 +22,10 @@ function normalizeDate(date: string): string {
   return cleaned;
 }
 
-function deduplicateSkills(skills: string[]): string[] {
+function deduplicateSkills(skills: EditorSkill[]): EditorSkill[] {
   const seen = new Set<string>();
   return skills.filter(s => {
-    const key = s.toLowerCase().trim();
+    const key = s.name.toLowerCase().trim();
     if (seen.has(key) || !key) return false;
     seen.add(key);
     return true;
@@ -96,9 +96,7 @@ function normalizeExtractedData(data: any, toConfirm: ToConfirmItem[]): EditorSe
       const bullets: EditorBullet[] = (Array.isArray(rawBullets) ? rawBullets : []).map((b: any) => ({
         id: generateId(),
         text: typeof b === "string" ? b : b.text || "",
-        status: "pending" as const,
         grounded: true,
-        evidenceRefs: [],
       }));
 
       experience.push({
@@ -125,16 +123,17 @@ function normalizeExtractedData(data: any, toConfirm: ToConfirmItem[]): EditorSe
   }));
 
   const rawSkills = data.skills || [];
-  let skills: string[] = [];
+  let skillNames: string[] = [];
   if (Array.isArray(rawSkills)) {
-    skills = rawSkills.map((s: any) => typeof s === "string" ? s : s.name || "").filter(Boolean);
+    skillNames = rawSkills.map((s: any) => typeof s === "string" ? s : s.name || "").filter(Boolean);
   } else if (typeof rawSkills === "object") {
-    skills = [
+    skillNames = [
       ...(rawSkills.technical || []),
       ...(rawSkills.legal || []),
       ...(rawSkills.soft || []),
     ];
   }
+  const skills: EditorSkill[] = skillNames.map(name => ({ name }));
 
   const rawCerts = data.certifications || [];
   const certifications = (Array.isArray(rawCerts) ? rawCerts : []).map((c: any) => ({

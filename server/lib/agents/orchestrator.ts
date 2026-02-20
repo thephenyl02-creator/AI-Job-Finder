@@ -1,9 +1,7 @@
 import type { EditorSections, RequirementItem, ToConfirmItem, EditorPayload, ResumeEditorVersion } from "@shared/schema";
 import { resumeIntakeAgent } from "./resume-intake-agent";
 import { requirementMappingAgent } from "./requirement-mapping-agent";
-import { modelResumeAgent } from "./model-resume-agent";
-import { tailoringAgent, applyTailoringSuggestions } from "./tailoring-agent";
-import { honestyVerifierAgent } from "./honesty-verifier-agent";
+import { rewriteAgent, applyRewrite } from "./rewrite-agent";
 import { generateDocx, generatePdf, generateApplyPack } from "./export-agent";
 
 export interface OrchestratorInput {
@@ -15,7 +13,6 @@ export interface OrchestratorInput {
   jobCompany: string;
   jobDescription: string;
   jobRequirements?: string;
-  mode: "my" | "model";
 }
 
 export interface OrchestratorResult {
@@ -32,7 +29,7 @@ export interface OrchestratorResult {
 
 export async function runOrchestrator(input: OrchestratorInput): Promise<OrchestratorResult> {
   const traceId = Math.random().toString(36).substring(2, 10);
-  console.log(`[Orchestrator:${traceId}] Starting for job ${input.jobId}, mode=${input.mode}`);
+  console.log(`[Orchestrator:${traceId}] Starting for job ${input.jobId}`);
 
   if (input.existingVersion && input.existingVersion.sections) {
     console.log(`[Orchestrator:${traceId}] Using existing version ${input.existingVersion.versionNumber}`);
@@ -70,8 +67,6 @@ export async function runOrchestrator(input: OrchestratorInput): Promise<Orchest
     sections = getEmptySections();
   }
 
-  const originalSections = JSON.parse(JSON.stringify(sections));
-
   let jobRequirements: RequirementItem[] = [];
   try {
     console.log(`[Orchestrator:${traceId}] Step 2: Requirement Mapping`);
@@ -84,59 +79,32 @@ export async function runOrchestrator(input: OrchestratorInput): Promise<Orchest
     console.error(`[Orchestrator:${traceId}] Requirement mapping failed:`, err);
   }
 
-  if (input.mode === "model") {
-    try {
-      console.log(`[Orchestrator:${traceId}] Step 3: Model Resume Generation`);
-      sections = await withTimeout(
-        modelResumeAgent(sections, input.jobDescription, input.jobRequirements, input.jobTitle, input.jobCompany),
-        20000,
-        "ModelResumeAgent"
-      );
-    } catch (err) {
-      console.error(`[Orchestrator:${traceId}] Model resume failed:`, err);
-    }
-  } else {
-    try {
-      console.log(`[Orchestrator:${traceId}] Step 3: Tailoring Suggestions`);
-      const tailoring = await withTimeout(
-        tailoringAgent(sections, input.jobDescription, input.jobRequirements, input.jobTitle, input.jobCompany),
-        20000,
-        "TailoringAgent"
-      );
-      sections = applyTailoringSuggestions(sections, tailoring);
-    } catch (err) {
-      console.error(`[Orchestrator:${traceId}] Tailoring failed:`, err);
-    }
+  try {
+    console.log(`[Orchestrator:${traceId}] Step 3: Unified Rewrite`);
+    const rewrite = await withTimeout(
+      rewriteAgent(sections, input.jobDescription, input.jobRequirements, input.jobTitle, input.jobCompany),
+      25000,
+      "RewriteAgent"
+    );
+    sections = applyRewrite(sections, rewrite);
+  } catch (err) {
+    console.error(`[Orchestrator:${traceId}] Rewrite failed:`, err);
   }
+
+  const missingRequirements = jobRequirements.filter(r => r.coverage === "missing").length;
+  const improvementsApplied = sections.changedCount || 0;
+  const needsConfirmation = countUngrounded(sections);
 
   let readyToApply: "yes" | "almost" | "not_yet" = "not_yet";
-  let improvementsApplied = 0;
-  let needsConfirmation = 0;
-  const missingRequirements = jobRequirements.filter(r => r.coverage === "missing").length;
-  let allConfirmItems = [...intakeConfirmItems];
+  if (missingRequirements === 0 && needsConfirmation === 0) readyToApply = "yes";
+  else if (missingRequirements <= 2 && needsConfirmation <= 3) readyToApply = "almost";
 
-  try {
-    console.log(`[Orchestrator:${traceId}] Step 4: Honesty Verification`);
-    const verification = await withTimeout(
-      honestyVerifierAgent(sections, originalSections, missingRequirements),
-      10000,
-      "HonestyVerifierAgent"
-    );
-    readyToApply = verification.readyToApply;
-    improvementsApplied = verification.improvementsApplied;
-    needsConfirmation = verification.needsConfirmation;
-    allConfirmItems = [...intakeConfirmItems, ...verification.toConfirmItems];
-    sections = verification.sections;
-  } catch (err) {
-    console.error(`[Orchestrator:${traceId}] Verification failed:`, err);
-  }
-
-  console.log(`[Orchestrator:${traceId}] Complete. Ready: ${readyToApply}, Improvements: ${improvementsApplied}, Confirm: ${needsConfirmation}`);
+  console.log(`[Orchestrator:${traceId}] Complete. Ready: ${readyToApply}, Improvements: ${improvementsApplied}, Ungrounded: ${needsConfirmation}`);
 
   return {
     sections,
     jobRequirements,
-    toConfirmItems: allConfirmItems.slice(0, 5),
+    toConfirmItems: intakeConfirmItems.slice(0, 5),
     readyToApply,
     counts: {
       improvementsApplied,
@@ -146,40 +114,15 @@ export async function runOrchestrator(input: OrchestratorInput): Promise<Orchest
   };
 }
 
-export async function runVerificationOnly(
-  sections: EditorSections,
-  originalSections: EditorSections | null,
-  jobRequirements: RequirementItem[]
-): Promise<{
-  readyToApply: "yes" | "almost" | "not_yet";
-  counts: { improvementsApplied: number; needsConfirmation: number; missingRequirements: number };
-  toConfirmItems: ToConfirmItem[];
-}> {
-  const missingRequirements = jobRequirements.filter(r => r.coverage === "missing").length;
-
-  try {
-    const verification = await withTimeout(
-      honestyVerifierAgent(sections, originalSections, missingRequirements),
-      10000,
-      "HonestyVerifierAgent"
-    );
-    return {
-      readyToApply: verification.readyToApply,
-      counts: {
-        improvementsApplied: verification.improvementsApplied,
-        needsConfirmation: verification.needsConfirmation,
-        missingRequirements,
-      },
-      toConfirmItems: verification.toConfirmItems,
-    };
-  } catch (err) {
-    console.error("[Orchestrator] Verification-only failed:", err);
-    return {
-      readyToApply: "not_yet",
-      counts: { improvementsApplied: 0, needsConfirmation: 0, missingRequirements },
-      toConfirmItems: [],
-    };
+function countUngrounded(sections: EditorSections): number {
+  let count = 0;
+  if (sections.summaryGrounded === false) count++;
+  for (const exp of sections.experience) {
+    for (const b of exp.bullets) {
+      if (b.grounded === false && !b.reverted) count++;
+    }
   }
+  return count;
 }
 
 async function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {

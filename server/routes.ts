@@ -2031,6 +2031,44 @@ Provide 2-4 recommended paths. Be specific to this candidate's actual experience
     }
   });
 
+  app.get("/api/resumes/tailored-versions", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.id;
+      if (!userId) return res.status(401).json({ error: "Not authenticated" });
+
+      const versions = await db.select({
+        id: resumeEditorVersions.id,
+        resumeId: resumeEditorVersions.resumeId,
+        jobId: resumeEditorVersions.jobId,
+        versionNumber: resumeEditorVersions.versionNumber,
+        updatedAt: resumeEditorVersions.updatedAt,
+        improvementsApplied: resumeEditorVersions.improvementsApplied,
+      }).from(resumeEditorVersions)
+        .where(eq(resumeEditorVersions.userId, userId))
+        .orderBy(desc(resumeEditorVersions.updatedAt))
+        .limit(20);
+
+      const jobIds = Array.from(new Set(versions.map(v => v.jobId).filter(Boolean)));
+      const jobMap = new Map<number, { title: string; company: string }>();
+      for (const jid of jobIds) {
+        const job = await storage.getJob(jid);
+        if (job) jobMap.set(jid, { title: job.title, company: job.company });
+      }
+
+      const result = versions.map(v => ({
+        ...v,
+        jobTitle: jobMap.get(v.jobId)?.title || "Unknown Role",
+        jobCompany: jobMap.get(v.jobId)?.company || "Unknown Company",
+        label: `Tailored for ${jobMap.get(v.jobId)?.title || "Unknown Role"} at ${jobMap.get(v.jobId)?.company || "Unknown Company"}`,
+      }));
+
+      res.json(result);
+    } catch (error) {
+      console.error("Error fetching tailored versions:", error);
+      res.status(500).json({ error: "Failed to fetch tailored versions" });
+    }
+  });
+
   app.post("/api/resumes/upload", isAuthenticated, upload.single("resume"), async (req, res) => {
     try {
       const userId = (req.user as any)?.id;
@@ -7029,7 +7067,7 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
   });
 
   // ── Resume Editor API ──────────────────────────────────────
-  const { runOrchestrator, runVerificationOnly, generateDocx, generatePdf, generateApplyPack } = await import("./lib/agents/orchestrator");
+  const { runOrchestrator, generateDocx, generatePdf, generateApplyPack } = await import("./lib/agents/orchestrator");
 
   app.get("/api/resume/:resumeId/editor", isAuthenticated, async (req: any, res) => {
     try {
@@ -7039,7 +7077,6 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
 
       const resumeId = parseInt(req.params.resumeId);
       const jobId = parseInt(req.query.jobId as string);
-      const mode = (req.query.mode as string) === "model" ? "model" : "my";
 
       if (isNaN(resumeId) || isNaN(jobId)) {
         return res.status(400).json({ error: "Valid resumeId and jobId are required" });
@@ -7062,8 +7099,7 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
         and(
           eq(resumeEditorVersions.userId, userId),
           eq(resumeEditorVersions.resumeId, resumeId),
-          eq(resumeEditorVersions.jobId, jobId),
-          eq(resumeEditorVersions.mode, mode)
+          eq(resumeEditorVersions.jobId, jobId)
         )
       ).orderBy(desc(resumeEditorVersions.versionNumber)).limit(1);
 
@@ -7078,7 +7114,6 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
         jobCompany: job.company,
         jobDescription: job.description,
         jobRequirements: job.requirements || undefined,
-        mode,
       });
 
       if (!existingVersion) {
@@ -7086,7 +7121,7 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
           userId,
           resumeId,
           jobId,
-          mode,
+          mode: "rewrite",
           versionNumber: 1,
           sections: result.sections as any,
           requirementMapping: result.jobRequirements as any,
@@ -7113,7 +7148,6 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
           requirements: job.requirements,
         },
         versionNumber: existingVersion?.versionNumber || 1,
-        mode,
       });
     } catch (error) {
       console.error("Error loading resume editor:", error);
@@ -7128,7 +7162,7 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
       if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
       const resumeId = parseInt(req.params.resumeId);
-      const { sections, jobId, mode, versionNumber } = req.body;
+      const { sections, jobId, versionNumber } = req.body;
 
       if (isNaN(resumeId) || !sections || !jobId || isNaN(parseInt(jobId))) {
         return res.status(400).json({ error: "Valid resumeId, sections, and jobId are required" });
@@ -7145,8 +7179,7 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
         and(
           eq(resumeEditorVersions.userId, userId),
           eq(resumeEditorVersions.resumeId, resumeId),
-          eq(resumeEditorVersions.jobId, jobId),
-          eq(resumeEditorVersions.mode, mode || "my")
+          eq(resumeEditorVersions.jobId, jobId)
         )
       ).orderBy(desc(resumeEditorVersions.versionNumber)).limit(1);
 
@@ -7159,29 +7192,26 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
       }
 
       const newVersion = (existing.length > 0 ? existing[0].versionNumber : 0) + 1;
-      const existingMapping = existing.length > 0 ? (existing[0].requirementMapping as any[]) || [] : [];
 
-      let verificationResult;
-      try {
-        verificationResult = await runVerificationOnly(sections, null, existingMapping);
-      } catch {
-        verificationResult = {
-          readyToApply: "not_yet" as const,
-          counts: { improvementsApplied: 0, needsConfirmation: 0, missingRequirements: 0 },
-          toConfirmItems: [],
-        };
+      const changedCount = sections.changedCount || 0;
+      let ungrounded = 0;
+      if (sections.summaryGrounded === false && !sections.summaryReverted) ungrounded++;
+      for (const exp of (sections.experience || [])) {
+        for (const b of (exp.bullets || [])) {
+          if (b.grounded === false && !b.reverted) ungrounded++;
+        }
       }
+      const existingMapping = existing.length > 0 ? (existing[0].requirementMapping as any[]) || [] : [];
+      const missingReqs = Array.isArray(existingMapping) ? existingMapping.filter((r: any) => r.coverage === "missing").length : 0;
 
       if (existing.length > 0) {
         await db.update(resumeEditorVersions)
           .set({
             sections: sections as any,
             versionNumber: newVersion,
-            readyToApply: verificationResult.readyToApply,
-            improvementsApplied: verificationResult.counts.improvementsApplied,
-            needsConfirmationCount: verificationResult.counts.needsConfirmation,
-            missingRequirementsCount: verificationResult.counts.missingRequirements,
-            toConfirmItems: verificationResult.toConfirmItems as any,
+            improvementsApplied: changedCount,
+            needsConfirmationCount: ungrounded,
+            missingRequirementsCount: missingReqs,
             updatedAt: new Date(),
           })
           .where(eq(resumeEditorVersions.id, existing[0].id));
@@ -7190,15 +7220,13 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
           userId,
           resumeId,
           jobId,
-          mode: mode || "my",
+          mode: "rewrite",
           versionNumber: newVersion,
           sections: sections as any,
           requirementMapping: existingMapping as any,
-          toConfirmItems: verificationResult.toConfirmItems as any,
-          readyToApply: verificationResult.readyToApply,
-          improvementsApplied: verificationResult.counts.improvementsApplied,
-          needsConfirmationCount: verificationResult.counts.needsConfirmation,
-          missingRequirementsCount: verificationResult.counts.missingRequirements,
+          improvementsApplied: changedCount,
+          needsConfirmationCount: ungrounded,
+          missingRequirementsCount: missingReqs,
           lastAgentRunAt: new Date(),
         });
       }
@@ -7206,9 +7234,6 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
       res.json({
         saved: true,
         versionNumber: newVersion,
-        readyToApply: verificationResult.readyToApply,
-        counts: verificationResult.counts,
-        toConfirmItems: verificationResult.toConfirmItems,
       });
     } catch (error) {
       console.error("Error saving resume editor:", error);
@@ -7224,7 +7249,6 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
 
       const resumeId = parseInt(req.params.resumeId);
       const jobId = parseInt(req.query.jobId as string);
-      const mode = (req.query.mode as string) || "my";
 
       if (isNaN(resumeId) || isNaN(jobId)) {
         return res.status(400).json({ error: "Valid resumeId and jobId are required" });
@@ -7234,8 +7258,7 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
         and(
           eq(resumeEditorVersions.userId, userId),
           eq(resumeEditorVersions.resumeId, resumeId),
-          eq(resumeEditorVersions.jobId, jobId),
-          eq(resumeEditorVersions.mode, mode)
+          eq(resumeEditorVersions.jobId, jobId)
         )
       ).orderBy(desc(resumeEditorVersions.versionNumber)).limit(1);
 
@@ -7263,7 +7286,6 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
 
       const resumeId = parseInt(req.params.resumeId);
       const jobId = parseInt(req.query.jobId as string);
-      const mode = (req.query.mode as string) || "my";
 
       if (isNaN(resumeId) || isNaN(jobId)) {
         return res.status(400).json({ error: "Valid resumeId and jobId are required" });
@@ -7273,8 +7295,7 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
         and(
           eq(resumeEditorVersions.userId, userId),
           eq(resumeEditorVersions.resumeId, resumeId),
-          eq(resumeEditorVersions.jobId, jobId),
-          eq(resumeEditorVersions.mode, mode)
+          eq(resumeEditorVersions.jobId, jobId)
         )
       ).orderBy(desc(resumeEditorVersions.versionNumber)).limit(1);
 
@@ -7302,7 +7323,6 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
 
       const resumeId = parseInt(req.params.resumeId);
       const jobId = parseInt(req.query.jobId as string);
-      const mode = (req.query.mode as string) || "my";
 
       if (isNaN(resumeId) || isNaN(jobId)) {
         return res.status(400).json({ error: "Valid resumeId and jobId are required" });
@@ -7312,8 +7332,7 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
         and(
           eq(resumeEditorVersions.userId, userId),
           eq(resumeEditorVersions.resumeId, resumeId),
-          eq(resumeEditorVersions.jobId, jobId),
-          eq(resumeEditorVersions.mode, mode)
+          eq(resumeEditorVersions.jobId, jobId)
         )
       ).orderBy(desc(resumeEditorVersions.versionNumber)).limit(1);
 

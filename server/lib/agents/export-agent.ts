@@ -5,6 +5,22 @@ import archiver from "archiver";
 import { Readable, PassThrough } from "stream";
 import { getOpenAIClient } from "../openai-client";
 
+function resolveSkills(sections: EditorSections): string[] {
+  return sections.skills
+    .filter(s => typeof s === 'string' ? !!s : !!s.name)
+    .map(s => typeof s === 'string' ? s : s.name);
+}
+
+function resolveBulletText(bullet: { text: string; originalText?: string; reverted?: boolean }): string {
+  if (bullet.reverted && bullet.originalText) return bullet.originalText;
+  return bullet.text;
+}
+
+function resolveSummary(sections: EditorSections): string {
+  if (sections.summaryReverted && sections.originalSummary) return sections.originalSummary;
+  return sections.summary;
+}
+
 export async function generateDocx(sections: EditorSections, jobTitle?: string): Promise<Buffer> {
   const children: Paragraph[] = [];
 
@@ -28,10 +44,11 @@ export async function generateDocx(sections: EditorSections, jobTitle?: string):
     }));
   }
 
-  if (sections.summary) {
+  const summary = resolveSummary(sections);
+  if (summary) {
     children.push(createSectionHeading("PROFESSIONAL SUMMARY"));
     children.push(new Paragraph({
-      children: [new TextRun({ text: sections.summary, size: 22, font: "Calibri" })],
+      children: [new TextRun({ text: summary, size: 22, font: "Calibri" })],
       spacing: { after: 200 },
     }));
   }
@@ -53,7 +70,7 @@ export async function generateDocx(sections: EditorSections, jobTitle?: string):
         spacing: { after: 60 },
       }));
       for (const bullet of exp.bullets) {
-        const text = (bullet.status === "accepted" && bullet.suggestion) ? bullet.suggestion : bullet.text;
+        const text = resolveBulletText(bullet);
         if (text) {
           children.push(new Paragraph({
             children: [new TextRun({ text, size: 22, font: "Calibri" })],
@@ -83,10 +100,11 @@ export async function generateDocx(sections: EditorSections, jobTitle?: string):
     }
   }
 
-  if (sections.skills.length > 0) {
+  const skillNames = resolveSkills(sections);
+  if (skillNames.length > 0) {
     children.push(createSectionHeading("SKILLS"));
     children.push(new Paragraph({
-      children: [new TextRun({ text: sections.skills.join(", "), size: 22, font: "Calibri" })],
+      children: [new TextRun({ text: skillNames.join(", "), size: 22, font: "Calibri" })],
       spacing: { after: 200 },
     }));
   }
@@ -142,9 +160,10 @@ export async function generatePdf(sections: EditorSections): Promise<Buffer> {
     }
     doc.moveDown(0.5);
 
-    if (sections.summary) {
+    const summary = resolveSummary(sections);
+    if (summary) {
       drawSectionHeader(doc, "PROFESSIONAL SUMMARY");
-      doc.font("Helvetica").fontSize(10).text(sections.summary);
+      doc.font("Helvetica").fontSize(10).text(summary);
       doc.moveDown(0.5);
     }
 
@@ -155,7 +174,7 @@ export async function generatePdf(sections: EditorSections): Promise<Buffer> {
         doc.font("Helvetica-Oblique").fontSize(9).text(`${exp.location ? exp.location + " | " : ""}${exp.startDate} - ${exp.endDate}`);
         doc.moveDown(0.2);
         for (const bullet of exp.bullets) {
-          const text = (bullet.status === "accepted" && bullet.suggestion) ? bullet.suggestion : bullet.text;
+          const text = resolveBulletText(bullet);
           if (text) {
             doc.font("Helvetica").fontSize(10).text(`• ${text}`, { indent: 15 });
           }
@@ -173,9 +192,10 @@ export async function generatePdf(sections: EditorSections): Promise<Buffer> {
       }
     }
 
-    if (sections.skills.length > 0) {
+    const skillNames = resolveSkills(sections);
+    if (skillNames.length > 0) {
       drawSectionHeader(doc, "SKILLS");
-      doc.font("Helvetica").fontSize(10).text(sections.skills.join(", "));
+      doc.font("Helvetica").fontSize(10).text(skillNames.join(", "));
       doc.moveDown(0.5);
     }
 
@@ -241,6 +261,7 @@ async function generateCoverLetter(
   company: string
 ): Promise<string> {
   const openai = getOpenAIClient();
+  const skillNames = resolveSkills(sections);
 
   const response = await openai.chat.completions.create({
     model: "gpt-4o-mini",
@@ -257,7 +278,7 @@ Rules:
       },
       {
         role: "user",
-        content: `Position: ${jobTitle} at ${company}\n\nApplicant: ${sections.contact.fullName}\nCurrent/Recent Role: ${sections.experience[0]?.title || "N/A"} at ${sections.experience[0]?.company || "N/A"}\nKey Skills: ${sections.skills.slice(0, 10).join(", ")}\nSummary: ${sections.summary || "N/A"}`
+        content: `Position: ${jobTitle} at ${company}\n\nApplicant: ${sections.contact.fullName}\nCurrent/Recent Role: ${sections.experience[0]?.title || "N/A"} at ${sections.experience[0]?.company || "N/A"}\nKey Skills: ${skillNames.slice(0, 10).join(", ")}\nSummary: ${resolveSummary(sections) || "N/A"}`
       }
     ],
   });
