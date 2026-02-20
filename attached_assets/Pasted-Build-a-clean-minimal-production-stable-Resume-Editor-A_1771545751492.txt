@@ -1,0 +1,267 @@
+Build a clean, minimal, production-stable “Resume Editor + Apply Pack” inside my existing app.
+
+NORTH STAR
+When a user selects a matched job and chooses Model Resume (or My Resume), they land on a Word-like inline editor where they can quickly review/approve edits, then download an application-ready pack (PDF + DOCX, optional cover letter) and immediately apply. The experience must be seamless, minimal, and stable in both development and production.
+
+────────────────────────────────────────
+1) UX REQUIREMENTS (Minimal + Seamless)
+────────────────────────────────────────
+
+A) Editor Principles (IMPORTANT)
+1. Locked structure, editable content
+- Users can edit text (headings, bullets, summary, experience lines)
+- Users cannot break layout/structure:
+  - No drag/drop sections
+  - No font family/size selection
+  - No columns/tables
+- Keep ATS-safe formatting (single column, standard headings, consistent spacing)
+
+2. Inline editing like Word
+- Click any text → inline edit
+- Enter creates a new bullet/line depending on context
+- Backspace merges lines naturally
+- Formatting controls are minimal:
+  - Optional: bold/italic only
+  - No styling toolbar beyond that
+
+3. Minimal controls (top right)
+- Download PDF
+- Download DOCX
+- (Optional toggle) Download “Apply Pack”
+- Autosave status: “Saved” / “Saving…” / “Offline”
+- Reset to Model (one click)
+- Undo/Redo (keyboard + buttons)
+
+B) No Confusion / No Overlap
+- This screen is NOT for job browsing or match scoring.
+- Only show what is needed to apply: job requirements snapshot + resume + suggestions.
+
+C) 3-Context View Without Clutter (Drawers)
+- Model Resume is the primary center panel
+- Add two collapsible drawers:
+  1) Job Requirements drawer
+  2) My Resume Evidence drawer
+- Default: drawers closed (clean view). User opens when needed.
+
+D) Job Requirements Drawer (Critical)
+- Show requirements in a clean list grouped by:
+  - Must-have
+  - Nice-to-have
+  - Tools/Keywords
+- Each requirement shows a tiny coverage badge:
+  - ✅ Covered
+  - ⚠ Partial
+  - ⛔ Missing
+- Clicking a requirement scrolls to the mapped resume bullet(s) in the editor and highlights them.
+
+E) Evidence Lock + Honesty Guard (Critical)
+Every AI suggestion must be classified:
+- “Grounded” (supported by the user’s original resume/portfolio text)
+- “Needs Confirmation” (not explicitly supported)
+
+UI rules:
+- For “Needs Confirmation” text, show a subtle label: “Confirm this is true”
+- User must explicitly Accept/Confirm those lines before the resume can be marked “Ready to Apply”
+- Never invent employers, titles, degrees, dates, certifications, or metrics.
+
+F) Accept / Edit / Keep Original (Minimal Review Flow)
+- If AI suggestions exist per bullet/section:
+  - Accept ✅ applies suggested text
+  - Keep Original ❌ restores original
+  - Edit ✏️ lets user tweak freely
+- Do NOT show heavy diff views. Keep it clean.
+
+G) “Change Summary” Micro-Bar (Top, Minimal)
+Add a tiny summary bar (not a dashboard):
+- Improvements applied: X
+- Needs confirmation: Y
+- Still missing: Z
+Clicking an item filters/highlights affected bullets.
+
+H) “To Confirm” Queue (Minimal, High Value)
+If key items are missing/ambiguous (dates, titles, seniority, metrics):
+- Add a small “To confirm (Y)” link
+- Clicking opens a compact list of 1–5 questions max (no long form)
+- Confirmations update the resume JSON and remove warnings.
+
+I) “Ready to Apply” Status (Single, Clear)
+Show a single status at top:
+- Ready to Apply: Yes / Almost / Not Yet
+
+Logic:
+- Yes: ATS checks pass + no unconfirmed claims
+- Almost: <=3 unconfirmed items and no structural issues
+- Not Yet: missing critical sections or many unconfirmed items
+
+────────────────────────────────────────
+2) DATA MODEL + STORAGE (No HTML storage)
+────────────────────────────────────────
+
+A) Store resume as structured JSON (NOT raw HTML)
+Example schema:
+- summary: string
+- skills: string[]
+- experience: [{
+    company: string,
+    title: string,
+    startDate: string,
+    endDate: string,
+    bullets: [{ id, text, suggestion?, status, grounded: boolean, evidenceRefs?: [] }]
+  }]
+- education: [...]
+- projects: [...] (optional)
+
+B) Stable ordering (locked structure)
+- Maintain consistent section order and list order.
+- Use stable IDs for bullets/entries.
+
+C) Versioning per job + mode
+Store:
+- resumeId
+- jobId
+- mode (“model” | “my”)
+- versionNumber
+- updatedAt
+Allow revert to last saved version.
+
+D) Autosave (Debounced + Robust)
+- Debounce: ~800ms
+- Show Saving/Saved states
+- Must survive refresh without losing work.
+
+E) Multi-tab conflict handling (Production safety)
+- Detect if same resume version is being edited in another tab/session.
+- Show “You have this open elsewhere” warning and provide:
+  - “Use latest version”
+  - “Overwrite” (only if user confirms)
+
+────────────────────────────────────────
+3) REQUIREMENT↔EVIDENCE MAPPING (Powers the drawers)
+────────────────────────────────────────
+
+Create a mapping output for each job requirement:
+- requirementId
+- requirementText
+- coverage: covered|partial|missing
+- evidenceRefs: pointers to resume entries/bullets (by stable IDs)
+
+This mapping is what lets the user click a requirement and jump to the right bullet.
+
+────────────────────────────────────────
+4) EXPORTS (Stable in Dev + Production)
+────────────────────────────────────────
+
+A) DOCX export (server-side)
+- Generate DOCX from the structured JSON
+- Preserve ATS-safe formatting: headings, bullet lists, spacing
+- Must download reliably in production.
+
+B) PDF export (server-side)
+- Generate PDF from the same structured JSON
+- Must look consistent between dev and production
+- Avoid client-only rendering for reliability.
+
+C) Apply Pack (Optional, high value, minimal UI)
+If user toggles “Apply Pack,” generate a ZIP containing:
+- Resume.pdf
+- Resume.docx
+- Short cover letter (200–250 words) as .docx or .txt
+Rules:
+- Cover letter must be grounded in resume content (no new claims)
+- Keep it minimal; one version only
+
+D) Export reliability
+- Exports should not crash on long resumes
+- Add timeouts and meaningful error messages
+- Allow retry without losing edits.
+
+────────────────────────────────────────
+5) API ROUTES (Minimal + Clear)
+────────────────────────────────────────
+
+Implement these endpoints:
+
+1) GET /api/resume/:resumeId/editor?jobId=...&mode=...
+Returns:
+- resume JSON (current version)
+- job requirements (grouped)
+- requirement↔evidence mapping
+- AI suggestions (if any)
+- status counts (improvements/confirmations/missing)
+- readyToApply state
+
+2) POST /api/resume/:resumeId/editor/save
+Body:
+- resume JSON patch (or full resume JSON)
+- jobId, mode, version info
+Validates schema + sanitizes content
+
+3) GET /api/resume/:resumeId/export/docx?jobId=...&mode=...
+Returns DOCX file
+
+4) GET /api/resume/:resumeId/export/pdf?jobId=...&mode=...
+Returns PDF file
+
+5) GET /api/resume/:resumeId/export/apply-pack?jobId=...&mode=...
+Returns ZIP file with Resume PDF/DOCX + optional cover letter
+
+6) GET /api/health
+Returns service health + export dependency check.
+
+────────────────────────────────────────
+6) “NO GLITCHES” ENGINEERING REQUIREMENTS
+────────────────────────────────────────
+
+A) Strict validation
+- Validate all inputs with a schema validator (e.g., zod)
+- Reject invalid edits with clear errors
+- Sanitize all text (prevent injection)
+
+B) Frontend stability
+- Add error boundary around the editor
+- Toast notifications for save/export failures
+- Never lose user data: keep a local “pending changes” queue if save fails.
+
+C) Autosave retry queue
+- If offline or save fails, show Offline and retry when back online
+- Do not silently drop edits.
+
+D) Export parity dev/prod
+- Use the same server-side export path in dev and prod
+- Ensure dependencies run on Replit production runtime
+- Avoid browser-only APIs for export.
+
+E) Performance
+- Debounced saves
+- Avoid re-rendering full document on each keystroke
+- Use stable keys for bullets/sections
+
+F) Minimal tests/checks
+- Save endpoint works (schema validation + persistence)
+- Export endpoints return valid files
+- Health check returns OK
+- Requirement mapping returns valid references (no broken pointers)
+
+────────────────────────────────────────
+7) ACCEPTANCE CRITERIA (Must Pass)
+────────────────────────────────────────
+
+- Editing feels like Word (click/type/enter bullets/backspace merges)
+- Structure cannot be broken; ATS-safe format preserved
+- Autosave never loses data; refresh retains edits
+- Multi-tab conflicts are handled gracefully
+- Requirements drawer shows covered/partial/missing and click-to-jump works
+- AI suggestions never invent facts; “Needs confirmation” is enforced
+- Ready-to-Apply status is accurate and obvious
+- PDF + DOCX downloads work consistently in dev + production
+- Apply Pack (ZIP) downloads reliably (if enabled)
+- No console errors; meaningful errors shown to user; export retries work
+
+────────────────────────────────────────
+Implementation Notes
+- Use a stable editor framework (TipTap/ProseMirror or Slate) but heavily restrict formatting.
+- Do NOT store raw HTML. Always store structured JSON and render from it.
+- Keep UI minimal: default drawers closed, model resume center, simple actions.
+- No new feature sprawl beyond what’s required to apply seamlessly.
+
+Build this end-to-end with clean code and production-grade handling.

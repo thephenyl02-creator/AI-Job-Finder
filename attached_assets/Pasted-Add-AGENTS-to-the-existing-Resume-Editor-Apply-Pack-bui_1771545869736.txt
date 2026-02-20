@@ -1,0 +1,180 @@
+Add AGENTS to the existing “Resume Editor + Apply Pack” build, but keep the UI minimal and avoid feature overlap.
+
+DEFINITION
+Agents run behind the scenes to do multi-step work (extract → map → rewrite → verify → export). The UI remains simple: user mostly reviews and accepts/edits.
+
+────────────────────────────────────────
+1) AGENT ARCHITECTURE (Clean + Minimal)
+────────────────────────────────────────
+
+Implement ONE orchestrator + a few specialist agents as server-side services. Do NOT build “agent UI.” Agents are invisible helpers.
+
+Create:
+- server/lib/agents/orchestrator.ts
+
+Specialist agents (functions/services):
+1) ResumeIntakeAgent
+2) RequirementMappingAgent
+3) ModelResumeAgent
+4) HonestyVerifierAgent
+5) ExportAgent (PDF/DOCX/Pack)
+
+The orchestrator decides which steps to run and returns a single payload to the frontend.
+
+────────────────────────────────────────
+2) WHERE AGENTS RUN IN THE FLOW
+────────────────────────────────────────
+
+A) After Upload (Resume Intake)
+Triggered when resume/portfolio is uploaded or imported.
+Agent responsibilities:
+- Parse + normalize into structured resume JSON (no raw HTML)
+- Deduplicate skills, normalize dates/titles, detect sections
+- Flag uncertainties (missing dates, unclear role, missing company)
+- Output: structured resume JSON + “To Confirm” items (max 5)
+
+Rules:
+- Never invent facts
+- If uncertain, create a “Needs confirmation” task instead of guessing
+
+B) When Job is Selected (Requirement Mapping)
+Triggered when user opens editor for a job.
+Agent responsibilities:
+- Extract job requirements into Must-have / Nice-to-have / Tools
+- Map each requirement to evidence in the user resume JSON
+- Label coverage: covered/partial/missing
+- Output: mapping used by the Requirements drawer + evidence drawer
+
+C) When User Chooses Model Resume (Model Resume Generation)
+Triggered when user selects “Model Resume.”
+Agent responsibilities:
+- Apply role-standard locked structure template
+- Generate bullet rewrites aligned to job requirements
+- Produce suggestions as proposals, not overwrites
+- Every suggested line must include:
+  - grounded=true with evidenceRefs[] OR
+  - grounded=false and status="needs_confirmation"
+
+Output:
+- modelResume JSON with suggestions attached at bullet-level
+
+D) Before “Ready to Apply” (Honesty + ATS Verification)
+Triggered:
+- On each significant update (debounced), and always before export
+Agent responsibilities:
+- HonestyVerifier:
+  - Ensure no invented claims (titles, employers, degrees, dates, metrics)
+  - Any ungrounded claim must be marked “Needs confirmation”
+- ATSVerifier:
+  - Ensure ATS-safe structure remains intact (no tables/columns, etc.)
+  - Enforce constraints (section order, bullet formatting)
+
+Output:
+- readyToApply state: Yes / Almost / Not Yet
+- micro summary counts:
+  - improvementsApplied
+  - needsConfirmation
+  - missingRequirements
+
+E) Export (Server-side, agent-backed)
+Triggered on download.
+Agent responsibilities:
+- Use the verified resume JSON to generate PDF/DOCX consistently in dev/prod
+- For Apply Pack:
+  - Generate cover letter ONLY from grounded facts + job requirements
+  - No new claims; if needed, omit rather than invent
+
+────────────────────────────────────────
+3) AGENT OUTPUT CONTRACTS (Strict + Safe)
+────────────────────────────────────────
+
+A) Suggestion object (per bullet/section)
+- id
+- originalText
+- suggestedText
+- grounded: boolean
+- evidenceRefs: [] (required if grounded=true)
+- reason: short string (optional; do not show by default)
+- status: "pending" | "accepted" | "rejected" | "edited" | "needs_confirmation"
+
+B) EvidenceRefs format
+Must reference stable IDs in the user resume JSON:
+- experience[expId].bullets[bulletId]
+- projects[projectId]...
+Never store raw text snippets as the only reference.
+
+C) “To Confirm” items
+Keep it minimal:
+- id
+- prompt
+- fieldsToFill (e.g., startDate, endDate, metricValue)
+- severity: low|medium|high
+
+Maximum 5 items shown to user.
+
+────────────────────────────────────────
+4) UI INTEGRATION (Still Minimal)
+────────────────────────────────────────
+
+Do NOT add agent controls. Only reflect outcomes:
+- Requirements drawer uses mapping
+- Evidence drawer shows mapped evidence
+- “Change Summary” bar uses agent counts
+- “To Confirm” queue is fed by Intake/Verifier agents
+- “Ready to Apply” uses Verifier agent output
+- Suggestions appear inline per bullet with Accept/Edit/Keep
+
+User never sees “agent steps.”
+
+────────────────────────────────────────
+5) API CHANGES (Minimal Additions)
+────────────────────────────────────────
+
+When calling:
+GET /api/resume/:resumeId/editor?jobId=...&mode=...
+
+Return:
+- resume JSON (current)
+- jobRequirements grouped
+- requirementEvidenceMapping
+- suggestions attached to bullets (if any)
+- verification results:
+  - readyToApply state
+  - needsConfirmation count
+  - missingRequirements count
+  - improvementsApplied count
+- toConfirmItems (max 5)
+
+POST /api/resume/:resumeId/editor/save
+- Apply patch
+- Re-run verifier agent (lightweight) in background or synchronous
+- Return updated readyToApply + counts
+
+Exports:
+- ExportAgent uses verified JSON only
+
+────────────────────────────────────────
+6) RELIABILITY (No Glitches)
+────────────────────────────────────────
+
+Agents must be production-safe:
+- Timeouts per agent step (e.g., 10–20s)
+- If an agent fails, return a graceful fallback:
+  - Keep last known good resume version
+  - Show a toast: “We couldn’t refresh suggestions right now. Your edits are saved.”
+- Log agent errors with trace IDs for debugging
+- Never block user from editing if the suggestion agent fails
+- Verifier agent must always run before export; if it fails, block export with a clear error.
+
+────────────────────────────────────────
+7) ACCEPTANCE CRITERIA (Agent-enabled)
+────────────────────────────────────────
+
+- Agents run behind the scenes and improve the experience without adding UI complexity
+- Requirement mapping is accurate and clickable (requirement → evidence → bullet highlight)
+- Model resume suggestions are grounded or flagged for confirmation (no hallucinations)
+- Honest feedback works: overhyped claims get flagged as “Needs confirmation”
+- Ready-to-Apply status updates based on verification
+- Exports only use verified JSON; consistent dev/prod
+
+Build this with minimal surface area changes and maximum reliability.
