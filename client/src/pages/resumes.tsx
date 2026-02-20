@@ -1067,15 +1067,6 @@ export default function Resumes() {
     enabled: isAuthenticated,
   });
 
-  const { data: tailoredVersions = [] } = useQuery<Array<{
-    id: number; resumeId: number; jobId: number; versionNumber: number;
-    updatedAt: string; improvementsApplied: number;
-    jobTitle: string; jobCompany: string; label: string;
-  }>>({
-    queryKey: ["/api/resumes/tailored-versions"],
-    enabled: isAuthenticated,
-  });
-
   const matchMutation = useMutation({
     mutationFn: async () => {
       const res = await apiRequest("POST", "/api/resumes/match-all");
@@ -1395,37 +1386,6 @@ export default function Resumes() {
             )}
           </div>
         </div>
-
-        {tailoredVersions.length > 0 && (
-          <div className="max-w-2xl mx-auto mt-10 space-y-4">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground" data-testid="heading-tailored-versions">
-              Tailored Versions
-            </h2>
-            <div className="space-y-2">
-              {tailoredVersions.map((v) => (
-                <Card key={v.id} className="hover-elevate cursor-pointer" data-testid={`tailored-version-${v.id}`}>
-                  <CardContent className="p-4 flex items-center justify-between gap-3 flex-wrap">
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium truncate" data-testid={`text-tailored-label-${v.id}`}>{v.label}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {v.improvementsApplied || 0} improvements
-                        {v.updatedAt ? ` \u00b7 ${new Date(v.updatedAt).toLocaleDateString()}` : ""}
-                      </p>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setLocation(`/resume-editor/${v.resumeId}?jobId=${v.jobId}`)}
-                      data-testid={`button-open-tailored-${v.id}`}
-                    >
-                      Open
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
-        )}
 
       </main>
       <Footer />
