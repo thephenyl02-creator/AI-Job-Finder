@@ -1,0 +1,204 @@
+Build a HYBRID “Career Intelligence + Job Execution” experience in my existing app, in a way that does NOT look like a job board.
+
+NORTH STAR
+Users should feel guided by intelligence first (career map + readiness), then seamlessly execute (curated jobs + model resume + apply). Jobs must appear as a contextual output of intelligence, not as a browsing-first marketplace.
+
+────────────────────────────────────────
+1) INFORMATION ARCHITECTURE (Primary vs Secondary)
+────────────────────────────────────────
+
+A) Primary Experience (default entry)
+- Upload (resume / portfolio / paste) → Career Intelligence Dashboard → Choose a Path → Curated Jobs → Model Resume Editor → Download → Apply
+
+B) Secondary “Job Feed” (optional)
+- A job feed exists but it is NOT the home screen.
+- It is accessible via a nav item “Jobs” but defaults to:
+  “Recommended for you” (not “All jobs”)
+- “Browse all jobs” must be hidden behind an extra click and a disclaimer:
+  “Browsing is optional. We recommend starting with Career Map.”
+
+C) Product framing
+- This is NOT a job board.
+- It is a Career Intelligence Engine with integrated job execution.
+
+────────────────────────────────────────
+2) UX SCREENS (Minimal + Clear)
+────────────────────────────────────────
+
+A) Landing / Home (for logged-in users)
+Default: “Career Intelligence”
+Components:
+1) Profile snapshot (from resume intake)
+2) Career Map (3–5 paths)
+3) Ready-to-Apply status for selected path
+4) CTA: “Choose a path” or “Continue to jobs”
+
+DO NOT show a long job list on home.
+
+B) Career Map Screen (3–5 options only)
+Each path card includes:
+- Role name
+- Fit label: High/Medium/Low (not %)
+- 2–3 “Why this fits” (grounded)
+- 2–3 “What you’ll need” (gaps)
+- “Reality check” (if needed)
+- Button: “Choose this path”
+
+C) Curated Jobs Screen (appears AFTER path selection)
+Show:
+- Title: “Jobs for [Selected Path]”
+- Small filter chips only (Location, Remote, Seniority)
+- List top 10–20 jobs max
+Each job card includes:
+- Job title + company
+- Key requirements (3 bullets max)
+- Button: “Apply with Model Resume”
+- Secondary button: “Save”
+
+D) Job Details (minimal)
+Show:
+- Requirements (must-have / nice-to-have / tools)
+- Coverage: covered/partial/missing
+- CTA: “Generate Model Resume”
+
+E) Resume Editor + Apply Pack (existing feature)
+- Model resume center panel
+- Requirements drawer
+- Evidence drawer
+- Accept/Edit/Keep
+- Ready-to-Apply status
+- Download PDF/DOCX + Apply Pack
+
+F) Navigation (simple)
+Top nav:
+- Career Intelligence (default)
+- Jobs
+- Applications (saved/applied)
+- Resumes (versions)
+
+Jobs tab defaults to “Recommended for you” and requires a selected path.
+If no path chosen, show:
+“Pick a career path to see your curated jobs.”
+
+────────────────────────────────────────
+3) INTELLIGENCE LAYER (Must Drive Jobs)
+────────────────────────────────────────
+
+Implement a “User Intelligence State” per user/resume:
+- selectedPathId
+- careerMapPaths[]
+- readinessStatus (Yes/Almost/Not Yet)
+- topGaps[]
+- recommendedJobs[] (derived from selected path)
+
+Rules:
+- Jobs shown should be:
+  - filtered by selectedPathId
+  - ranked by match + feasibility
+  - limited to reduce overwhelm
+
+NO “All jobs in the market” on entry.
+
+────────────────────────────────────────
+4) AGENTS (Behind-the-scenes only)
+────────────────────────────────────────
+
+Add an orchestrator:
+- server/lib/agents/hybrid-orchestrator.ts
+
+Specialist agents:
+1) ProfileExtractionAgent
+2) CareerMapAgent
+3) JobCurationAgent
+4) RequirementMappingAgent
+5) ModelResumeAgent
+6) HonestyVerifierAgent
+7) ExportAgent
+
+A) ProfileExtractionAgent
+- Normalize resume into structured profile JSON
+
+B) CareerMapAgent
+- Produce 3–5 paths with grounded “why” + gaps + reality check
+
+C) JobCurationAgent
+- When a path is selected, fetch jobs and produce:
+  - top 10–20 curated jobs for that path
+  - ranked by relevance + feasibility (not just keyword match)
+  - add a 1-line “why recommended” per job
+
+D) RequirementMappingAgent
+- In job details/editor: map requirements ↔ resume evidence
+
+E) ModelResumeAgent + HonestyVerifierAgent
+- Generate grounded model resume suggestions
+- Enforce “needs confirmation” for any ungrounded claim
+- Update “Ready-to-Apply” status
+
+Agents must never invent experience, titles, employers, dates, degrees, certifications, or metrics.
+
+────────────────────────────────────────
+5) API ROUTES (Minimal additions)
+────────────────────────────────────────
+
+A) Intelligence home
+GET /api/intelligence/home?resumeId=...
+Returns:
+- profile snapshot
+- career map (3–5 paths)
+- selectedPath (if any)
+- readiness status
+- top gaps
+- recommended jobs preview (0 if no path selected)
+
+B) Career map
+POST /api/career-map/generate { resumeId }
+POST /api/career-map/select { resumeId, pathId }
+
+C) Curated jobs (path-gated)
+GET /api/jobs/curated?resumeId=...&pathId=...
+Returns top 10–20 jobs only.
+
+D) Optional browsing (secondary, guarded)
+GET /api/jobs/browse?query=...&filters=...
+UI must place this under “Explore more jobs” and not as default.
+
+E) Existing resume editor/export endpoints remain.
+
+────────────────────────────────────────
+6) “NOT A JOB BOARD” SAFETY RULES
+────────────────────────────────────────
+
+- Home screen cannot show more than 3 job cards (preview only)
+- Full job list only appears after path selection
+- Default jobs tab shows “Recommended for you,” not “All jobs”
+- “Browse all jobs” is secondary and behind an extra click
+- UI language must emphasize guidance:
+  - “Recommended jobs for your selected path”
+  - “Start with Career Map”
+  - Not “Browse jobs”
+
+────────────────────────────────────────
+7) RELIABILITY (No Glitches)
+────────────────────────────────────────
+
+- Cache career map per resumeId to reduce repeated calls
+- Cache curated jobs per pathId (refresh every X hours)
+- Timeouts + fallbacks for agent calls:
+  - If job curation fails: show “Try again” and keep UI stable
+- Ensure dev/prod parity with env vars and server-side exports
+- Add /api/health
+
+────────────────────────────────────────
+8) ACCEPTANCE CRITERIA
+────────────────────────────────────────
+
+- Logged-in home shows Career Intelligence first (no job-board wall)
+- Career map shows 3–5 paths with grounded why/gaps
+- Selecting a path shows curated jobs (10–20)
+- Jobs tab requires a selected path and defaults to Recommended
+- Model resume editor remains the execution step for applying
+- The app feels guided and minimal, not like a job listing site
+- Works smoothly in dev and production with stable APIs and exports
+
+Build this end-to-end with minimal UI and strong intelligence-first framing.
