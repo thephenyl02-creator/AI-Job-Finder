@@ -54,11 +54,11 @@ NO examples at this tier: Staff Attorney (traditional practice), Immigration Att
 SCORE 7-8: Strong legal tech intersection. Legal knowledge directly enhances work with legal technology, legal data, or legal process optimization.
 Examples: Legal Product Manager at a legal tech company, Contract Automation Specialist, Legal Solutions Director, Engagement Manager designing legal tech workflows for clients, GRC Analyst implementing compliance technology, Legal Data Scientist, Contracts Counsel at a legal tech company (if role involves the company's tech product).
 
-SCORE 5-6: Moderate legal tech connection. Role is at a legal tech company and understanding legal domain helps, but technology component is indirect.
-Examples: Product Manager at a legal tech company (generic product work), Customer Success Manager at a legal tech vendor (helping legal users adopt the product), Professional Services Consultant at a legal tech vendor.
+SCORE 5-6: Moderate legal tech connection. Role requires understanding legal workflows and directly supports legal technology adoption or legal process improvement. The role title or description must explicitly reference legal domain expertise.
+Examples: Customer Success Manager at a legal tech vendor whose job description requires legal industry knowledge and helping law firms adopt the product, Professional Services Consultant implementing legal tech solutions. NOT generic CS/support/marketing roles that happen to be at a legal tech company.
 
-SCORE 3-4: Weak connection. Generic business/tech role at a legal tech company OR legal role with no technology component.
-Examples: Account Executive, Sales Engineer, Marketing Manager, generic Software Engineer, HR, Finance, Billing, Revenue Ops. Also: Paralegal (traditional), Staff Attorney at a nonprofit, any attorney role focused on traditional practice.
+SCORE 3-4: Weak connection. Generic business/tech/operations role at a legal tech company with NO explicit legal domain requirement. These roles could exist at ANY company — the legal tech context is incidental.
+Examples: Account Executive, Sales Engineer, Marketing Manager/Director/Coordinator, Content Manager, Customer Support, generic Software Engineer, HR, Finance Lead, Billing, Revenue Ops, Data Scientist, Brand Design, IT Specialist, Talent Sourcer/Recruiter, Sales Operations, Customer Engagement Coordinator, Renewals Associate. Also: Paralegal (traditional), Staff Attorney at a nonprofit, any attorney role focused on traditional practice.
 
 SCORE 1-2: No legal tech connection whatsoever.
 
@@ -175,7 +175,7 @@ CRITICAL RULES:
     const aiSeniority = result.seniorityLevel || "Mid";
     const validatedSeniority = validateSeniority(aiSeniority, title, description);
 
-    const rawScore = typeof result.legalRelevanceScore === "number" ? result.legalRelevanceScore : 5;
+    const rawScore = typeof result.legalRelevanceScore === "number" ? result.legalRelevanceScore : 3;
     const legalRelevanceScore = Math.max(1, Math.min(10, rawScore));
     
     let reviewStatus: string;
@@ -466,7 +466,7 @@ function fallbackCategorization(
     salaryMin: salary.min,
     salaryMax: salary.max,
     employmentType: "full-time",
-    legalRelevanceScore: 5,
+    legalRelevanceScore: 3,
     reviewStatus: "needs_review",
   };
 }

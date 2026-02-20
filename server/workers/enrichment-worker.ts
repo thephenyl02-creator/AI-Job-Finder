@@ -241,6 +241,53 @@ const ALWAYS_REJECT_TITLE_PATTERNS = [
   /\bgift planning\b/i,
   /\bsocial worker\b/i,
   /\bimmigration coordinator\b/i,
+  /\btalent sourcer\b/i,
+  /\btalent researcher\b/i,
+  /\bexecutive recruiter\b/i,
+  /\bhead of brand\b/i,
+  /\bbrand design\b/i,
+  /\bbrand manager\b/i,
+  /\bfinance systems lead\b/i,
+  /\bfinance strategy\b/i,
+  /\bstrategic finance\b/i,
+  /\bmarketing director\b/i,
+  /\bmarketing coordinator\b/i,
+  /\bmarketing enablement\b/i,
+  /\bmarketing strategy\b/i,
+  /\bperformance marketing\b/i,
+  /\bsecurity\s*&?\s*it specialist\b/i,
+  /\bit specialist\b/i,
+  /\bcustomer support associate\b/i,
+  /\bcustomer engagement coordinator\b/i,
+  /\bsales strategy\b.*\bprograms?\b/i,
+  /\bsales operations\b/i,
+  /\baccount based marketing\b/i,
+  /\bdata scientist.*marketing\b/i,
+  /\bmarketing.*data scientist\b/i,
+  /\brenewals? (associate|manager|specialist)\b/i,
+  /\bsupport analyst\b/i,
+  /^growth marketing$/i,
+  /^social media marketing$/i,
+  /\bsales compensation\b/i,
+  /\brevenue operations manager\b/i,
+  /\bsales development representative\b/i,
+  /\binside sales (representative|executive)\b/i,
+  /\bfield marketing manager\b/i,
+  /\bsystems specialist.*finance\b/i,
+  /^sales engineer$/i,
+  /\bsales strategy.*operations\b/i,
+  /\binbound marketing\b/i,
+  /\bBDR\s*(manager)?\b/i,
+  /\bbusiness development representative\b/i,
+  /^director of sales\b/i,
+  /^content manager$/i,
+  /\bFP&A\b/i,
+  /\bfinancial planning\b/i,
+  /\bcustomer support specialist\b/i,
+  /\benterprise sales manager\b/i,
+  /^sales manager\b/i,
+  /\bnotary public\b/i,
+  /\bsales enablement manager\b/i,
 ];
 
 const GENERAL_COMPANY_REJECT_PATTERNS = [
@@ -262,6 +309,7 @@ const GENERAL_COMPANY_REJECT_PATTERNS = [
   /\binvestment associate\b/i,
   /\bproposal specialist\b/i,
   /\bregional sales\b/i,
+  /\bpayment (fraud|operations)\b/i,
   /\benterprise sales\b/i,
   /\bpartner development\b/i,
   /\bfield enablement\b/i,
@@ -774,7 +822,7 @@ async function enrichJob(job: Job): Promise<void> {
       enrichedData.pipelineStatus = 'rejected';
       enrichedData.isPublished = false;
       enrichedData.reviewReasonCode = 'LOW_RELEVANCE';
-    } else if (relevanceConfidence >= 40 && enrichedData.roleCategory && relevanceScore >= 3 && qualityScore >= qualityThreshold) {
+    } else if (relevanceConfidence >= 50 && enrichedData.roleCategory && relevanceScore >= 5 && qualityScore >= qualityThreshold) {
       const existingDuplicate = await storage.findLiveJobDuplicate(job.title, job.company, job.location, job.id);
       if (existingDuplicate) {
         enrichedData.pipelineStatus = 'rejected';
@@ -912,9 +960,9 @@ async function runLiveJobAudit(): Promise<{ audited: number; flagged: number; pr
       if (!job.isActive) failReason = 'INACTIVE';
       else if (job.jobStatus !== 'open') failReason = 'JOB_CLOSED';
       else if ((job.qualityScore ?? 0) < auditQualityThreshold) failReason = 'LOW_QUALITY_SCORE';
-      else if ((job.legalRelevanceScore ?? 0) < 3) failReason = 'LOW_RELEVANCE_SCORE';
+      else if ((job.legalRelevanceScore ?? 0) < 5) failReason = 'LOW_RELEVANCE_SCORE';
       else if (!job.roleCategory) failReason = 'MISSING_CATEGORY';
-      else if ((job.relevanceConfidence ?? 0) < 40) failReason = 'LOW_CONFIDENCE';
+      else if ((job.relevanceConfidence ?? 0) < 50) failReason = 'LOW_CONFIDENCE';
       else if (!job.applyUrl || job.applyUrl.trim() === '') failReason = 'NO_APPLY_URL';
 
       if (failReason) {
@@ -938,9 +986,9 @@ async function runLiveJobAudit(): Promise<{ audited: number; flagged: number; pr
     for (const job of candidates) {
       const candidateQualityThreshold = (job.legalRelevanceScore ?? 0) >= 7 ? 40 : 50;
       const passesGate = (job.qualityScore ?? 0) >= candidateQualityThreshold
-        && (job.legalRelevanceScore ?? 0) >= 3
+        && (job.legalRelevanceScore ?? 0) >= 5
         && job.roleCategory !== null
-        && (job.relevanceConfidence ?? 0) >= 40
+        && (job.relevanceConfidence ?? 0) >= 50
         && job.applyUrl && job.applyUrl.trim() !== ''
         && !isGenericCareersUrl(job.applyUrl)
         && !shouldHardReject(job.title, job.company)
