@@ -155,7 +155,7 @@ export function JobCard({ job, isSaved = false, isAuthenticated = false }: JobCa
                     <Bookmark className={`h-4 w-4 ${isSaved ? "fill-current" : ""}`} />
                   </Button>
                 )}
-                {job.applyUrl && (
+                {job.applyUrl ? (
                   <Button asChild variant="outline" size="sm" className="gap-1.5" data-testid={`button-apply-${job.id}`}>
                     <a
                       href={job.applyUrl}
@@ -167,6 +167,10 @@ export function JobCard({ job, isSaved = false, isAuthenticated = false }: JobCa
                       <ExternalLink className="h-3 w-3" />
                     </a>
                   </Button>
+                ) : (
+                  <Button asChild variant="ghost" size="sm" className="gap-1 text-muted-foreground" data-testid={`button-view-${job.id}`}>
+                    <Link to={`/jobs/${job.id}`}>View</Link>
+                  </Button>
                 )}
               </div>
             </div>
@@ -177,7 +181,7 @@ export function JobCard({ job, isSaved = false, isAuthenticated = false }: JobCa
                 {companyDescriptor && (
                   <>
                     <span className="flex-shrink-0 text-muted-foreground/40">·</span>
-                    <span className="flex-shrink-0 text-xs text-muted-foreground/70">{companyDescriptor}</span>
+                    <span className="flex-shrink-0 text-xs text-muted-foreground/70 truncate max-w-[140px] sm:max-w-[180px]">{companyDescriptor}</span>
                   </>
                 )}
                 <span className="flex-shrink-0 text-muted-foreground/40">·</span>

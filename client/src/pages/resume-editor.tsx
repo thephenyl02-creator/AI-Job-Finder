@@ -26,6 +26,19 @@ import type { EditorSections, EditorBullet, EditorSkill, EditorExperience, Edito
 
 type SaveStatus = "saved" | "saving" | "unsaved" | "error" | "conflict";
 
+interface SimilarJob {
+  id: number;
+  title: string;
+  company: string;
+  location: string;
+  roleCategory?: string;
+  roleSubcategory?: string;
+  seniorityLevel?: string;
+  salaryMin?: number | null;
+  salaryMax?: number | null;
+  salaryCurrency?: string | null;
+}
+
 interface EditorData {
   sections: EditorSections;
   jobRequirements: RequirementItem[];
@@ -265,6 +278,12 @@ function RequirementsPanel({ requirements, isOpen, onToggle }: { requirements: R
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-5">
+        <div className="p-2.5 rounded-md bg-muted/50 border border-border/50" data-testid="requirements-info">
+          <p className="text-[11px] text-muted-foreground leading-relaxed">
+            <Info className="w-3 h-3 inline mr-1 text-primary/60" />
+            These are the job's key requirements. Green means your resume covers it, amber means partial coverage, and grey means a gap you could address.
+          </p>
+        </div>
         {mustHaves.length > 0 && (
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-wider text-red-500/80 mb-2 flex items-center gap-1.5">
@@ -377,7 +396,10 @@ export default function ResumeEditor() {
   const [changesVisible, setChangesVisible] = useState(true);
   const [changeIdx, setChangeIdx] = useState(0);
   const [showPostExport, setShowPostExport] = useState(false);
-  const [similarJobs, setSimilarJobs] = useState<any[]>([]);
+  const [similarJobs, setSimilarJobs] = useState<SimilarJob[]>([]);
+  const [similarJobsLoading, setSimilarJobsLoading] = useState(false);
+  const [showRevertConfirm, setShowRevertConfirm] = useState(false);
+  const prevJobIdRef = useRef(jobId);
 
   usePageTitle("Resume Editor");
 
@@ -419,6 +441,21 @@ export default function ResumeEditor() {
     if (!Array.isArray(raw)) return [];
     return raw;
   }, [editorQuery.data?.jobRequirements]);
+
+  useEffect(() => {
+    if (jobId !== prevJobIdRef.current) {
+      prevJobIdRef.current = jobId;
+      setSections(null);
+      setUndoStack([]);
+      setRedoStack([]);
+      setChangeIdx(0);
+      setSaveStatus("saved");
+      setShowPostExport(false);
+      setSimilarJobs([]);
+      hasUnsavedRef.current = false;
+      queryClient.invalidateQueries({ queryKey: ["/api/resume", resumeId, "editor", jobId] });
+    }
+  }, [jobId, resumeId]);
 
   useEffect(() => {
     if (editorQuery.data?.sections) {
@@ -544,43 +581,63 @@ export default function ResumeEditor() {
     const handler = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey) { e.preventDefault(); undo(); }
       if ((e.ctrlKey || e.metaKey) && (e.key === "y" || (e.key === "z" && e.shiftKey))) { e.preventDefault(); redo(); }
+      const isEditing = (e.target as HTMLElement)?.isContentEditable || ["INPUT", "TEXTAREA"].includes((e.target as HTMLElement)?.tagName);
+      if (!isEditing && changesVisible) {
+        if (e.key === "j" || e.key === "ArrowDown") { e.preventDefault(); setChangeIdx(i => i + 1); }
+        if (e.key === "k" || e.key === "ArrowUp") { e.preventDefault(); setChangeIdx(i => Math.max(0, i - 1)); }
+      }
+      if (e.key === "Escape" && showPostExport) { setShowPostExport(false); }
+      if (e.key === "Escape" && showRevertConfirm) { setShowRevertConfirm(false); }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [undo, redo]);
+  }, [undo, redo, changesVisible, showPostExport, showRevertConfirm]);
+
+  const contactNameRef = useRef(sections?.contact?.fullName || "");
+  useEffect(() => { contactNameRef.current = sections?.contact?.fullName || ""; }, [sections?.contact?.fullName]);
 
   const downloadFile = useCallback(async (type: "pdf" | "docx" | "apply-pack") => {
     try {
+      toast({ title: "Saving latest edits..." });
+      try {
+        await flushSave();
+      } catch {
+        toast({ title: "Warning", description: "Could not save latest edits. The export may not include your most recent changes.", variant: "destructive" });
+      }
       toast({ title: "Preparing download..." });
-      await flushSave();
       const res = await fetch(`/api/resume/${resumeId}/export/${type}?jobId=${jobId}`, { credentials: "include" });
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: "Download failed" }));
         throw new Error(err.error);
       }
       const blob = await res.blob();
+      if (blob.size < 100) {
+        throw new Error("Download produced an empty file. Please try again.");
+      }
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
 
-      const name = sections?.contact?.fullName?.replace(/[^a-zA-Z0-9]/g, "_") || "Resume";
+      const name = contactNameRef.current.replace(/[^a-zA-Z0-9]/g, "_") || "Resume";
       const company = editorQuery.data?.job?.company?.replace(/[^a-zA-Z0-9]/g, "_") || "";
       const baseName = company ? `${name}_${company}` : name;
       a.download = `${baseName}.${type === "apply-pack" ? "zip" : type}`;
       a.click();
       URL.revokeObjectURL(url);
 
+      setSimilarJobsLoading(true);
+      setShowPostExport(true);
       fetch(`/api/jobs/${jobId}/similar`, { credentials: "include" })
         .then(r => r.ok ? r.json() : [])
-        .then(jobs => setSimilarJobs(jobs || []))
-        .catch(() => {});
-      setShowPostExport(true);
+        .then(jobs => setSimilarJobs(Array.isArray(jobs) ? jobs : []))
+        .catch(() => setSimilarJobs([]))
+        .finally(() => setSimilarJobsLoading(false));
     } catch (err: any) {
       toast({ title: "Download failed", description: err.message, variant: "destructive" });
     }
-  }, [resumeId, jobId, toast, editorQuery.data?.job, setLocation, flushSave, sections]);
+  }, [resumeId, jobId, toast, editorQuery.data?.job, flushSave]);
 
-  const revertAll = useCallback(() => {
+  const executeRevertAll = useCallback(() => {
     updateSections(prev => {
       const reverted = { ...prev };
       if (prev.originalSummary) {
@@ -593,7 +650,8 @@ export default function ResumeEditor() {
       reverted.skills = prev.skills.filter(s => !s.addedByAI);
       return reverted;
     });
-    toast({ title: "All changes reverted" });
+    setShowRevertConfirm(false);
+    toast({ title: "All changes reverted", description: "Your resume is back to its original state." });
   }, [updateSections, toast]);
 
   const addExperience = useCallback(() => {
@@ -775,7 +833,7 @@ export default function ResumeEditor() {
               />
             )}
           </div>
-          <Button variant="ghost" size="sm" className="h-6 text-xs px-2 text-muted-foreground" onClick={revertAll} data-testid="button-revert-all">
+          <Button variant="ghost" size="sm" className="h-6 text-xs px-2 text-muted-foreground" onClick={() => setShowRevertConfirm(true)} data-testid="button-revert-all">
             <RotateCcw className="w-3 h-3 mr-1" />Revert All
           </Button>
         </div>
@@ -793,6 +851,18 @@ export default function ResumeEditor() {
                   </div>
                 </div>
               )}
+
+              {sections && (() => {
+                const changes = getChanges(sections);
+                return changes.length > 0 && changes.length < 20 ? (
+                  <div className="p-3 rounded-md bg-primary/5 border border-primary/10" data-testid="selective-rewrite-note">
+                    <p className="text-xs text-primary/80">
+                      <Sparkles className="w-3 h-3 inline mr-1" />
+                      We focused on the <span className="font-medium">{changes.length} most impactful changes</span> for this role. Unchanged bullets were already strong.
+                    </p>
+                  </div>
+                ) : null;
+              })()}
 
               {sections.strengthNotes && sections.strengthNotes.length > 0 && (
                 <div className="p-3 rounded-md bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900" data-testid="strength-notes">
@@ -958,9 +1028,33 @@ export default function ResumeEditor() {
         </div>
       )}
 
+      {showRevertConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" data-testid="dialog-revert-confirm">
+          <div className="bg-card rounded-xl shadow-2xl max-w-sm w-full mx-4 p-6 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+                <RotateCcw className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-foreground">Revert all changes?</h3>
+                <p className="text-sm text-muted-foreground">This will undo every AI change and return your resume to its original state.</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="destructive" className="flex-1" onClick={executeRevertAll} data-testid="button-confirm-revert">
+                Revert All
+              </Button>
+              <Button variant="outline" className="flex-1" onClick={() => setShowRevertConfirm(false)} data-testid="button-cancel-revert">
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showPostExport && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" data-testid="dialog-post-export">
-          <div className="bg-card rounded-xl shadow-2xl max-w-md w-full mx-4 p-6 space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={() => setShowPostExport(false)} data-testid="dialog-post-export">
+          <div className="bg-card rounded-xl shadow-2xl max-w-md w-full mx-4 p-6 space-y-4" onClick={e => e.stopPropagation()}>
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
                 <CheckCircle className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
@@ -969,13 +1063,16 @@ export default function ResumeEditor() {
                 <h3 className="font-semibold text-foreground">Resume downloaded</h3>
                 <p className="text-sm text-muted-foreground">Tailored for {editorQuery.data?.job?.company || "this role"}</p>
               </div>
+              <Button variant="ghost" size="icon" className="ml-auto" onClick={() => setShowPostExport(false)} data-testid="button-close-dialog">
+                <X className="h-4 w-4" />
+              </Button>
             </div>
 
-            {(editorQuery.data?.job as any)?.applyUrl && (
+            {editorQuery.data?.job?.applyUrl && (
               <Button
                 className="w-full gap-2"
                 onClick={() => {
-                  window.open((editorQuery.data?.job as any).applyUrl, "_blank");
+                  window.open(editorQuery.data?.job?.applyUrl, "_blank");
                   setShowPostExport(false);
                 }}
                 data-testid="button-apply-now"
@@ -985,22 +1082,55 @@ export default function ResumeEditor() {
               </Button>
             )}
 
-            {similarJobs.length > 0 && (
-              <div className="space-y-2">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Tailor for another role</p>
-                {similarJobs.slice(0, 3).map((sj: any) => (
-                  <Link key={sj.id} to={`/resume-editor/${resumeId}?jobId=${sj.id}`} onClick={() => setShowPostExport(false)}>
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Tailor for another role</p>
+              {similarJobsLoading ? (
+                <div className="flex items-center justify-center py-4 gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">Finding similar roles...</p>
+                </div>
+              ) : similarJobs.length > 0 ? (
+                similarJobs.slice(0, 3).map((sj) => (
+                  <Link
+                    key={sj.id}
+                    to={resumeId ? `/resume-editor/${resumeId}?jobId=${sj.id}` : `/jobs/${sj.id}`}
+                    onClick={() => setShowPostExport(false)}
+                  >
                     <div className="flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors cursor-pointer" data-testid={`card-suggestion-${sj.id}`}>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-foreground truncate">{sj.title}</p>
-                        <p className="text-xs text-muted-foreground truncate">{sj.company} · {sj.location}</p>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <span className="text-xs text-muted-foreground truncate">{sj.company}</span>
+                          {sj.location && (
+                            <>
+                              <span className="text-xs text-muted-foreground/40">·</span>
+                              <span className="text-xs text-muted-foreground truncate">{sj.location}</span>
+                            </>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1.5 mt-1">
+                          {sj.roleSubcategory && (
+                            <Badge variant="secondary" className="text-[10px] h-4 px-1.5 bg-primary/5 text-primary/70">{sj.roleSubcategory}</Badge>
+                          )}
+                          {sj.seniorityLevel && (
+                            <Badge variant="outline" className="text-[10px] h-4 px-1.5">{sj.seniorityLevel}</Badge>
+                          )}
+                          {sj.salaryMin && (
+                            <span className="text-[10px] text-emerald-600 dark:text-emerald-400">
+                              {sj.salaryCurrency === "GBP" ? "£" : sj.salaryCurrency === "EUR" ? "€" : "$"}
+                              {Math.round((sj.salaryMin || 0) / 1000)}k{sj.salaryMax ? `–${Math.round(sj.salaryMax / 1000)}k` : "+"}
+                            </span>
+                          )}
+                        </div>
                       </div>
                       <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                     </div>
                   </Link>
-                ))}
-              </div>
-            )}
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground py-2">No similar roles found. Browse all jobs to find your next opportunity.</p>
+              )}
+            </div>
 
             <div className="flex items-center gap-2 pt-1">
               <Button

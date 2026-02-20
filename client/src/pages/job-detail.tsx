@@ -341,7 +341,12 @@ export default function JobDetail() {
     if (typeof window === 'undefined') return false;
     return !hasViewedJob(jobId || '') && getAnonViewCount() >= ANON_VIEW_LIMIT;
   });
-  const authReturnUrl = `/auth?returnTo=${encodeURIComponent(`/jobs/${jobId}`)}`;
+  const authReturnUrl = `/auth?returnTo=${encodeURIComponent(`/jobs/${jobId}?openTailor=1`)}`;
+
+  const handleTailorClick = () => {
+    apiRequest("POST", `/api/jobs/${parseInt(jobId || "0")}/tailor-click`).catch(() => {});
+    setShowResumePicker(true);
+  };
 
   const { data: publicJob, isLoading: publicLoading } = useQuery<Job>({
     queryKey: ['/api/public/jobs', jobId],
@@ -371,6 +376,18 @@ export default function JobDetail() {
       });
     }
   }, [jobId, job]);
+
+  useEffect(() => {
+    if (isAuthenticated && !authLoading && job) {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("openTailor") === "1") {
+        setShowResumePicker(true);
+        params.delete("openTailor");
+        const newUrl = `${window.location.pathname}${params.toString() ? `?${params}` : ""}`;
+        window.history.replaceState({}, "", newUrl);
+      }
+    }
+  }, [isAuthenticated, authLoading, job]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -771,7 +788,7 @@ export default function JobDetail() {
             {isAuthenticated ? (
               <Button
                 className="gap-2"
-                onClick={() => setShowResumePicker(true)}
+                onClick={handleTailorClick}
                 data-testid="button-tailor-resume-top"
               >
                 <FileText className="h-4 w-4" />
@@ -1175,29 +1192,31 @@ export default function JobDetail() {
             <p className="text-sm font-medium text-foreground truncate">{job.title}</p>
             <p className="text-xs text-muted-foreground truncate">{job.company}</p>
           </div>
-          <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="flex items-center gap-2 w-full sm:w-auto min-w-0">
             {isAuthenticated ? (
               <Button
                 size="sm"
-                className="gap-1.5 flex-1 sm:flex-none"
-                onClick={() => setShowResumePicker(true)}
+                className="gap-1.5 flex-1 sm:flex-none text-xs sm:text-sm"
+                onClick={handleTailorClick}
                 data-testid="button-tailor-sticky"
               >
-                <FileText className="h-4 w-4" />
-                Tailor Resume
+                <FileText className="h-4 w-4 flex-shrink-0" />
+                <span className="hidden sm:inline">Tailor Resume</span>
+                <span className="sm:hidden">Tailor</span>
               </Button>
             ) : (
               <Link href={authReturnUrl} className="flex-1 sm:flex-none">
-                <Button size="sm" className="gap-1.5 w-full" data-testid="button-tailor-sticky-signin">
-                  <FileText className="h-4 w-4" />
-                  Tailor Resume
+                <Button size="sm" className="gap-1.5 w-full text-xs sm:text-sm" data-testid="button-tailor-sticky-signin">
+                  <FileText className="h-4 w-4 flex-shrink-0" />
+                  <span className="hidden sm:inline">Tailor Resume</span>
+                  <span className="sm:hidden">Tailor</span>
                 </Button>
               </Link>
             )}
             {job?.applyUrl ? (
               <a href={job.applyUrl} target="_blank" rel="noopener noreferrer" onClick={handleApplyClick} className="flex-1 sm:flex-none">
-                <Button variant="outline" size="sm" className="gap-2 w-full" data-testid="button-apply-sticky">
-                  <ExternalLink className="h-4 w-4" />
+                <Button variant="outline" size="sm" className="gap-1.5 w-full text-xs sm:text-sm" data-testid="button-apply-sticky">
+                  <ExternalLink className="h-4 w-4 flex-shrink-0" />
                   Apply
                 </Button>
               </a>
