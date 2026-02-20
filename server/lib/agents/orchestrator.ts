@@ -2,6 +2,7 @@ import type { EditorSections, RequirementItem, ToConfirmItem, EditorPayload, Res
 import { resumeIntakeAgent } from "./resume-intake-agent";
 import { requirementMappingAgent } from "./requirement-mapping-agent";
 import { modelResumeAgent } from "./model-resume-agent";
+import { tailoringAgent, applyTailoringSuggestions } from "./tailoring-agent";
 import { honestyVerifierAgent } from "./honesty-verifier-agent";
 import { generateDocx, generatePdf, generateApplyPack } from "./export-agent";
 
@@ -93,6 +94,18 @@ export async function runOrchestrator(input: OrchestratorInput): Promise<Orchest
       );
     } catch (err) {
       console.error(`[Orchestrator:${traceId}] Model resume failed:`, err);
+    }
+  } else {
+    try {
+      console.log(`[Orchestrator:${traceId}] Step 3: Tailoring Suggestions`);
+      const tailoring = await withTimeout(
+        tailoringAgent(sections, input.jobDescription, input.jobRequirements, input.jobTitle, input.jobCompany),
+        20000,
+        "TailoringAgent"
+      );
+      sections = applyTailoringSuggestions(sections, tailoring);
+    } catch (err) {
+      console.error(`[Orchestrator:${traceId}] Tailoring failed:`, err);
     }
   }
 

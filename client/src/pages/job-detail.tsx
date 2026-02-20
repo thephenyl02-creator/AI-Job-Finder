@@ -331,9 +331,6 @@ export default function JobDetail() {
   const jobId = params.id;
   const trackedJobRef = useRef<string | null>(null);
   const applyButtonRef = useRef<HTMLDivElement>(null);
-  const inlineUploadRef = useRef<HTMLInputElement>(null);
-  const [inlineUploadState, setInlineUploadState] = useState<"idle" | "uploading" | "matching" | "done">("idle");
-  const [inlineMatchResult, setInlineMatchResult] = useState<{ score: number; highlights: string[]; gapSummary: string } | null>(null);
   const [showStickyBar, setShowStickyBar] = useState(false);
   const [showApplyNudge, setShowApplyNudge] = useState(false);
   const [showReportDialog, setShowReportDialog] = useState(false);
@@ -438,68 +435,6 @@ export default function JobDetail() {
 
   const { toast } = useToast();
 
-  const handleInlineUpload = async (file: File) => {
-    try {
-      setInlineUploadState("uploading");
-      setInlineMatchResult(null);
-      const formData = new FormData();
-      formData.append("resume", file);
-      formData.append("label", file.name.replace(/\.[^/.]+$/, ""));
-
-      const uploadRes = await fetch("/api/resumes/upload", {
-        method: "POST",
-        body: formData,
-        credentials: "include",
-      });
-
-      if (!uploadRes.ok) {
-        const err = await uploadRes.json().catch(() => ({ error: "Upload failed" }));
-        throw new Error(err.error || "Upload failed");
-      }
-
-      const uploadData = await uploadRes.json();
-      const resumeId = uploadData.resume?.id;
-      if (!resumeId) throw new Error("Upload succeeded but matching failed.");
-
-      queryClient.invalidateQueries({ queryKey: ["/api/resumes"] });
-      setInlineUploadState("matching");
-
-      const matchRes = await apiRequest("POST", `/api/resumes/${resumeId}/match-jobs`);
-      const matchData = await matchRes.json();
-      const matches = matchData.matches || [];
-
-      const thisJobMatch = matches.find((m: any) => String(m.jobId) === String(jobId));
-
-      if (thisJobMatch) {
-        setInlineMatchResult({
-          score: thisJobMatch.matchScore,
-          highlights: thisJobMatch.matchHighlights || [],
-          gapSummary: thisJobMatch.gapSummary || "",
-        });
-        setInlineUploadState("done");
-      } else if (matches.length > 0) {
-        toast({
-          title: `${matches.length} roles match your background`,
-          description: `This role wasn't in your top matches, but we found ${matches.length} others. Redirecting...`,
-        });
-        setTimeout(() => setLocation("/jobs"), 1500);
-        setInlineUploadState("idle");
-      } else {
-        toast({
-          title: "Resume uploaded successfully",
-          description: "No strong matches found right now. We'll notify you when new roles appear.",
-        });
-        setInlineUploadState("idle");
-      }
-    } catch (error: any) {
-      setInlineUploadState("idle");
-      toast({
-        title: "Couldn't process your resume",
-        description: error.message || "Please try again with a different file.",
-        variant: "destructive",
-      });
-    }
-  };
 
   const saveJobMutation = useMutation({
     mutationFn: async () => {
@@ -1076,59 +1011,6 @@ export default function JobDetail() {
           }
 
           if (!hasResumes) {
-            if (inlineUploadState === "done" && inlineMatchResult) {
-              const scoreColor = inlineMatchResult.score >= 75 ? "text-emerald-600 dark:text-emerald-400" :
-                inlineMatchResult.score >= 55 ? "text-amber-600 dark:text-amber-400" :
-                inlineMatchResult.score > 0 ? "text-muted-foreground" : "text-muted-foreground";
-              return (
-                <Card className="mb-6 border-primary/20" data-testid="card-match-result-inline">
-                  <CardContent className="p-5 sm:p-6">
-                    <div className="flex items-start gap-4">
-                      <div className="shrink-0 w-10 h-10 rounded-md bg-primary/10 flex items-center justify-center">
-                        <CheckCircle2 className="h-5 w-5 text-primary" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        {inlineMatchResult.score > 0 ? (
-                          <>
-                            <div className="flex items-center gap-2 mb-1">
-                              <h3 className="text-sm font-semibold text-foreground">Your match score</h3>
-                              <span className={`text-lg font-bold ${scoreColor}`} data-testid="text-inline-match-score">
-                                {inlineMatchResult.score}%
-                              </span>
-                            </div>
-                            {inlineMatchResult.highlights.length > 0 && (
-                              <div className="flex flex-wrap gap-1.5 mb-2">
-                                {inlineMatchResult.highlights.slice(0, 3).map((h, i) => (
-                                  <Badge key={i} variant="secondary" className="text-xs">{h}</Badge>
-                                ))}
-                              </div>
-                            )}
-                            {inlineMatchResult.gapSummary && (
-                              <p className="text-xs text-muted-foreground mb-3">{inlineMatchResult.gapSummary}</p>
-                            )}
-                            <Button size="sm" onClick={() => setShowResumePicker(true)} data-testid="button-inline-match-improve">
-                              <FileText className="h-3.5 w-3.5 mr-1.5" />
-                              Tailor your resume for this role
-                            </Button>
-                          </>
-                        ) : (
-                          <>
-                            <h3 className="text-sm font-semibold text-foreground mb-1">Resume uploaded</h3>
-                            <p className="text-sm text-muted-foreground mb-3">{inlineMatchResult.gapSummary}</p>
-                            <Link href="/jobs">
-                              <Button size="sm" variant="outline" data-testid="button-inline-match-browse">
-                                See your matches
-                              </Button>
-                            </Link>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            }
-
             return (
               <Card className="mb-6 border-primary/20" data-testid="card-match-teaser-no-resume">
                 <CardContent className="p-5 sm:p-6">
@@ -1138,51 +1020,17 @@ export default function JobDetail() {
                     </div>
                     <div className="min-w-0 flex-1">
                       <h3 className="text-sm font-semibold text-foreground mb-1">
-                        {inlineUploadState !== "idle" ? (
-                          inlineUploadState === "uploading" ? "Processing your resume..." : "Finding your matches..."
-                        ) : (
-                          "See how you match this role"
-                        )}
+                        See how you match this role
                       </h3>
                       <p className="text-sm text-muted-foreground mb-3">
-                        {inlineUploadState !== "idle"
-                          ? "This usually takes about 15 seconds."
-                          : "Upload your resume and instantly see how your skills align with this position."
-                        }
+                        Add your resume to get a personalized fit score, skill gap analysis, and tailored suggestions.
                       </p>
-                      <input
-                        ref={inlineUploadRef}
-                        type="file"
-                        accept=".pdf,.docx"
-                        className="hidden"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) handleInlineUpload(file);
-                          if (inlineUploadRef.current) inlineUploadRef.current.value = "";
-                        }}
-                        data-testid="input-inline-upload-file"
-                      />
-                      <Button
-                        size="sm"
-                        onClick={() => inlineUploadRef.current?.click()}
-                        disabled={inlineUploadState !== "idle"}
-                        data-testid="button-match-teaser-upload"
-                      >
-                        {inlineUploadState !== "idle" ? (
-                          <>
-                            <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                            {inlineUploadState === "matching" ? "Matching..." : "Processing..."}
-                          </>
-                        ) : (
-                          <>
-                            <FileText className="h-3.5 w-3.5 mr-1.5" />
-                            Upload Resume
-                          </>
-                        )}
-                      </Button>
-                      {inlineUploadState === "idle" && (
-                        <p className="text-xs text-muted-foreground mt-2">PDF or DOCX</p>
-                      )}
+                      <Link href={`/resumes?returnTo=${encodeURIComponent(`/jobs/${jobId}`)}`}>
+                        <Button size="sm" data-testid="button-match-teaser-add-resume">
+                          <FileText className="h-3.5 w-3.5 mr-1.5" />
+                          Add your resume
+                        </Button>
+                      </Link>
                     </div>
                   </div>
                 </CardContent>

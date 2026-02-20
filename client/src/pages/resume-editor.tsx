@@ -78,13 +78,34 @@ export default function ResumeEditor() {
   const editorQuery = useQuery<EditorData>({
     queryKey: ["/api/resume", resumeId, "editor", jobId, mode],
     queryFn: async () => {
-      const res = await fetch(`/api/resume/${resumeId}/editor?jobId=${jobId}&mode=${mode}`, {
-        credentials: "include",
-      });
-      if (!res.ok) throw new Error("Failed to load editor");
-      return res.json();
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 45000);
+      try {
+        const res = await fetch(`/api/resume/${resumeId}/editor?jobId=${jobId}&mode=${mode}`, {
+          credentials: "include",
+          signal: controller.signal,
+        });
+        clearTimeout(timeout);
+        if (!res.ok) {
+          const errBody = await res.json().catch(() => ({}));
+          throw new Error(errBody.error || `Failed to load editor (${res.status})`);
+        }
+        const data = await res.json();
+        if (!data.sections || (!data.sections.contact && !data.sections.summary && (!data.sections.experience || data.sections.experience.length === 0))) {
+          throw new Error("The resume could not be parsed. Please try uploading again or use a different file format.");
+        }
+        return data;
+      } catch (err: any) {
+        clearTimeout(timeout);
+        if (err.name === "AbortError") {
+          throw new Error("The request took too long. Please try again.");
+        }
+        throw err;
+      }
     },
     enabled: !!resumeId && !!jobId && isAuthenticated,
+    retry: 1,
+    retryDelay: 2000,
   });
 
   useEffect(() => {
@@ -231,15 +252,35 @@ export default function ResumeEditor() {
     );
   }
 
+  if (editorQuery.isError) {
+    return (
+      <div className="flex items-center justify-center min-h-screen" data-testid="editor-error">
+        <Card><CardContent className="p-8 text-center max-w-md space-y-4">
+          <AlertTriangle className="w-8 h-8 mx-auto text-muted-foreground" />
+          <p className="text-sm text-foreground font-medium">Something went wrong</p>
+          <p className="text-sm text-muted-foreground">{editorQuery.error?.message || "We couldn't load the editor. Please try again."}</p>
+          <div className="flex items-center justify-center gap-2 flex-wrap">
+            <Button variant="outline" size="sm" onClick={() => editorQuery.refetch()} data-testid="button-retry">
+              Try again
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => window.history.back()} data-testid="button-go-back">
+              Go back
+            </Button>
+          </div>
+        </CardContent></Card>
+      </div>
+    );
+  }
+
   if (editorQuery.isLoading || !sections) {
     return (
       <div className="flex items-center justify-center min-h-screen" data-testid="editor-loading">
         <div className="text-center space-y-3">
           <Loader2 className="w-8 h-8 animate-spin mx-auto text-muted-foreground" />
           <p className="text-muted-foreground">
-            {mode === "model" ? "Building your model resume..." : "Loading your resume..."}
+            {mode === "model" ? "Building your tailored resume..." : "Analyzing your resume against this role..."}
           </p>
-          <p className="text-xs text-muted-foreground">Our agents are analyzing the job requirements</p>
+          <p className="text-xs text-muted-foreground">This usually takes 10-15 seconds</p>
         </div>
       </div>
     );
@@ -278,6 +319,20 @@ export default function ResumeEditor() {
 
         <div className="flex-1 overflow-y-auto">
           <div className="max-w-3xl mx-auto py-8 px-6">
+            {sections.strengthNotes && sections.strengthNotes.length > 0 && (
+              <div className="mb-6 p-4 rounded-md bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900" data-testid="strength-notes">
+                <div className="flex items-start gap-2">
+                  <Target className="w-4 h-4 text-emerald-600 dark:text-emerald-400 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-xs font-medium text-emerald-800 dark:text-emerald-300 mb-1">Your strengths for this role</p>
+                    {sections.strengthNotes.map((note, i) => (
+                      <p key={i} className="text-xs text-emerald-700 dark:text-emerald-400">{note}</p>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {showConfirm && toConfirmItems.length > 0 && (
               <ConfirmQueue items={toConfirmItems} />
             )}

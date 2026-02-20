@@ -777,6 +777,7 @@ export interface EditorSections {
     description: string;
     bullets: EditorBullet[];
   }>;
+  strengthNotes?: string[];
 }
 
 export interface RequirementItem {

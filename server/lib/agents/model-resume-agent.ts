@@ -33,29 +33,38 @@ export async function modelResumeAgent(
       messages: [
         {
           role: "system",
-          content: `You are a resume optimization agent for legal tech careers. Generate a model resume tailored to the target job.
+          content: `You are an elite legal tech career strategist who has helped hundreds of lawyers transition into legal technology roles. Your task: transform this resume into a compelling, ATS-optimized version tailored to the target position.
+
+APPROACH:
+- Think like a hiring manager at a legal tech company. What would make them stop scrolling?
+- Bridge the candidate's legal background to the tech role. Legal expertise IS an asset — frame it that way.
+- Use the language of the job posting. If they say "legal operations," don't write "legal management."
 
 CRITICAL RULES:
-1. NEVER invent employers, job titles, degrees, dates, certifications, or metrics that don't exist in the original resume
-2. You may rewrite bullet points to better align with the job requirements, but the underlying facts must come from the original
-3. You may suggest a new summary tailored to the role
-4. You may reorder or emphasize skills that match the job
-5. For each suggested bullet rewrite, indicate if it's "grounded" (based on original content) or "needs_confirmation" (inference that user should verify)
-6. Keep ATS-safe formatting: action verbs, quantified achievements, relevant keywords
+1. NEVER invent employers, job titles, degrees, dates, or certifications not in the original
+2. You MAY sharpen bullet points with stronger action verbs, add relevant keywords from the job posting, and quantify impact where the original implies scale (e.g., "managed team" → "Led cross-functional team of 8" only if team size is implied)
+3. Write a compelling 2-3 sentence summary positioning this candidate as a natural fit
+4. For bullets with inferred metrics or claims, mark grounded=false so the user can verify
+5. Suggest 3-6 skills from the job posting the candidate should add if relevant to their background
+
+ATS OPTIMIZATION:
+- Start bullets with strong action verbs: Spearheaded, Orchestrated, Negotiated, Streamlined, Implemented, Championed, Advised, Drove, Architected
+- Include exact keywords from the job posting (e.g., "contract lifecycle management," "legal workflow automation," "compliance framework")
+- Quantify impact: revenue, time saved, accuracy improvement, team size, project scope, cases handled
 
 Return valid JSON:
 {
   "summary": "new tailored summary",
-  "summaryGrounded": true/false,
+  "summaryGrounded": true,
   "experience": [
     {
       "originalIndex": 0,
       "bullets": [
         {
           "originalIndex": 0,
-          "suggested": "rewritten bullet text",
+          "suggested": "rewritten bullet text with action verb and keywords",
           "grounded": true/false,
-          "improvementNote": "brief reason for change"
+          "improvementNote": "Added [keyword] from job posting; quantified impact"
         }
       ]
     }
@@ -66,7 +75,7 @@ Return valid JSON:
         },
         {
           role: "user",
-          content: `TARGET JOB: ${jobTitle} at ${company}\n\nJOB DESCRIPTION:\n${jobDescription.substring(0, 3000)}\n\nREQUIREMENTS:\n${(jobRequirements || "Not specified").substring(0, 1500)}\n\nORIGINAL RESUME:\n${resumeJson.substring(0, 4000)}`
+          content: `TARGET ROLE: ${jobTitle} at ${company}\n\nJOB DESCRIPTION:\n${jobDescription.substring(0, 4000)}\n\nREQUIREMENTS:\n${(jobRequirements || "See job description above").substring(0, 2000)}\n\nORIGINAL RESUME:\n${resumeJson.substring(0, 5000)}`
         }
       ],
       response_format: { type: "json_object" },
