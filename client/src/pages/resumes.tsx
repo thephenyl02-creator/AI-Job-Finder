@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { usePageTitle } from "@/hooks/use-page-title";
-import { useLocation, Link } from "wouter";
+import { useLocation, Link, useSearch } from "wouter";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { Button } from "@/components/ui/button";
@@ -335,9 +335,11 @@ function MatchJobCard({
 function UploadForm({
   onClose,
   existingCount,
+  onUploadSuccess,
 }: {
   onClose: () => void;
   existingCount: number;
+  onUploadSuccess?: () => void;
 }) {
   const { toast } = useToast();
   const { track } = useActivityTracker();
@@ -367,6 +369,7 @@ function UploadForm({
       toast({ title: "Resume uploaded", description: "Your resume has been parsed and saved." });
       track({ eventType: "resume_upload" });
       onClose();
+      onUploadSuccess?.();
     },
     onError: (err: Error) => {
       toast({ title: "Upload failed", description: err.message, variant: "destructive" });
@@ -1035,6 +1038,7 @@ function ATSReviewPanel({ review, onClose }: { review: ATSReview; onClose: () =>
 export default function Resumes() {
   usePageTitle("My Resumes");
   const [, setLocation] = useLocation();
+  const searchString = useSearch();
   const { isAuthenticated } = useAuth();
   const { isPro } = useSubscription();
   const { track } = useActivityTracker();
@@ -1042,6 +1046,16 @@ export default function Resumes() {
   const [showUpload, setShowUpload] = useState(false);
   const [atsReview, setAtsReview] = useState<ATSReview | null>(null);
   const [selectedAtsResumeId, setSelectedAtsResumeId] = useState<number | null>(null);
+  const [showReturnBanner, setShowReturnBanner] = useState(false);
+
+  const urlParams = new URLSearchParams(searchString);
+  const returnTo = urlParams.get("returnTo");
+
+  useEffect(() => {
+    if (returnTo) {
+      setShowUpload(true);
+    }
+  }, [returnTo]);
 
   useEffect(() => { track({ eventType: "page_view", pagePath: "/resumes" }); }, []);
 
@@ -1178,10 +1192,32 @@ export default function Resumes() {
               ) : null}
             </div>
 
+            {showReturnBanner && returnTo && (
+              <Card className="mb-4 border-primary/30 bg-primary/5" data-testid="card-return-banner">
+                <CardContent className="p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-sm font-semibold text-foreground">Resume uploaded</h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Go back to the job and tailor your resume with AI-powered suggestions.
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    onClick={() => setLocation(returnTo)}
+                    data-testid="button-return-to-job"
+                  >
+                    <ArrowRight className="w-3.5 h-3.5 mr-1" />
+                    Back to Job
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+
             {showUpload && (
               <UploadForm
                 onClose={() => setShowUpload(false)}
                 existingCount={userResumes.length}
+                onUploadSuccess={returnTo ? () => setShowReturnBanner(true) : undefined}
               />
             )}
 

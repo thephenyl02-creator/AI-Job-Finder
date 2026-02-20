@@ -991,7 +991,7 @@ export default function JobDetail() {
                     isPro={isPro}
                     hasMatch={hasMatch}
                     matchScore={primaryScore}
-                    onUploadResume={() => setLocation("/resumes")}
+                    onUploadResume={() => setLocation(job?.id ? `/resumes?returnTo=${encodeURIComponent(`/jobs/${job.id}`)}` : "/resumes")}
                     onOpenRewrite={() => setShowResumePicker(true)}
                     onSignIn={() => setLocation(authReturnUrl)}
                     roleCategory={job?.roleCategory}

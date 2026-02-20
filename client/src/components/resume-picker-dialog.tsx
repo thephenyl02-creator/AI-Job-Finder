@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import {
@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { FileText, Upload, Loader2, Star } from "lucide-react";
+import { FileText, Upload, Loader2, Star, PenLine } from "lucide-react";
 import type { Resume } from "@shared/schema";
 
 interface ResumePickerDialogProps {
@@ -30,11 +30,20 @@ export function ResumePickerDialog({
 }: ResumePickerDialogProps) {
   const [, setLocation] = useLocation();
   const [selectedResumeId, setSelectedResumeId] = useState<string>("");
+  const [autoRedirecting, setAutoRedirecting] = useState(false);
+  const hasAutoRedirected = useRef(false);
 
   const { data: resumes = [], isLoading } = useQuery<Resume[]>({
     queryKey: ["/api/resumes"],
     enabled: open,
   });
+
+  useEffect(() => {
+    if (!open) {
+      hasAutoRedirected.current = false;
+      setAutoRedirecting(false);
+    }
+  }, [open]);
 
   const handleContinue = () => {
     if (!selectedResumeId) return;
@@ -44,13 +53,18 @@ export function ResumePickerDialog({
 
   const handleUpload = () => {
     onOpenChange(false);
-    setLocation("/resumes");
+    setLocation(jobId ? `/resumes?returnTo=${encodeURIComponent(`/jobs/${jobId}`)}` : "/resumes");
   };
 
   useEffect(() => {
-    if (resumes.length === 1 && open && !isLoading) {
-      onOpenChange(false);
-      setLocation(`/resume-editor/${resumes[0].id}?jobId=${jobId}&mode=my`);
+    if (resumes.length === 1 && open && !isLoading && !hasAutoRedirected.current) {
+      hasAutoRedirected.current = true;
+      setAutoRedirecting(true);
+      const timer = setTimeout(() => {
+        onOpenChange(false);
+        setLocation(`/resume-editor/${resumes[0].id}?jobId=${jobId}&mode=my`);
+      }, 600);
+      return () => clearTimeout(timer);
     }
   }, [resumes, open, isLoading, jobId, onOpenChange, setLocation]);
 
@@ -59,18 +73,23 @@ export function ResumePickerDialog({
       <DialogContent className="max-w-md" data-testid="dialog-resume-picker">
         <DialogHeader>
           <DialogTitle className="text-base" data-testid="heading-resume-picker">
-            Choose a resume to tailor
+            {autoRedirecting ? "Opening editor..." : "Choose a resume to tailor"}
           </DialogTitle>
           <DialogDescription className="text-sm">
-            {jobTitle
-              ? `Select which resume to tailor for "${jobTitle}"`
-              : "Select which resume you'd like to tailor for this role"}
+            {autoRedirecting
+              ? `Taking you to the editor for "${resumes[0]?.label || resumes[0]?.filename || "your resume"}"`
+              : jobTitle
+                ? `Select which resume to tailor for "${jobTitle}"`
+                : "Select which resume you'd like to tailor for this role"}
           </DialogDescription>
         </DialogHeader>
 
-        {isLoading ? (
-          <div className="flex items-center justify-center py-8">
+        {isLoading || autoRedirecting ? (
+          <div className="flex flex-col items-center justify-center py-8 gap-2">
             <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+            {autoRedirecting && (
+              <p className="text-xs text-muted-foreground">Preparing your resume editor...</p>
+            )}
           </div>
         ) : resumes.length === 0 ? (
           <div className="text-center py-6 space-y-3">
@@ -145,6 +164,7 @@ export function ResumePickerDialog({
                 disabled={!selectedResumeId}
                 data-testid="button-continue-to-editor"
               >
+                <PenLine className="w-3.5 h-3.5 mr-1" />
                 Tailor Resume
               </Button>
             </div>

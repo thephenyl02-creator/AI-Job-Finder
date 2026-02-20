@@ -323,20 +323,22 @@ function EditorHeader({
   onToggleConfirm: () => void;
   confirmCount: number;
 }) {
+  const backHref = job ? `/jobs/${job.id}` : "/jobs";
+
   return (
     <div className="border-b bg-card sticky top-0 z-30" data-testid="editor-header">
       <div className="flex items-center justify-between gap-3 px-4 py-2 flex-wrap">
         <div className="flex items-center gap-3 flex-wrap">
-          <Link href="/jobs">
+          <Link href={backHref}>
             <Button variant="ghost" size="icon" data-testid="button-back">
               <ArrowLeft className="w-4 h-4" />
             </Button>
           </Link>
           {job && (
-            <div className="min-w-0">
-              <p className="text-sm font-medium truncate" data-testid="text-job-title">{job.title}</p>
+            <Link href={backHref} className="min-w-0">
+              <p className="text-sm font-medium truncate hover:underline" data-testid="text-job-title">{job.title}</p>
               <p className="text-xs text-muted-foreground truncate">{job.company}</p>
-            </div>
+            </Link>
           )}
         </div>
 
