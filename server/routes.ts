@@ -2036,7 +2036,7 @@ Provide 2-4 recommended paths. Be specific to this candidate's actual experience
       const userId = (req.user as any)?.id;
       if (!userId) return res.status(401).json({ error: "Not authenticated" });
 
-      const versions = await db.select({
+      const allVersions = await db.select({
         id: resumeEditorVersions.id,
         resumeId: resumeEditorVersions.resumeId,
         jobId: resumeEditorVersions.jobId,
@@ -2045,8 +2045,15 @@ Provide 2-4 recommended paths. Be specific to this candidate's actual experience
         improvementsApplied: resumeEditorVersions.improvementsApplied,
       }).from(resumeEditorVersions)
         .where(eq(resumeEditorVersions.userId, userId))
-        .orderBy(desc(resumeEditorVersions.updatedAt))
-        .limit(20);
+        .orderBy(desc(resumeEditorVersions.updatedAt));
+
+      const seen = new Set<string>();
+      const versions = allVersions.filter(v => {
+        const key = `${v.resumeId}-${v.jobId}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      }).slice(0, 20);
 
       const jobIds = Array.from(new Set(versions.map(v => v.jobId).filter(Boolean)));
       const jobMap = new Map<number, { title: string; company: string }>();
