@@ -36,7 +36,6 @@ export function NextStepCard({
 }: NextStepCardProps) {
 
   const isStretch = hasMatch && matchScore !== null && matchScore < 35;
-  const reviewHref = jobId ? `/resume-review/${jobId}` : "/resumes";
 
   if (!isLoggedIn) {
     return (
@@ -108,15 +107,13 @@ export function NextStepCard({
             This role is a stretch right now, but you can still review what to improve.
           </p>
           <p className="text-xs text-muted-foreground/70 mb-3">
-            See specific line-by-line suggestions to strengthen your resume.
+            Tailor your resume with AI suggestions specific to this role.
           </p>
           <div className="flex items-center gap-2 flex-wrap">
-            <Link href={reviewHref}>
-              <Button size="sm" className="gap-1.5" data-testid="button-next-step-review">
-                <PenLine className="h-3.5 w-3.5" />
-                Improve My Resume
-              </Button>
-            </Link>
+            <Button size="sm" className="gap-1.5" onClick={onOpenRewrite} data-testid="button-next-step-review">
+              <PenLine className="h-3.5 w-3.5" />
+              Tailor My Resume
+            </Button>
             <Link href={browseHref}>
               <Button variant="ghost" size="sm" className="text-xs text-muted-foreground" data-testid="link-explore-similar">
                 <Search className="h-3 w-3 mr-1" />
@@ -140,22 +137,20 @@ export function NextStepCard({
             <h3 className="text-sm font-semibold text-foreground" data-testid="heading-next-step">Your Next Step</h3>
           </div>
           <p className="text-sm text-muted-foreground mb-1" data-testid="text-next-step-message">
-            See exactly what to change in your resume for this role.
+            Tailor your resume for this role with AI-powered suggestions.
           </p>
           <p className="text-xs text-muted-foreground/70 mb-3">
-            Line-by-line suggestions you can accept or reject — like track changes.
+            Edit inline, review suggestions, and export a polished resume.
           </p>
           <div className="flex items-center gap-2 flex-wrap">
-            <Link href={reviewHref}>
-              <Button size="sm" className="gap-1.5" data-testid="button-next-step-review">
-                <PenLine className="h-3.5 w-3.5" />
-                Improve My Resume
-              </Button>
-            </Link>
+            <Button size="sm" className="gap-1.5" onClick={onOpenRewrite} data-testid="button-next-step-review">
+              <PenLine className="h-3.5 w-3.5" />
+              Tailor My Resume
+            </Button>
             <Link href="/pricing">
               <Button variant="ghost" size="sm" className="text-xs text-muted-foreground gap-1" data-testid="button-next-step-pro-hint">
                 <Lock className="h-3 w-3" />
-                Full suggestions
+                Model resume & Apply Pack
                 <Badge variant="secondary" className="text-[10px] ml-0.5">Pro</Badge>
               </Button>
             </Link>
@@ -175,18 +170,16 @@ export function NextStepCard({
           <h3 className="text-sm font-semibold text-foreground" data-testid="heading-next-step">Your Next Step</h3>
         </div>
         <p className="text-sm text-muted-foreground mb-1" data-testid="text-next-step-message">
-          Review line-by-line suggestions to align your resume with this role.
+          Tailor your resume for this role with inline editing and AI suggestions.
         </p>
         <p className="text-xs text-muted-foreground/70 mb-3">
-          Accept or reject each change — like track changes in a document.
+          Edit, review suggestions, check job requirements, and export as PDF or DOCX.
         </p>
         <div className="flex items-center gap-2 flex-wrap">
-          <Link href={reviewHref}>
-            <Button size="sm" className="gap-1.5" data-testid="button-next-step-review">
-              <PenLine className="h-3.5 w-3.5" />
-              Improve My Resume
-            </Button>
-          </Link>
+          <Button size="sm" className="gap-1.5" onClick={onOpenRewrite} data-testid="button-next-step-review">
+            <PenLine className="h-3.5 w-3.5" />
+            Tailor My Resume
+          </Button>
         </div>
       </CardContent>
     </Card>

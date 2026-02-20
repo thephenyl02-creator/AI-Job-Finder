@@ -1,4 +1,5 @@
-import { Switch, Route, Redirect } from "wouter";
+import { useEffect } from "react";
+import { Switch, Route, Redirect, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -19,7 +20,6 @@ import Insights from "@/pages/insights";
 import Alerts from "@/pages/alerts";
 import Resumes from "@/pages/resumes";
 import ResumeBuilder from "@/pages/resume-builder";
-import ResumeReview from "@/pages/resume-review";
 import SavedJobs from "@/pages/saved-jobs";
 import AdminAnalytics from "@/pages/admin-analytics";
 import AdminScraper from "@/pages/admin-scraper";
@@ -39,6 +39,14 @@ import OpportunityMap from "@/pages/opportunity-map";
 import ResumeEditor from "@/pages/resume-editor";
 import { AssistantWidget } from "@/components/assistant-widget";
 import { OnboardingDialog } from "@/components/onboarding-dialog";
+
+function ResumeReviewRedirect({ params }: { params: { id: string } }) {
+  const [, setLocation] = useLocation();
+  useEffect(() => {
+    setLocation(`/jobs/${params.id}`, { replace: true });
+  }, [params.id, setLocation]);
+  return null;
+}
 
 function AdminRoute({ component: Component }: { component: React.ComponentType }) {
   const { isAuthenticated, isAdmin, isLoading } = useAuth();
@@ -87,7 +95,7 @@ function AppRouter() {
       <Route path="/alerts">{isAuthenticated ? <Alerts /> : <Landing />}</Route>
       <Route path="/resumes">{isAuthenticated ? <Resumes /> : <Landing />}</Route>
       <Route path="/resume-builder">{isAuthenticated ? <ResumeBuilder /> : <Landing />}</Route>
-      <Route path="/resume-review/:id" component={ResumeReview} />
+      <Route path="/resume-review/:id" component={ResumeReviewRedirect} />
       <Route path="/resume-editor/:resumeId" component={ResumeEditor} />
       <Route path="/saved-jobs">{isAuthenticated ? <SavedJobs /> : <Landing />}</Route>
       <Route path="/dashboard">{isAuthenticated ? <Dashboard /> : <Landing />}</Route>

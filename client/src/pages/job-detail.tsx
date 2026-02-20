@@ -49,6 +49,7 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
+import { ResumePickerDialog } from "@/components/resume-picker-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
 
@@ -336,6 +337,7 @@ export default function JobDetail() {
   const [showStickyBar, setShowStickyBar] = useState(false);
   const [showApplyNudge, setShowApplyNudge] = useState(false);
   const [showReportDialog, setShowReportDialog] = useState(false);
+  const [showResumePicker, setShowResumePicker] = useState(false);
   const [reportType, setReportType] = useState<string>("broken_link");
   const [reportDetails, setReportDetails] = useState("");
   const [showSignupGate, setShowSignupGate] = useState(() => {
@@ -990,7 +992,7 @@ export default function JobDetail() {
                     hasMatch={hasMatch}
                     matchScore={primaryScore}
                     onUploadResume={() => setLocation("/resumes")}
-                    onOpenRewrite={() => setLocation(`/resume-review/${job?.id}`)}
+                    onOpenRewrite={() => setShowResumePicker(true)}
                     onSignIn={() => setLocation(authReturnUrl)}
                     roleCategory={job?.roleCategory}
                     jobId={job?.id}
@@ -1103,12 +1105,10 @@ export default function JobDetail() {
                             {inlineMatchResult.gapSummary && (
                               <p className="text-xs text-muted-foreground mb-3">{inlineMatchResult.gapSummary}</p>
                             )}
-                            <Link href={`/resume-review/${job?.id}`}>
-                              <Button size="sm" data-testid="button-inline-match-improve">
-                                <FileText className="h-3.5 w-3.5 mr-1.5" />
-                                Improve your resume for this role
-                              </Button>
-                            </Link>
+                            <Button size="sm" onClick={() => setShowResumePicker(true)} data-testid="button-inline-match-improve">
+                              <FileText className="h-3.5 w-3.5 mr-1.5" />
+                              Tailor your resume for this role
+                            </Button>
                           </>
                         ) : (
                           <>
@@ -1406,6 +1406,15 @@ export default function JobDetail() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {job && (
+        <ResumePickerDialog
+          open={showResumePicker}
+          onOpenChange={setShowResumePicker}
+          jobId={job.id}
+          jobTitle={job.title}
+        />
+      )}
     </div>
   );
 }

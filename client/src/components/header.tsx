@@ -69,7 +69,7 @@ export function Header() {
   const isActive = (path: string) => location === path;
   const isJobsActive = isActive("/jobs") || isActive("/") || location.startsWith("/jobs/");
   const isDashboardActive = isActive("/dashboard");
-  const isResumesActive = isActive("/resumes") || isActive("/resume-builder") || location.startsWith("/resume-review/");
+  const isResumesActive = isActive("/resumes") || isActive("/resume-builder") || location.startsWith("/resume-editor/");
 
   return (
     <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border/40 header-elev">

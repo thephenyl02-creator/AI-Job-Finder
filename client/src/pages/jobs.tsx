@@ -41,6 +41,7 @@ import {
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { queryClient } from "@/lib/queryClient";
 import { Footer } from "@/components/footer";
+import { ResumePickerDialog } from "@/components/resume-picker-dialog";
 
 interface ResumeMatchResult {
   jobId: number;
@@ -125,6 +126,8 @@ export default function Jobs() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [resumeMatches, setResumeMatches] = useState<ResumeMatchResult[] | null>(null);
   const [resumeMatchStep, setResumeMatchStep] = useState<"idle" | "uploading" | "matching">("idle");
+  const [pickerJobId, setPickerJobId] = useState<number | null>(null);
+  const [pickerJobTitle, setPickerJobTitle] = useState<string>("");
   const [profileSummary, setProfileSummary] = useState<string | null>(null);
   const [proNudgeDismissed, setProNudgeDismissed] = useState(() => {
     try { return localStorage.getItem("ltc_pro_nudge_dismissed") === "1"; } catch { return false; }
@@ -1343,15 +1346,20 @@ export default function Jobs() {
                                 {match.matchHighlights[0]}
                               </Badge>
                             )}
-                            <Link
-                              href={`/resume-review/${match.jobId}`}
-                              onClick={(e: any) => e.stopPropagation()}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-auto py-0.5 px-1.5 text-[11px] text-muted-foreground"
+                              data-testid={`link-improve-resume-${match.jobId}`}
+                              onClick={(e: any) => {
+                                e.stopPropagation();
+                                setPickerJobId(match.jobId);
+                                setPickerJobTitle(match.title);
+                              }}
                             >
-                              <Button variant="ghost" size="sm" className="h-auto py-0.5 px-1.5 text-[11px] text-muted-foreground" data-testid={`link-improve-resume-${match.jobId}`}>
-                                <FileText className="h-3 w-3 mr-0.5" />
-                                Improve resume
-                              </Button>
-                            </Link>
+                              <FileText className="h-3 w-3 mr-0.5" />
+                              Tailor resume
+                            </Button>
                           </div>
                         </div>
                       </div>
@@ -1510,6 +1518,15 @@ export default function Jobs() {
       </main>
 
       <Footer />
+
+      {pickerJobId && (
+        <ResumePickerDialog
+          open={!!pickerJobId}
+          onOpenChange={(open) => { if (!open) { setPickerJobId(null); setPickerJobTitle(""); } }}
+          jobId={pickerJobId}
+          jobTitle={pickerJobTitle}
+        />
+      )}
     </div>
   );
 }
