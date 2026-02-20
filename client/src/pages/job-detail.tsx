@@ -989,6 +989,7 @@ export default function JobDetail() {
                   <NextStepCard
                     isLoggedIn={isAuthenticated}
                     isPro={isPro}
+                    hasResume={userResumes.length > 0}
                     hasMatch={hasMatch}
                     matchScore={primaryScore}
                     onUploadResume={() => setLocation(job?.id ? `/resumes?returnTo=${encodeURIComponent(`/jobs/${job.id}`)}` : "/resumes")}

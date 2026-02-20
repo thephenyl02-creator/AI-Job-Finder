@@ -14,6 +14,7 @@ import {
 interface NextStepCardProps {
   isLoggedIn: boolean;
   isPro: boolean;
+  hasResume: boolean;
   hasMatch: boolean;
   matchScore: number | null;
   onUploadResume: () => void;
@@ -26,6 +27,7 @@ interface NextStepCardProps {
 export function NextStepCard({
   isLoggedIn,
   isPro,
+  hasResume,
   hasMatch,
   matchScore,
   onUploadResume,
@@ -67,7 +69,7 @@ export function NextStepCard({
     );
   }
 
-  if (!hasMatch) {
+  if (!hasResume) {
     return (
       <Card className="border-border/50" data-testid="card-next-step">
         <CardContent className="p-4">
