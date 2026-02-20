@@ -11,7 +11,8 @@ function resolveSkills(sections: EditorSections): string[] {
     .map(s => typeof s === 'string' ? s : s.name);
 }
 
-function resolveBulletText(bullet: { text: string; originalText?: string; reverted?: boolean }): string {
+function resolveBulletText(bullet: { text: string; originalText?: string; reverted?: boolean; addedByAI?: boolean }): string {
+  if (bullet.reverted && bullet.addedByAI && !bullet.originalText) return "";
   if (bullet.reverted && bullet.originalText) return bullet.originalText;
   return bullet.text;
 }
@@ -233,7 +234,8 @@ export async function generateApplyPack(
         coverLetterText = await generateCoverLetter(sections, jobTitle, company);
       } catch (err) {
         console.error("[ExportAgent] Cover letter generation failed:", err);
-        coverLetterText = `Dear Hiring Manager,\n\nI am writing to express my interest in the ${jobTitle} position at ${company}.\n\nWith my background in ${sections.experience[0]?.title || "the field"}, I believe I would be a strong fit for this role.\n\nSincerely,\n${sections.contact.fullName}`;
+        const roleTitle = sections.experience.length > 0 ? sections.experience[0].title : "the field";
+        coverLetterText = `Dear Hiring Manager,\n\nI am writing to express my interest in the ${jobTitle} position at ${company}.\n\nWith my background in ${roleTitle || "the field"}, I believe I would be a strong fit for this role.\n\nSincerely,\n${sections.contact.fullName}`;
       }
 
       const archive = archiver("zip", { zlib: { level: 9 } });
@@ -245,8 +247,9 @@ export async function generateApplyPack(
       passThrough.on("error", reject);
 
       archive.pipe(passThrough);
-      archive.append(pdfBuffer, { name: "Resume.pdf" });
-      archive.append(docxBuffer, { name: "Resume.docx" });
+      const safeName = (sections.contact.fullName || "Resume").replace(/[^a-zA-Z0-9]/g, "_");
+      archive.append(pdfBuffer, { name: `${safeName}.pdf` });
+      archive.append(docxBuffer, { name: `${safeName}.docx` });
       archive.append(coverLetterText, { name: "Cover_Letter.txt" });
       await archive.finalize();
     } catch (err) {
@@ -278,7 +281,7 @@ Rules:
       },
       {
         role: "user",
-        content: `Position: ${jobTitle} at ${company}\n\nApplicant: ${sections.contact.fullName}\nCurrent/Recent Role: ${sections.experience[0]?.title || "N/A"} at ${sections.experience[0]?.company || "N/A"}\nKey Skills: ${skillNames.slice(0, 10).join(", ")}\nSummary: ${resolveSummary(sections) || "N/A"}`
+        content: `Position: ${jobTitle} at ${company}\n\nApplicant: ${sections.contact.fullName}\nCurrent/Recent Role: ${sections.experience.length > 0 ? `${sections.experience[0].title || "N/A"} at ${sections.experience[0].company || "N/A"}` : "N/A"}\nKey Skills: ${skillNames.slice(0, 10).join(", ") || "N/A"}\nSummary: ${resolveSummary(sections) || "N/A"}`
       }
     ],
   });

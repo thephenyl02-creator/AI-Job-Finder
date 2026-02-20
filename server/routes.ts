@@ -7277,7 +7277,8 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
       const buffer = await generateDocx(sections);
 
       res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
-      res.setHeader("Content-Disposition", `attachment; filename="Resume_${sections.contact?.fullName || "Document"}.docx"`);
+      const safeName = (sections.contact?.fullName || "Resume").replace(/[^a-zA-Z0-9 ]/g, "").replace(/\s+/g, "_");
+      res.setHeader("Content-Disposition", `attachment; filename="${safeName}.docx"`);
       res.send(buffer);
     } catch (error) {
       console.error("Error exporting DOCX:", error);
@@ -7314,7 +7315,8 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
       const buffer = await generatePdf(sections);
 
       res.setHeader("Content-Type", "application/pdf");
-      res.setHeader("Content-Disposition", `attachment; filename="Resume_${sections.contact?.fullName || "Document"}.pdf"`);
+      const safeName = (sections.contact?.fullName || "Resume").replace(/[^a-zA-Z0-9 ]/g, "").replace(/\s+/g, "_");
+      res.setHeader("Content-Disposition", `attachment; filename="${safeName}.pdf"`);
       res.send(buffer);
     } catch (error) {
       console.error("Error exporting PDF:", error);

@@ -87,8 +87,15 @@ export async function runOrchestrator(input: OrchestratorInput): Promise<Orchest
       "RewriteAgent"
     );
     sections = applyRewrite(sections, rewrite);
-  } catch (err) {
+    if (!rewrite.summary && rewrite.experience.length === 0) {
+      sections.rewriteWarning = "We couldn't fully tailor your resume. Your original content is shown — you can edit everything directly.";
+    }
+  } catch (err: any) {
     console.error(`[Orchestrator:${traceId}] Rewrite failed:`, err);
+    const isTimeout = err?.message?.includes("timed out");
+    sections.rewriteWarning = isTimeout
+      ? "Tailoring took too long and was skipped. Your original resume is shown — you can edit everything directly."
+      : "Tailoring encountered an error. Your original resume is shown — you can edit everything directly.";
   }
 
   const missingRequirements = jobRequirements.filter(r => r.coverage === "missing").length;

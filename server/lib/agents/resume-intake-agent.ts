@@ -22,6 +22,38 @@ function normalizeDate(date: string): string {
   return cleaned;
 }
 
+function parseDurationToStartEnd(duration: string): { startDate: string; endDate: string } {
+  if (!duration) return { startDate: "", endDate: "Present" };
+  const cleaned = duration.trim();
+  const rangeMatch = cleaned.match(/^(.+?)\s*[-–—to]+\s*(.+)$/i);
+  if (rangeMatch) {
+    return {
+      startDate: normalizeDate(rangeMatch[1].trim()),
+      endDate: normalizeDate(rangeMatch[2].trim()),
+    };
+  }
+  return { startDate: normalizeDate(cleaned), endDate: "Present" };
+}
+
+function splitDescriptionIntoBullets(text: string): string[] {
+  if (!text || typeof text !== "string") return [];
+  const trimmed = text.trim();
+  if (!trimmed) return [];
+
+  const bulletSplit = trimmed.split(/(?:^|\n)\s*[-•▪▸◦●■]\s*/);
+  const filtered = bulletSplit.map(s => s.trim()).filter(Boolean);
+  if (filtered.length >= 2) return filtered;
+
+  const sentences = trimmed
+    .split(/(?<=[.!?])\s+/)
+    .map(s => s.trim())
+    .filter(s => s.length > 10);
+  if (sentences.length >= 2) return sentences;
+
+  if (trimmed.length > 20) return [trimmed];
+  return [];
+}
+
 function deduplicateSkills(skills: EditorSkill[]): EditorSkill[] {
   const seen = new Set<string>();
   return skills.filter(s => {
@@ -42,6 +74,41 @@ export async function resumeIntakeAgent(
 
   if (extractedData && typeof extractedData === "object") {
     sections = normalizeExtractedData(extractedData, toConfirmItems);
+
+    const hasAnyEmptyBullets = sections.experience.length > 0 &&
+      sections.experience.some(e => e.bullets.length === 0);
+
+    if (hasAnyEmptyBullets && resumeText) {
+      console.log("[ResumeIntakeAgent] Some experience entries had empty bullets, falling back to AI re-parse from raw text");
+      try {
+        const reParsed = await parseResumeTextWithAI(resumeText, []);
+        if (reParsed.experience.some(e => e.bullets.length > 0)) {
+          for (let i = 0; i < sections.experience.length; i++) {
+            if (sections.experience[i].bullets.length > 0) continue;
+            const match = reParsed.experience.find(re =>
+              (re.company && sections.experience[i].company && re.company.toLowerCase() === sections.experience[i].company.toLowerCase()) ||
+              (re.title && sections.experience[i].title && re.title.toLowerCase() === sections.experience[i].title.toLowerCase())
+            );
+            if (match && match.bullets.length > 0) {
+              sections.experience[i].bullets = match.bullets;
+            }
+          }
+          const stillEmpty = sections.experience.filter(e => e.bullets.length === 0);
+          const usedBulletSets = new Set(sections.experience.filter(e => e.bullets.length > 0).map(e => e.bullets));
+          for (const exp of stillEmpty) {
+            const unusedReParsed = reParsed.experience.find(re =>
+              re.bullets.length > 0 && !usedBulletSets.has(re.bullets)
+            );
+            if (unusedReParsed) {
+              exp.bullets = unusedReParsed.bullets;
+              usedBulletSets.add(unusedReParsed.bullets);
+            }
+          }
+        }
+      } catch (err) {
+        console.error("[ResumeIntakeAgent] Fallback AI re-parse failed:", err);
+      }
+    }
   } else if (resumeText) {
     sections = await parseResumeTextWithAI(resumeText, toConfirmItems);
   } else {
@@ -79,8 +146,15 @@ function normalizeExtractedData(data: any, toConfirm: ToConfirmItem[]): EditorSe
   const rawExp = data.experience || data.workExperience || [];
   if (Array.isArray(rawExp)) {
     for (const exp of rawExp) {
-      const startDate = normalizeDate(exp.startDate || exp.start || "");
-      const endDate = normalizeDate(exp.endDate || exp.end || "Present");
+      let startDate = normalizeDate(exp.startDate || exp.start || "");
+      let endDate = normalizeDate(exp.endDate || exp.end || "");
+
+      if (!startDate && exp.duration) {
+        const parsed = parseDurationToStartEnd(exp.duration);
+        startDate = parsed.startDate;
+        if (!endDate) endDate = parsed.endDate;
+      }
+      if (!endDate) endDate = "Present";
 
       if (!startDate) {
         toConfirm.push({
@@ -92,12 +166,24 @@ function normalizeExtractedData(data: any, toConfirm: ToConfirmItem[]): EditorSe
         });
       }
 
-      const rawBullets = exp.bullets || exp.responsibilities || exp.achievements || [];
-      const bullets: EditorBullet[] = (Array.isArray(rawBullets) ? rawBullets : []).map((b: any) => ({
-        id: generateId(),
-        text: typeof b === "string" ? b : b.text || "",
-        grounded: true,
-      }));
+      let rawBullets = exp.bullets || exp.responsibilities || exp.achievements || [];
+      let bullets: EditorBullet[];
+
+      if (Array.isArray(rawBullets) && rawBullets.length > 0) {
+        bullets = rawBullets.map((b: any) => ({
+          id: generateId(),
+          text: typeof b === "string" ? b : b.text || "",
+          grounded: true,
+        }));
+      } else {
+        const descText = exp.description || exp.details || exp.summary || exp.duties || "";
+        const splitBullets = splitDescriptionIntoBullets(descText);
+        bullets = splitBullets.map(text => ({
+          id: generateId(),
+          text,
+          grounded: true,
+        }));
+      }
 
       experience.push({
         id: generateId(),
@@ -118,7 +204,7 @@ function normalizeExtractedData(data: any, toConfirm: ToConfirmItem[]): EditorSe
     institution: e.institution || e.school || e.university || "",
     degree: e.degree || "",
     field: e.field || e.major || e.fieldOfStudy || "",
-    graduationDate: normalizeDate(e.graduationDate || e.graduation || e.date || ""),
+    graduationDate: normalizeDate(e.graduationDate || e.graduation || e.date || e.year || ""),
     honors: e.honors || e.gpa || "",
   }));
 
@@ -170,6 +256,9 @@ async function parseResumeTextWithAI(text: string, toConfirm: ToConfirmItem[]): 
   "skills": [""],
   "certifications": [{ "name": "", "issuer": "", "date": "" }]
 }
+
+IMPORTANT: For each experience entry, extract EVERY bullet point, responsibility, or achievement as a separate item in the "bullets" array.
+If the experience description is a paragraph, split it into individual sentences/accomplishments for the bullets array.
 Extract ONLY what's in the text. Never invent information.`
         },
         { role: "user", content: text.substring(0, 8000) }

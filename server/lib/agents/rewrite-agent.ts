@@ -17,6 +17,10 @@ export interface RewriteResult {
       reason: string;
       grounded: boolean;
     }>;
+    generatedBullets?: Array<{
+      text: string;
+      reason: string;
+    }>;
   }>;
   suggestedSkills: string[];
   strengthNotes: string[];
@@ -32,6 +36,15 @@ export async function rewriteAgent(
   try {
     const openai = getOpenAIClient();
     const resumeContext = buildResumeContext(sections);
+
+    const hasEmptyBulletEntries = sections.experience.some(e => e.bullets.length === 0);
+
+    const emptyBulletsInstruction = hasEmptyBulletEntries
+      ? `\n\nSPECIAL CASE - EXPERIENCE WITH NO BULLETS:
+Some experience entries have no bullet points. For these, generate 2-3 plausible bullet points based on the job title, company, and the target role. Mark ALL generated bullets as grounded=false so the user can verify them.
+Include these in a "generatedBullets" array (separate from the "bullets" array which is for rewriting existing bullets):
+"generatedBullets": [{ "text": "generated bullet text", "reason": "Generated based on role title" }]`
+      : "";
 
     const response = await openai.chat.completions.create({
       model: "gpt-4o-mini",
@@ -71,14 +84,15 @@ Return valid JSON:
           "reason": "Added [keyword]; quantified impact",
           "grounded": true
         }
-      ]
+      ],
+      "generatedBullets": []
     }
   ],
   "suggestedSkills": ["skill1", "skill2"],
   "strengthNotes": ["Strength 1", "Strength 2"]
 }
 
-IMPORTANT: Include ALL experience entries and ALL bullets. Do not skip any.`
+IMPORTANT: Include ALL experience entries and ALL bullets. Do not skip any.${emptyBulletsInstruction}`
         },
         {
           role: "user",
@@ -128,9 +142,13 @@ function buildResumeContext(sections: EditorSections): string {
   sections.experience.forEach((exp, i) => {
     parts.push(`\nExperience ${i}: ${exp.title} at ${exp.company} (${exp.startDate} - ${exp.endDate})`);
     if (exp.location) parts.push(`  Location: ${exp.location}`);
-    exp.bullets.forEach((b, j) => {
-      parts.push(`  Bullet ${j}: ${b.text}`);
-    });
+    if (exp.bullets.length > 0) {
+      exp.bullets.forEach((b, j) => {
+        parts.push(`  Bullet ${j}: ${b.text}`);
+      });
+    } else {
+      parts.push(`  (No bullet points provided for this role — please generate 2-3 based on the role title)`);
+    }
   });
 
   sections.education.forEach((edu) => {
@@ -153,6 +171,10 @@ export function applyRewrite(
   rewrite: RewriteResult
 ): EditorSections {
   let changedCount = 0;
+  let summaryRewritten = false;
+  let bulletsSharpened = 0;
+  let bulletsGenerated = 0;
+  let skillsAdded = 0;
 
   const result: EditorSections = {
     contact: { ...sections.contact },
@@ -173,22 +195,42 @@ export function applyRewrite(
     result.summaryGrounded = rewrite.summaryGrounded;
     result.summaryReverted = false;
     changedCount++;
+    summaryRewritten = true;
   }
 
   for (const expRewrite of rewrite.experience) {
     const idx = expRewrite.originalIndex;
-    if (idx >= 0 && idx < result.experience.length && Array.isArray(expRewrite.bullets)) {
-      for (const bulletRewrite of expRewrite.bullets) {
-        const bIdx = bulletRewrite.originalIndex;
-        if (bIdx >= 0 && bIdx < result.experience[idx].bullets.length) {
-          const bullet = result.experience[idx].bullets[bIdx];
-          if (bulletRewrite.rewritten && bulletRewrite.rewritten !== bullet.text) {
-            bullet.originalText = bullet.text;
-            bullet.text = bulletRewrite.rewritten;
-            bullet.rewriteReason = bulletRewrite.reason || "";
-            bullet.grounded = bulletRewrite.grounded !== false;
-            bullet.reverted = false;
+    if (idx >= 0 && idx < result.experience.length) {
+      if (Array.isArray(expRewrite.bullets)) {
+        for (const bulletRewrite of expRewrite.bullets) {
+          const bIdx = bulletRewrite.originalIndex;
+          if (bIdx >= 0 && bIdx < result.experience[idx].bullets.length) {
+            const bullet = result.experience[idx].bullets[bIdx];
+            if (bulletRewrite.rewritten && bulletRewrite.rewritten !== bullet.text) {
+              bullet.originalText = bullet.text;
+              bullet.text = bulletRewrite.rewritten;
+              bullet.rewriteReason = bulletRewrite.reason || "";
+              bullet.grounded = bulletRewrite.grounded !== false;
+              bullet.reverted = false;
+              changedCount++;
+              bulletsSharpened++;
+            }
+          }
+        }
+      }
+
+      if (Array.isArray(expRewrite.generatedBullets) && expRewrite.generatedBullets.length > 0) {
+        for (const gen of expRewrite.generatedBullets) {
+          if (gen.text) {
+            result.experience[idx].bullets.push({
+              id: generateId(),
+              text: gen.text,
+              grounded: false,
+              addedByAI: true,
+              rewriteReason: gen.reason || "Generated based on your role title",
+            });
             changedCount++;
+            bulletsGenerated++;
           }
         }
       }
@@ -201,6 +243,7 @@ export function applyRewrite(
       if (skill && !existingLower.has(skill.toLowerCase())) {
         result.skills.push({ name: skill, addedByAI: true });
         changedCount++;
+        skillsAdded++;
       }
     }
   }
@@ -210,5 +253,11 @@ export function applyRewrite(
   }
 
   result.changedCount = changedCount;
+  result.changeBreakdown = {
+    summaryRewritten,
+    bulletsSharpened,
+    bulletsGenerated,
+    skillsAdded,
+  };
   return result;
 }

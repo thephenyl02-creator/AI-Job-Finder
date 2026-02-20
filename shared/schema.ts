@@ -726,6 +726,7 @@ export interface EditorBullet {
   rewriteReason?: string;
   grounded?: boolean;
   reverted?: boolean;
+  addedByAI?: boolean;
 }
 
 export interface EditorExperience {
@@ -778,6 +779,13 @@ export interface EditorSections {
   }>;
   strengthNotes?: string[];
   changedCount?: number;
+  changeBreakdown?: {
+    summaryRewritten: boolean;
+    bulletsSharpened: number;
+    bulletsGenerated: number;
+    skillsAdded: number;
+  };
+  rewriteWarning?: string;
 }
 
 export interface RequirementItem {
