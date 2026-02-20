@@ -36,6 +36,7 @@ import Dashboard from "@/pages/dashboard";
 import Events from "@/pages/events";
 import EventDetail from "@/pages/event-detail";
 import OpportunityMap from "@/pages/opportunity-map";
+import ResumeEditor from "@/pages/resume-editor";
 import { AssistantWidget } from "@/components/assistant-widget";
 import { OnboardingDialog } from "@/components/onboarding-dialog";
 
@@ -87,6 +88,7 @@ function AppRouter() {
       <Route path="/resumes">{isAuthenticated ? <Resumes /> : <Landing />}</Route>
       <Route path="/resume-builder">{isAuthenticated ? <ResumeBuilder /> : <Landing />}</Route>
       <Route path="/resume-review/:id" component={ResumeReview} />
+      <Route path="/resume-editor/:resumeId" component={ResumeEditor} />
       <Route path="/saved-jobs">{isAuthenticated ? <SavedJobs /> : <Landing />}</Route>
       <Route path="/dashboard">{isAuthenticated ? <Dashboard /> : <Landing />}</Route>
       <Route path="/events" component={Events} />

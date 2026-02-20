@@ -57,7 +57,7 @@ import { runQAChecks, checkDuplicate } from "./lib/job-qa";
 import { enforceJobDefaults } from "./lib/job-defaults";
 import { generateJobHash } from "./lib/job-hash";
 import { db } from "./db";
-import { jobs, users } from "@shared/schema";
+import { jobs, users, resumes, resumeEditorVersions } from "@shared/schema";
 import { eq, and, sql, desc, count, or } from "drizzle-orm";
 import { JOB_TAXONOMY } from "@shared/schema";
 import {
@@ -7025,6 +7025,314 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
     } catch (error) {
       console.error("Error repairing visibility:", error);
       res.status(500).json({ error: "Failed to repair visibility" });
+    }
+  });
+
+  // ── Resume Editor API ──────────────────────────────────────
+  const { runOrchestrator, runVerificationOnly, generateDocx, generatePdf, generateApplyPack } = await import("./lib/agents/orchestrator");
+
+  app.get("/api/resume/:resumeId/editor", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = req.user as any;
+      const userId = user?.id;
+      if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+      const resumeId = parseInt(req.params.resumeId);
+      const jobId = parseInt(req.query.jobId as string);
+      const mode = (req.query.mode as string) === "model" ? "model" : "my";
+
+      if (isNaN(resumeId) || isNaN(jobId)) {
+        return res.status(400).json({ error: "Valid resumeId and jobId are required" });
+      }
+
+      const resume = await db.select().from(resumes).where(
+        and(eq(resumes.id, resumeId), eq(resumes.userId, userId))
+      ).limit(1);
+
+      if (resume.length === 0) {
+        return res.status(404).json({ error: "Resume not found" });
+      }
+
+      const job = await storage.getJob(jobId);
+      if (!job) {
+        return res.status(404).json({ error: "Job not found" });
+      }
+
+      const existing = await db.select().from(resumeEditorVersions).where(
+        and(
+          eq(resumeEditorVersions.userId, userId),
+          eq(resumeEditorVersions.resumeId, resumeId),
+          eq(resumeEditorVersions.jobId, jobId),
+          eq(resumeEditorVersions.mode, mode)
+        )
+      ).orderBy(desc(resumeEditorVersions.versionNumber)).limit(1);
+
+      const existingVersion = existing.length > 0 ? existing[0] : null;
+
+      const result = await runOrchestrator({
+        resumeExtractedData: resume[0].extractedData,
+        resumeText: resume[0].resumeText || undefined,
+        existingVersion,
+        jobId,
+        jobTitle: job.title,
+        jobCompany: job.company,
+        jobDescription: job.description,
+        jobRequirements: job.requirements || undefined,
+        mode,
+      });
+
+      if (!existingVersion) {
+        await db.insert(resumeEditorVersions).values({
+          userId,
+          resumeId,
+          jobId,
+          mode,
+          versionNumber: 1,
+          sections: result.sections as any,
+          requirementMapping: result.jobRequirements as any,
+          toConfirmItems: result.toConfirmItems as any,
+          readyToApply: result.readyToApply,
+          improvementsApplied: result.counts.improvementsApplied,
+          needsConfirmationCount: result.counts.needsConfirmation,
+          missingRequirementsCount: result.counts.missingRequirements,
+          lastAgentRunAt: new Date(),
+        });
+      }
+
+      res.json({
+        sections: result.sections,
+        jobRequirements: result.jobRequirements,
+        toConfirmItems: result.toConfirmItems,
+        readyToApply: result.readyToApply,
+        counts: result.counts,
+        job: {
+          id: job.id,
+          title: job.title,
+          company: job.company,
+          description: job.description,
+          requirements: job.requirements,
+        },
+        versionNumber: existingVersion?.versionNumber || 1,
+        mode,
+      });
+    } catch (error) {
+      console.error("Error loading resume editor:", error);
+      res.status(500).json({ error: "Failed to load resume editor" });
+    }
+  });
+
+  app.post("/api/resume/:resumeId/editor/save", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = req.user as any;
+      const userId = user?.id;
+      if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+      const resumeId = parseInt(req.params.resumeId);
+      const { sections, jobId, mode, versionNumber } = req.body;
+
+      if (isNaN(resumeId) || !sections || !jobId || isNaN(parseInt(jobId))) {
+        return res.status(400).json({ error: "Valid resumeId, sections, and jobId are required" });
+      }
+
+      const resumeCheck = await db.select({ id: resumes.id }).from(resumes).where(
+        and(eq(resumes.id, resumeId), eq(resumes.userId, userId))
+      ).limit(1);
+      if (resumeCheck.length === 0) {
+        return res.status(404).json({ error: "Resume not found" });
+      }
+
+      const existing = await db.select().from(resumeEditorVersions).where(
+        and(
+          eq(resumeEditorVersions.userId, userId),
+          eq(resumeEditorVersions.resumeId, resumeId),
+          eq(resumeEditorVersions.jobId, jobId),
+          eq(resumeEditorVersions.mode, mode || "my")
+        )
+      ).orderBy(desc(resumeEditorVersions.versionNumber)).limit(1);
+
+      if (existing.length > 0 && versionNumber && existing[0].versionNumber > versionNumber) {
+        return res.status(409).json({
+          error: "Version conflict",
+          message: "This resume has been modified in another tab. Please refresh to get the latest version.",
+          serverVersion: existing[0].versionNumber,
+        });
+      }
+
+      const newVersion = (existing.length > 0 ? existing[0].versionNumber : 0) + 1;
+      const existingMapping = existing.length > 0 ? (existing[0].requirementMapping as any[]) || [] : [];
+
+      let verificationResult;
+      try {
+        verificationResult = await runVerificationOnly(sections, null, existingMapping);
+      } catch {
+        verificationResult = {
+          readyToApply: "not_yet" as const,
+          counts: { improvementsApplied: 0, needsConfirmation: 0, missingRequirements: 0 },
+          toConfirmItems: [],
+        };
+      }
+
+      if (existing.length > 0) {
+        await db.update(resumeEditorVersions)
+          .set({
+            sections: sections as any,
+            versionNumber: newVersion,
+            readyToApply: verificationResult.readyToApply,
+            improvementsApplied: verificationResult.counts.improvementsApplied,
+            needsConfirmationCount: verificationResult.counts.needsConfirmation,
+            missingRequirementsCount: verificationResult.counts.missingRequirements,
+            toConfirmItems: verificationResult.toConfirmItems as any,
+            updatedAt: new Date(),
+          })
+          .where(eq(resumeEditorVersions.id, existing[0].id));
+      } else {
+        await db.insert(resumeEditorVersions).values({
+          userId,
+          resumeId,
+          jobId,
+          mode: mode || "my",
+          versionNumber: newVersion,
+          sections: sections as any,
+          requirementMapping: existingMapping as any,
+          toConfirmItems: verificationResult.toConfirmItems as any,
+          readyToApply: verificationResult.readyToApply,
+          improvementsApplied: verificationResult.counts.improvementsApplied,
+          needsConfirmationCount: verificationResult.counts.needsConfirmation,
+          missingRequirementsCount: verificationResult.counts.missingRequirements,
+          lastAgentRunAt: new Date(),
+        });
+      }
+
+      res.json({
+        saved: true,
+        versionNumber: newVersion,
+        readyToApply: verificationResult.readyToApply,
+        counts: verificationResult.counts,
+        toConfirmItems: verificationResult.toConfirmItems,
+      });
+    } catch (error) {
+      console.error("Error saving resume editor:", error);
+      res.status(500).json({ error: "Failed to save. Your edits are preserved locally." });
+    }
+  });
+
+  app.get("/api/resume/:resumeId/export/docx", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = req.user as any;
+      const userId = user?.id;
+      if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+      const resumeId = parseInt(req.params.resumeId);
+      const jobId = parseInt(req.query.jobId as string);
+      const mode = (req.query.mode as string) || "my";
+
+      if (isNaN(resumeId) || isNaN(jobId)) {
+        return res.status(400).json({ error: "Valid resumeId and jobId are required" });
+      }
+
+      const existing = await db.select().from(resumeEditorVersions).where(
+        and(
+          eq(resumeEditorVersions.userId, userId),
+          eq(resumeEditorVersions.resumeId, resumeId),
+          eq(resumeEditorVersions.jobId, jobId),
+          eq(resumeEditorVersions.mode, mode)
+        )
+      ).orderBy(desc(resumeEditorVersions.versionNumber)).limit(1);
+
+      if (existing.length === 0) {
+        return res.status(404).json({ error: "No saved version found. Please save your resume first." });
+      }
+
+      const sections = existing[0].sections as any;
+      const buffer = await generateDocx(sections);
+
+      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+      res.setHeader("Content-Disposition", `attachment; filename="Resume_${sections.contact?.fullName || "Document"}.docx"`);
+      res.send(buffer);
+    } catch (error) {
+      console.error("Error exporting DOCX:", error);
+      res.status(500).json({ error: "Failed to generate DOCX. Please try again." });
+    }
+  });
+
+  app.get("/api/resume/:resumeId/export/pdf", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = req.user as any;
+      const userId = user?.id;
+      if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+      const resumeId = parseInt(req.params.resumeId);
+      const jobId = parseInt(req.query.jobId as string);
+      const mode = (req.query.mode as string) || "my";
+
+      if (isNaN(resumeId) || isNaN(jobId)) {
+        return res.status(400).json({ error: "Valid resumeId and jobId are required" });
+      }
+
+      const existing = await db.select().from(resumeEditorVersions).where(
+        and(
+          eq(resumeEditorVersions.userId, userId),
+          eq(resumeEditorVersions.resumeId, resumeId),
+          eq(resumeEditorVersions.jobId, jobId),
+          eq(resumeEditorVersions.mode, mode)
+        )
+      ).orderBy(desc(resumeEditorVersions.versionNumber)).limit(1);
+
+      if (existing.length === 0) {
+        return res.status(404).json({ error: "No saved version found. Please save your resume first." });
+      }
+
+      const sections = existing[0].sections as any;
+      const buffer = await generatePdf(sections);
+
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", `attachment; filename="Resume_${sections.contact?.fullName || "Document"}.pdf"`);
+      res.send(buffer);
+    } catch (error) {
+      console.error("Error exporting PDF:", error);
+      res.status(500).json({ error: "Failed to generate PDF. Please try again." });
+    }
+  });
+
+  app.get("/api/resume/:resumeId/export/apply-pack", isAuthenticated, requirePro, async (req: any, res) => {
+    try {
+      const user = req.user as any;
+      const userId = user?.id;
+      if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+      const resumeId = parseInt(req.params.resumeId);
+      const jobId = parseInt(req.query.jobId as string);
+      const mode = (req.query.mode as string) || "my";
+
+      if (isNaN(resumeId) || isNaN(jobId)) {
+        return res.status(400).json({ error: "Valid resumeId and jobId are required" });
+      }
+
+      const existing = await db.select().from(resumeEditorVersions).where(
+        and(
+          eq(resumeEditorVersions.userId, userId),
+          eq(resumeEditorVersions.resumeId, resumeId),
+          eq(resumeEditorVersions.jobId, jobId),
+          eq(resumeEditorVersions.mode, mode)
+        )
+      ).orderBy(desc(resumeEditorVersions.versionNumber)).limit(1);
+
+      if (existing.length === 0) {
+        return res.status(404).json({ error: "No saved version found." });
+      }
+
+      const sections = existing[0].sections as any;
+      const job = await storage.getJob(jobId);
+      if (!job) return res.status(404).json({ error: "Job not found" });
+
+      const buffer = await generateApplyPack(sections, job.title, job.company);
+
+      res.setHeader("Content-Type", "application/zip");
+      res.setHeader("Content-Disposition", `attachment; filename="Apply_Pack_${job.company}.zip"`);
+      res.send(buffer);
+    } catch (error) {
+      console.error("Error exporting apply pack:", error);
+      res.status(500).json({ error: "Failed to generate apply pack. Please try again." });
     }
   });
 

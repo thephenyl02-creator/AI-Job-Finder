@@ -689,3 +689,129 @@ export const insertJobReportSchema = createInsertSchema(jobReports).omit({
 
 export type JobReport = typeof jobReports.$inferSelect;
 export type InsertJobReport = z.infer<typeof insertJobReportSchema>;
+
+export const resumeEditorVersions = pgTable("resume_editor_versions", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id", { length: 255 }).notNull(),
+  resumeId: integer("resume_id").notNull(),
+  jobId: integer("job_id").notNull(),
+  mode: varchar("mode", { length: 20 }).notNull().default("my"),
+  versionNumber: integer("version_number").notNull().default(1),
+  sections: jsonb("sections").notNull(),
+  suggestions: jsonb("suggestions"),
+  requirementMapping: jsonb("requirement_mapping"),
+  toConfirmItems: jsonb("to_confirm_items"),
+  readyToApply: varchar("ready_to_apply", { length: 20 }).default("not_yet"),
+  improvementsApplied: integer("improvements_applied").default(0),
+  needsConfirmationCount: integer("needs_confirmation_count").default(0),
+  missingRequirementsCount: integer("missing_requirements_count").default(0),
+  lastAgentRunAt: timestamp("last_agent_run_at"),
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: timestamp("updated_at").default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const insertResumeEditorVersionSchema = createInsertSchema(resumeEditorVersions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type ResumeEditorVersion = typeof resumeEditorVersions.$inferSelect;
+export type InsertResumeEditorVersion = z.infer<typeof insertResumeEditorVersionSchema>;
+
+export interface EditorBullet {
+  id: string;
+  text: string;
+  suggestion?: string;
+  status: "pending" | "accepted" | "rejected" | "edited" | "needs_confirmation";
+  grounded: boolean;
+  evidenceRefs?: string[];
+  improvementNote?: string;
+}
+
+export interface EditorExperience {
+  id: string;
+  company: string;
+  title: string;
+  location: string;
+  startDate: string;
+  endDate: string;
+  current: boolean;
+  bullets: EditorBullet[];
+}
+
+export interface EditorEducation {
+  id: string;
+  institution: string;
+  degree: string;
+  field: string;
+  graduationDate: string;
+  honors?: string;
+}
+
+export interface EditorSections {
+  contact: {
+    fullName: string;
+    email: string;
+    phone: string;
+    location: string;
+    linkedin?: string;
+    website?: string;
+  };
+  summary: string;
+  summarySuggestion?: string;
+  summarySuggestionStatus?: "pending" | "accepted" | "rejected" | "edited" | "needs_confirmation";
+  summarySuggestionGrounded?: boolean;
+  experience: EditorExperience[];
+  education: EditorEducation[];
+  skills: string[];
+  certifications: Array<{
+    id: string;
+    name: string;
+    issuer: string;
+    date: string;
+  }>;
+  projects?: Array<{
+    id: string;
+    name: string;
+    description: string;
+    bullets: EditorBullet[];
+  }>;
+}
+
+export interface RequirementItem {
+  id: string;
+  text: string;
+  category: "must_have" | "nice_to_have" | "tools_keywords";
+  coverage: "covered" | "partial" | "missing";
+  evidenceRefs: string[];
+}
+
+export interface ToConfirmItem {
+  id: string;
+  prompt: string;
+  fieldsToFill: string[];
+  severity: "low" | "medium" | "high";
+  resolved: boolean;
+  resolvedValue?: string;
+}
+
+export interface EditorPayload {
+  version: ResumeEditorVersion;
+  sections: EditorSections;
+  jobRequirements: RequirementItem[];
+  toConfirmItems: ToConfirmItem[];
+  readyToApply: "yes" | "almost" | "not_yet";
+  counts: {
+    improvementsApplied: number;
+    needsConfirmation: number;
+    missingRequirements: number;
+  };
+  job: {
+    id: number;
+    title: string;
+    company: string;
+    description: string;
+    requirements?: string;
+  };
+}
