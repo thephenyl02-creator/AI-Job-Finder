@@ -1,0 +1,327 @@
+Build a FULL “Career Intelligence + Apply Journey” system inside my existing app, but keep the UX clean, minimal, and NOT like a job board.
+
+NORTH STAR (User Outcome)
+A user enters, the system understands their profile, recommends 3–5 realistic career paths, curates a small set of high-fit jobs ONLY after a path is chosen, then guides them to tailor a resume (word-like editor) and leave with an application-ready pack (PDF/DOCX, optional cover letter). Intelligence exists in the same place, but it must not block applying.
+
+IMPORTANT PRODUCT RULES (no overlap, minimal)
+- Intelligence drives actions; jobs are downstream of intelligence.
+- Never show “all jobs in the market” as the default.
+- Keep the critical path fast: Upload → Path → Job → Tailor → Apply.
+- Use at most ONE primary score per screen. Prefer High/Med/Low labels over %.
+- All AI outputs must be grounded; if not grounded, mark as “Needs confirmation.”
+
+────────────────────────────────────────
+0) ENTRY LAYER – USER ONBOARDING & INPUT
+────────────────────────────────────────
+
+Goal: understand who the user is and what they want, with minimal friction.
+
+User inputs supported:
+1) Upload resume (PDF/DOCX)
+2) Paste resume text
+3) Paste LinkedIn URL
+4) Paste portfolio website URL
+5) Type a short intent prompt (optional): “I want Legal Ops roles in NYC”
+6) Voice input (optional, via mic button; transcribe to text)
+
+UI rule:
+- Default CTA is “Upload resume”
+- Search/intent input is secondary (small field)
+- Voice is optional (mic icon next to text field), not primary.
+
+System action:
+- Parse and normalize into structured resume/profile JSON
+- Extract:
+  - career stage (student / <1 yr / 1–5 / 5+)
+  - practice area (litigation/corporate/IP/etc.)
+  - years of experience (estimate)
+  - skills (legal + tech)
+  - education
+  - inferred intent (if provided) + constraints (location/remote/seniority)
+
+Output to user:
+- “Your current position:” (1 concise card)
+  - Example: “Mid-Level Litigation Associate (5 years)”
+  - “Strengths: Research, Drafting”
+  - “Gaps: Limited tech exposure”
+Keep this tight and honest.
+
+────────────────────────────────────────
+1) POSITION IDENTIFICATION ENGINE
+────────────────────────────────────────
+
+Goal: identify where the user stands (clarity boost).
+
+Implement a server-side module:
+- server/lib/intelligence/position-engine.ts
+
+It takes normalized profile JSON and returns:
+- careerStage label
+- experienceCluster label (e.g., “5 years litigation”)
+- strengths (max 3)
+- limitations/gaps (max 3)
+
+Must be grounded in resume evidence; if uncertain, say “Not enough evidence.”
+
+────────────────────────────────────────
+2) CAREER MAP GENERATION (3–5 PATHS MAX)
+────────────────────────────────────────
+
+Goal: show upward/lateral paths without overwhelming.
+
+Career Map UI (cards only):
+For each path (max 3–5):
+- Role name
+- Fit label: High / Medium / Low (NOT %)
+- “Why this fits” (2–3 bullets, grounded)
+- “What you’ll need” (2–3 bullets, gaps)
+- Optional “Reality check” (1 short line if it’s a stretch)
+- CTA: “Choose this path”
+
+No job list on this screen.
+
+Implement:
+- server/lib/intelligence/career-map-engine.ts
+
+Output schema:
+paths: [
+  {
+    pathId,
+    roleName,
+    fitLabel,               // High/Medium/Low
+    whyFit: [{ text, grounded, evidenceRefs[] }],
+    gaps: [{ text }],
+    realityCheck?: string,
+    nextStep?: string
+  }
+]
+
+Evidence refs must point to resume JSON stable IDs.
+
+────────────────────────────────────────
+3) JOB CURATION ENGINE (LIVE ROLES, PATH-GATED)
+────────────────────────────────────────
+
+Goal: curate a small list of jobs once the user chooses a path.
+
+Rules:
+- Jobs are shown ONLY after path selection.
+- Default list: top 10 jobs (max 20) to avoid job-board feel.
+- Each job card shows:
+  - Title, Company
+  - 3 key requirements (max)
+  - “Fit label” High/Med/Low (NOT % by default)
+  - CTA: “Apply with Model Resume”
+  - Secondary: “Save”
+
+Optional “Explore more” is behind a click (not default).
+
+Implement:
+- server/lib/jobs/job-curation-engine.ts
+
+Ranking logic:
+- must consider selectedPath role taxonomy tags
+- skills overlap
+- seniority alignment
+- location/remote constraints (if provided)
+Return:
+jobs: [
+  { jobId, title, company, location, remote, keyReqs[], fitLabel, whyRecommendedLine }
+]
+
+────────────────────────────────────────
+4) MULTI-JOB SELECTION + COMPARISON (PHASED + MINIMAL)
+────────────────────────────────────────
+
+Implement a minimal “Compare” without making it a dashboard:
+- User can select up to 3 jobs (checkbox)
+- Click “Compare”
+Comparison shows ONLY:
+- Role differences
+- Top gaps (3 each)
+- Transition effort (Low/Med/High)
+- Growth direction (1 line)
+No deep tables, no long essays.
+
+This is optional and must not block applying.
+
+Implement:
+- server/lib/intelligence/job-compare-engine.ts
+
+────────────────────────────────────────
+5) RESUME MATCHING ENGINE (PER JOB)
+────────────────────────────────────────
+
+When user opens a job:
+Show a minimal “Readiness” panel:
+- Readiness: Ready / Almost / Not Yet
+- Top 3 improvements needed
+
+Avoid many scores.
+
+Implement:
+- server/lib/resume/resume-job-match.ts
+
+Output:
+- readinessState (Ready/Almost/NotYet)
+- missingItems (max 3)
+- requirementMapping (covered/partial/missing) for drawer
+
+────────────────────────────────────────
+6) RESUME TAILORING AGENT (WORD-LIKE EDITOR)
+────────────────────────────────────────
+
+Open “Resume Editor” (existing or build if missing):
+- Locked structure, editable content
+- Inline editing like Word
+- Accept/Edit/Keep suggestions per bullet
+- Requirements drawer + Evidence drawer
+- “Evidence Lock” (grounded vs needs confirmation)
+- “Ready to Apply” status
+- Download PDF + DOCX + optional Apply Pack (ZIP)
+
+IMPORTANT:
+- Do NOT use dangerouslySetInnerHTML in contentEditable.
+- Store structured JSON only.
+
+Implement or refactor:
+- client/src/pages/ResumeEditor.tsx
+- server routes for editor + save + exports
+
+────────────────────────────────────────
+7) FINALIZATION LAYER
+────────────────────────────────────────
+
+User can:
+- Download PDF
+- Download DOCX
+- Download Apply Pack (ZIP: Resume PDF/DOCX + short grounded cover letter)
+- Save resume version linked to jobId
+
+Implement:
+- resume version table: (resumeId, jobId, mode, version, createdAt)
+- application tracking optional (save/applied status)
+
+────────────────────────────────────────
+8) CAREER GROWTH LOOP (POST-APPLY, OPTIONAL)
+────────────────────────────────────────
+
+After user saves/applies, show:
+- 3 recommended actions:
+  - course/cert
+  - project idea
+  - networking action
+Keep short; no overwhelming list.
+
+Implement:
+- server/lib/intelligence/growth-loop-engine.ts
+
+Inputs:
+- selectedPath
+- gaps detected
+- job requirements patterns
+Outputs:
+- 3 actions max
+
+────────────────────────────────────────
+9) AGENT SYSTEM (Behind-the-scenes Orchestrator)
+────────────────────────────────────────
+
+Implement one orchestrator:
+- server/lib/agents/intelligence-orchestrator.ts
+
+Specialist agents (server-side services):
+1) IntakeAgent (parse/normalize inputs)
+2) PositionAgent (position-engine)
+3) CareerMapAgent (career-map-engine)
+4) JobCurationAgent (job-curation-engine)
+5) RequirementMappingAgent (for drawers)
+6) ModelResumeAgent (tailoring suggestions)
+7) HonestyVerifierAgent (anti-hype + grounded checks)
+8) ExportAgent (PDF/DOCX/Apply Pack)
+
+Rules:
+- Agents are invisible to the user.
+- Must have timeouts + safe fallbacks.
+- Never invent facts; mark as “Needs confirmation” instead.
+
+────────────────────────────────────────
+10) API ROUTES (END-TO-END)
+────────────────────────────────────────
+
+A) Intake
+POST /api/intake
+Body: { uploadId | pastedText | linkedinUrl | portfolioUrl | intentText }
+Returns: { resumeId, profileSnapshot, positionCard, toConfirmItems[] }
+
+B) Intelligence Home
+GET /api/intelligence/home?resumeId=...
+Returns: { positionCard, careerMapPaths, selectedPathId?, jobsPreview(<=3) }
+
+C) Career Map
+POST /api/career-map/generate { resumeId }
+POST /api/career-map/select { resumeId, pathId }
+
+D) Curated Jobs (path-gated)
+GET /api/jobs/curated?resumeId=...&pathId=...
+Optional:
+GET /api/jobs/explore?resumeId=...&pathId=...&query=...  // not default
+
+E) Compare
+POST /api/jobs/compare { resumeId, jobIds[] }  // max 3
+
+F) Resume Editor
+GET /api/resume/:resumeId/editor?jobId=...&mode=...
+POST /api/resume/:resumeId/editor/save
+GET /api/resume/:resumeId/export/pdf?jobId=...&mode=...
+GET /api/resume/:resumeId/export/docx?jobId=...&mode=...
+GET /api/resume/:resumeId/export/apply-pack?jobId=...&mode=...
+
+G) Growth Loop
+GET /api/growth-loop?resumeId=...&pathId=...
+
+H) Health
+GET /api/health
+
+────────────────────────────────────────
+11) “NOT A JOB BOARD” UX SAFETY CHECKS
+────────────────────────────────────────
+
+- Home shows Career Intelligence first (no long job lists)
+- Jobs are shown only after selecting a path
+- Default curated jobs limited to 10 (max 20)
+- “Explore jobs” is secondary behind a click
+- One primary score per screen max (prefer High/Med/Low)
+- Copy emphasizes guidance: “Recommended for you” “Choose a path” “Ready to apply”
+
+────────────────────────────────────────
+12) RELIABILITY + PRODUCTION SAFETY
+────────────────────────────────────────
+
+- Validate inputs/outputs with schema (zod)
+- Debounced autosave + retry queue
+- Multi-tab conflict detection
+- Server-side exports only (PDF/DOCX parity in dev/prod)
+- Timeouts for agent calls + graceful fallback:
+  - If career map fails: show “Try again”
+  - If job curation fails: show saved map, allow retry
+- Logs with trace IDs
+- Minimal automated checks:
+  - intake works
+  - career map returns 3–5 paths
+  - curated jobs returns <=20
+  - exports return valid files
+
+────────────────────────────────────────
+ACCEPTANCE CRITERIA (MUST PASS)
+────────────────────────────────────────
+
+- User can upload/paste/link and get a position card within 10–20 seconds
+- Career map shows 3–5 grounded paths with honest gaps
+- Selecting a path shows curated jobs (<=20), not a giant job board
+- User can pick a job → tailor resume in word-like editor
+- Honest “Needs confirmation” blocks ungrounded claims
+- User can download PDF/DOCX (and apply pack) reliably in dev/prod
+- The experience feels guided and minimal, not a job board
+
+Build this end-to-end with clean, minimal UI and strong grounding.
