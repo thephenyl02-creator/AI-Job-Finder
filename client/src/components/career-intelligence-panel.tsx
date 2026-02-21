@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
+import { useActivityTracker } from "@/hooks/use-activity-tracker";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -74,6 +75,7 @@ const DEMO_PATHS: CareerPath[] = [
 export function CareerIntelligencePanel({ onSelectPath, selectedPath }: CareerIntelligencePanelProps) {
   const { isAuthenticated, isPro } = useAuth();
   const { toast } = useToast();
+  const { trackNow } = useActivityTracker();
   const [isExpanded, setIsExpanded] = useState(true);
   const [result, setResult] = useState<CareerIntelligenceResult | null>(null);
 
@@ -286,7 +288,7 @@ export function CareerIntelligencePanel({ onSelectPath, selectedPath }: CareerIn
 
             {!isPro && result.recommendedPaths.length > 1 && (
               <div className="mt-3 flex items-center gap-2">
-                <Link href="/pricing">
+                <Link href="/pricing" onClick={() => trackNow({ eventType: "pro_gate_click", entityType: "feature", metadata: { gate: "career_paths", pathCount: result.recommendedPaths.length } })}>
                   <Button variant="ghost" size="sm" className="text-xs text-primary" data-testid="button-unlock-paths">
                     <Lock className="h-3 w-3 mr-1" />
                     Unlock all {result.recommendedPaths.length} paths
