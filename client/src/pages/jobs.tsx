@@ -714,8 +714,15 @@ export default function Jobs() {
               {totalJobCount} curated roles across legal technology
             </p>
 
-            <div data-testid="card-smart-search" className="max-w-2xl mx-auto">
-              <div className="rounded-xl border border-foreground/15 bg-muted/20 px-4 py-3 sm:px-5 sm:py-3.5 transition-colors focus-within:border-primary/40 focus-within:bg-muted/30 focus-within:shadow-sm">
+            <div data-testid="card-smart-search" className="max-w-3xl mx-auto">
+              <div
+                className="rounded-xl border border-foreground/15 bg-muted/20 px-5 py-4 sm:px-6 sm:py-5 transition-colors focus-within:border-primary/40 focus-within:bg-muted/30 focus-within:shadow-sm cursor-text"
+                onClick={(e) => {
+                  if (!(e.target as HTMLElement).closest('button, a, [role="button"]')) {
+                    searchInputRef.current?.focus();
+                  }
+                }}
+              >
                 <div className="flex items-center gap-3">
                   {isAuthenticated && (
                     <Popover open={gearOpen} onOpenChange={setGearOpen}>
@@ -751,11 +758,11 @@ export default function Jobs() {
                       </PopoverContent>
                     </Popover>
                   )}
-                  <Search className="h-5 w-5 text-foreground/40 shrink-0" />
+                  <Search className="h-6 w-6 text-foreground/40 shrink-0" />
                   <Input
                     ref={searchInputRef}
                     placeholder={searchPlaceholder}
-                    className="border-0 shadow-none h-11 text-base focus-visible:ring-0 bg-transparent placeholder:text-muted-foreground/40 px-0"
+                    className="border-0 shadow-none h-14 text-lg focus-visible:ring-0 bg-transparent placeholder:text-muted-foreground/40 px-0"
                     value={smartQuery}
                     onChange={(e) => setSmartQuery(e.target.value)}
                     onKeyDown={(e) => {
@@ -784,12 +791,12 @@ export default function Jobs() {
                     </Button>
                     <Button
                       size="icon"
-                      className="h-9 w-9"
+                      className="h-10 w-10"
                       onClick={handleSmartSearch}
                       disabled={!smartQuery.trim() || isSearching}
                       data-testid="button-smart-search"
                     >
-                      {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
+                      {isSearching ? <Loader2 className="h-5 w-5 animate-spin" /> : <ArrowRight className="h-5 w-5" />}
                     </Button>
                     <kbd
                       className={`hidden sm:inline-flex h-5 items-center rounded border border-foreground/10 bg-muted/50 px-1.5 text-[10px] text-muted-foreground/60 font-mono transition-opacity ${smartQuery ? "opacity-0 pointer-events-none" : "opacity-100"}`}
