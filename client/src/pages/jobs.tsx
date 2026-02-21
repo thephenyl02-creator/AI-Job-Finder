@@ -762,7 +762,7 @@ export default function Jobs() {
                   <Input
                     ref={searchInputRef}
                     placeholder={searchPlaceholder}
-                    className="border-0 shadow-none h-14 text-lg focus-visible:ring-0 bg-transparent placeholder:text-muted-foreground/40 px-0"
+                    className="!border-0 shadow-none h-14 text-lg focus-visible:ring-0 !bg-transparent placeholder:text-muted-foreground/40 px-0 !ring-0 !ring-offset-0"
                     value={smartQuery}
                     onChange={(e) => setSmartQuery(e.target.value)}
                     onKeyDown={(e) => {
