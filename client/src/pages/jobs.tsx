@@ -15,7 +15,6 @@ import { JobLocation } from "@/components/job-location";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
@@ -123,7 +122,7 @@ export default function Jobs() {
   const [refinedSummary, setRefinedSummary] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const [resumeMatches, setResumeMatches] = useState<ResumeMatchResult[] | null>(null);
   const [resumeMatchStep, setResumeMatchStep] = useState<"idle" | "uploading" | "matching">("idle");
   const [pickerJobId, setPickerJobId] = useState<number | null>(null);
@@ -247,9 +246,6 @@ export default function Jobs() {
       setSearchQuery("Profile match");
       setSmartQuery("");
       setGuidedStep("idle");
-      if (textareaRef.current) {
-        textareaRef.current.style.height = "auto";
-      }
       track({ eventType: "search", metadata: { type: "semantic", resultCount: data.matches.length } });
     },
     onError: (error: any) => {
@@ -486,6 +482,17 @@ export default function Jobs() {
   useEffect(() => { track({ eventType: "page_view", pagePath: "/jobs" }); }, []);
 
   useEffect(() => {
+    const handleGlobalKey = (e: KeyboardEvent) => {
+      if (e.key === "/" && !["INPUT", "TEXTAREA", "SELECT"].includes((e.target as HTMLElement)?.tagName)) {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", handleGlobalKey);
+    return () => window.removeEventListener("keydown", handleGlobalKey);
+  }, []);
+
+  useEffect(() => {
     const timer = setTimeout(() => setDebouncedFilterText(filterText), 300);
     return () => clearTimeout(timer);
   }, [filterText]);
@@ -641,54 +648,52 @@ export default function Jobs() {
         />
 
         <div data-testid="card-smart-search" className="mt-2">
-          <div className="rounded-md border-2 border-foreground/20 bg-muted/30 px-4 py-3 sm:px-8 sm:py-7 transition-colors focus-within:border-foreground/50">
-            <div className="flex items-start gap-2 sm:gap-4">
-              <Search className="h-5 w-5 sm:h-6 sm:w-6 text-foreground/40 mt-2 sm:mt-2.5 shrink-0" />
-              <Textarea
-                ref={textareaRef}
-                placeholder="Search roles or paste your resume..."
-                className="border-0 shadow-none text-sm sm:text-xl min-h-[36px] sm:min-h-[52px] resize-none overflow-y-auto max-h-[300px] focus-visible:ring-0 bg-transparent placeholder:text-muted-foreground/50"
+          <div className="rounded-md border border-foreground/15 bg-muted/20 px-3 py-2 sm:px-4 sm:py-2.5 transition-colors focus-within:border-foreground/40 focus-within:bg-muted/30">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <Search className="h-4 w-4 text-foreground/40 shrink-0" />
+              <Input
+                ref={searchInputRef}
+                placeholder="Search roles, skills, or companies..."
+                className="border-0 shadow-none h-9 text-sm focus-visible:ring-0 bg-transparent placeholder:text-muted-foreground/50 px-0"
                 value={smartQuery}
-                onChange={(e) => {
-                  setSmartQuery(e.target.value);
-                  const el = e.target;
-                  el.style.height = "auto";
-                  el.style.height = Math.min(el.scrollHeight, 300) + "px";
-                }}
+                onChange={(e) => setSmartQuery(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
+                  if (e.key === "Enter") {
                     e.preventDefault();
                     handleSmartSearch();
                   }
                 }}
-                rows={1}
                 data-testid="input-smart-search"
               />
-            </div>
-            <div className="flex items-center justify-end gap-1 mt-2 sm:mt-3">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="text-muted-foreground"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={resumeMatchStep !== "idle"}
-                data-testid="button-upload-resume"
-                title="Upload resume to find matching roles"
-              >
-                {resumeMatchStep !== "idle" ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Upload className="h-4 w-4" />
-                )}
-              </Button>
-              <Button
-                size="icon"
-                onClick={handleSmartSearch}
-                disabled={!smartQuery.trim() || isSearching}
-                data-testid="button-smart-search"
-              >
-                {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
-              </Button>
+              <div className="flex items-center gap-1 shrink-0">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-muted-foreground"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={resumeMatchStep !== "idle"}
+                  data-testid="button-upload-resume"
+                  title="Upload resume to find matching roles"
+                >
+                  {resumeMatchStep !== "idle" ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Upload className="h-4 w-4" />
+                  )}
+                </Button>
+                <Button
+                  size="icon"
+                  onClick={handleSmartSearch}
+                  disabled={!smartQuery.trim() || isSearching}
+                  data-testid="button-smart-search"
+                >
+                  {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
+                </Button>
+                <kbd
+                  className={`hidden sm:inline-flex h-5 items-center rounded border border-foreground/10 bg-muted/50 px-1.5 text-[10px] text-muted-foreground/60 font-mono transition-opacity ${smartQuery ? "opacity-0 pointer-events-none" : "opacity-100"}`}
+                  data-testid="kbd-search-hint"
+                >/</kbd>
+              </div>
             </div>
           </div>
 
