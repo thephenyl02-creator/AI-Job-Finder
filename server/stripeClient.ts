@@ -81,13 +81,33 @@ export async function getStripeSync() {
     const { StripeSync } = await import('stripe-replit-sync');
     const secretKey = await getStripeSecretKey();
 
-    stripeSync = new StripeSync({
-      poolConfig: {
-        connectionString: process.env.DATABASE_URL!,
-        max: 2,
-      },
-      stripeSecretKey: secretKey,
-    });
+    const origConsoleError = console.error;
+    const origConsoleLog = console.log;
+    console.error = (...args: any[]) => {
+      const msg = args.map(a => typeof a === 'string' ? a : '').join(' ');
+      if (msg.includes('StripePermissionError') || msg.includes('rak_accounts_kyc_basic_read') || (typeof args[0] === 'object' && args[0]?.type === 'StripePermissionError')) return;
+      origConsoleError(...args);
+    };
+    console.log = (...args: any[]) => {
+      const msg = args.map(a => typeof a === 'string' ? a : '').join(' ');
+      if (msg.includes('Failed to retrieve account')) return;
+      origConsoleLog(...args);
+    };
+
+    try {
+      stripeSync = new StripeSync({
+        poolConfig: {
+          connectionString: process.env.DATABASE_URL!,
+          max: 2,
+        },
+        stripeSecretKey: secretKey,
+      });
+    } finally {
+      setTimeout(() => {
+        console.error = origConsoleError;
+        console.log = origConsoleLog;
+      }, 5000);
+    }
   }
   return stripeSync;
 }

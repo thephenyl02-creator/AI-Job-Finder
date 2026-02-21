@@ -12,7 +12,6 @@ import { JOB_TAXONOMY } from "@shared/schema";
 import { cleanStructuredText } from "@/lib/structured-description";
 import { getCountryDisplayName } from "@/lib/country-names";
 import { JobLocation } from "@/components/job-location";
-import { CareerIntelligencePanel } from "@/components/career-intelligence-panel";
 import { JourneyStepper } from "@/components/journey-stepper";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -40,8 +39,13 @@ import {
   Lock,
   Compass,
   TrendingUp,
+  Settings2,
+  Zap,
+  AlertCircle,
+  Briefcase,
 } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { queryClient } from "@/lib/queryClient";
 import { Footer } from "@/components/footer";
 import { ResumePickerDialog } from "@/components/resume-picker-dialog";
@@ -59,6 +63,23 @@ interface ResumeMatchResult {
   matchHighlights: string[];
   gapSummary: string;
   topMissingSkills: string[];
+}
+
+interface CareerPath {
+  path: string;
+  why: string;
+  fit: "high" | "medium" | "low";
+  jobCount: number;
+}
+
+interface CareerIntelligenceResult {
+  recommendedPaths: CareerPath[];
+  strengths: { label: string; evidence: string }[];
+  gaps: { label: string; suggestion: string }[];
+  transitionSteps: string[];
+  suggestedSteppingStoneRoles: string[];
+  learningPlan: string[];
+  confidenceNotes: string[];
 }
 
 interface SearchQuestion {
@@ -141,6 +162,9 @@ export default function Jobs() {
   });
   const welcomeFileRef = useRef<HTMLInputElement>(null);
   const [welcomeUploading, setWelcomeUploading] = useState(false);
+  const [intelligenceResult, setIntelligenceResult] = useState<CareerIntelligenceResult | null>(null);
+  const [intelligenceResumeChanged, setIntelligenceResumeChanged] = useState(false);
+  const [gearOpen, setGearOpen] = useState(false);
 
   const { data: userResumes = [] } = useQuery<any[]>({
     queryKey: ["/api/resumes"],
@@ -157,11 +181,63 @@ export default function Jobs() {
     staleTime: 1000 * 30,
   });
 
+  const hasResume = userResumes.length > 0;
+
+  const { data: cachedIntelligence } = useQuery<{
+    cached: boolean;
+    resumeChanged?: boolean;
+    generatedAt?: string;
+    data: CareerIntelligenceResult | null;
+  }>({
+    queryKey: ["/api/career-intelligence"],
+    enabled: isAuthenticated && hasResume && !intelligenceResult,
+  });
+
+  useEffect(() => {
+    if (cachedIntelligence?.cached && cachedIntelligence.data && !intelligenceResult) {
+      setIntelligenceResult(cachedIntelligence.data);
+      if (cachedIntelligence.resumeChanged) {
+        setIntelligenceResumeChanged(true);
+      }
+    }
+  }, [cachedIntelligence, intelligenceResult]);
+
   const guidedSearchUsed = usageLimits?.guidedSearch?.used ?? 0;
   const guidedSearchLimit = usageLimits?.guidedSearch?.limit ?? 7;
   const isPro = usageLimits?.isPro ?? false;
   const guidedTrialsRemaining = isPro ? Infinity : Math.max(0, guidedSearchLimit - guidedSearchUsed);
   const canUseGuidedSearch = isPro || guidedTrialsRemaining > 0;
+
+  const advisorMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/career-path-advisor", {});
+      return res.json() as Promise<CareerIntelligenceResult>;
+    },
+    onSuccess: (data) => {
+      if (!data?.recommendedPaths) {
+        toast({ title: "Unexpected response", description: "Please try again.", variant: "destructive" });
+        return;
+      }
+      setIntelligenceResult(data);
+      setIntelligenceResumeChanged(false);
+    },
+    onError: (err: any) => {
+      toast({ title: "Error", description: err?.message || "Failed to generate career intelligence", variant: "destructive" });
+    },
+  });
+
+  const handlePathClick = useCallback((path: CareerPath, index: number) => {
+    if (index > 0 && !isPro) return;
+    if (selectedIntelligencePath === path.path) {
+      setSelectedIntelligencePath(null);
+      setSelectedCategory("all");
+    } else {
+      setSelectedIntelligencePath(path.path);
+      setSelectedCategory(path.path);
+    }
+    setCurrentPage(1);
+    setGearOpen(false);
+  }, [isPro, selectedIntelligencePath]);
 
   const searchMutation = useMutation({
     mutationFn: async (query: string) => {
@@ -599,50 +675,173 @@ export default function Jobs() {
 
       <main className="py-6 overflow-hidden">
         <Container className="space-y-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".pdf,.docx"
+          onChange={handleFileChange}
+          className="hidden"
+          data-testid="input-resume-file"
+        />
+
+        {searchResults ? (
           <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
-            {searchResults && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleClearSearch}
-                data-testid="button-back-search"
-              >
-                <ArrowLeft className="h-4 w-4 mr-1" />
-                All Jobs
-              </Button>
-            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleClearSearch}
+              data-testid="button-back-search"
+            >
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              All Jobs
+            </Button>
             <div className="space-y-0.5">
               <h1 className="text-lg sm:text-xl font-semibold text-foreground tracking-tight" data-testid="text-page-title">
-                {searchResults ? `Results for "${searchQuery}"` : "Find your next role in legal tech"}
+                Results for "{searchQuery}"
               </h1>
               <p className="text-sm text-muted-foreground" data-testid="text-page-subtitle">
-                {searchResults
-                  ? `${searchResults.length} results`
-                  : `${totalJobCount} curated roles across legal technology`}
+                {searchResults.length} results
               </p>
             </div>
           </div>
-        </div>
+        ) : (
+          <div className="text-center pt-2 pb-1" data-testid="section-search-hero">
+            <h1 className="text-xl sm:text-2xl font-semibold text-foreground tracking-tight mb-1" data-testid="text-page-title">
+              Find your next role in legal tech
+            </h1>
+            <p className="text-sm text-muted-foreground mb-5" data-testid="text-page-subtitle">
+              {totalJobCount} curated roles across legal technology
+            </p>
+
+            <div data-testid="card-smart-search" className="max-w-2xl mx-auto">
+              <div className="rounded-xl border border-foreground/15 bg-muted/20 px-4 py-3 sm:px-5 sm:py-3.5 transition-colors focus-within:border-primary/40 focus-within:bg-muted/30 focus-within:shadow-sm">
+                <div className="flex items-center gap-3">
+                  {isAuthenticated && (
+                    <Popover open={gearOpen} onOpenChange={setGearOpen}>
+                      <PopoverTrigger asChild>
+                        <button
+                          className={`relative shrink-0 rounded-md p-1.5 transition-colors hover:bg-muted/60 ${intelligenceResult ? "text-primary" : "text-muted-foreground/50"}`}
+                          data-testid="button-career-gear"
+                          title="Career intelligence"
+                        >
+                          <Settings2 className="h-5 w-5" />
+                          {intelligenceResult && (
+                            <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-primary" />
+                          )}
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent
+                        className="w-[380px] sm:w-[440px] p-0"
+                        align="start"
+                        side="bottom"
+                        sideOffset={8}
+                      >
+                        <CareerGearPopover
+                          isAuthenticated={isAuthenticated}
+                          hasResume={hasResume}
+                          isPro={isPro}
+                          result={intelligenceResult}
+                          resumeChanged={intelligenceResumeChanged}
+                          isGenerating={advisorMutation.isPending}
+                          onGenerate={() => advisorMutation.mutate()}
+                          onSelectPath={handlePathClick}
+                          selectedPath={selectedIntelligencePath}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  )}
+                  <Search className="h-5 w-5 text-foreground/40 shrink-0" />
+                  <Input
+                    ref={searchInputRef}
+                    placeholder={searchPlaceholder}
+                    className="border-0 shadow-none h-11 text-base focus-visible:ring-0 bg-transparent placeholder:text-muted-foreground/40 px-0"
+                    value={smartQuery}
+                    onChange={(e) => setSmartQuery(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleSmartSearch();
+                      }
+                    }}
+                    data-testid="input-smart-search"
+                  />
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-muted-foreground h-9 w-9"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={resumeMatchStep !== "idle"}
+                      data-testid="button-upload-resume"
+                      title="Upload resume to find matching roles"
+                    >
+                      {resumeMatchStep !== "idle" ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Upload className="h-4 w-4" />
+                      )}
+                    </Button>
+                    <Button
+                      size="icon"
+                      className="h-9 w-9"
+                      onClick={handleSmartSearch}
+                      disabled={!smartQuery.trim() || isSearching}
+                      data-testid="button-smart-search"
+                    >
+                      {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
+                    </Button>
+                    <kbd
+                      className={`hidden sm:inline-flex h-5 items-center rounded border border-foreground/10 bg-muted/50 px-1.5 text-[10px] text-muted-foreground/60 font-mono transition-opacity ${smartQuery ? "opacity-0 pointer-events-none" : "opacity-100"}`}
+                      data-testid="kbd-search-hint"
+                    >/</kbd>
+                  </div>
+                </div>
+              </div>
+
+              {!smartQuery && guidedStep === "idle" && (
+                <div className="flex items-center justify-center gap-2 mt-3 flex-wrap">
+                  {isPersonalized && (
+                    <span className="text-[10px] text-muted-foreground/60 mr-0.5" data-testid="text-personalized-label">Try:</span>
+                  )}
+                  {searchSuggestions.map((s) => (
+                    <Badge
+                      key={s.label}
+                      variant="outline"
+                      className="cursor-pointer text-xs font-normal"
+                      onClick={() => setSmartQuery(s.query)}
+                      data-testid={`chip-${s.label.toLowerCase().replace(/\s+/g, "-")}`}
+                    >
+                      {cleanStructuredText(s.label)}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+              {smartQuery.trim() && guidedStep === "idle" && !isSearching && (
+                <div className="flex items-center justify-center gap-2 mt-3 flex-wrap">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleQuickSearch}
+                    className="text-xs text-muted-foreground"
+                    data-testid="button-quick-search"
+                  >
+                    Search without follow-up questions
+                  </Button>
+                  {!canUseGuidedSearch && (
+                    <Link href="/pricing" className="text-xs text-primary font-medium" data-testid="link-guided-search-upgrade">
+                      Upgrade for unlimited
+                    </Link>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {!searchResults && <JourneyStepper currentStep="jobs" />}
 
         {!searchResults && isAuthenticated && <WelcomeBackBanner />}
-
-        {!searchResults && (
-          <CareerIntelligencePanel
-            onSelectPath={(path) => {
-              setSelectedIntelligencePath(path);
-              if (path) {
-                setSelectedCategory(path);
-              } else {
-                setSelectedCategory("all");
-              }
-              setCurrentPage(1);
-            }}
-            selectedPath={selectedIntelligencePath}
-          />
-        )}
 
         {selectedIntelligencePath && (
           <div className="flex items-center gap-2 flex-wrap" data-testid="path-filter-banner">
@@ -682,103 +881,6 @@ export default function Jobs() {
             </Button>
           </div>
         )}
-
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".pdf,.docx"
-          onChange={handleFileChange}
-          className="hidden"
-          data-testid="input-resume-file"
-        />
-
-        <div data-testid="card-smart-search" className="mt-2">
-          <div className="rounded-md border border-foreground/15 bg-muted/20 px-3 py-2 sm:px-4 sm:py-2.5 transition-colors focus-within:border-foreground/40 focus-within:bg-muted/30">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <Search className="h-4 w-4 text-foreground/40 shrink-0" />
-              <Input
-                ref={searchInputRef}
-                placeholder="Search roles, skills, or companies..."
-                className="border-0 shadow-none h-9 text-sm focus-visible:ring-0 bg-transparent placeholder:text-muted-foreground/50 px-0"
-                value={smartQuery}
-                onChange={(e) => setSmartQuery(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    handleSmartSearch();
-                  }
-                }}
-                data-testid="input-smart-search"
-              />
-              <div className="flex items-center gap-1 shrink-0">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="text-muted-foreground"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={resumeMatchStep !== "idle"}
-                  data-testid="button-upload-resume"
-                  title="Upload resume to find matching roles"
-                >
-                  {resumeMatchStep !== "idle" ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Upload className="h-4 w-4" />
-                  )}
-                </Button>
-                <Button
-                  size="icon"
-                  onClick={handleSmartSearch}
-                  disabled={!smartQuery.trim() || isSearching}
-                  data-testid="button-smart-search"
-                >
-                  {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
-                </Button>
-                <kbd
-                  className={`hidden sm:inline-flex h-5 items-center rounded border border-foreground/10 bg-muted/50 px-1.5 text-[10px] text-muted-foreground/60 font-mono transition-opacity ${smartQuery ? "opacity-0 pointer-events-none" : "opacity-100"}`}
-                  data-testid="kbd-search-hint"
-                >/</kbd>
-              </div>
-            </div>
-          </div>
-
-          {!smartQuery && !searchResults && guidedStep === "idle" && (
-            <div className="flex items-center gap-2 mt-3 flex-wrap">
-              {isPersonalized && (
-                <span className="text-[10px] text-muted-foreground/60 mr-0.5" data-testid="text-personalized-label">Try:</span>
-              )}
-              {searchSuggestions.map((s) => (
-                <Badge
-                  key={s.label}
-                  variant="outline"
-                  className="cursor-pointer text-xs font-normal"
-                  onClick={() => setSmartQuery(s.query)}
-                  data-testid={`chip-${s.label.toLowerCase().replace(/\s+/g, "-")}`}
-                >
-                  {cleanStructuredText(s.label)}
-                </Badge>
-              ))}
-            </div>
-          )}
-          {smartQuery.trim() && guidedStep === "idle" && !isSearching && !searchResults && (
-            <div className="flex items-center gap-2 mt-3 flex-wrap">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleQuickSearch}
-                className="text-xs text-muted-foreground"
-                data-testid="button-quick-search"
-              >
-                Search without follow-up questions
-              </Button>
-              {!canUseGuidedSearch && (
-                <Link href="/pricing" className="text-xs text-primary font-medium" data-testid="link-guided-search-upgrade">
-                  Upgrade for unlimited
-                </Link>
-              )}
-            </div>
-          )}
-        </div>
 
         {resumeMatchStep !== "idle" && (
           <Card className="border-primary/20" data-testid="card-resume-matching">
@@ -1577,6 +1679,215 @@ export default function Jobs() {
           jobTitle={pickerJobTitle}
         />
       )}
+    </div>
+  );
+}
+
+const FIT_COLORS: Record<string, { bg: string; text: string; border: string; dot: string }> = {
+  high: { bg: "bg-emerald-50 dark:bg-emerald-950/30", text: "text-emerald-700 dark:text-emerald-400", border: "border-emerald-200 dark:border-emerald-800", dot: "bg-emerald-500" },
+  medium: { bg: "bg-amber-50 dark:bg-amber-950/30", text: "text-amber-700 dark:text-amber-400", border: "border-amber-200 dark:border-amber-800", dot: "bg-amber-500" },
+  low: { bg: "bg-slate-50 dark:bg-slate-900/30", text: "text-slate-600 dark:text-slate-400", border: "border-slate-200 dark:border-slate-700", dot: "bg-slate-400" },
+};
+
+const FIT_LABELS: Record<string, string> = { high: "Strong fit", medium: "Good fit", low: "Stretch" };
+
+function CareerGearPopover({
+  isAuthenticated,
+  hasResume,
+  isPro,
+  result,
+  resumeChanged,
+  isGenerating,
+  onGenerate,
+  onSelectPath,
+  selectedPath,
+}: {
+  isAuthenticated: boolean;
+  hasResume: boolean;
+  isPro: boolean;
+  result: CareerIntelligenceResult | null;
+  resumeChanged: boolean;
+  isGenerating: boolean;
+  onGenerate: () => void;
+  onSelectPath: (path: CareerPath, index: number) => void;
+  selectedPath: string | null;
+}) {
+  if (!isAuthenticated) {
+    return (
+      <div className="p-4 text-center" data-testid="gear-unauth">
+        <Compass className="h-5 w-5 text-primary mx-auto mb-2" />
+        <p className="text-sm font-medium text-foreground mb-1">Career Intelligence</p>
+        <p className="text-xs text-muted-foreground mb-3">Sign in and upload your resume to see personalized career paths</p>
+        <Link href="/auth">
+          <Button size="sm" data-testid="button-signin-gear">Sign In</Button>
+        </Link>
+      </div>
+    );
+  }
+
+  if (!hasResume) {
+    return (
+      <div className="p-4 text-center" data-testid="gear-no-resume">
+        <Compass className="h-5 w-5 text-primary mx-auto mb-2" />
+        <p className="text-sm font-medium text-foreground mb-1">Career Intelligence</p>
+        <p className="text-xs text-muted-foreground mb-3">Upload your resume to unlock personalized career paths</p>
+        <Link href="/resumes">
+          <Button size="sm" data-testid="button-upload-resume-gear">
+            <Upload className="h-3.5 w-3.5 mr-1.5" />
+            Upload Resume
+          </Button>
+        </Link>
+      </div>
+    );
+  }
+
+  if (!result) {
+    return (
+      <div className="p-4 text-center" data-testid="gear-generate">
+        <Compass className="h-5 w-5 text-primary mx-auto mb-2" />
+        <p className="text-sm font-medium text-foreground mb-1">Career Intelligence</p>
+        <p className="text-xs text-muted-foreground mb-3">Discover which legal tech paths match your background</p>
+        <Button
+          onClick={onGenerate}
+          disabled={isGenerating}
+          size="sm"
+          data-testid="button-generate-intelligence"
+        >
+          {isGenerating ? (
+            <>
+              <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+              Analyzing...
+            </>
+          ) : (
+            <>
+              <Zap className="h-3.5 w-3.5 mr-1.5" />
+              Map my career paths
+            </>
+          )}
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-4" data-testid="gear-intelligence-result">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <Compass className="h-4 w-4 text-primary" />
+          <span className="text-sm font-semibold text-foreground">Career Intelligence</span>
+        </div>
+        {resumeChanged && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-xs text-amber-600 h-7 px-2"
+            onClick={onGenerate}
+            disabled={isGenerating}
+            data-testid="button-refresh-intelligence"
+          >
+            {isGenerating ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Zap className="h-3 w-3 mr-1" />}
+            Refresh
+          </Button>
+        )}
+      </div>
+
+      {resumeChanged && (
+        <div className="flex items-center gap-2 mb-3 p-2 rounded-md bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/50" data-testid="resume-changed-banner">
+          <AlertCircle className="h-3 w-3 text-amber-600 shrink-0" />
+          <p className="text-[11px] text-amber-700 dark:text-amber-400">Resume changed — refresh for updated insights</p>
+        </div>
+      )}
+
+      {result.strengths.length > 0 && (
+        <div className="mb-3">
+          <p className="text-[11px] text-muted-foreground mb-1.5 font-medium uppercase tracking-wider flex items-center gap-1">
+            <TrendingUp className="h-3 w-3 text-emerald-500" />
+            Top strengths
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {result.strengths.slice(0, 3).map((s, i) => (
+              <Badge key={i} variant="outline" className="text-[11px] font-normal bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200/50 dark:border-emerald-800/30">
+                {s.label}
+              </Badge>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {result.gaps.length > 0 && (
+        <div className="mb-3">
+          <p className="text-[11px] text-muted-foreground mb-1.5 font-medium uppercase tracking-wider flex items-center gap-1">
+            <AlertCircle className="h-3 w-3 text-slate-400" />
+            Gaps to close
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {result.gaps.slice(0, 3).map((g, i) => (
+              <Badge key={i} variant="outline" className="text-[11px] font-normal">
+                {g.label}
+              </Badge>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="border-t border-foreground/10 pt-3 mt-1">
+        <p className="text-[11px] text-muted-foreground mb-2 font-medium uppercase tracking-wider">Career paths — click to filter jobs</p>
+        <div className="space-y-1.5">
+          {result.recommendedPaths.map((path, i) => {
+            const isLocked = i > 0 && !isPro;
+            const isActive = selectedPath === path.path;
+            const colors = FIT_COLORS[path.fit] || FIT_COLORS.medium;
+
+            return (
+              <button
+                key={path.path}
+                onClick={() => onSelectPath(path, i)}
+                disabled={isLocked}
+                className={`relative w-full text-left rounded-md border px-3 py-2 transition-all text-sm ${
+                  isActive
+                    ? `${colors.border} ${colors.bg} ring-1 ring-primary/20`
+                    : isLocked
+                      ? "border-foreground/5 bg-muted/10 opacity-50"
+                      : "border-foreground/10 hover:border-foreground/20 hover:bg-muted/20"
+                }`}
+                data-testid={`button-path-${i}`}
+              >
+                {isLocked && (
+                  <div className="absolute inset-0 rounded-md bg-background/40 backdrop-blur-[2px] flex items-center justify-center z-10">
+                    <span className="flex items-center gap-1 text-[10px] font-medium text-primary">
+                      <Lock className="h-3 w-3" />
+                      Pro
+                    </span>
+                  </div>
+                )}
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-medium text-foreground text-sm">{path.path}</span>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className={`flex items-center gap-1 text-[10px] font-medium ${colors.text}`}>
+                      <span className={`h-1.5 w-1.5 rounded-full ${colors.dot}`} />
+                      {FIT_LABELS[path.fit]}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground/60 flex items-center gap-0.5">
+                      <Briefcase className="h-2.5 w-2.5" />
+                      {path.jobCount}
+                    </span>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground mt-0.5 leading-snug">{path.why}</p>
+              </button>
+            );
+          })}
+        </div>
+
+        {!isPro && result.recommendedPaths.length > 1 && (
+          <Link href="/pricing">
+            <Button variant="ghost" size="sm" className="text-xs text-primary mt-2 w-full" data-testid="button-unlock-paths">
+              <Lock className="h-3 w-3 mr-1" />
+              Unlock all {result.recommendedPaths.length} paths
+            </Button>
+          </Link>
+        )}
+      </div>
     </div>
   );
 }

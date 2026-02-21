@@ -88,6 +88,7 @@ export function Header() {
               <NavLink href="/opportunity-map" icon={Globe} label="Map" isActive={isActive("/opportunity-map")} testId="link-map" />
               <NavLink href="/dashboard" icon={LayoutDashboard} label="Dashboard" isActive={isDashboardActive} testId="link-dashboard" />
               <NavLink href="/resumes" icon={FileText} label="Resumes" isActive={isResumesActive} testId="link-resumes" />
+              <NavLink href="/events" icon={Calendar} label="Events" isActive={isActive("/events") || location.startsWith("/events/")} testId="link-events" />
             </div>
           ) : (
             <div className="hidden md:flex items-center gap-0.5">
@@ -201,12 +202,6 @@ export function Header() {
                       <Link href="/alerts" className="cursor-pointer" data-testid="link-alerts-dropdown">
                         <Bell className="mr-2 h-4 w-4" />
                         <span>Alerts</span>
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link href="/events" className="cursor-pointer" data-testid="link-events">
-                        <Calendar className="mr-2 h-4 w-4" />
-                        <span>Events</span>
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>

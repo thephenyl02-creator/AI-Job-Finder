@@ -52,7 +52,7 @@ export default function Landing() {
 
   const { data: featuredJobs } = useQuery<FeaturedJob[]>({
     queryKey: ["/api/featured-jobs"],
-    refetchInterval: 30000,
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: density } = useQuery<{ totalJobs: number; countriesCount: number; remoteShare: number; byCountry: { countryCode: string; countryName: string; jobCount: number; topCategories: string[] }[] }>({
