@@ -19,8 +19,14 @@ async function verifyAndParseEvent(payload: Buffer, signature: string): Promise<
         return event;
       }
 
+      if (process.env.NODE_ENV === 'production' || process.env.REPLIT_DEPLOYMENT === '1') {
+        console.error('STRIPE WEBHOOK REJECTED: No webhook secret configured in production. Set STRIPE_WEBHOOK_SECRET.');
+        return null;
+      }
+
       const payloadObj = JSON.parse(payload.toString());
       if (payloadObj?.id && payloadObj?.type && payloadObj?.data?.object) {
+        console.warn('DEV ONLY: Verifying webhook via event retrieval (not signature). Set STRIPE_WEBHOOK_SECRET for production.');
         const event = await stripe.events.retrieve(payloadObj.id);
         return event;
       }
