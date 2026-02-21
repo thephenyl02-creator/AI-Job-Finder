@@ -206,6 +206,39 @@ export async function registerRoutes(
     }
   })();
 
+  app.get("/robots.txt", (_req, res) => {
+    res.type("text/plain").send(
+      `User-agent: *\nAllow: /\nSitemap: ${process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : "https://legal-tech-careers.replit.app"}/sitemap.xml\n`
+    );
+  });
+
+  app.get("/sitemap.xml", async (_req, res) => {
+    try {
+      const jobs = await storage.getActiveJobs();
+      const base = process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : "https://legal-tech-careers.replit.app";
+      const staticPages = [
+        { loc: "/", priority: "1.0", changefreq: "daily" },
+        { loc: "/jobs", priority: "0.9", changefreq: "daily" },
+        { loc: "/opportunity-map", priority: "0.7", changefreq: "weekly" },
+        { loc: "/events", priority: "0.6", changefreq: "weekly" },
+        { loc: "/about", priority: "0.4", changefreq: "monthly" },
+        { loc: "/pricing", priority: "0.5", changefreq: "monthly" },
+      ];
+      const urls = staticPages.map(p =>
+        `<url><loc>${base}${p.loc}</loc><changefreq>${p.changefreq}</changefreq><priority>${p.priority}</priority></url>`
+      );
+      for (const job of jobs.slice(0, 2000)) {
+        const lastmod = job.lastCheckedAt || job.firstSeenAt || new Date().toISOString();
+        urls.push(`<url><loc>${base}/jobs/${job.id}</loc><lastmod>${new Date(lastmod).toISOString().split("T")[0]}</lastmod><changefreq>weekly</changefreq><priority>0.6</priority></url>`);
+      }
+      const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.join("\n")}\n</urlset>`;
+      res.type("application/xml").send(xml);
+    } catch (err) {
+      console.error("Sitemap generation error:", err);
+      res.status(500).send("Error generating sitemap");
+    }
+  });
+
   // Public stats endpoint (no auth required)
   app.get("/api/stats", async (req, res) => {
     try {
@@ -1927,7 +1960,13 @@ ${resumeSignal}
 Based on this candidate's background, provide career path guidance for transitioning into legal technology. Return a JSON object with exactly this shape:
 {
   "recommendedPaths": [
-    { "path": "Category name (e.g., Legal Ops, Legal Product, Privacy/Compliance)", "why": "1-2 sentence explanation of why this path suits this candidate" }
+    { "path": "Category name (must match one of the available categories listed above)", "why": "1-2 sentence explanation of why this path suits this candidate", "fit": "high" | "medium" | "low" }
+  ],
+  "strengths": [
+    { "label": "Skill or experience area (3-5 words)", "evidence": "Brief quote or reference from their resume" }
+  ],
+  "gaps": [
+    { "label": "Missing skill or experience (3-5 words)", "suggestion": "How to close this gap in 1 sentence" }
   ],
   "transitionSteps": ["3-6 concrete steps the candidate should take over the next 6-24 months"],
   "suggestedSteppingStoneRoles": ["3-6 specific job titles that would be realistic next steps"],
@@ -1935,7 +1974,12 @@ Based on this candidate's background, provide career path guidance for transitio
   "confidenceNotes": ["2-3 honest observations about what's strong and what's missing in the candidate's profile for legal tech"]
 }
 
-Provide 2-4 recommended paths. Be specific to this candidate's actual experience — do not give generic advice.`;
+Rules:
+- Provide 3-5 recommended paths. Be specific to this candidate's actual experience — do not give generic advice.
+- Provide exactly 3 strengths grounded in resume evidence.
+- Provide exactly 3 gaps with actionable suggestions.
+- Each path's "fit" must be "high", "medium", or "low" based on how well the candidate's background aligns.
+- Path names MUST match available categories listed above (e.g., "Legal Operations", "Legal Engineering", "Compliance & Privacy").`;
 
       const { getOpenAIClient } = await import("./lib/openai-client");
       const completion = await getOpenAIClient().chat.completions.create({
@@ -1958,8 +2002,24 @@ Provide 2-4 recommended paths. Be specific to this candidate's actual experience
         throw new Error("Invalid AI response format");
       }
 
+      const categoryCounts: Record<string, number> = {};
+      for (const job of allJobs) {
+        if (job.roleCategory) {
+          categoryCounts[job.roleCategory] = (categoryCounts[job.roleCategory] || 0) + 1;
+        }
+      }
+
+      const enrichedPaths = (parsed.recommendedPaths || []).map((p: any) => ({
+        path: p.path,
+        why: p.why,
+        fit: p.fit || "medium",
+        jobCount: categoryCounts[p.path] || 0,
+      }));
+
       res.json({
-        recommendedPaths: parsed.recommendedPaths || [],
+        recommendedPaths: enrichedPaths,
+        strengths: (parsed.strengths || []).slice(0, 3),
+        gaps: (parsed.gaps || []).slice(0, 3),
         transitionSteps: parsed.transitionSteps || [],
         suggestedSteppingStoneRoles: parsed.suggestedSteppingStoneRoles || [],
         learningPlan: parsed.learningPlan || [],

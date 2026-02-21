@@ -17,6 +17,8 @@ import type { ResumeExtractedData } from "@shared/models/auth";
 import { decodeHtmlEntities, fixMissingSentenceSpaces, cleanStructuredText, parseStructuredDescription } from "@/lib/structured-description";
 import { formatSalary } from "@/lib/format-salary";
 import { JobLocation } from "@/components/job-location";
+import { JourneyStepper } from "@/components/journey-stepper";
+import { ReadinessDisplay } from "@/components/readiness-display";
 import { StructuredDescriptionView } from "@/components/structured-description-view";
 import { NextStepCard } from "@/components/next-step-card";
 import { Link } from "wouter";
@@ -321,6 +323,69 @@ function getLocationTypeLabel(job: Job): string | null {
   return null;
 }
 
+function useJobSEO(job: Job | undefined) {
+  useEffect(() => {
+    if (!job) return;
+    const title = `${job.title} at ${job.company} | Legal Tech Careers`;
+    document.title = title;
+
+    const setMeta = (name: string, content: string) => {
+      let el = document.querySelector(`meta[name="${name}"]`) || document.querySelector(`meta[property="${name}"]`);
+      if (!el) {
+        el = document.createElement("meta");
+        if (name.startsWith("og:")) {
+          el.setAttribute("property", name);
+        } else {
+          el.setAttribute("name", name);
+        }
+        document.head.appendChild(el);
+      }
+      el.setAttribute("content", content);
+    };
+
+    const desc = job.aiSummary
+      ? `${job.aiSummary.slice(0, 155)}...`
+      : `${job.title} at ${job.company}${job.location ? ` in ${job.location}` : ""}. Apply now on Legal Tech Careers.`;
+    setMeta("description", desc);
+    setMeta("og:title", `${job.title} at ${job.company}`);
+    setMeta("og:description", desc);
+    setMeta("og:type", "website");
+
+    let scriptEl = document.getElementById("job-schema-ld") as HTMLScriptElement | null;
+    if (!scriptEl) {
+      scriptEl = document.createElement("script");
+      scriptEl.id = "job-schema-ld";
+      scriptEl.type = "application/ld+json";
+      document.head.appendChild(scriptEl);
+    }
+    const schema: Record<string, any> = {
+      "@context": "https://schema.org",
+      "@type": "JobPosting",
+      title: job.title,
+      description: job.aiSummary || job.description?.slice(0, 500) || "",
+      hiringOrganization: {
+        "@type": "Organization",
+        name: job.company,
+        ...(job.companyLogo ? { logo: job.companyLogo } : {}),
+      },
+      jobLocation: {
+        "@type": "Place",
+        address: job.location || "Remote",
+      },
+      employmentType: "FULL_TIME",
+      datePosted: job.firstSeenAt || new Date().toISOString(),
+    };
+    if (job.salaryMin) schema.baseSalary = { "@type": "MonetaryAmount", currency: job.salaryCurrency || "USD", value: { "@type": "QuantitativeValue", minValue: job.salaryMin, ...(job.salaryMax ? { maxValue: job.salaryMax } : {}), unitText: "YEAR" } };
+    scriptEl.textContent = JSON.stringify(schema);
+
+    return () => {
+      document.title = "Legal Tech Careers - Jobs for Legal Professionals in Technology";
+      const schemaEl = document.getElementById("job-schema-ld");
+      if (schemaEl) schemaEl.remove();
+    };
+  }, [job]);
+}
+
 export default function JobDetail() {
   usePageTitle("Job Details");
   const { isAuthenticated, isLoading: authLoading } = useAuth();
@@ -360,6 +425,8 @@ export default function JobDetail() {
 
   const job = isAuthenticated ? authJob : publicJob;
   const isLoading = isAuthenticated ? authJobLoading : publicLoading;
+
+  useJobSEO(job);
 
   useEffect(() => {
     if (jobId && job && trackedJobRef.current !== jobId) {
@@ -639,10 +706,12 @@ export default function JobDetail() {
       <Header />
 
       <main className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-        <Link href="/jobs" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-5" data-testid="button-back-jobs">
+        <Link href="/jobs" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-3" data-testid="button-back-jobs">
           <ArrowLeft className="h-4 w-4" />
           Back to Jobs
         </Link>
+
+        <JourneyStepper currentStep="jobs" />
 
         {/* === HEADER === */}
         <div className="mb-6" ref={applyButtonRef}>
@@ -858,6 +927,25 @@ export default function JobDetail() {
             </div>
           )}
         </div>
+
+        {/* === READINESS DISPLAY === */}
+        {(() => {
+          const primaryFit = resumeFit?.find(r => r.isPrimary) || resumeFit?.[0];
+          if (!primaryFit || !isAuthenticated) return null;
+          return (
+            <Card className="mb-4" data-testid="card-readiness">
+              <CardContent className="p-4 sm:p-5">
+                <ReadinessDisplay
+                  score={primaryFit.score}
+                  matched={primaryFit.matched}
+                  missing={primaryFit.missing}
+                  totalSkills={primaryFit.totalSkills}
+                  isPro={isPro}
+                />
+              </CardContent>
+            </Card>
+          );
+        })()}
 
         {/* === UNIFIED JOB DETAILS CARD === */}
         <Card className="mb-6" data-testid="section-job-details">

@@ -12,6 +12,8 @@ import { JOB_TAXONOMY } from "@shared/schema";
 import { cleanStructuredText } from "@/lib/structured-description";
 import { getCountryDisplayName } from "@/lib/country-names";
 import { JobLocation } from "@/components/job-location";
+import { CareerIntelligencePanel } from "@/components/career-intelligence-panel";
+import { JourneyStepper } from "@/components/journey-stepper";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -36,6 +38,7 @@ import {
   FileText,
   Sparkles,
   Lock,
+  Compass,
 } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { queryClient } from "@/lib/queryClient";
@@ -114,6 +117,7 @@ export default function Jobs() {
   const [searchResults, setSearchResults] = useState<JobWithScore[] | null>(null);
   const [searchQuery, setSearchQuery] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<string>("newest");
+  const [selectedIntelligencePath, setSelectedIntelligencePath] = useState<string | null>(null);
 
   const [smartQuery, setSmartQuery] = useState("");
   const [guidedStep, setGuidedStep] = useState<GuidedStep>("idle");
@@ -619,6 +623,44 @@ export default function Jobs() {
             </div>
           </div>
         </div>
+
+        {!searchResults && <JourneyStepper currentStep="jobs" />}
+
+        {!searchResults && (
+          <CareerIntelligencePanel
+            onSelectPath={(path) => {
+              setSelectedIntelligencePath(path);
+              if (path) {
+                setSelectedCategory(path);
+              } else {
+                setSelectedCategory("all");
+              }
+              setCurrentPage(1);
+            }}
+            selectedPath={selectedIntelligencePath}
+          />
+        )}
+
+        {selectedIntelligencePath && (
+          <div className="flex items-center gap-2 flex-wrap" data-testid="path-filter-banner">
+            <Badge variant="secondary" className="text-xs gap-1">
+              <Compass className="h-3 w-3" />
+              Filtered: {selectedIntelligencePath}
+            </Badge>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-xs text-muted-foreground"
+              onClick={() => {
+                setSelectedIntelligencePath(null);
+                setSelectedCategory("all");
+              }}
+              data-testid="button-clear-path-filter"
+            >
+              Show all jobs
+            </Button>
+          </div>
+        )}
 
         {selectedCountry !== "all" && (
           <div className="flex items-center gap-2 mt-2 flex-wrap" data-testid="country-filter-banner">
