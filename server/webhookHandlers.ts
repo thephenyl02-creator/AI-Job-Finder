@@ -1,6 +1,38 @@
 import Stripe from 'stripe';
-import { getStripeSync } from './stripeClient';
+import { getStripeSync, getUncachableStripeClient, getStripeSecretKey } from './stripeClient';
 import { storage } from './storage';
+
+async function verifyAndParseEvent(payload: Buffer, signature: string): Promise<Stripe.Event | null> {
+  try {
+    const sync = await getStripeSync();
+    const verifiedEvent = await sync.processWebhook(payload, signature) as Stripe.Event | undefined;
+    return verifiedEvent || null;
+  } catch (syncErr: any) {
+    console.log('StripeSync unavailable for webhook verification, using direct Stripe client');
+    try {
+      const stripe = await getUncachableStripeClient();
+      const secretKey = await getStripeSecretKey();
+
+      const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+      if (webhookSecret) {
+        const event = stripe.webhooks.constructEvent(payload.toString(), signature, webhookSecret);
+        return event;
+      }
+
+      const payloadObj = JSON.parse(payload.toString());
+      if (payloadObj?.id && payloadObj?.type && payloadObj?.data?.object) {
+        const event = await stripe.events.retrieve(payloadObj.id);
+        return event;
+      }
+
+      console.warn('Cannot verify webhook: no webhook secret and payload format unrecognized');
+      return null;
+    } catch (directErr: any) {
+      console.error('Direct webhook verification also failed:', directErr.message);
+      return null;
+    }
+  }
+}
 
 export async function processWebhook(payload: Buffer, signature: string): Promise<void> {
   if (!Buffer.isBuffer(payload)) {
@@ -11,8 +43,7 @@ export async function processWebhook(payload: Buffer, signature: string): Promis
     );
   }
 
-  const sync = await getStripeSync();
-  const verifiedEvent = await sync.processWebhook(payload, signature) as Stripe.Event | undefined;
+  const verifiedEvent = await verifyAndParseEvent(payload, signature);
 
   if (!verifiedEvent) {
     return;

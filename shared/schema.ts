@@ -465,6 +465,9 @@ export const userPersonas = pgTable("user_personas", {
   totalApplyClicks: integer("total_apply_clicks").default(0),
   lastActiveAt: timestamp("last_active_at"),
   updatedAt: timestamp("updated_at").default(sql`CURRENT_TIMESTAMP`),
+  careerIntelligence: jsonb("career_intelligence"),
+  careerIntelligenceResumeHash: varchar("career_intelligence_resume_hash", { length: 64 }),
+  careerIntelligenceGeneratedAt: timestamp("career_intelligence_generated_at"),
 });
 
 export const insertUserPersonaSchema = createInsertSchema(userPersonas).omit({

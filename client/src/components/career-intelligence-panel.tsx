@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
@@ -78,6 +78,7 @@ export function CareerIntelligencePanel({ onSelectPath, selectedPath }: CareerIn
   const { trackNow } = useActivityTracker();
   const [isExpanded, setIsExpanded] = useState(true);
   const [result, setResult] = useState<CareerIntelligenceResult | null>(null);
+  const [resumeChanged, setResumeChanged] = useState(false);
 
   const { data: resumes } = useQuery<any[]>({
     queryKey: ["/api/resumes"],
@@ -85,6 +86,25 @@ export function CareerIntelligencePanel({ onSelectPath, selectedPath }: CareerIn
   });
 
   const hasResume = resumes && resumes.length > 0;
+
+  const { data: cachedIntelligence, isLoading: isCacheLoading } = useQuery<{
+    cached: boolean;
+    resumeChanged?: boolean;
+    generatedAt?: string;
+    data: CareerIntelligenceResult | null;
+  }>({
+    queryKey: ["/api/career-intelligence"],
+    enabled: isAuthenticated && hasResume === true && !result,
+  });
+
+  useEffect(() => {
+    if (cachedIntelligence?.cached && cachedIntelligence.data && !result) {
+      setResult(cachedIntelligence.data);
+      if (cachedIntelligence.resumeChanged) {
+        setResumeChanged(true);
+      }
+    }
+  }, [cachedIntelligence, result]);
 
   const advisorMutation = useMutation({
     mutationFn: async () => {
@@ -97,6 +117,7 @@ export function CareerIntelligencePanel({ onSelectPath, selectedPath }: CareerIn
         return;
       }
       setResult(data);
+      setResumeChanged(false);
     },
     onError: (err: any) => {
       toast({ title: "Error", description: err?.message || "Failed to generate career intelligence", variant: "destructive" });
@@ -195,27 +216,36 @@ export function CareerIntelligencePanel({ onSelectPath, selectedPath }: CareerIn
               <ChevronUp className="h-4 w-4" />
             </button>
           </div>
-          <p className="text-sm text-muted-foreground mb-4">
-            Discover which legal tech career paths match your background — and how many roles are hiring right now.
-          </p>
-          <Button
-            onClick={() => advisorMutation.mutate()}
-            disabled={advisorMutation.isPending}
-            size="sm"
-            data-testid="button-generate-intelligence"
-          >
-            {advisorMutation.isPending ? (
-              <>
-                <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                Analyzing your background...
-              </>
-            ) : (
-              <>
-                <Zap className="h-3.5 w-3.5 mr-1.5" />
-                Map my career paths
-              </>
-            )}
-          </Button>
+          {isCacheLoading ? (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              Loading your career data...
+            </div>
+          ) : (
+            <>
+              <p className="text-sm text-muted-foreground mb-4">
+                Discover which legal tech career paths match your background — and how many roles are hiring right now.
+              </p>
+              <Button
+                onClick={() => advisorMutation.mutate()}
+                disabled={advisorMutation.isPending}
+                size="sm"
+                data-testid="button-generate-intelligence"
+              >
+                {advisorMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                    Analyzing your background...
+                  </>
+                ) : (
+                  <>
+                    <Zap className="h-3.5 w-3.5 mr-1.5" />
+                    Map my career paths
+                  </>
+                )}
+              </Button>
+            </>
+          )}
         </CardContent>
       </Card>
     );
@@ -233,6 +263,24 @@ export function CareerIntelligencePanel({ onSelectPath, selectedPath }: CareerIn
             <ChevronUp className="h-4 w-4" />
           </button>
         </div>
+
+        {resumeChanged && (
+          <div className="flex items-center gap-2 mb-4 p-2.5 rounded-md bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/50" data-testid="resume-changed-banner">
+            <AlertCircle className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
+            <p className="text-xs text-amber-700 dark:text-amber-400 flex-1">Your resume has changed since this analysis. Refresh for updated insights.</p>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-xs text-amber-700 dark:text-amber-400 h-7 px-2"
+              onClick={() => advisorMutation.mutate()}
+              disabled={advisorMutation.isPending}
+              data-testid="button-refresh-intelligence"
+            >
+              {advisorMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Zap className="h-3 w-3" />}
+              <span className="ml-1">Refresh</span>
+            </Button>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto_1.5fr] gap-5">
           <ProfileCard strengths={result.strengths} gaps={result.gaps} />
@@ -262,10 +310,10 @@ export function CareerIntelligencePanel({ onSelectPath, selectedPath }: CareerIn
                     data-testid={`button-path-${i}`}
                   >
                     {isLocked && (
-                      <div className="absolute inset-0 rounded-md bg-background/60 backdrop-blur-[1px] flex items-center justify-center z-10">
-                        <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <div className="absolute inset-0 rounded-md bg-background/40 backdrop-blur-[3px] flex flex-col items-center justify-center z-10 gap-1">
+                        <span className="flex items-center gap-1 text-[10px] font-medium text-primary">
                           <Lock className="h-3 w-3" />
-                          Pro
+                          Unlock with Pro
                         </span>
                       </div>
                     )}

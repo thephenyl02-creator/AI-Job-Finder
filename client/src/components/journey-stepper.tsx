@@ -4,6 +4,14 @@ import { Check } from "lucide-react";
 
 type JourneyStep = "profile" | "path" | "jobs" | "tailor" | "apply";
 
+interface JourneyState {
+  profile: boolean;
+  path: boolean;
+  jobs: boolean;
+  tailor: boolean;
+  apply: boolean;
+}
+
 const STEPS: { key: JourneyStep; label: string }[] = [
   { key: "profile", label: "Profile" },
   { key: "path", label: "Path" },
@@ -19,23 +27,36 @@ interface JourneyStepperProps {
 export function JourneyStepper({ currentStep }: JourneyStepperProps) {
   const { isAuthenticated } = useAuth();
 
-  const { data: resumes } = useQuery<any[]>({
-    queryKey: ["/api/resumes"],
+  const { data: journeyState } = useQuery<JourneyState>({
+    queryKey: ["/api/journey-state"],
     enabled: isAuthenticated,
   });
 
-  const hasResume = resumes && resumes.length > 0;
-
   const completedSteps = new Set<JourneyStep>();
-  if (isAuthenticated && hasResume) completedSteps.add("profile");
+  if (journeyState?.profile) completedSteps.add("profile");
+  if (journeyState?.path) completedSteps.add("path");
+  if (journeyState?.jobs) completedSteps.add("jobs");
+  if (journeyState?.tailor) completedSteps.add("tailor");
+  if (journeyState?.apply) completedSteps.add("apply");
 
-  const activeStep = currentStep || (hasResume ? "path" : "profile");
+  let activeStep: JourneyStep = "profile";
+  if (currentStep) {
+    activeStep = currentStep;
+  } else {
+    if (!journeyState?.profile) activeStep = "profile";
+    else if (!journeyState?.path) activeStep = "path";
+    else if (!journeyState?.jobs) activeStep = "jobs";
+    else if (!journeyState?.tailor) activeStep = "tailor";
+    else if (!journeyState?.apply) activeStep = "apply";
+    else activeStep = "apply";
+  }
+
   const activeIndex = STEPS.findIndex((s) => s.key === activeStep);
 
   return (
     <div className="flex items-center gap-0 w-full max-w-md mx-auto py-2" data-testid="journey-stepper">
       {STEPS.map((step, i) => {
-        const isCompleted = completedSteps.has(step.key) && i < activeIndex;
+        const isCompleted = completedSteps.has(step.key);
         const isActive = step.key === activeStep;
         const isPast = i < activeIndex;
 
@@ -44,7 +65,7 @@ export function JourneyStepper({ currentStep }: JourneyStepperProps) {
             <div className="flex flex-col items-center gap-0.5">
               <div
                 className={`h-2.5 w-2.5 rounded-full border transition-colors ${
-                  isCompleted || isPast
+                  isCompleted
                     ? "bg-primary border-primary"
                     : isActive
                       ? "bg-primary border-primary ring-2 ring-primary/20"
@@ -58,7 +79,7 @@ export function JourneyStepper({ currentStep }: JourneyStepperProps) {
               </div>
               <span
                 className={`text-[9px] leading-tight ${
-                  isActive ? "text-foreground font-medium" : "text-muted-foreground/60"
+                  isActive ? "text-foreground font-medium" : isCompleted ? "text-primary" : "text-muted-foreground/60"
                 }`}
               >
                 {step.label}
@@ -67,7 +88,7 @@ export function JourneyStepper({ currentStep }: JourneyStepperProps) {
             {i < STEPS.length - 1 && (
               <div
                 className={`flex-1 h-px mx-1 mt-[-10px] ${
-                  isPast ? "bg-primary" : "bg-foreground/10"
+                  isCompleted || isPast ? "bg-primary" : "bg-foreground/10"
                 }`}
               />
             )}

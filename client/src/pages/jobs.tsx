@@ -39,6 +39,7 @@ import {
   Sparkles,
   Lock,
   Compass,
+  TrendingUp,
 } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { queryClient } from "@/lib/queryClient";
@@ -625,6 +626,8 @@ export default function Jobs() {
         </div>
 
         {!searchResults && <JourneyStepper currentStep="jobs" />}
+
+        {!searchResults && isAuthenticated && <WelcomeBackBanner />}
 
         {!searchResults && (
           <CareerIntelligencePanel
@@ -1574,6 +1577,45 @@ export default function Jobs() {
           jobTitle={pickerJobTitle}
         />
       )}
+    </div>
+  );
+}
+
+function WelcomeBackBanner() {
+  const { data: insights } = useQuery<{
+    hasInsights: boolean;
+    newJobCount: number;
+    topCategory: string | null;
+    topCategoryNewJobs: number;
+    totalJobViews: number;
+    totalApplyClicks: number;
+  }>({
+    queryKey: ["/api/personalized-insights"],
+    staleTime: 60000,
+  });
+
+  if (!insights?.hasInsights || insights.newJobCount === 0) return null;
+
+  return (
+    <div
+      className="flex items-center gap-3 rounded-md border border-primary/15 bg-primary/5 dark:bg-primary/10 px-4 py-3 mb-1"
+      data-testid="welcome-back-banner"
+    >
+      <TrendingUp className="h-4 w-4 text-primary shrink-0" />
+      <div className="text-sm text-foreground">
+        {insights.topCategory && insights.topCategoryNewJobs > 0 ? (
+          <span>
+            <span className="font-medium">{insights.topCategoryNewJobs} new {insights.topCategory}</span> {insights.topCategoryNewJobs === 1 ? "role" : "roles"} since your last visit
+            {insights.newJobCount > insights.topCategoryNewJobs && (
+              <span className="text-muted-foreground"> ({insights.newJobCount} total new)</span>
+            )}
+          </span>
+        ) : (
+          <span>
+            <span className="font-medium">{insights.newJobCount} new</span> {insights.newJobCount === 1 ? "role" : "roles"} since your last visit
+          </span>
+        )}
+      </div>
     </div>
   );
 }

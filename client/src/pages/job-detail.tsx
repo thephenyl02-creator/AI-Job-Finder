@@ -13,7 +13,6 @@ import { useActivityTracker } from "@/hooks/use-activity-tracker";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Job, Resume, StructuredDescription } from "@shared/schema";
-import type { ResumeExtractedData } from "@shared/models/auth";
 import { decodeHtmlEntities, fixMissingSentenceSpaces, cleanStructuredText, parseStructuredDescription } from "@/lib/structured-description";
 import { formatSalary } from "@/lib/format-salary";
 import { JobLocation } from "@/components/job-location";
@@ -47,6 +46,7 @@ import {
   X,
   Lock,
   Eye,
+  Compass,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -491,31 +491,44 @@ export default function JobDetail() {
     enabled: isAuthenticated,
   });
 
-  const resumeFit = useMemo(() => {
-    if (!job?.keySkills?.length || userResumes.length === 0) return null;
-    const jobSkillsLower = job.keySkills.map(s => s.toLowerCase().trim());
-    const results = userResumes
-      .filter(r => r.extractedData && typeof r.extractedData === 'object')
-      .map(resume => {
-        const data = resume.extractedData as ResumeExtractedData;
-        const resumeSkills = (data.skills || []).map(s => s.toLowerCase().trim());
-        let matchCount = 0;
-        const matched: string[] = [];
-        const missing: string[] = [];
-        for (const js of job.keySkills!) {
-          const jsLower = js.toLowerCase().trim();
-          const found = resumeSkills.some(rs =>
-            rs.includes(jsLower) || jsLower.includes(rs) ||
-            rs.split(/\s+/).some(w => jsLower.split(/\s+/).includes(w))
-          );
-          if (found) { matchCount++; matched.push(js); } else { missing.push(js); }
-        }
-        const score = Math.round((matchCount / jobSkillsLower.length) * 100);
-        return { resumeId: resume.id, label: resume.label, isPrimary: resume.isPrimary, score, matched, missing, totalSkills: jobSkillsLower.length };
-      })
-      .sort((a, b) => b.score - a.score);
-    return results.length > 0 ? results : null;
-  }, [job?.keySkills, userResumes]);
+  const { data: careerIntel } = useQuery<{
+    cached: boolean;
+    data: {
+      recommendedPaths: { path: string; why: string; fit: string; jobCount: number }[];
+      strengths: { label: string; evidence: string }[];
+      gaps: { label: string; suggestion: string }[];
+      transitionSteps: string[];
+      learningPlan: string[];
+    } | null;
+  }>({
+    queryKey: ["/api/career-intelligence"],
+    enabled: isAuthenticated,
+  });
+
+  const careerMatch = useMemo(() => {
+    if (!careerIntel?.cached || !careerIntel.data || !job?.roleCategory) return null;
+    const matchedPath = careerIntel.data.recommendedPaths.find(
+      p => p.path.toLowerCase() === job.roleCategory!.toLowerCase()
+    );
+    return matchedPath || null;
+  }, [careerIntel, job?.roleCategory]);
+
+  const { data: readinessData } = useQuery<{
+    scores: Array<{
+      resumeId: number;
+      label: string | null;
+      isPrimary: boolean | null;
+      score: number;
+      matched: string[];
+      missing: string[];
+      totalSkills: number;
+    }>;
+  }>({
+    queryKey: ["/api/jobs", jobId, "readiness"],
+    enabled: isAuthenticated && !!jobId && !!job?.keySkills?.length,
+  });
+
+  const resumeFit = readinessData?.scores?.length ? readinessData.scores : null;
 
   const { toast } = useToast();
 
@@ -928,7 +941,26 @@ export default function JobDetail() {
           )}
         </div>
 
-        {/* === READINESS DISPLAY === */}
+        {/* === CAREER CONTEXT + READINESS === */}
+        {isAuthenticated && careerMatch && (
+          <div className="flex items-center gap-2 mb-3" data-testid="career-path-match-badge">
+            <Badge
+              variant="outline"
+              className={`text-xs px-2.5 py-1 ${
+                careerMatch.fit === "high"
+                  ? "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800"
+                  : careerMatch.fit === "medium"
+                    ? "bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800"
+                    : "bg-slate-50 dark:bg-slate-900/30 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700"
+              }`}
+            >
+              <Compass className="h-3 w-3 mr-1" />
+              On your recommended path
+            </Badge>
+            <span className="text-[11px] text-muted-foreground">{careerMatch.why}</span>
+          </div>
+        )}
+
         {(() => {
           const primaryFit = resumeFit?.find(r => r.isPrimary) || resumeFit?.[0];
           if (!primaryFit || !isAuthenticated) return null;
@@ -942,6 +974,28 @@ export default function JobDetail() {
                   totalSkills={primaryFit.totalSkills}
                   isPro={isPro}
                 />
+                {careerIntel?.cached && careerIntel.data && careerIntel.data.gaps.length > 0 && (
+                  <div className="mt-4 pt-3 border-t border-foreground/5" data-testid="career-gap-suggestions">
+                    <p className="text-[11px] text-muted-foreground font-medium mb-2">Based on your career analysis</p>
+                    <div className="space-y-1.5">
+                      {careerIntel.data.gaps.slice(0, isPro ? 3 : 1).map((gap, i) => (
+                        <div key={i} className="flex items-start gap-2 text-xs" data-testid={`gap-suggestion-${i}`}>
+                          <TrendingUp className="h-3 w-3 text-amber-500 shrink-0 mt-0.5" />
+                          <div>
+                            <span className="font-medium text-foreground">{gap.label}</span>
+                            <span className="text-muted-foreground"> — {gap.suggestion}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    {!isPro && careerIntel.data.gaps.length > 1 && (
+                      <Link href="/pricing" className="flex items-center gap-1 mt-2 text-[10px] text-primary hover:underline" data-testid="link-unlock-gaps">
+                        <Lock className="h-2.5 w-2.5" />
+                        See all {careerIntel.data.gaps.length} improvement areas
+                      </Link>
+                    )}
+                  </div>
+                )}
               </CardContent>
             </Card>
           );

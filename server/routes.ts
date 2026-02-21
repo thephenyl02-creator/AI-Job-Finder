@@ -541,6 +541,37 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/jobs/:id/readiness", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const userId = user?.id;
+      if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+      const jobId = parseInt(req.params.id as string);
+      if (isNaN(jobId)) return res.status(400).json({ error: "Invalid job ID" });
+
+      const job = await storage.getJob(jobId);
+      if (!job || !job.keySkills || job.keySkills.length === 0) {
+        return res.json({ scores: [] });
+      }
+
+      const userResumes = await storage.getUserResumes(userId);
+      if (!userResumes || userResumes.length === 0) {
+        return res.json({ scores: [] });
+      }
+
+      const { computeReadinessScores } = await import("./lib/resume-matcher");
+      const scores = computeReadinessScores(
+        job.keySkills,
+        userResumes.map((r: any) => ({ id: r.id, label: r.label, isPrimary: r.isPrimary, extractedData: r.extractedData })),
+      );
+      res.json({ scores });
+    } catch (error) {
+      console.error("Error computing readiness:", error);
+      res.status(500).json({ error: "Failed to compute readiness" });
+    }
+  });
+
   // Track apply button clicks for analytics
   app.post("/api/jobs/:id/apply-click", async (req, res) => {
     try {
@@ -1419,55 +1450,6 @@ ${JSON.stringify(jobSummaries, null, 2)}`
   });
 
   // Resume upload endpoint
-  app.post("/api/resume/upload", isAuthenticated, upload.single("resume"), async (req, res) => {
-    try {
-      const user = req.user as any;
-      const userId = user?.id;
-      if (!userId) {
-        return res.status(401).json({ error: "Unauthorized" });
-      }
-
-      const file = req.file;
-      if (!file) {
-        return res.status(400).json({ error: "No file provided" });
-      }
-
-      // Extract text based on file type
-      let resumeText: string;
-      if (file.mimetype === "application/pdf") {
-        resumeText = await extractTextFromPDF(file.buffer);
-      } else {
-        resumeText = await extractTextFromDOCX(file.buffer);
-      }
-
-      if (!resumeText || resumeText.trim().length < 50) {
-        return res.status(400).json({ error: "Could not extract text from file. Please ensure your resume contains readable text." });
-      }
-
-      // Parse resume with AI
-      const parsedData = await parseResumeWithAI(resumeText);
-
-      // Generate search query from resume
-      const searchQuery = await generateSearchQueryFromResume(parsedData);
-
-      // Save to database
-      await storage.updateUserResume(userId, resumeText, file.originalname, parsedData);
-
-      res.json({
-        success: true,
-        parsedData,
-        searchQuery,
-        message: "Resume uploaded and parsed successfully",
-      });
-    } catch (error: any) {
-      console.error("Resume upload error:", error);
-      if (error instanceof InvalidPDFError) {
-        return res.status(400).json({ error: error.message });
-      }
-      res.status(500).json({ error: "Failed to process resume. Please try a different file." });
-    }
-  });
-
   app.post("/api/resume/anonymous-match", upload.single("resume"), async (req, res) => {
     try {
       const file = req.file;
@@ -1848,55 +1830,127 @@ Be specific and actionable. Focus on legal tech industry keywords and ATS best p
     }
   });
 
-  app.post("/api/resume/strategy-for-job", isAuthenticated, async (req, res) => {
+  app.get("/api/career-intelligence", isAuthenticated, async (req, res) => {
     try {
       const user = req.user as any;
       const userId = user?.id;
       if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
-      const schema = z.object({
-        jobId: z.number(),
-      });
-      const parsed = schema.safeParse(req.body);
-      if (!parsed.success) return res.status(400).json({ error: "Invalid input", details: parsed.error.flatten() });
-
-      const { jobId } = parsed.data;
-
-      const job = await storage.getJob(jobId);
-      if (!job) return res.status(404).json({ error: "Job not found" });
-      if (!job.structuredDescription) return res.status(400).json({ error: "This job does not have structured description data yet" });
+      const persona = await storage.getUserPersona(userId);
+      if (!persona?.careerIntelligence) {
+        return res.json({ cached: false, data: null });
+      }
 
       const userResumes = await storage.getUserResumes(userId);
       const primaryResume = userResumes.find((r: any) => r.isPrimary) || userResumes[0];
-      if (!primaryResume || !primaryResume.extractedData) {
-        return res.status(400).json({ error: "No parsed resume found. Please upload a resume first." });
+      let resumeChanged = false;
+      if (primaryResume?.extractedData) {
+        const currentHash = crypto.createHash("sha256").update(JSON.stringify(primaryResume.extractedData)).digest("hex").slice(0, 16);
+        resumeChanged = persona.careerIntelligenceResumeHash !== currentHash;
       }
 
-      const { computeStrategy } = await import("./lib/resume-strategy");
-
-      const sd = job.structuredDescription as any;
-      const resumeData = primaryResume.extractedData as any;
-
-      const strategy = await computeStrategy({
-        jobId,
-        jobTitle: job.title,
-        company: job.company,
-        structuredDescription: sd,
-        resumeData,
-      });
+      const allJobs = await storage.getActiveJobs();
+      const categoryCounts: Record<string, number> = {};
+      for (const job of allJobs) {
+        if (job.roleCategory) {
+          categoryCounts[job.roleCategory] = (categoryCounts[job.roleCategory] || 0) + 1;
+        }
+      }
+      const intelligence = persona.careerIntelligence as any;
+      if (intelligence.recommendedPaths) {
+        intelligence.recommendedPaths = intelligence.recommendedPaths.map((p: any) => ({
+          ...p,
+          jobCount: categoryCounts[p.path] || 0,
+        }));
+      }
 
       res.json({
-        job: {
-          id: job.id,
-          title: job.title,
-          company: job.company,
-          location: job.location,
-        },
-        strategy,
+        cached: true,
+        resumeChanged,
+        generatedAt: persona.careerIntelligenceGeneratedAt,
+        data: intelligence,
       });
-    } catch (error: any) {
-      console.error("Error computing resume strategy:", error);
-      res.status(500).json({ error: "Failed to compute resume strategy" });
+    } catch (error) {
+      console.error("Error loading career intelligence:", error);
+      res.status(500).json({ error: "Failed to load career intelligence" });
+    }
+  });
+
+  app.get("/api/personalized-insights", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const userId = user?.id;
+      if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+      const persona = await storage.getUserPersona(userId);
+      if (!persona) {
+        return res.json({ hasInsights: false });
+      }
+
+      const lastActive = persona.lastActiveAt;
+      let newJobCount = 0;
+      let topCategoryNewJobs = 0;
+      let topCategory: string | null = null;
+
+      const intel = persona.careerIntelligence as any;
+      if (intel?.recommendedPaths?.length) {
+        const highFitPath = intel.recommendedPaths.find((p: any) => p.fit === "high") || intel.recommendedPaths[0];
+        topCategory = highFitPath?.path || null;
+      }
+
+      if (lastActive) {
+        const allActiveJobs = await storage.getActiveJobs();
+        const newJobs = allActiveJobs.filter(j => j.publishedAt && new Date(j.publishedAt) > new Date(lastActive));
+        newJobCount = newJobs.length;
+        if (topCategory) {
+          topCategoryNewJobs = newJobs.filter(j => j.roleCategory === topCategory).length;
+        }
+      }
+
+      await storage.upsertUserPersona(userId, { lastActiveAt: new Date() });
+
+      res.json({
+        hasInsights: true,
+        newJobCount,
+        topCategory,
+        topCategoryNewJobs,
+        totalJobViews: persona.totalJobViews || 0,
+        totalApplyClicks: persona.totalApplyClicks || 0,
+      });
+    } catch (error) {
+      console.error("Error loading personalized insights:", error);
+      res.status(500).json({ error: "Failed to load insights" });
+    }
+  });
+
+  app.get("/api/journey-state", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const userId = user?.id;
+      if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+      const [resumes, persona, editorVersions] = await Promise.all([
+        storage.getUserResumes(userId),
+        storage.getUserPersona(userId),
+        db.select({ id: resumeEditorVersions.id }).from(resumeEditorVersions).where(eq(resumeEditorVersions.userId, userId)).limit(1),
+      ]);
+
+      const hasResume = resumes.length > 0;
+      const hasCareerIntelligence = !!persona?.careerIntelligence;
+      const hasViewedJobs = (persona?.totalJobViews || 0) > 0;
+      const hasTailoredResume = editorVersions.length > 0;
+      const hasApplied = (persona?.totalApplyClicks || 0) > 0;
+
+      res.json({
+        profile: hasResume,
+        path: hasCareerIntelligence,
+        jobs: hasViewedJobs,
+        tailor: hasTailoredResume,
+        apply: hasApplied,
+      });
+    } catch (error) {
+      console.error("Error loading journey state:", error);
+      res.status(500).json({ error: "Failed to load journey state" });
     }
   });
 
@@ -2016,7 +2070,7 @@ Rules:
         jobCount: categoryCounts[p.path] || 0,
       }));
 
-      res.json({
+      const responseData = {
         recommendedPaths: enrichedPaths,
         strengths: (parsed.strengths || []).slice(0, 3),
         gaps: (parsed.gaps || []).slice(0, 3),
@@ -2024,7 +2078,20 @@ Rules:
         suggestedSteppingStoneRoles: parsed.suggestedSteppingStoneRoles || [],
         learningPlan: parsed.learningPlan || [],
         confidenceNotes: parsed.confidenceNotes || [],
-      });
+      };
+
+      const resumeHash = crypto.createHash("sha256").update(JSON.stringify(primaryResume.extractedData)).digest("hex").slice(0, 16);
+      try {
+        await storage.upsertUserPersona(userId, {
+          careerIntelligence: responseData as any,
+          careerIntelligenceResumeHash: resumeHash,
+          careerIntelligenceGeneratedAt: new Date(),
+        });
+      } catch (persistErr) {
+        console.error("Failed to persist career intelligence (non-blocking):", persistErr);
+      }
+
+      res.json(responseData);
     } catch (error: any) {
       console.error("Error in career path advisor:", error);
       res.status(500).json({ error: "Failed to generate career path advice" });
@@ -6020,121 +6087,6 @@ ${platformContext}`;
     }
   });
 
-  app.post("/api/match/discuss", isAuthenticated, requirePro, async (req, res) => {
-    try {
-      const user = req.user as any;
-      const userId = user?.id;
-      const { message, history, matchContext } = req.body;
-
-      if (!message || typeof message !== "string" || message.trim().length < 2) {
-        return res.status(400).json({ error: "Please provide a message." });
-      }
-
-      if (!matchContext?.jobId) {
-        return res.status(400).json({ error: "Match context required." });
-      }
-
-      const conversationHistory: { role: "user" | "assistant"; content: string }[] = Array.isArray(history)
-        ? history.slice(-8).map((h: any) => ({
-            role: h.role === "assistant" ? "assistant" as const : "user" as const,
-            content: String(h.content).slice(0, 2000),
-          }))
-        : [];
-
-      const job = await storage.getJob(Number(matchContext.jobId));
-      if (!job) {
-        return res.status(404).json({ error: "Job not found." });
-      }
-
-      let resumeContext = "";
-      if (userId) {
-        const primaryResume = await storage.getPrimaryResume(userId);
-        if (primaryResume) {
-          const extracted = primaryResume.extractedData as any;
-          resumeContext = `
-USER'S RESUME:
-${extracted?.skills?.length ? `Skills: ${extracted.skills.join(", ")}` : ""}
-${extracted?.experience ? `Experience: ${JSON.stringify(extracted.experience).slice(0, 1200)}` : ""}
-${extracted?.education ? `Education: ${JSON.stringify(extracted.education).slice(0, 500)}` : ""}
-${extracted?.yearsOfExperience ? `Years of Experience: ${extracted.yearsOfExperience}` : ""}
-${primaryResume.resumeText ? `Full Resume:\n${primaryResume.resumeText.slice(0, 2000)}` : ""}`;
-        }
-      }
-
-      const salaryInfo = job.salaryMin || job.salaryMax
-        ? `Salary: ${job.salaryMin ? `$${job.salaryMin.toLocaleString()}` : ""}${job.salaryMin && job.salaryMax ? " - " : ""}${job.salaryMax ? `$${job.salaryMax.toLocaleString()}` : ""}`
-        : "Salary: Not disclosed";
-
-      const matchDetails = `
-MATCH ANALYSIS RESULTS:
-Match Score: ${matchContext.matchScore}%
-Tweak Needed: ${matchContext.tweakPercentage}%
-Verdict: ${matchContext.brutalVerdict}
-${matchContext.matchHighlights?.length ? `Strengths: ${matchContext.matchHighlights.join("; ")}` : ""}
-${matchContext.gapSummary ? `Gaps: ${matchContext.gapSummary}` : ""}
-${matchContext.topMissingSkills?.length ? `Missing Skills: ${matchContext.topMissingSkills.join(", ")}` : ""}`;
-
-      const jobDetails = `
-JOB DETAILS:
-Title: ${job.title}
-Company: ${job.company}
-Location: ${job.location || "Not specified"}
-${job.isRemote ? "Remote: Yes" : ""}
-${salaryInfo}
-Seniority: ${job.seniorityLevel || "Not specified"}
-Category: ${job.roleCategory || "Not specified"}
-${job.roleSubcategory ? `Specialization: ${job.roleSubcategory}` : ""}
-${job.keySkills?.length ? `Key Skills: ${job.keySkills.join(", ")}` : ""}
-Summary: ${job.aiSummary || "No summary available"}
-Description:
-${(job.description || "").slice(0, 3000)}
-${job.requirements ? `Requirements:\n${job.requirements.slice(0, 1500)}` : ""}`;
-
-      const systemPrompt = `You are a career advisor helping a legal professional understand how well they match with a specific job opportunity. You have their resume, the full job details, and the match analysis results.
-
-YOUR ROLE:
-- Help the user understand their match with this specific job
-- Explain what parts of their background align well and what gaps exist
-- Give honest, actionable advice on whether to apply and how to position themselves
-- Suggest specific ways to strengthen their application
-- Answer any questions about the role, company, or what the job involves day-to-day
-
-GUIDELINES:
-- Be direct and honest but constructive. Don't sugarcoat, but always offer a path forward
-- Use plain language. If you use a technical term, explain it
-- Keep responses focused and practical. Short paragraphs, bullet points for lists
-- Reference specific details from their resume and the job posting
-- Never say "based on the data" or "according to the analysis" - speak naturally as a knowledgeable advisor
-- Use **bold** for key points. Use - for bullet points
-- If the user asks something you don't have data for, say so honestly
-
-${resumeContext}
-
-${jobDetails}
-
-${matchDetails}`;
-
-      const messages: { role: "system" | "user" | "assistant"; content: string }[] = [
-        { role: "system", content: systemPrompt },
-        ...conversationHistory,
-        { role: "user", content: message.trim() },
-      ];
-
-      const completion = await getOpenAIClient().chat.completions.create({
-        model: "gpt-4o-mini",
-        messages,
-        temperature: 0.6,
-        max_tokens: 1200,
-      });
-
-      const reply = completion.choices[0]?.message?.content || "I'm sorry, I couldn't generate a response. Please try again.";
-      res.json({ reply });
-    } catch (error) {
-      console.error("Match discussion error:", error);
-      res.status(500).json({ error: "Failed to process your question. Please try again." });
-    }
-  });
-
   // =============================================
   // User Activity & Persona Routes
   // =============================================
@@ -6445,6 +6397,43 @@ ${matchDetails}`;
     }
   });
 
+  app.post("/api/stripe/confirm-checkout", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const userId = user?.id;
+      if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+      const { getUncachableStripeClient } = await import("./stripeClient");
+      const stripe = await getUncachableStripeClient();
+
+      const subData = await storage.getUserSubscription(userId);
+      if (!subData?.stripeCustomerId) {
+        return res.json({ status: "no_customer" });
+      }
+
+      const subscriptions = await stripe.subscriptions.list({
+        customer: subData.stripeCustomerId,
+        status: "active",
+        limit: 1,
+      });
+
+      if (subscriptions.data.length > 0) {
+        const sub = subscriptions.data[0];
+        await storage.updateUserSubscription(userId, {
+          stripeSubscriptionId: sub.id,
+          subscriptionTier: "pro",
+          subscriptionStatus: "active",
+        });
+        return res.json({ status: "active", tier: "pro" });
+      }
+
+      return res.json({ status: subData.subscriptionStatus || "inactive", tier: subData.subscriptionTier || "free" });
+    } catch (error: any) {
+      console.error("Confirm checkout error:", error?.message);
+      res.status(500).json({ error: "Failed to confirm checkout status" });
+    }
+  });
+
   app.post("/api/stripe/create-portal-session", isAuthenticated, async (req, res) => {
     try {
       const user = req.user as any;
@@ -6510,62 +6499,6 @@ ${matchDetails}`;
     } catch (error) {
       console.error("Error fetching subscription:", error);
       res.status(500).json({ error: "Failed to fetch subscription" });
-    }
-  });
-
-  app.post("/api/stripe/sync-subscription", isAuthenticated, async (req, res) => {
-    try {
-      const user = req.user as any;
-      const userId = user?.id;
-      if (!userId) {
-        return res.status(401).json({ error: "Unauthorized" });
-      }
-
-      const subData = await storage.getUserSubscription(userId);
-      if (!subData?.stripeCustomerId) {
-        return res.json({ tier: "free", status: "inactive" });
-      }
-
-      const { getUncachableStripeClient } = await import("./stripeClient");
-      const stripe = await getUncachableStripeClient();
-      const subscriptions = await stripe.subscriptions.list({
-        customer: subData.stripeCustomerId,
-        status: 'active',
-        limit: 1,
-      });
-
-      if (subscriptions.data.length > 0) {
-        const activeSub = subscriptions.data[0];
-        await storage.updateUserSubscription(userId, {
-          stripeSubscriptionId: activeSub.id,
-          subscriptionTier: "pro",
-          subscriptionStatus: "active",
-        });
-        return res.json({ tier: "pro", status: "active" });
-      }
-
-      const canceledSubs = await stripe.subscriptions.list({
-        customer: subData.stripeCustomerId,
-        status: 'canceled',
-        limit: 1,
-      });
-
-      if (canceledSubs.data.length > 0) {
-        await storage.updateUserSubscription(userId, {
-          subscriptionTier: "free",
-          subscriptionStatus: "canceled",
-        });
-        return res.json({ tier: "free", status: "canceled" });
-      }
-
-      await storage.updateUserSubscription(userId, {
-        subscriptionTier: "free",
-        subscriptionStatus: "inactive",
-      });
-      res.json({ tier: "free", status: "inactive" });
-    } catch (error) {
-      console.error("Error syncing subscription:", error);
-      res.status(500).json({ error: "Failed to sync subscription" });
     }
   });
 
@@ -7176,6 +7109,22 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
 
       const existingVersion = existing.length > 0 ? existing[0] : null;
 
+      let careerContext = null;
+      try {
+        const persona = await storage.getUserPersona(userId);
+        if (persona?.careerIntelligence) {
+          const intel = persona.careerIntelligence as any;
+          if (intel.strengths?.length || intel.gaps?.length) {
+            careerContext = {
+              strengths: intel.strengths || [],
+              gaps: intel.gaps || [],
+            };
+          }
+        }
+      } catch (err) {
+        console.error("Non-blocking: failed to load career context for editor:", err);
+      }
+
       const result = await runOrchestrator({
         resumeExtractedData: resume[0].extractedData,
         resumeText: resume[0].resumeText || undefined,
@@ -7185,6 +7134,7 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
         jobCompany: job.company,
         jobDescription: job.description,
         jobRequirements: job.requirements || undefined,
+        careerContext,
       });
 
       if (!existingVersion) {

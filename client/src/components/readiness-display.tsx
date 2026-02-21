@@ -78,10 +78,34 @@ export function ReadinessDisplay({ score, matched, missing, totalSkills, isPro }
       )}
 
       {!isPro && missing.length > 0 && (
-        <Link href="/pricing" className="flex items-center gap-1.5 text-[10px] text-primary hover:underline" data-testid="link-readiness-upgrade">
-          <Lock className="h-2.5 w-2.5" />
-          See what to improve
-        </Link>
+        <div data-testid="readiness-pro-preview">
+          <p className="text-[10px] text-muted-foreground font-medium mb-1.5">Skills to develop:</p>
+          <div className="flex flex-wrap gap-1 mb-2">
+            <Badge
+              variant="outline"
+              className="text-[10px] bg-amber-50/50 dark:bg-amber-950/20 border-amber-200/50 dark:border-amber-800/50"
+            >
+              {missing[0]}
+            </Badge>
+            {missing.length > 1 && (
+              <div className="relative flex flex-wrap gap-1">
+                {missing.slice(1, 3).map((skill, i) => (
+                  <Badge
+                    key={i}
+                    variant="outline"
+                    className="text-[10px] border-foreground/5 blur-[3px] select-none"
+                  >
+                    {skill}
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </div>
+          <Link href="/pricing" className="flex items-center gap-1.5 text-[10px] text-primary hover:underline" data-testid="link-readiness-upgrade">
+            <Lock className="h-2.5 w-2.5" />
+            Unlock all {missing.length} improvement areas
+          </Link>
+        </div>
       )}
     </div>
   );

@@ -121,7 +121,7 @@ export default function Pricing() {
     let cancelled = false;
     const syncSubscription = async () => {
       try {
-        const syncRes = await fetch("/api/stripe/sync-subscription", {
+        const syncRes = await fetch("/api/stripe/confirm-checkout", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
@@ -146,7 +146,7 @@ export default function Pricing() {
           }
           attempts++;
           try {
-            const res = await fetch("/api/stripe/sync-subscription", {
+            const res = await fetch("/api/stripe/confirm-checkout", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               credentials: "include",

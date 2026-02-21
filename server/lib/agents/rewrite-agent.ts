@@ -31,7 +31,8 @@ export async function rewriteAgent(
   jobDescription: string,
   jobRequirements: string | undefined,
   jobTitle: string,
-  company: string
+  company: string,
+  careerContext?: { strengths: { label: string; evidence: string }[]; gaps: { label: string; suggestion: string }[] } | null
 ): Promise<RewriteResult> {
   try {
     const openai = getOpenAIClient();
@@ -104,6 +105,11 @@ ${jobDescription.substring(0, 4000)}
 
 REQUIREMENTS:
 ${(jobRequirements || "See job description above").substring(0, 2000)}
+${careerContext ? `
+CAREER INTELLIGENCE (from prior analysis):
+Candidate Strengths: ${careerContext.strengths.map(s => `${s.label} (${s.evidence})`).join("; ")}
+Known Gaps to Address: ${careerContext.gaps.map(g => `${g.label} — ${g.suggestion}`).join("; ")}
+Use this context to: amplify the strengths in bullet rewrites, and specifically position experience to offset the known gaps where possible.` : ""}
 
 CANDIDATE RESUME:
 ${resumeContext.substring(0, 5000)}`

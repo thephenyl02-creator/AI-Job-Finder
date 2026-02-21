@@ -13,6 +13,7 @@ export interface OrchestratorInput {
   jobCompany: string;
   jobDescription: string;
   jobRequirements?: string;
+  careerContext?: { strengths: { label: string; evidence: string }[]; gaps: { label: string; suggestion: string }[] } | null;
 }
 
 export interface OrchestratorResult {
@@ -82,7 +83,7 @@ export async function runOrchestrator(input: OrchestratorInput): Promise<Orchest
   try {
     console.log(`[Orchestrator:${traceId}] Step 3: Unified Rewrite`);
     const rewrite = await withTimeout(
-      rewriteAgent(sections, input.jobDescription, input.jobRequirements, input.jobTitle, input.jobCompany),
+      rewriteAgent(sections, input.jobDescription, input.jobRequirements, input.jobTitle, input.jobCompany, input.careerContext),
       25000,
       "RewriteAgent"
     );

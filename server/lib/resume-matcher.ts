@@ -474,3 +474,45 @@ function generateFallbackTweaks(
         : [],
   };
 }
+
+export interface ReadinessResult {
+  resumeId: number;
+  label: string | null;
+  isPrimary: boolean | null;
+  score: number;
+  matched: string[];
+  missing: string[];
+  totalSkills: number;
+}
+
+export function computeReadinessScores(
+  jobKeySkills: string[],
+  resumes: Array<{ id: number; label: string | null; isPrimary: boolean | null; extractedData: any }>,
+): ReadinessResult[] {
+  if (!jobKeySkills || jobKeySkills.length === 0) return [];
+
+  const jobSkillsLower = jobKeySkills.map(s => s.toLowerCase().trim());
+
+  const results = resumes
+    .filter(r => r.extractedData && typeof r.extractedData === "object")
+    .map(resume => {
+      const data = resume.extractedData as any;
+      const resumeSkills = ((data.skills || []) as string[]).map(s => s.toLowerCase().trim());
+      let matchCount = 0;
+      const matched: string[] = [];
+      const missing: string[] = [];
+      for (const js of jobKeySkills) {
+        const jsLower = js.toLowerCase().trim();
+        const found = resumeSkills.some(rs =>
+          rs.includes(jsLower) || jsLower.includes(rs) ||
+          rs.split(/\s+/).some(w => w.length > 2 && jsLower.split(/\s+/).some(jw => jw.length > 2 && (jw.includes(w) || w.includes(jw))))
+        );
+        if (found) { matchCount++; matched.push(js); } else { missing.push(js); }
+      }
+      const score = Math.round((matchCount / jobSkillsLower.length) * 100);
+      return { resumeId: resume.id, label: resume.label, isPrimary: resume.isPrimary, score, matched, missing, totalSkills: jobSkillsLower.length };
+    })
+    .sort((a, b) => b.score - a.score);
+
+  return results;
+}
