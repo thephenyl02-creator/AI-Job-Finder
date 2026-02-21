@@ -82,6 +82,38 @@ function ScoreBadge({ score }: { score: number }) {
   );
 }
 
+function ResumeCompletenessRing({ extracted }: { extracted: ResumeExtractedData | null }) {
+  const sections = [
+    !!(extracted?.skills && extracted.skills.length > 0),
+    !!(extracted?.experience && (extracted.experience as any[]).length > 0),
+    !!(extracted?.education && (extracted.education as any[]).length > 0),
+    !!(extracted?.name),
+    !!(extracted?.email),
+  ];
+  const filled = sections.filter(Boolean).length;
+  const pct = Math.round((filled / sections.length) * 100);
+  const circumference = 2 * Math.PI * 10;
+  const dashOffset = circumference - (pct / 100) * circumference;
+  const color = pct >= 80 ? "stroke-emerald-500" : pct >= 50 ? "stroke-amber-500" : "stroke-slate-400";
+
+  return (
+    <div className="relative flex items-center justify-center shrink-0 w-6 h-6" title={`${pct}% complete`} data-testid="resume-completeness-ring">
+      <svg className="w-6 h-6 -rotate-90" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="10" fill="none" className="stroke-muted" strokeWidth="2" />
+        <circle
+          cx="12" cy="12" r="10" fill="none"
+          className={`${color} transition-all duration-500`}
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={dashOffset}
+        />
+      </svg>
+      <span className="absolute text-[7px] font-bold text-foreground">{pct}</span>
+    </div>
+  );
+}
+
 function ResumeCard({
   resume,
   onDelete,
@@ -165,9 +197,12 @@ function ResumeCard({
                 </Badge>
               )}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {resume.filename}
-            </p>
+            <div className="flex items-center gap-2 mt-1.5">
+              <ResumeCompletenessRing extracted={extracted} />
+              <p className="text-xs text-muted-foreground">
+                {resume.filename}
+              </p>
+            </div>
             {extracted?.skills && extracted.skills.length > 0 && (
               <div className="flex flex-wrap gap-1 mt-2">
                 {extracted.skills.slice(0, 5).map((skill: string) => (
@@ -1047,6 +1082,7 @@ export default function Resumes() {
   const [atsReview, setAtsReview] = useState<ATSReview | null>(null);
   const [selectedAtsResumeId, setSelectedAtsResumeId] = useState<number | null>(null);
   const [showReturnBanner, setShowReturnBanner] = useState(false);
+  const [showJourneyNudge, setShowJourneyNudge] = useState(false);
 
   const urlParams = new URLSearchParams(searchString);
   const returnTo = urlParams.get("returnTo");
@@ -1217,8 +1253,41 @@ export default function Resumes() {
               <UploadForm
                 onClose={() => setShowUpload(false)}
                 existingCount={userResumes.length}
-                onUploadSuccess={returnTo ? () => setShowReturnBanner(true) : undefined}
+                onUploadSuccess={returnTo ? () => setShowReturnBanner(true) : () => setShowJourneyNudge(true)}
               />
+            )}
+
+            {showJourneyNudge && !returnTo && (
+              <Card className="border-primary/30 bg-gradient-to-r from-primary/5 to-transparent animate-in slide-in-from-top-2 duration-300" data-testid="card-journey-nudge">
+                <CardContent className="p-4 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <div className="shrink-0 w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
+                      <Briefcase className="h-4 w-4 text-primary" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-foreground">Resume uploaded!</p>
+                      <p className="text-xs text-muted-foreground">Head to Jobs to discover career paths that match your background.</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Link href="/jobs">
+                      <Button size="sm" data-testid="button-nudge-to-jobs">
+                        <ArrowRight className="h-3.5 w-3.5 mr-1" />
+                        Explore Jobs
+                      </Button>
+                    </Link>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7"
+                      onClick={() => setShowJourneyNudge(false)}
+                      data-testid="button-dismiss-nudge"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
             )}
 
             {resumesLoading ? (

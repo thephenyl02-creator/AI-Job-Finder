@@ -39,7 +39,6 @@ import {
   Lock,
   Compass,
   TrendingUp,
-  Settings2,
   Zap,
   AlertCircle,
   Briefcase,
@@ -165,6 +164,7 @@ export default function Jobs() {
   const [intelligenceResult, setIntelligenceResult] = useState<CareerIntelligenceResult | null>(null);
   const [intelligenceResumeChanged, setIntelligenceResumeChanged] = useState(false);
   const [gearOpen, setGearOpen] = useState(false);
+  const autoOpenedRef = useRef(false);
 
   const { data: userResumes = [] } = useQuery<any[]>({
     queryKey: ["/api/resumes"],
@@ -201,6 +201,26 @@ export default function Jobs() {
       }
     }
   }, [cachedIntelligence, intelligenceResult]);
+
+  useEffect(() => {
+    if (
+      isAuthenticated &&
+      hasResume &&
+      !intelligenceResult &&
+      !autoOpenedRef.current &&
+      !cachedIntelligence?.cached
+    ) {
+      const alreadyNudged = sessionStorage.getItem("ltc_path_nudged");
+      if (!alreadyNudged) {
+        const timer = setTimeout(() => {
+          setGearOpen(true);
+          autoOpenedRef.current = true;
+          sessionStorage.setItem("ltc_path_nudged", "1");
+        }, 800);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [isAuthenticated, hasResume, intelligenceResult, cachedIntelligence]);
 
   const guidedSearchUsed = usageLimits?.guidedSearch?.used ?? 0;
   const guidedSearchLimit = usageLimits?.guidedSearch?.limit ?? 7;
@@ -728,11 +748,12 @@ export default function Jobs() {
                     <Popover open={gearOpen} onOpenChange={setGearOpen}>
                       <PopoverTrigger asChild>
                         <button
-                          className={`relative shrink-0 rounded-md p-1.5 transition-colors hover:bg-muted/60 ${intelligenceResult ? "text-primary" : "text-muted-foreground/50"}`}
+                          className={`relative shrink-0 rounded-lg px-2.5 py-1.5 flex items-center gap-1.5 transition-colors hover:bg-muted/60 border ${intelligenceResult ? "text-primary border-primary/30 bg-primary/5" : "text-muted-foreground/60 border-transparent hover:border-foreground/10"}`}
                           data-testid="button-career-gear"
                           title="Career intelligence"
                         >
-                          <Settings2 className="h-5 w-5" />
+                          <Compass className="h-4.5 w-4.5" />
+                          <span className="text-xs font-medium hidden sm:inline">Career Paths</span>
                           {intelligenceResult && (
                             <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-primary" />
                           )}
@@ -846,7 +867,21 @@ export default function Jobs() {
           </div>
         )}
 
-        {!searchResults && <JourneyStepper currentStep="jobs" />}
+        {!searchResults && (
+          <JourneyStepper
+            currentStep="jobs"
+            onStepClick={(step) => {
+              if (step === "profile") {
+                setLocation("/resumes");
+              } else if (step === "path") {
+                setGearOpen(true);
+              } else if (step === "jobs" || step === "tailor" || step === "apply") {
+                const el = document.querySelector('[data-testid="filter-bar"]');
+                if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+              }
+            }}
+          />
+        )}
 
         {!searchResults && isAuthenticated && <WelcomeBackBanner />}
 
@@ -1468,6 +1503,11 @@ export default function Jobs() {
                     return null;
                   }
 
+                  const ringColor = match.matchScore >= 75 ? "stroke-emerald-500" :
+                    match.matchScore >= 55 ? "stroke-amber-500" : "stroke-slate-400";
+                  const circumference = 2 * Math.PI * 18;
+                  const dashOffset = circumference - (match.matchScore / 100) * circumference;
+
                   return (
                     <div
                       key={`match-${match.jobId}`}
@@ -1476,11 +1516,21 @@ export default function Jobs() {
                       onClick={() => setLocation(`/jobs/${match.jobId}`)}
                     >
                       <div className="flex gap-3">
-                        <div className={`flex flex-col items-center justify-center rounded-md border px-2 py-1.5 shrink-0 ${scoreBg}`}>
-                          <span className={`text-lg font-bold leading-none ${scoreColor}`} data-testid={`text-match-score-${match.jobId}`}>
-                            {match.matchScore}
+                        <div className="relative flex items-center justify-center shrink-0 w-12 h-12" data-testid={`match-ring-${match.jobId}`}>
+                          <svg className="w-12 h-12 -rotate-90" viewBox="0 0 44 44">
+                            <circle cx="22" cy="22" r="18" fill="none" className="stroke-muted" strokeWidth="3" />
+                            <circle
+                              cx="22" cy="22" r="18" fill="none"
+                              className={`${ringColor} transition-all duration-700 ease-out`}
+                              strokeWidth="3"
+                              strokeLinecap="round"
+                              strokeDasharray={circumference}
+                              strokeDashoffset={dashOffset}
+                            />
+                          </svg>
+                          <span className={`absolute text-xs font-bold ${scoreColor}`} data-testid={`text-match-score-${match.jobId}`}>
+                            {match.matchScore}%
                           </span>
-                          <span className="text-[9px] text-muted-foreground mt-0.5">match</span>
                         </div>
                         <div className="min-w-0 flex-1">
                           <h3 className="font-medium text-foreground text-sm sm:text-base leading-snug" data-testid={`text-match-title-${match.jobId}`}>
@@ -1776,8 +1826,10 @@ function CareerGearPopover({
     );
   }
 
+  const fitScoreMap: Record<string, number> = { high: 90, medium: 65, low: 35 };
+
   return (
-    <div className="p-4" data-testid="gear-intelligence-result">
+    <div className="p-4 max-h-[70vh] overflow-y-auto" data-testid="gear-intelligence-result">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <Compass className="h-4 w-4 text-primary" />
@@ -1805,52 +1857,70 @@ function CareerGearPopover({
         </div>
       )}
 
-      {result.strengths.length > 0 && (
-        <div className="mb-3">
-          <p className="text-[11px] text-muted-foreground mb-1.5 font-medium uppercase tracking-wider flex items-center gap-1">
-            <TrendingUp className="h-3 w-3 text-emerald-500" />
-            Top strengths
-          </p>
-          <div className="flex flex-wrap gap-1.5">
-            {result.strengths.slice(0, 3).map((s, i) => (
-              <Badge key={i} variant="outline" className="text-[11px] font-normal bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200/50 dark:border-emerald-800/30">
-                {s.label}
-              </Badge>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {result.gaps.length > 0 && (
-        <div className="mb-3">
-          <p className="text-[11px] text-muted-foreground mb-1.5 font-medium uppercase tracking-wider flex items-center gap-1">
-            <AlertCircle className="h-3 w-3 text-slate-400" />
-            Gaps to close
-          </p>
-          <div className="flex flex-wrap gap-1.5">
-            {result.gaps.slice(0, 3).map((g, i) => (
-              <Badge key={i} variant="outline" className="text-[11px] font-normal">
-                {g.label}
-              </Badge>
-            ))}
+      {(result.strengths.length > 0 || result.gaps.length > 0) && (
+        <div className="mb-4" data-testid="section-strengths-gaps">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <p className="text-[11px] text-muted-foreground mb-2 font-medium uppercase tracking-wider flex items-center gap-1">
+                <TrendingUp className="h-3 w-3 text-emerald-500" />
+                Strengths
+              </p>
+              <div className="space-y-1.5">
+                {result.strengths.slice(0, 4).map((s, i) => (
+                  <div key={i} className="group" data-testid={`strength-bar-${i}`}>
+                    <div className="flex items-center gap-1.5">
+                      <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-emerald-500 transition-all duration-700 ease-out"
+                          style={{ width: `${85 - i * 12}%` }}
+                        />
+                      </div>
+                      <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium w-20 truncate text-right">{s.label}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div>
+              <p className="text-[11px] text-muted-foreground mb-2 font-medium uppercase tracking-wider flex items-center gap-1">
+                <AlertCircle className="h-3 w-3 text-slate-400" />
+                Gaps
+              </p>
+              <div className="space-y-1.5">
+                {result.gaps.slice(0, 4).map((g, i) => (
+                  <div key={i} className="group" data-testid={`gap-bar-${i}`}>
+                    <div className="flex items-center gap-1.5">
+                      <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-slate-400 dark:bg-slate-500 transition-all duration-700 ease-out"
+                          style={{ width: `${70 - i * 15}%` }}
+                        />
+                      </div>
+                      <span className="text-[10px] text-muted-foreground font-medium w-20 truncate text-right">{g.label}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       )}
 
       <div className="border-t border-foreground/10 pt-3 mt-1">
         <p className="text-[11px] text-muted-foreground mb-2 font-medium uppercase tracking-wider">Career paths — click to filter jobs</p>
-        <div className="space-y-1.5">
+        <div className="space-y-2">
           {result.recommendedPaths.map((path, i) => {
             const isLocked = i > 0 && !isPro;
             const isActive = selectedPath === path.path;
             const colors = FIT_COLORS[path.fit] || FIT_COLORS.medium;
+            const fitScore = fitScoreMap[path.fit] || 50;
 
             return (
               <button
                 key={path.path}
                 onClick={() => onSelectPath(path, i)}
                 disabled={isLocked}
-                className={`relative w-full text-left rounded-md border px-3 py-2 transition-all text-sm ${
+                className={`relative w-full text-left rounded-md border px-3 py-2.5 transition-all text-sm ${
                   isActive
                     ? `${colors.border} ${colors.bg} ring-1 ring-primary/20`
                     : isLocked
@@ -1867,20 +1937,29 @@ function CareerGearPopover({
                     </span>
                   </div>
                 )}
-                <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center justify-between gap-2 mb-1.5">
                   <span className="font-medium text-foreground text-sm">{path.path}</span>
                   <div className="flex items-center gap-2 shrink-0">
-                    <span className={`flex items-center gap-1 text-[10px] font-medium ${colors.text}`}>
-                      <span className={`h-1.5 w-1.5 rounded-full ${colors.dot}`} />
-                      {FIT_LABELS[path.fit]}
-                    </span>
                     <span className="text-[10px] text-muted-foreground/60 flex items-center gap-0.5">
                       <Briefcase className="h-2.5 w-2.5" />
                       {path.jobCount}
                     </span>
                   </div>
                 </div>
-                <p className="text-xs text-muted-foreground mt-0.5 leading-snug">{path.why}</p>
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden" data-testid={`path-fit-bar-${i}`}>
+                    <div
+                      className={`h-full rounded-full transition-all duration-700 ease-out ${
+                        path.fit === "high" ? "bg-emerald-500" : path.fit === "medium" ? "bg-amber-500" : "bg-slate-400"
+                      }`}
+                      style={{ width: `${fitScore}%` }}
+                    />
+                  </div>
+                  <span className={`text-[10px] font-semibold ${colors.text} w-16 text-right`}>
+                    {FIT_LABELS[path.fit]}
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground leading-snug">{path.why}</p>
               </button>
             );
           })}
