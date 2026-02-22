@@ -258,16 +258,26 @@ export default function DashboardPage() {
     refetchInterval: 30000,
   });
 
-  const { data: diagnosticData } = useQuery<{
-    id: number;
-    readinessScore: number;
-    readinessTier: string;
-    careerPaths: { pathName: string; matchScore: number; tier: string }[];
-    skillCategories: { category: string; score: number }[];
-    transitionPlan: { week: number; title: string }[];
+  const { data: rawDiagnostic } = useQuery<{
+    report: {
+      readinessScore: number;
+      readinessTier: string;
+      careerPaths: { pathName: string; matchScore: number; tier: string }[];
+      skillClusters: { name: string; score: number }[];
+      transitionPlan: { week: number; theme: string }[];
+    } | null;
+    reportId: number;
+    overallReadinessScore: number;
   }>({
     queryKey: ["/api/diagnostic/latest"],
   });
+
+  const diagnosticData = rawDiagnostic?.report ? {
+    readinessScore: rawDiagnostic.report.readinessScore ?? rawDiagnostic.overallReadinessScore ?? 0,
+    readinessTier: rawDiagnostic.report.readinessTier ?? "",
+    careerPaths: rawDiagnostic.report.careerPaths ?? [],
+    skillCategories: (rawDiagnostic.report.skillClusters ?? []).map(c => ({ category: c.name, score: c.score })),
+  } : null;
 
   useEffect(() => {
     if (dataUpdatedAt) setLastUpdated(new Date(dataUpdatedAt));

@@ -446,7 +446,7 @@ export default function DiagnosticPage() {
   const { toast } = useToast();
 
   const { data: authData } = useQuery<any>({ queryKey: ["/api/auth/user"] });
-  const isPro = authData?.subscriptionTier === "pro";
+  const isPro = authData?.isPro === true;
 
   const { data: resumeData } = useQuery<any[]>({
     queryKey: ["/api/resumes"],
