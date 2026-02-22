@@ -2,7 +2,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ExternalLink, Bookmark, DollarSign } from "lucide-react";
+import { ExternalLink, Bookmark, DollarSign, Zap, TrendingUp, Target } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { JobLocation } from "./job-location";
 import type { JobWithScore } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -10,12 +11,20 @@ import { useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
 
+interface FitScoreData {
+  fitScore: number | null;
+  aiIntensity: string | null;
+  transitionDifficulty: string | null;
+  oneLineReason: string | null;
+}
+
 interface JobCardProps {
   job: JobWithScore;
   showMatchScore?: boolean;
   hasResume?: boolean;
   isSaved?: boolean;
   isAuthenticated?: boolean;
+  fitData?: FitScoreData | null;
 }
 
 function formatSalary(min?: number | null, max?: number | null, currency?: string | null): string | null {
@@ -82,7 +91,30 @@ function getCompanyColor(company: string): string {
   return colors[Math.abs(hash) % colors.length];
 }
 
-export function JobCard({ job, isSaved = false, isAuthenticated = false }: JobCardProps) {
+function getFitColor(score: number): string {
+  if (score >= 80) return "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800";
+  if (score >= 60) return "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 border-blue-200 dark:border-blue-800";
+  if (score >= 40) return "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 border-amber-200 dark:border-amber-800";
+  return "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300 border-red-200 dark:border-red-800";
+}
+
+function getAiIntensityLabel(level: string): { label: string; color: string } {
+  switch (level) {
+    case "high": return { label: "High AI", color: "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300" };
+    case "medium": return { label: "Some AI", color: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300" };
+    default: return { label: "Low AI", color: "bg-slate-100 text-slate-600 dark:bg-slate-900/40 dark:text-slate-400" };
+  }
+}
+
+function getTransitionLabel(level: string): { label: string; color: string } {
+  switch (level) {
+    case "low": return { label: "Easy Transition", color: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300" };
+    case "medium": return { label: "Moderate Shift", color: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300" };
+    default: return { label: "Career Pivot", color: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300" };
+  }
+}
+
+export function JobCard({ job, isSaved = false, isAuthenticated = false, fitData }: JobCardProps) {
   const { toast } = useToast();
   const salary = formatSalary(job.salaryMin, job.salaryMax, job.salaryCurrency);
   const companyDescriptor = COMPANY_DESCRIPTORS[job.company] || null;
@@ -204,6 +236,33 @@ export function JobCard({ job, isSaved = false, isAuthenticated = false }: JobCa
                 {job.roleSubcategory && (
                   <Badge variant="secondary" className="bg-primary/5 text-primary/80 border-primary/10 text-xs">
                     {job.roleSubcategory}
+                  </Badge>
+                )}
+                {fitData?.fitScore != null && (
+                  <TooltipProvider delayDuration={200}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Badge variant="outline" className={`gap-0.5 text-xs font-semibold ${getFitColor(fitData.fitScore)}`} data-testid={`badge-fit-${job.id}`}>
+                          <Target className="h-3 w-3" />
+                          {fitData.fitScore}% fit
+                        </Badge>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-[200px] text-xs">
+                        {fitData.oneLineReason || "Based on your resume analysis"}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
+                {fitData?.aiIntensity && (
+                  <Badge variant="secondary" className={`text-xs gap-0.5 ${getAiIntensityLabel(fitData.aiIntensity).color}`} data-testid={`badge-ai-${job.id}`}>
+                    <Zap className="h-3 w-3" />
+                    {getAiIntensityLabel(fitData.aiIntensity).label}
+                  </Badge>
+                )}
+                {fitData?.transitionDifficulty && (
+                  <Badge variant="secondary" className={`text-xs gap-0.5 ${getTransitionLabel(fitData.transitionDifficulty).color}`} data-testid={`badge-transition-${job.id}`}>
+                    <TrendingUp className="h-3 w-3" />
+                    {getTransitionLabel(fitData.transitionDifficulty).label}
                   </Badge>
                 )}
               </div>

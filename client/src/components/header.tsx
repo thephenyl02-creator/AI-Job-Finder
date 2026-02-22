@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   LogOut, BarChart3, Bell, FileText, Globe,
-  Bookmark, LayoutDashboard, Menu, Calendar, Settings, Activity, Search, CreditCard,
+  Bookmark, LayoutDashboard, Menu, Calendar, Settings, Activity, Search, CreditCard, Brain,
 } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { Link, useLocation } from "wouter";
@@ -70,6 +70,7 @@ export function Header() {
   const isJobsActive = isActive("/jobs") || isActive("/") || location.startsWith("/jobs/");
   const isDashboardActive = isActive("/dashboard");
   const isResumesActive = isActive("/resumes") || isActive("/resume-builder") || location.startsWith("/resume-editor/");
+  const isDiagnosticActive = isActive("/diagnostic");
 
   return (
     <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border/40 header-elev">
@@ -88,6 +89,7 @@ export function Header() {
               <NavLink href="/opportunity-map" icon={Globe} label="Map" isActive={isActive("/opportunity-map")} testId="link-map" />
               <NavLink href="/dashboard" icon={LayoutDashboard} label="Dashboard" isActive={isDashboardActive} testId="link-dashboard" />
               <NavLink href="/resumes" icon={FileText} label="Resumes" isActive={isResumesActive} testId="link-resumes" />
+              <NavLink href="/diagnostic" icon={Brain} label="Diagnostic" isActive={isDiagnosticActive} testId="link-diagnostic" />
               <NavLink href="/events" icon={Calendar} label="Events" isActive={isActive("/events") || location.startsWith("/events/")} testId="link-events" />
             </div>
           ) : (
@@ -139,6 +141,7 @@ export function Header() {
                       <MobileNavItem href="/opportunity-map" icon={Globe} label="Opportunity Map" active={isActive("/opportunity-map")} testId="link-map-mobile" />
                       <MobileNavItem href="/dashboard" icon={LayoutDashboard} label="Dashboard" active={isDashboardActive} testId="link-dashboard-mobile" />
                       <MobileNavItem href="/resumes" icon={FileText} label="Resumes" active={isResumesActive} testId="link-resumes-mobile" />
+                      <MobileNavItem href="/diagnostic" icon={Brain} label="Diagnostic" active={isDiagnosticActive} testId="link-diagnostic-mobile" />
                       <div className="h-px bg-border/40 my-2" />
                       <MobileNavItem href="/saved-jobs" icon={Bookmark} label="Saved Jobs" active={isActive("/saved-jobs")} testId="link-saved-jobs-mobile" />
                       <MobileNavItem href="/alerts" icon={Bell} label="Alerts" active={isActive("/alerts")} testId="link-alerts-mobile" />
@@ -208,6 +211,12 @@ export function Header() {
                       <Link href="/insights" className="cursor-pointer" data-testid="link-insights">
                         <BarChart3 className="mr-2 h-4 w-4" />
                         <span>Market Insights</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/diagnostic" className="cursor-pointer" data-testid="link-diagnostic-dropdown">
+                        <Brain className="mr-2 h-4 w-4" />
+                        <span>Career Diagnostic</span>
                       </Link>
                     </DropdownMenuItem>
                   </DropdownMenuGroup>

@@ -808,6 +808,124 @@ export interface ToConfirmItem {
   resolvedValue?: string;
 }
 
+export const diagnosticReports = pgTable("diagnostic_reports", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id", { length: 255 }).notNull(),
+  resumeId: integer("resume_id").notNull(),
+  resumeHash: varchar("resume_hash", { length: 64 }),
+  overallReadinessScore: integer("overall_readiness_score"),
+  topPaths: jsonb("top_paths"),
+  readinessSummary: jsonb("readiness_summary"),
+  skillClusters: jsonb("skill_clusters"),
+  transitionPlan: jsonb("transition_plan"),
+  brutalHonesty: jsonb("brutal_honesty"),
+  reportJson: jsonb("report_json"),
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const insertDiagnosticReportSchema = createInsertSchema(diagnosticReports).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type DiagnosticReport = typeof diagnosticReports.$inferSelect;
+export type InsertDiagnosticReport = z.infer<typeof insertDiagnosticReportSchema>;
+
+export const jobFitResults = pgTable("job_fit_results", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id", { length: 255 }).notNull(),
+  resumeId: integer("resume_id").notNull(),
+  jobId: integer("job_id").notNull(),
+  fitScore: integer("fit_score"),
+  skillsMatch: integer("skills_match"),
+  experienceMatch: integer("experience_match"),
+  domainMatch: integer("domain_match"),
+  seniorityMatch: integer("seniority_match"),
+  strengths: jsonb("strengths"),
+  gaps: jsonb("gaps"),
+  evidence: jsonb("evidence"),
+  recommendedEdits: jsonb("recommended_edits"),
+  aiIntensity: varchar("ai_intensity", { length: 10 }),
+  transitionDifficulty: varchar("transition_difficulty", { length: 10 }),
+  oneLineReason: text("one_line_reason"),
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const insertJobFitResultSchema = createInsertSchema(jobFitResults).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type JobFitResult = typeof jobFitResults.$inferSelect;
+export type InsertJobFitResult = z.infer<typeof insertJobFitResultSchema>;
+
+export interface SkillCluster {
+  name: string;
+  score: number;
+  evidence: string[];
+  missingSignals: string[];
+}
+
+export interface CareerPath {
+  name: string;
+  confidence: number;
+  fitLevel: "high" | "medium" | "low";
+  description: string;
+  topStrengths: string[];
+  topGaps: string[];
+}
+
+export interface ReadinessRole {
+  jobId: number;
+  title: string;
+  company: string;
+  tier: "ready" | "near_ready" | "stretch";
+  fitScore: number;
+  topStrengths: string[];
+  topBlockers: string[];
+  whyThisTier: string;
+}
+
+export interface TransitionWeek {
+  week: number;
+  theme: string;
+  actions: Array<{
+    task: string;
+    timeEstimate: string;
+    deliverable: string;
+    skillGapAddressed: string;
+  }>;
+}
+
+export interface DiagnosticReportData {
+  topPaths: CareerPath[];
+  readinessLadder: {
+    ready: ReadinessRole[];
+    nearReady: ReadinessRole[];
+    stretch: ReadinessRole[];
+  };
+  skillClusters: SkillCluster[];
+  overallReadinessScore: number;
+  transitionDifficulty: {
+    score: number;
+    label: "Easy" | "Moderate" | "Hard";
+    explanation: string;
+  };
+  transitionPlan: TransitionWeek[];
+  brutalHonesty: string[];
+  marketDemand: Array<{
+    skill: string;
+    demandCount: number;
+    userHasIt: boolean;
+  }>;
+  fitBreakdown: {
+    skillsMatch: number;
+    experienceMatch: number;
+    domainMatch: number;
+    seniorityMatch: number;
+  };
+}
+
 export interface EditorPayload {
   version: ResumeEditorVersion;
   sections: EditorSections;

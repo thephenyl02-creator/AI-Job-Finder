@@ -42,6 +42,7 @@ import {
   Zap,
   AlertCircle,
   Briefcase,
+  Brain,
 } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -182,6 +183,19 @@ export default function Jobs() {
   });
 
   const hasResume = userResumes.length > 0;
+
+  const { data: fitScoresData } = useQuery<{ scores: Record<number, { fitScore: number | null; aiIntensity: string | null; transitionDifficulty: string | null; oneLineReason: string | null }> }>({
+    queryKey: ["/api/user/fit-scores"],
+    enabled: isAuthenticated && hasResume,
+    staleTime: 1000 * 60 * 5,
+  });
+  const fitScores = fitScoresData?.scores || {};
+
+  const { data: diagnosticData } = useQuery<any>({
+    queryKey: ["/api/diagnostic/latest"],
+    enabled: isAuthenticated && hasResume,
+    staleTime: 1000 * 60 * 5,
+  });
 
   const { data: cachedIntelligence } = useQuery<{
     cached: boolean;
@@ -397,10 +411,14 @@ export default function Jobs() {
         setResumeMatchStep("idle");
         track({ eventType: "resume_match", metadata: { resumeId, matchCount: matchData.matches?.length || 0 } });
 
+        queryClient.invalidateQueries({ queryKey: ["/api/resumes"] });
+
         toast({
-          title: `Found ${matchData.matches?.length || 0} matching roles`,
-          description: matchData.matches?.length > 0 ? "Sorted by how well they fit your background." : "Try broadening your experience or upload a different resume.",
+          title: "Resume uploaded — running your diagnostic",
+          description: "We're analyzing your background against the legal tech market.",
         });
+
+        setLocation("/diagnostic");
       } else {
         const matchRes = await fetch("/api/resume/anonymous-match", {
           method: "POST",
@@ -478,18 +496,12 @@ export default function Jobs() {
 
       track({ eventType: "resume_match", metadata: { resumeId, matchCount: matches.length, source: "welcome_card" } });
 
-      if (matches.length > 0) {
-        const top = matches[0];
-        toast({
-          title: `${matches.length} roles match your background`,
-          description: `Top match: ${top.title} at ${top.company} (${top.matchScore}% fit)`,
-        });
-      } else {
-        toast({
-          title: "Resume uploaded successfully",
-          description: "We couldn't find strong matches right now, but we'll notify you when new roles appear.",
-        });
-      }
+      toast({
+        title: "Resume uploaded — running your diagnostic",
+        description: "We're analyzing your background against the legal tech market.",
+      });
+
+      setLocation("/diagnostic");
     } catch (error: any) {
       setWelcomeUploading(false);
       toast({
@@ -498,7 +510,7 @@ export default function Jobs() {
         variant: "destructive",
       });
     }
-  }, [track, toast]);
+  }, [track, toast, setLocation]);
 
   const handleClearResumeMatches = useCallback(() => {
     setResumeMatches(null);
@@ -1272,6 +1284,93 @@ export default function Jobs() {
           </div>
         </div>
 
+        {isAuthenticated && hasResume && diagnosticData?.report && !searchResults && (
+          <div className="rounded-lg border bg-card p-3 sm:p-4 flex items-center gap-3 sm:gap-4 flex-wrap" data-testid="career-intelligence-header">
+            <div className="flex items-center gap-2 shrink-0">
+              <div className={`h-10 w-10 rounded-full flex items-center justify-center text-sm font-bold ${
+                diagnosticData.report.readinessScore >= 75 ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300" :
+                diagnosticData.report.readinessScore >= 50 ? "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300" :
+                diagnosticData.report.readinessScore >= 30 ? "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300" :
+                "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300"
+              }`} data-testid="text-readiness-score">
+                {diagnosticData.report.readinessScore}
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-foreground truncate" data-testid="text-readiness-label">
+                  {diagnosticData.report.readinessScore >= 75 ? "Market Ready" :
+                   diagnosticData.report.readinessScore >= 50 ? "Nearly Ready" :
+                   diagnosticData.report.readinessScore >= 30 ? "Building Momentum" : "Early Stage"}
+                </p>
+                {diagnosticData.report.topPaths?.[0] && (
+                  <p className="text-xs text-muted-foreground truncate" data-testid="text-top-path">
+                    Top path: {diagnosticData.report.topPaths[0].title}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="hidden sm:flex items-center gap-1.5 flex-wrap flex-1 min-w-0">
+              {diagnosticData.report.skillClusters?.slice(0, 3).map((cluster: any) => (
+                <Badge
+                  key={cluster.name}
+                  variant="secondary"
+                  className={`text-[10px] ${cluster.score >= 70 ? "text-emerald-600 dark:text-emerald-400" : cluster.score >= 40 ? "text-amber-600 dark:text-amber-400" : "text-red-600 dark:text-red-400"}`}
+                  data-testid={`badge-skill-${cluster.name}`}
+                >
+                  {cluster.name}: {cluster.score}
+                </Badge>
+              ))}
+            </div>
+
+            <Link href="/diagnostic" className="shrink-0">
+              <Button variant="outline" size="sm" className="gap-1.5 text-xs" data-testid="button-view-diagnostic">
+                <Brain className="h-3.5 w-3.5" />
+                Full Diagnostic
+              </Button>
+            </Link>
+          </div>
+        )}
+
+        {isAuthenticated && hasResume && !diagnosticData?.report && !searchResults && (
+          <div className="rounded-lg border border-primary/20 bg-primary/[0.03] p-3 sm:p-4 flex items-center gap-3" data-testid="run-diagnostic-banner">
+            <div className="shrink-0 w-8 h-8 rounded-md bg-primary/10 flex items-center justify-center">
+              <Brain className="h-4 w-4 text-primary" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium text-foreground">See how you stack up</p>
+              <p className="text-xs text-muted-foreground">Run your Career Diagnostic to see readiness scores, matching roles, and a transition plan.</p>
+            </div>
+            <Link href="/diagnostic" className="shrink-0">
+              <Button size="sm" variant="outline" className="gap-1.5" data-testid="button-run-diagnostic-banner">
+                <Brain className="h-3.5 w-3.5" />
+                Run Diagnostic
+              </Button>
+            </Link>
+          </div>
+        )}
+
+        {isAuthenticated && !hasResume && !searchResults && (
+          <div className="rounded-lg border border-primary/20 bg-primary/[0.03] p-3 sm:p-4 flex items-center gap-3" data-testid="upload-resume-banner">
+            <div className="shrink-0 w-8 h-8 rounded-md bg-primary/10 flex items-center justify-center">
+              <Upload className="h-4 w-4 text-primary" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium text-foreground">Get your Career Diagnostic</p>
+              <p className="text-xs text-muted-foreground">Upload your resume to see readiness scores, skill gaps, and a personalized transition plan.</p>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              className="shrink-0 gap-1.5"
+              onClick={() => setLocation("/resumes")}
+              data-testid="button-upload-resume-banner"
+            >
+              <Upload className="h-3.5 w-3.5" />
+              Upload
+            </Button>
+          </div>
+        )}
+
         {jobsLoading && !jobsResponse ? (
           <div className="grid gap-3" data-testid="skeleton-jobs">
             {Array.from({ length: 8 }).map((_, i) => (
@@ -1683,6 +1782,41 @@ export default function Jobs() {
                           {taxonomy && (
                             <Badge variant="secondary" className="text-[10px]" data-testid={`badge-category-${job.id}`}>
                               {taxonomy.shortName}
+                            </Badge>
+                          )}
+                          {fitScores[job.id]?.fitScore != null && (
+                            <Badge
+                              variant="outline"
+                              className={`text-[10px] font-semibold gap-0.5 ${
+                                fitScores[job.id].fitScore! >= 80 ? "text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800" :
+                                fitScores[job.id].fitScore! >= 60 ? "text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800" :
+                                fitScores[job.id].fitScore! >= 40 ? "text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800" :
+                                "text-red-600 dark:text-red-400 border-red-200 dark:border-red-800"
+                              }`}
+                              data-testid={`badge-fit-${job.id}`}
+                            >
+                              <Target className="h-2.5 w-2.5" />
+                              {fitScores[job.id].fitScore}% fit
+                            </Badge>
+                          )}
+                          {fitScores[job.id]?.aiIntensity && (
+                            <Badge variant="secondary" className={`text-[10px] gap-0.5 ${
+                              fitScores[job.id].aiIntensity === "high" ? "text-violet-600 dark:text-violet-400" :
+                              fitScores[job.id].aiIntensity === "medium" ? "text-blue-600 dark:text-blue-400" :
+                              "text-slate-500 dark:text-slate-400"
+                            }`} data-testid={`badge-ai-${job.id}`}>
+                              <Zap className="h-2.5 w-2.5" />
+                              {fitScores[job.id].aiIntensity === "high" ? "High AI" : fitScores[job.id].aiIntensity === "medium" ? "Some AI" : "Low AI"}
+                            </Badge>
+                          )}
+                          {fitScores[job.id]?.transitionDifficulty && (
+                            <Badge variant="secondary" className={`text-[10px] gap-0.5 ${
+                              fitScores[job.id].transitionDifficulty === "low" ? "text-emerald-600 dark:text-emerald-400" :
+                              fitScores[job.id].transitionDifficulty === "medium" ? "text-amber-600 dark:text-amber-400" :
+                              "text-red-600 dark:text-red-400"
+                            }`} data-testid={`badge-transition-${job.id}`}>
+                              <TrendingUp className="h-2.5 w-2.5" />
+                              {fitScores[job.id].transitionDifficulty === "low" ? "Easy" : fitScores[job.id].transitionDifficulty === "medium" ? "Moderate" : "Career Pivot"}
                             </Badge>
                           )}
                         </div>

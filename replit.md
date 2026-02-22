@@ -35,7 +35,7 @@ Legal Tech Careers is a freemium SaaS job search platform tailored for legal pro
 
 ### AI Integration
 - **Provider**: OpenAI API
-- **Capabilities**: Powers Guided Search, Job Categorization, Resume Parsing, Resume-Job Comparison, Conversational Assistant, ATS Resume Review, AI-assisted resume builder, and Market Insights Q&A.
+- **Capabilities**: Powers Guided Search, Job Categorization, Resume Parsing, Resume-Job Comparison, Conversational Assistant, ATS Resume Review, AI-assisted resume builder, Market Insights Q&A, Career Diagnostic Engine (skill clustering, readiness scoring, transition planning), and per-job fit scoring.
 
 ### Payments & Subscription
 - **Provider**: Stripe
@@ -55,6 +55,9 @@ Legal Tech Careers is a freemium SaaS job search platform tailored for legal pro
 - **Resume Management & Editing**: Upload, parse, manage multiple resumes, and an AI-powered resume editor for tailoring resumes to specific jobs with real-time ATS scoring.
 - **Job Matching**: AI-driven comparison of resumes against job postings, providing match scores and gap analysis.
 - **Career Guidance**: Market insights dashboard, conversational assistant, and a career intelligence panel with personalized path recommendations.
+- **Career Diagnostic Engine**: Full diagnostic page (/diagnostic) with skill clustering (7 categories), readiness scoring, transition difficulty gauge, readiness ladder (Ready/Near-Ready/Stretch tiers), top career paths, 30-day transition plan, and Recharts visualizations (radar, bar, gauge charts). Auto-routes from resume upload.
+- **Per-Job Fit Scoring**: AI-computed fit scores (skills/experience/domain/seniority breakdown), AI intensity, and transition difficulty cached per resume-job pair. Displayed as badges on job cards.
+- **Career Intelligence Header**: On /jobs page, shows readiness score + top path + skill chips when diagnostic exists, or prompts to run diagnostic / upload resume.
 - **Job Alerts & Notifications**: Users receive alerts for new matching jobs.
 - **Opportunity Map**: An interactive global map displaying job density by country.
 - **SEO**: Dynamic meta tags, `JobPosting` JSON-LD, and an XML sitemap for enhanced search visibility.

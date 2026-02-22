@@ -41,6 +41,8 @@ import { LAW_FIRMS_AND_COMPANIES } from "./lib/law-firms-list";
 import { categorizeJob } from "./lib/job-categorizer";
 import { extractStructuredDescription, validateStructuredDescription } from "./lib/description-extractor";
 import { matchNewJobsAgainstAlerts } from "./lib/alert-matcher";
+import { generateDiagnosticReport, computeAIIntensity, computeTransitionDifficulty, computeJobFitScore, batchComputeJobFits, computeJDRequirement } from "./lib/diagnostic-engine";
+import { diagnosticReports, jobFitResults } from "@shared/schema";
 
 async function extractStructuredDescriptionBackground(jobId: number, description: string, company: string, title: string) {
   try {
@@ -7375,6 +7377,336 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
     } catch (error) {
       console.error("Error exporting apply pack:", error);
       res.status(500).json({ error: "Failed to generate apply pack. Please try again." });
+    }
+  });
+
+  // ============ DIAGNOSTIC REPORT ENDPOINTS ============
+
+  app.post("/api/diagnostic/run", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const userId = user?.id;
+      if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+      const { resumeId, targetPath } = req.body;
+
+      const userResumes = await storage.getUserResumes(userId);
+      const resume = resumeId
+        ? userResumes.find((r: any) => r.id === resumeId)
+        : userResumes.find((r: any) => r.isPrimary) || userResumes[0];
+
+      if (!resume || !resume.extractedData) {
+        return res.status(400).json({ error: "No parsed resume found. Please upload a resume first." });
+      }
+
+      const resumeData = resume.extractedData as ResumeExtractedData;
+      const resumeHash = crypto.createHash("md5").update(JSON.stringify(resumeData)).digest("hex");
+
+      const existing = await db.select().from(diagnosticReports)
+        .where(and(
+          eq(diagnosticReports.userId, userId),
+          eq(diagnosticReports.resumeId, resume.id),
+          eq(diagnosticReports.resumeHash, resumeHash),
+        ))
+        .limit(1);
+
+      if (existing.length > 0 && existing[0].reportJson) {
+        return res.json({
+          report: existing[0].reportJson,
+          cached: true,
+          reportId: existing[0].id,
+        });
+      }
+
+      const allJobs = await storage.getPublishedJobs();
+      const report = await generateDiagnosticReport(resumeData, allJobs, targetPath);
+
+      const [saved] = await db.insert(diagnosticReports).values({
+        userId,
+        resumeId: resume.id,
+        resumeHash: resumeHash,
+        overallReadinessScore: report.overallReadinessScore,
+        topPaths: report.topPaths as any,
+        readinessSummary: report.readinessLadder as any,
+        skillClusters: report.skillClusters as any,
+        transitionPlan: report.transitionPlan as any,
+        brutalHonesty: report.brutalHonesty as any,
+        reportJson: report as any,
+      }).returning();
+
+      res.json({
+        report,
+        cached: false,
+        reportId: saved.id,
+      });
+    } catch (error: any) {
+      console.error("Error generating diagnostic:", error);
+      res.status(500).json({ error: error.message || "Failed to generate diagnostic report" });
+    }
+  });
+
+  app.get("/api/diagnostic/latest", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const userId = user?.id;
+      if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+      const [latest] = await db.select().from(diagnosticReports)
+        .where(eq(diagnosticReports.userId, userId))
+        .orderBy(desc(diagnosticReports.createdAt))
+        .limit(1);
+
+      if (!latest || !latest.reportJson) {
+        return res.json({ report: null });
+      }
+
+      res.json({
+        report: latest.reportJson,
+        reportId: latest.id,
+        createdAt: latest.createdAt,
+        overallReadinessScore: latest.overallReadinessScore,
+      });
+    } catch (error: any) {
+      console.error("Error fetching diagnostic:", error);
+      res.status(500).json({ error: "Failed to fetch diagnostic" });
+    }
+  });
+
+  app.post("/api/jobs/fit/batch", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const userId = user?.id;
+      if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+      const { resumeId, jobIds } = req.body;
+      if (!jobIds || !Array.isArray(jobIds) || jobIds.length === 0) {
+        return res.status(400).json({ error: "jobIds array required" });
+      }
+
+      const userResumes = await storage.getUserResumes(userId);
+      const resume = resumeId
+        ? userResumes.find((r: any) => r.id === resumeId)
+        : userResumes.find((r: any) => r.isPrimary) || userResumes[0];
+
+      if (!resume || !resume.extractedData) {
+        return res.status(400).json({ error: "No parsed resume found." });
+      }
+
+      const resumeData = resume.extractedData as ResumeExtractedData;
+
+      const cachedResults = await db.select().from(jobFitResults)
+        .where(and(
+          eq(jobFitResults.userId, userId),
+          eq(jobFitResults.resumeId, resume.id),
+        ));
+
+      const cachedMap = new Map(cachedResults.map(r => [r.jobId, r]));
+      const uncachedJobIds = jobIds.filter((id: number) => !cachedMap.has(id));
+
+      let newResults: any[] = [];
+      if (uncachedJobIds.length > 0) {
+        const jobsToScore = await Promise.all(
+          uncachedJobIds.slice(0, 20).map((id: number) => storage.getJob(id))
+        );
+        const validJobs = jobsToScore.filter(Boolean) as Job[];
+
+        if (validJobs.length > 0) {
+          const batchResults = await batchComputeJobFits(resumeData, validJobs);
+
+          for (const result of batchResults) {
+            try {
+              await db.insert(jobFitResults).values({
+                userId,
+                resumeId: resume.id,
+                jobId: result.jobId,
+                fitScore: result.fitScore,
+                skillsMatch: result.skillsMatch,
+                experienceMatch: result.experienceMatch,
+                domainMatch: result.domainMatch,
+                seniorityMatch: result.seniorityMatch,
+                strengths: result.strengths as any,
+                gaps: result.gaps as any,
+                oneLineReason: result.oneLineReason,
+                aiIntensity: result.aiIntensity,
+                transitionDifficulty: result.transitionDifficulty,
+              });
+            } catch (e) {
+              console.error(`Failed to cache fit result for job ${result.jobId}:`, e);
+            }
+          }
+          newResults = batchResults;
+        }
+      }
+
+      const allResults = jobIds.map((id: number) => {
+        const cached = cachedMap.get(id);
+        if (cached) {
+          return {
+            jobId: id,
+            fitScore: cached.fitScore,
+            skillsMatch: cached.skillsMatch,
+            experienceMatch: cached.experienceMatch,
+            domainMatch: cached.domainMatch,
+            seniorityMatch: cached.seniorityMatch,
+            strengths: cached.strengths,
+            gaps: cached.gaps,
+            oneLineReason: cached.oneLineReason,
+            aiIntensity: cached.aiIntensity,
+            transitionDifficulty: cached.transitionDifficulty,
+            cached: true,
+          };
+        }
+        const fresh = newResults.find((r: any) => r.jobId === id);
+        if (fresh) return { ...fresh, cached: false };
+        return null;
+      }).filter(Boolean);
+
+      res.json({ results: allResults });
+    } catch (error: any) {
+      console.error("Error computing batch fits:", error);
+      res.status(500).json({ error: error.message || "Failed to compute fit scores" });
+    }
+  });
+
+  app.get("/api/user/fit-scores", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const userId = user?.id;
+      if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+      const userResumes = await storage.getUserResumes(userId);
+      const resume = userResumes.find((r: any) => r.isPrimary) || userResumes[0];
+      if (!resume) return res.json({ scores: {} });
+
+      const results = await db.select({
+        jobId: jobFitResults.jobId,
+        fitScore: jobFitResults.fitScore,
+        aiIntensity: jobFitResults.aiIntensity,
+        transitionDifficulty: jobFitResults.transitionDifficulty,
+        oneLineReason: jobFitResults.oneLineReason,
+      }).from(jobFitResults)
+        .where(and(
+          eq(jobFitResults.userId, userId),
+          eq(jobFitResults.resumeId, resume.id),
+        ));
+
+      const scores: Record<number, any> = {};
+      for (const r of results) {
+        scores[r.jobId] = r;
+      }
+
+      res.json({ scores });
+    } catch (error: any) {
+      console.error("Error fetching fit scores:", error);
+      res.status(500).json({ error: "Failed to fetch fit scores" });
+    }
+  });
+
+  app.get("/api/jobs/:id/fit", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const userId = user?.id;
+      if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+      const jobId = parseInt(req.params.id);
+      if (isNaN(jobId)) return res.status(400).json({ error: "Invalid job ID" });
+
+      const userResumes = await storage.getUserResumes(userId);
+      const resume = userResumes.find((r: any) => r.isPrimary) || userResumes[0];
+
+      if (!resume || !resume.extractedData) {
+        return res.status(400).json({ error: "No parsed resume found." });
+      }
+
+      const [cached] = await db.select().from(jobFitResults)
+        .where(and(
+          eq(jobFitResults.userId, userId),
+          eq(jobFitResults.resumeId, resume.id),
+          eq(jobFitResults.jobId, jobId),
+        ))
+        .limit(1);
+
+      if (cached) {
+        return res.json({
+          ...cached,
+          cached: true,
+        });
+      }
+
+      const job = await storage.getJob(jobId);
+      if (!job) return res.status(404).json({ error: "Job not found" });
+
+      const result = await computeJobFitScore(resume.extractedData as ResumeExtractedData, job);
+
+      await db.insert(jobFitResults).values({
+        userId,
+        resumeId: resume.id,
+        jobId,
+        fitScore: result.fitScore,
+        skillsMatch: result.skillsMatch,
+        experienceMatch: result.experienceMatch,
+        domainMatch: result.domainMatch,
+        seniorityMatch: result.seniorityMatch,
+        strengths: result.strengths as any,
+        gaps: result.gaps as any,
+        evidence: result.evidence as any,
+        recommendedEdits: result.recommendedEdits as any,
+        oneLineReason: result.oneLineReason,
+        aiIntensity: computeAIIntensity(job),
+        transitionDifficulty: computeTransitionDifficulty(job),
+      });
+
+      res.json({
+        ...result,
+        aiIntensity: computeAIIntensity(job),
+        transitionDifficulty: computeTransitionDifficulty(job),
+        cached: false,
+      });
+    } catch (error: any) {
+      console.error("Error computing fit:", error);
+      res.status(500).json({ error: error.message || "Failed to compute fit score" });
+    }
+  });
+
+  app.get("/api/insights/market-demand", async (_req, res) => {
+    try {
+      const allJobs = await storage.getPublishedJobs();
+      const skillDemand: Record<string, number> = {};
+      for (const job of allJobs) {
+        for (const skill of (job.keySkills || [])) {
+          const s = skill.toLowerCase().trim();
+          skillDemand[s] = (skillDemand[s] || 0) + 1;
+        }
+      }
+      const topSkills = Object.entries(skillDemand)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 15)
+        .map(([skill, count]) => ({ skill, count }));
+
+      const categoryCounts: Record<string, number> = {};
+      for (const job of allJobs) {
+        if (job.roleCategory) {
+          categoryCounts[job.roleCategory] = (categoryCounts[job.roleCategory] || 0) + 1;
+        }
+      }
+
+      const workModeCounts: Record<string, number> = { remote: 0, hybrid: 0, onsite: 0 };
+      for (const job of allJobs) {
+        const mode = (job.locationType || job.workMode || "onsite").toLowerCase();
+        if (mode.includes("remote")) workModeCounts.remote++;
+        else if (mode.includes("hybrid")) workModeCounts.hybrid++;
+        else workModeCounts.onsite++;
+      }
+
+      res.json({
+        topSkills,
+        categoryCounts: Object.entries(categoryCounts).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count),
+        workModeCounts,
+        totalJobs: allJobs.length,
+      });
+    } catch (error: any) {
+      console.error("Error computing market demand:", error);
+      res.status(500).json({ error: "Failed to compute market demand" });
     }
   });
 
