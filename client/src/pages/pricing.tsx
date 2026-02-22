@@ -254,7 +254,7 @@ export default function Pricing() {
     : 0;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-x-hidden">
       {isAuthenticated ? (
         <Header />
       ) : (

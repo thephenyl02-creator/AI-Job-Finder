@@ -601,7 +601,7 @@ export default function JobDetail() {
 
   if (authLoading || isLoading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background overflow-x-hidden">
         <Header />
         <div className="flex items-center justify-center py-32">
           <div className="flex flex-col items-center gap-3">
@@ -615,7 +615,7 @@ export default function JobDetail() {
 
   if (!isAuthenticated && !authLoading && showSignupGate) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background overflow-x-hidden">
         <Header />
         <main className="max-w-xl mx-auto px-4 sm:px-6 py-12 sm:py-20">
           <Link href="/jobs" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-8" data-testid="button-back-jobs-gate">
@@ -663,7 +663,7 @@ export default function JobDetail() {
 
   if (!isAuthenticated && !job) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background overflow-x-hidden">
         <Header />
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-12 text-center">
           <h1 className="text-2xl font-semibold text-foreground mb-4">Job Not Found</h1>
@@ -680,7 +680,7 @@ export default function JobDetail() {
 
   if (!job) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background overflow-x-hidden">
         <Header />
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-12 text-center">
           <h1 className="text-2xl font-semibold text-foreground mb-4">Job Not Found</h1>
@@ -696,7 +696,7 @@ export default function JobDetail() {
 
   if (!job.isPublished) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background overflow-x-hidden">
         <Header />
         <div className="max-w-3xl mx-auto px-4 sm:px-6 py-12 text-center">
           <div className="rounded-md border border-border/50 bg-muted/30 p-8">
@@ -715,7 +715,7 @@ export default function JobDetail() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-x-hidden">
       <Header />
 
       <main className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-8">

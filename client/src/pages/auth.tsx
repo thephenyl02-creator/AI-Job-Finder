@@ -176,7 +176,7 @@ export default function Auth() {
 
   if (view === "forgot") {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center px-4">
+      <div className="min-h-screen bg-background flex items-center justify-center px-4 overflow-x-hidden">
         <div className="w-full max-w-sm">
           <div className="flex flex-col items-center gap-4 mb-8">
             <Logo className="h-8 w-8 text-foreground" />
@@ -237,7 +237,7 @@ export default function Auth() {
 
   if (view === "reset") {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center px-4">
+      <div className="min-h-screen bg-background flex items-center justify-center px-4 overflow-x-hidden">
         <div className="w-full max-w-sm">
           <div className="flex flex-col items-center gap-4 mb-8">
             <Logo className="h-8 w-8 text-foreground" />
@@ -335,7 +335,7 @@ export default function Auth() {
   ];
 
   return (
-    <div className="min-h-screen bg-background flex relative">
+    <div className="min-h-screen bg-background flex relative overflow-x-hidden">
 
       <div className="hidden lg:flex lg:flex-1 items-center justify-center p-12 relative">
         <div className="max-w-md">

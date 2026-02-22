@@ -1168,7 +1168,7 @@ export default function Resumes() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-x-hidden">
       <Header />
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         <div className="mb-6">

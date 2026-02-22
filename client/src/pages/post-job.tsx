@@ -180,7 +180,7 @@ export default function PostJob() {
 
   if (submitted) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background overflow-x-hidden">
         <Header />
         <main className="max-w-2xl mx-auto px-4 sm:px-6 py-16">
           <Card>
@@ -205,7 +205,7 @@ export default function PostJob() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-x-hidden">
       <Header />
       
       <main className="max-w-2xl mx-auto px-4 sm:px-6 py-12">

@@ -289,7 +289,7 @@ export default function DashboardPage() {
 
   if (error || !data) {
     return (
-      <>
+      <div className="overflow-x-hidden">
         <Header />
         <main className="container mx-auto px-4 py-8">
           <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
@@ -299,7 +299,7 @@ export default function DashboardPage() {
             </Link>
           </div>
         </main>
-      </>
+      </div>
     );
   }
 
@@ -313,7 +313,7 @@ export default function DashboardPage() {
   ];
 
   return (
-    <>
+    <div className="overflow-x-hidden">
       <Header />
       <main className="container mx-auto px-4 py-6 pb-20">
         <div className="max-w-6xl mx-auto">
@@ -807,6 +807,6 @@ export default function DashboardPage() {
         </div>
       </main>
       <Footer />
-    </>
+    </div>
   );
 }

@@ -7,7 +7,7 @@ import { Link } from "wouter";
 export default function NotFound() {
   usePageTitle("Page Not Found");
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4">
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4 overflow-x-hidden">
       <div className="max-w-md w-full text-center">
         <LogoMark className="h-10 w-10 text-foreground mx-auto mb-6" />
         <h1 className="text-5xl font-serif font-semibold text-foreground tracking-tight mb-3" data-testid="text-404-title">

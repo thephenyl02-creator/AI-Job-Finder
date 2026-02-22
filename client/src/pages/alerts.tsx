@@ -335,7 +335,7 @@ export default function Alerts() {
   if (!isAuthenticated) return null;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-x-hidden">
       <Header />
 
       <main className="max-w-2xl mx-auto px-4 sm:px-6 py-10">

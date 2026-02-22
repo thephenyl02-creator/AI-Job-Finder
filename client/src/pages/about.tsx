@@ -10,7 +10,7 @@ import { Footer } from "@/components/footer";
 export default function About() {
   usePageTitle("About");
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-x-hidden">
       <Header />
 
       <main className="max-w-3xl mx-auto px-4 sm:px-6 py-12 sm:py-16">

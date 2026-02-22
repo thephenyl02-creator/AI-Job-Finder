@@ -772,7 +772,7 @@ export default function Jobs() {
                         </button>
                       </PopoverTrigger>
                       <PopoverContent
-                        className="w-[380px] sm:w-[440px] p-0"
+                        className="w-[calc(100vw-2rem)] sm:w-[440px] p-0"
                         align="start"
                         side="bottom"
                         sideOffset={8}

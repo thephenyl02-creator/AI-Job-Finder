@@ -155,7 +155,7 @@ export default function EventDetail() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background flex flex-col">
+      <div className="min-h-screen bg-background flex flex-col overflow-x-hidden">
         <Header />
         <main className="flex-1">
           <EventDetailSkeleton />
@@ -167,7 +167,7 @@ export default function EventDetail() {
 
   if (error || !event) {
     return (
-      <div className="min-h-screen bg-background flex flex-col">
+      <div className="min-h-screen bg-background flex flex-col overflow-x-hidden">
         <Header />
         <main className="flex-1 flex items-center justify-center">
           <div className="text-center space-y-4" data-testid="event-not-found">
@@ -195,7 +195,7 @@ export default function EventDetail() {
   const isPastEvent = new Date(event.endDate || event.startDate) < new Date();
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col overflow-x-hidden">
       <Header />
 
       <main className="flex-1">
