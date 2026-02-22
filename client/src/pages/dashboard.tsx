@@ -15,7 +15,7 @@ import {
   Eye, Search, MousePointerClick, Flame, Calendar, Target,
   FileText, Bell, Bookmark, ArrowRight, TrendingUp,
   Building2, CheckCircle, Circle, ChevronRight, Briefcase,
-  Loader2, BarChart3, Zap, Award, Lock
+  Loader2, BarChart3, Zap, Award, Lock, Brain
 } from "lucide-react";
 
 interface DashboardData {
@@ -258,6 +258,17 @@ export default function DashboardPage() {
     refetchInterval: 30000,
   });
 
+  const { data: diagnosticData } = useQuery<{
+    id: number;
+    readinessScore: number;
+    readinessTier: string;
+    careerPaths: { pathName: string; matchScore: number; tier: string }[];
+    skillCategories: { category: string; score: number }[];
+    transitionPlan: { week: number; title: string }[];
+  }>({
+    queryKey: ["/api/diagnostic/latest"],
+  });
+
   useEffect(() => {
     if (dataUpdatedAt) setLastUpdated(new Date(dataUpdatedAt));
   }, [dataUpdatedAt]);
@@ -368,6 +379,99 @@ export default function DashboardPage() {
                     <Flame className="h-3 w-3 mr-1" />
                     {activityMetrics.currentStreak} days
                   </Badge>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {diagnosticData ? (
+            <Card className="mb-6 border-primary/20" data-testid="card-diagnostic-summary">
+              <CardContent className="p-4">
+                <div className="flex items-start gap-4">
+                  <div className="relative flex items-center justify-center shrink-0">
+                    <svg className="w-[64px] h-[64px] -rotate-90" viewBox="0 0 100 100">
+                      <circle cx="50" cy="50" r="40" fill="none" stroke="hsl(var(--muted))" strokeWidth="6" />
+                      <circle cx="50" cy="50" r="40" fill="none"
+                        stroke={diagnosticData.readinessScore >= 70 ? "#22c55e" : diagnosticData.readinessScore >= 40 ? "#f59e0b" : "#94a3b8"}
+                        strokeWidth="6" strokeLinecap="round"
+                        strokeDasharray={`${2 * Math.PI * 40}`}
+                        strokeDashoffset={`${2 * Math.PI * 40 - (diagnosticData.readinessScore / 100) * 2 * Math.PI * 40}`}
+                      />
+                    </svg>
+                    <div className="absolute flex flex-col items-center">
+                      <span className="text-lg font-bold text-foreground">{diagnosticData.readinessScore}</span>
+                      <span className="text-[8px] text-muted-foreground">Ready</span>
+                    </div>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Brain className="h-4 w-4 text-primary" />
+                      <p className="text-sm font-semibold text-foreground">Your Career Diagnostic</p>
+                    </div>
+                    {diagnosticData.careerPaths?.[0] && (
+                      <p className="text-xs text-muted-foreground mb-2">
+                        Top path: <span className="font-medium text-foreground">{diagnosticData.careerPaths[0].pathName}</span>
+                        {" · "}{diagnosticData.careerPaths[0].matchScore}% match
+                      </p>
+                    )}
+                    <div className="flex flex-wrap gap-1.5">
+                      {diagnosticData.skillCategories?.slice(0, 4).map((skill) => (
+                        <Badge key={skill.category} variant="secondary" className="text-[10px]">
+                          {skill.category}: {skill.score}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                  <Link href="/diagnostic">
+                    <Button size="sm" variant="outline" className="shrink-0 gap-1" data-testid="button-view-diagnostic">
+                      View
+                      <ChevronRight className="h-3 w-3" />
+                    </Button>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+          ) : readiness.hasResume ? (
+            <Card className="mb-6 border-dashed" data-testid="card-diagnostic-prompt">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-md bg-primary/10 text-primary shrink-0">
+                    <Brain className="h-4 w-4" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground">Run your Career Diagnostic</p>
+                    <p className="text-xs text-muted-foreground">
+                      See your readiness score, top career paths, and a 30-day transition plan.
+                    </p>
+                  </div>
+                  <Link href="/diagnostic">
+                    <Button size="sm" data-testid="button-run-diagnostic">
+                      Get Started
+                      <ArrowRight className="h-3 w-3 ml-1" />
+                    </Button>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="mb-6 border-dashed" data-testid="card-upload-resume-prompt">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-md bg-muted/50 text-muted-foreground shrink-0">
+                    <FileText className="h-4 w-4" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground">Upload your resume to get started</p>
+                    <p className="text-xs text-muted-foreground">
+                      Get your Career Diagnostic — readiness score, career paths, and a personalized transition plan.
+                    </p>
+                  </div>
+                  <Link href="/resumes">
+                    <Button size="sm" variant="outline" data-testid="button-upload-resume-dashboard">
+                      Upload
+                      <ArrowRight className="h-3 w-3 ml-1" />
+                    </Button>
+                  </Link>
                 </div>
               </CardContent>
             </Card>

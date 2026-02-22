@@ -54,10 +54,10 @@ const FREE_FEATURES = [
   { text: "View job details & apply links", included: true },
   { text: "Submit job postings", included: true },
   { text: "Upload 1 resume", included: true },
-  { text: "Resume matching & tweaks", included: false },
-  { text: "Deep job comparison & analysis", included: false },
-  { text: "ATS resume review", included: false },
-  { text: "Full events calendar", included: false },
+  { text: "Career Diagnostic (preview)", included: true },
+  { text: "Full Career Diagnostic & 30-day plan", included: false },
+  { text: "Per-job fit scores & match analysis", included: false },
+  { text: "Resume tailoring & ATS review", included: false },
   { text: "Market insights & analytics", included: false },
   { text: "Job alerts & notifications", included: false },
   { text: "Multi-resume management", included: false },
@@ -66,10 +66,10 @@ const FREE_FEATURES = [
 
 const PRO_FEATURES = [
   { text: "Everything in Free", included: true },
-  { text: "Resume matching & tweaks", included: true, detail: "See a fit score for every role, with gap analysis and rewrite suggestions" },
+  { text: "Full Career Diagnostic", included: true, detail: "Complete readiness report with all career paths, detailed skill gaps, and a personalized 30-day transition plan" },
+  { text: "Per-job fit scores", included: true, detail: "See your match percentage for every role, broken down by skills, experience, domain, and seniority" },
+  { text: "Resume matching & tailoring", included: true, detail: "Rewrite your bullet points to match each employer's language and pass ATS screening" },
   { text: "Deep job comparison & analysis", included: true, detail: "Compare roles side by side with career trajectory insights" },
-  { text: "ATS resume review", included: true, detail: "Check how applicant tracking systems will read your resume" },
-  { text: "Full events calendar", included: true, detail: "Legal tech conferences, webinars, and networking events" },
   { text: "Market insights & analytics", included: true, detail: "Salary data, hiring trends, and demand by category" },
   { text: "Job alerts & notifications", included: true, detail: "Get notified when roles matching your profile are posted" },
   { text: "Up to 5 resumes", included: true, detail: "Tailor different resumes for different role types" },
@@ -84,7 +84,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "What does Pro add that's worth paying for?",
-    a: "Pro unlocks resume matching (see a fit score for every job), deep job comparison with career analysis (compare offers side by side), job alerts (get notified when matching roles appear), and market insights (salary data, hiring trends). These tools save hours of manual research every week.",
+    a: "Pro unlocks the full Career Diagnostic (all career paths, detailed skill gaps, and a 30-day transition plan), per-job fit scores for every listing, resume tailoring and ATS review, job alerts, and market insights. These tools save hours of manual research and give you a clear action plan.",
   },
   {
     q: "Can I cancel anytime?",

@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LogoMark } from "@/components/logo";
-import { ArrowRight, Building2, Search, Target, FileText, Sparkles, Bell, Globe, Wifi } from "lucide-react";
+import { ArrowRight, Building2, Search, Target, FileText, Sparkles, Bell, Globe, Wifi, Brain, CheckCircle2, Clock } from "lucide-react";
 import { Footer } from "@/components/footer";
 
 interface Stats {
@@ -337,6 +337,114 @@ export default function Landing() {
           </div>
         </section>
 
+        <section className="border-t border-border/30 bg-primary/[0.02] dark:bg-primary/[0.04]">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-10 sm:py-20">
+            <div className="flex flex-col lg:flex-row items-center gap-8 lg:gap-16">
+              <div className="flex-1 text-center lg:text-left">
+                <p className="text-[11px] font-semibold text-muted-foreground tracking-[0.2em] uppercase mb-3">
+                  Career Diagnostic
+                </p>
+                <h2
+                  className="text-xl sm:text-3xl font-serif font-medium text-foreground tracking-tight"
+                  data-testid="text-diagnostic-teaser-title"
+                >
+                  See where you stand in 60 seconds
+                </h2>
+                <p className="text-xs sm:text-sm text-muted-foreground mt-2 max-w-md mx-auto lg:mx-0">
+                  Upload your resume and get a personalized readiness report — skill gaps, matching roles, and a 30-day action plan to break into legal tech.
+                </p>
+                <div className="space-y-3 mt-6 max-w-sm mx-auto lg:mx-0">
+                  <div className="flex items-center gap-3 text-sm" data-testid="diagnostic-benefit-1">
+                    <div className="shrink-0 w-7 h-7 rounded-full bg-emerald-500/10 flex items-center justify-center">
+                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                    </div>
+                    <span className="text-foreground">Readiness score across 7 skill categories</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-sm" data-testid="diagnostic-benefit-2">
+                    <div className="shrink-0 w-7 h-7 rounded-full bg-blue-500/10 flex items-center justify-center">
+                      <Target className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <span className="text-foreground">Roles you qualify for right now</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-sm" data-testid="diagnostic-benefit-3">
+                    <div className="shrink-0 w-7 h-7 rounded-full bg-amber-500/10 flex items-center justify-center">
+                      <Clock className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+                    </div>
+                    <span className="text-foreground">30-day transition plan tied to real jobs</span>
+                  </div>
+                </div>
+                <div className="mt-7">
+                  <Button asChild data-testid="button-diagnostic-cta">
+                    <a href="/auth">
+                      <Brain className="mr-2 h-4 w-4" />
+                      Get your diagnostic
+                    </a>
+                  </Button>
+                </div>
+              </div>
+              <div className="w-full lg:w-[340px] shrink-0">
+                <Card className="overflow-hidden" data-testid="diagnostic-preview-card">
+                  <CardContent className="p-5">
+                    <p className="text-[10px] font-semibold text-muted-foreground tracking-wide uppercase mb-4">Sample Report Preview</p>
+                    <div className="flex items-center gap-4 mb-4">
+                      <div className="relative flex items-center justify-center shrink-0">
+                        <svg className="w-[72px] h-[72px] -rotate-90" viewBox="0 0 100 100">
+                          <circle cx="50" cy="50" r="42" fill="none" stroke="hsl(var(--muted))" strokeWidth="6" />
+                          <circle cx="50" cy="50" r="42" fill="none" stroke="#f59e0b" strokeWidth="6" strokeLinecap="round"
+                            strokeDasharray={`${2 * Math.PI * 42}`}
+                            strokeDashoffset={`${2 * Math.PI * 42 - (58 / 100) * 2 * Math.PI * 42}`}
+                          />
+                        </svg>
+                        <div className="absolute flex flex-col items-center">
+                          <span className="text-lg font-bold text-foreground">58</span>
+                          <span className="text-[8px] text-muted-foreground">Readiness</span>
+                        </div>
+                      </div>
+                      <div className="space-y-1.5 min-w-0">
+                        <Badge variant="secondary" className="text-[10px] bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20">3 Ready roles</Badge>
+                        <Badge variant="secondary" className="text-[10px] bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20">5 Near-Ready</Badge>
+                        <Badge variant="secondary" className="text-[10px] bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/20">2 Stretch</Badge>
+                      </div>
+                    </div>
+                    <div className="space-y-1.5 mb-3">
+                      <div className="flex items-center justify-between gap-3 text-xs">
+                        <span className="text-muted-foreground">Contract Drafting</span>
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-16 h-1.5 bg-muted/40 rounded-full overflow-hidden">
+                            <div className="h-full bg-emerald-500 rounded-full" style={{ width: "82%" }} />
+                          </div>
+                          <span className="text-foreground font-medium w-6 text-right">82</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between gap-3 text-xs">
+                        <span className="text-muted-foreground">Legal Tech Tools</span>
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-16 h-1.5 bg-muted/40 rounded-full overflow-hidden">
+                            <div className="h-full bg-amber-500 rounded-full" style={{ width: "54%" }} />
+                          </div>
+                          <span className="text-foreground font-medium w-6 text-right">54</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between gap-3 text-xs">
+                        <span className="text-muted-foreground">Data Analytics</span>
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-16 h-1.5 bg-muted/40 rounded-full overflow-hidden">
+                            <div className="h-full bg-rose-500/60 rounded-full" style={{ width: "28%" }} />
+                          </div>
+                          <span className="text-foreground font-medium w-6 text-right">28</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-[10px] text-muted-foreground border-t border-border/30 pt-2.5">
+                      Top path: <span className="font-medium text-foreground">Legal Operations</span> · 87% match
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </div>
+        </section>
+
         {stats && (
           <section className="border-t border-border/30">
             <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-16">
@@ -377,11 +485,20 @@ export default function Landing() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-2xl mx-auto" data-testid="pro-features-grid">
               <div className="space-y-2">
                 <div className="flex items-center gap-2.5">
-                  <Target className="h-4 w-4 text-foreground shrink-0" />
-                  <h3 className="text-sm font-semibold text-foreground">Resume Match Scores</h3>
+                  <Brain className="h-4 w-4 text-foreground shrink-0" />
+                  <h3 className="text-sm font-semibold text-foreground">Full Career Diagnostic</h3>
                 </div>
                 <p className="text-xs text-muted-foreground leading-relaxed pl-[26px]">
-                  See exactly how your experience lines up with each role, with specific gap analysis.
+                  Unlock your complete readiness report — all career paths, detailed skill gaps, and a full 30-day transition plan.
+                </p>
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2.5">
+                  <Target className="h-4 w-4 text-foreground shrink-0" />
+                  <h3 className="text-sm font-semibold text-foreground">Per-Job Fit Scores</h3>
+                </div>
+                <p className="text-xs text-muted-foreground leading-relaxed pl-[26px]">
+                  See exactly how your experience lines up with each role, with specific gap analysis and match breakdowns.
                 </p>
               </div>
               <div className="space-y-2">
@@ -396,19 +513,10 @@ export default function Landing() {
               <div className="space-y-2">
                 <div className="flex items-center gap-2.5">
                   <Search className="h-4 w-4 text-foreground shrink-0" />
-                  <h3 className="text-sm font-semibold text-foreground">Smart Search</h3>
+                  <h3 className="text-sm font-semibold text-foreground">Smart Search & Alerts</h3>
                 </div>
                 <p className="text-xs text-muted-foreground leading-relaxed pl-[26px]">
-                  Describe what you're looking for in plain English and we'll find your best-fit roles.
-                </p>
-              </div>
-              <div className="space-y-2">
-                <div className="flex items-center gap-2.5">
-                  <Bell className="h-4 w-4 text-foreground shrink-0" />
-                  <h3 className="text-sm font-semibold text-foreground">Job Alerts</h3>
-                </div>
-                <p className="text-xs text-muted-foreground leading-relaxed pl-[26px]">
-                  Get notified when roles matching your profile are posted. Never miss the right opportunity.
+                  Search in plain English and get notified when matching roles appear. Never miss the right opportunity.
                 </p>
               </div>
             </div>
