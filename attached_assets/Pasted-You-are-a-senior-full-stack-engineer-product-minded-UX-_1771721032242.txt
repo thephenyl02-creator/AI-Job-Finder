@@ -1,0 +1,77 @@
+You are a senior full-stack engineer + product-minded UX builder. We are building a SaaS called “Legal Tech Careers” (lawjobs.co). It’s NOT a generic job board. It’s a “career intelligence engine” that helps lawyers transition into legal tech + legal AI.
+
+Goal: Increase activation (first meaningful action) and conversion to paid (Pro). Users must immediately see personalized value: fit scores, recommended path, gaps, and next steps.
+
+TASK: Implement the following product changes end-to-end with clean UI, real data flow, and minimal tech debt.
+
+1) JOBS PAGE: “Career Intelligence Header”
+- At the top of /jobs, show a personalized panel IF user has at least 1 resume uploaded.
+- Panel shows:
+  a) “Top recommended path” (e.g., Legal AI & Analytics)
+  b) “Search readiness” (0–100)
+  c) “Top 3 strengths” and “Top 3 gaps”
+  d) “Recommended next action” button: “Find my best matches”
+- If user has no resume: show a CTA panel “Upload resume to get fit scores + gap analysis” with upload button.
+
+2) JOB CARDS: Add Fit Intelligence (if resume exists)
+For each job card:
+- Show Fit Score badge (e.g., 72%)
+- Show AI Intensity tag (Low/Med/High)
+- Show “Transition Difficulty” tag (Easy/Medium/Hard)
+- Show 1-line reason: “Missing: AI Implementation” or “Strong match: Product + Legal Ops”
+- Add “Save” + “Compare” actions on each job card.
+- Clicking Compare adds to a comparison drawer/cart (max 3 jobs).
+
+3) SMART FILTERS (replace generic filters)
+Add filters that differentiate us from LinkedIn/Indeed:
+- AI Intensity: Low/Med/High
+- Legal background value: JD Preferred / JD Required / Not Required
+- Requires coding: Yes/No
+- Transition difficulty: Easy/Medium/Hard
+- Path: dropdown with 11 career paths
+Keep existing filters (Region/Level) but make these new ones primary.
+
+4) COMPARISON DRAWER (cart-like)
+- Persistent drawer on /jobs showing selected jobs (up to 3).
+- For each selected job: fit score, key requirements met, key gaps.
+- “Compare” button opens a /compare page with a side-by-side table:
+  - Fit score, AI intensity, transition difficulty, JD requirement
+  - Pros/Cons
+  - 3 strongest matching resume bullets
+  - 3 recommended resume tweaks (specific edits)
+
+5) DATA MODEL + SCORING (simple but consistent)
+Implement a deterministic scoring system so it’s not random:
+- Parse job description into “requirements” keywords/clusters.
+- Parse resume into skills/keywords/bullets.
+- Compute:
+  FitScore = weighted overlap (skills + role keywords + leadership + domain)
+  Strengths = top 3 matched clusters
+  Gaps = top 3 missing clusters
+  AI Intensity = based on keywords (“LLM”, “agents”, “prompt”, “RAG”, “ML”)
+  Transition Difficulty = based on seniority + coding requirement + AI intensity
+Store computed results in DB so it’s fast on reload.
+
+6) PAYMENT GATING (Pro conversion)
+- Free users: can see Fit Score + 1 Gap only.
+- Pro users: can see full gaps + resume tweaks + comparison insights + tailoring.
+Add a subtle lock icon + “Unlock with Pro” for gated sections.
+Do NOT break the free experience—make it feel valuable but incomplete.
+
+7) UX REQUIREMENTS
+- Make it premium: spacing, typography, consistent badges, subtle shadows.
+- Keep load fast: skeleton loaders, cache computed scores.
+- Empty states must be strong and guiding.
+- Ensure mobile responsiveness.
+
+8) OUTPUT
+- Implement changes across components, routes, DB schema/migrations, and API endpoints.
+- Provide a short README explaining:
+  - Where scoring logic lives
+  - How to test with a sample resume + job
+  - How Pro gating works
+
+IMPORTANT:
+- Do not handwave. Make real working changes.
+- If anything is missing, make reasonable assumptions and proceed.
+- Keep code clean, modular, and production-lean.

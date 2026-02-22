@@ -1,0 +1,147 @@
+You are a senior full-stack engineer and product leader. We are building lawjobs.co (“Legal Tech Careers for Lawyers”) and I want this to be a 10/10 product that delivers real, measurable value—not a generic job board.
+
+PRIMARY OUTCOME:
+Within 30 minutes of signup, a user should know:
+1) The best-fit legal tech / legal AI career path(s) for them
+2) Which roles they are READY for now vs NEAR-ready vs STRETCH
+3) Exactly what to do in the next 30 days to increase interview probability
+4) A resume + LinkedIn improvement plan tied to real job requirements
+This must be explainable, brutally honest, and actionable.
+
+DO THIS WORK END-TO-END (frontend + backend + DB + scoring + UI + paywall) with clean code, tests where reasonable, and premium UX.
+
+========================================================
+FEATURE 1: CAREER DIAGNOSTIC REPORT (the core “10/10” value)
+========================================================
+Add a new route/page: /diagnostic
+
+Trigger:
+- After resume upload OR user clicks “Run Career Diagnostic”
+
+Backend:
+- Create endpoint POST /api/diagnostic/run
+- Input: resumeId, optional targetPath (if user selects one)
+- Output: a structured DiagnosticReport JSON (store in DB for caching)
+
+DiagnosticReport must include:
+A) Top 3 recommended career paths (with confidence scores)
+B) Role Readiness Ladder:
+   - READY (roles user can apply now)
+   - NEAR-READY (roles needing 2–6 weeks of targeted work)
+   - STRETCH (roles needing 3–6 months)
+   For each role: include “why” + top 3 blockers + top 3 strengths.
+C) Skill Cluster Scores (0–100) with explainability:
+   - Legal Domain Expertise
+   - Legal Ops / Process
+   - Product Thinking
+   - Data / Analytics
+   - AI Literacy (LLMs, RAG, evaluation)
+   - Technical Tools (SQL/Python/automation)
+   - Stakeholder / Leadership
+   For each cluster: list evidence lines from the resume (quotes/snippets) and missing signals.
+D) 30-Day Transition Plan:
+   - Week 1–4 actions with time estimate (hrs), outputs (deliverables), and measurable goals.
+   - Each task must map to (i) skill gaps and (ii) real job requirements from our jobs DB.
+E) “Brutal Honesty” section:
+   - 3 direct statements about what is holding the user back most (no sugarcoating).
+F) Recommended next actions:
+   - “Tailor resume for top match”
+   - “Generate LinkedIn headline + About section”
+   - “Apply to 5 roles I’m ready for”
+
+DB:
+- Add table diagnostic_reports:
+  - id, userId, resumeId, createdAt
+  - reportJson (jsonb)
+  - topPaths, readinessSummary, overallReadinessScore
+Cache per (userId,resumeId) and regenerate only if resume changes.
+
+Scoring:
+- Implement deterministic, explainable scoring:
+  - Extract requirements from job descriptions into clusters + keywords
+  - Extract resume skills/experience into clusters + evidence
+  - Compute cluster overlap, seniority alignment, domain alignment
+  - Create readiness tiers based on thresholds + blockers
+- Do NOT output “magic numbers” without evidence. Every score must have “why”.
+
+========================================================
+FEATURE 2: EXPLAINABLE FIT SCORE EVERYWHERE
+========================================================
+On /jobs and /job/:id:
+- Show Fit Score plus a “Why this score?” expandable panel:
+  - Matched requirements (with checkmarks)
+  - Missing requirements (with gaps)
+  - Evidence from resume for matches (snippets)
+  - 3 recommended bullet rewrites (specific edits)
+- Store computed fit results in DB for speed.
+
+Backend:
+- Add endpoints:
+  GET /api/jobs/:id/fit?resumeId=...
+  POST /api/jobs/fit/batch { resumeId, jobIds[] }
+
+DB:
+- Add job_fit_results table:
+  - id, userId, resumeId, jobId
+  - fitScore, strengths[], gaps[], evidence[], recommendedEdits[]
+  - aiIntensity, transitionDifficulty
+  - createdAt
+
+========================================================
+FEATURE 3: CLEAN CAREER INTELLIGENCE DASHBOARD + CHARTS
+========================================================
+Update /dashboard to focus on decision-making, not vanity metrics.
+Add clean charts (Recharts preferred) with minimal style:
+1) Skill Gap Radar: current cluster scores vs target path expected scores
+2) Fit Score Breakdown Bar: skills/experience/domain/seniority contribution
+3) Market Demand Bar: top skills requested across roles in chosen path vs user coverage
+4) Readiness Ladder: counts of READY/NEAR/STRETCH roles with drilldown
+
+Charts must be:
+- simple, clean, readable
+- tooltips with definitions
+- skeleton loaders
+- mobile responsive
+
+Backend:
+- Add /api/analytics/market-demand?path=...
+- This computes top skills from our jobs DB (job descriptions) for that path.
+
+========================================================
+FEATURE 4: MONETIZATION THAT MAKES SENSE (PRO gating)
+========================================================
+Free users get:
+- Diagnostic summary + 1 recommended path
+- Fit score + 1 gap per job
+- 1 resume bullet rewrite per week
+
+Pro users get:
+- Full diagnostic report + 30-day plan
+- Full fit explanation (all gaps + evidence)
+- Unlimited tailoring & comparison
+- LinkedIn pack (headline + About + 5 featured bullets)
+
+Implement gating:
+- Add “locked” sections with tasteful lock icon and “Unlock Pro”
+- Never break free flow; free must still feel valuable.
+
+========================================================
+UX REQUIREMENTS (MUST FOLLOW)
+========================================================
+- Premium SaaS styling: consistent spacing, typography, neutral palette, subtle shadows.
+- Make “explainability” the design center: users must see WHY.
+- Add strong empty states: when no resume -> guide upload.
+- Performance: cache computed results, avoid re-running AI needlessly.
+- Error handling: friendly messages, retries, and logging.
+
+DELIVERABLES
+========================================================
+1) Implement all endpoints, DB migrations, and UI changes.
+2) Add a short README:
+   - how diagnostic scoring works
+   - how to test with sample resume
+   - where charts pull data from
+   - how Pro gating is enforced
+
+If something is missing, make reasonable assumptions and proceed without asking questions.
+Make it production-lean, not over-engineered.

@@ -1,0 +1,99 @@
+You are a senior product engineer + growth PM. Upgrade my existing “Legal Tech Careers” web app to be conversion-optimized and value-led, while keeping the current clean premium design.
+
+GOAL
+Increase (1) resume uploads, (2) diagnostic completions, (3) Pro upgrades. The product should create a “wow” moment within 60 seconds after a user uploads a resume.
+
+CURRENT APP (context)
+- Pages exist: Jobs, Map, Dashboard, Resumes, Events, Pricing
+- Jobs page has search + filters + job cards
+- Job detail page shows match %, readiness bar, “Tailor your resume”, “Apply on company website”
+- Resumes page shows uploaded resumes + “Find Matching Jobs” + ATS Review
+- Dashboard shows activity stats + a few charts
+- Map shows roles by country (one bug: France tooltip/selection appears wrong sometimes)
+
+WHAT TO BUILD (Conversion + Value Engine)
+1) Create a new page: /diagnostic (the “wow” page)
+   - When a user uploads a resume OR clicks “Find Matching Jobs”, route them to /diagnostic automatically.
+   - Show a Career Diagnostic Report with:
+     a) Fit Score (0–100) with breakdown (Skills / Experience / Domain / Seniority) — store per resume_id
+     b) Readiness ladder: Ready / Near-Ready / Stretch counts with drilldown list
+     c) Skill Gap Radar chart (Recharts) comparing “Current skills vs Target path skills”
+     d) Transition Difficulty gauge (0–100) with explanation
+     e) Market Demand mini-chart: role_count by career path + “you vs market” highlight
+   - Add a “Brutally Honest Summary” section (short, direct, evidence-based)
+   - Add a “30-day plan” section (week-by-week actions), only partially visible for free users
+
+2) Add “Intelligence Header” on /jobs
+   - Sticky compact panel at top of Jobs list that shows:
+     - Best path + fit %
+     - Top strengths (max 3 chips)
+     - Top gaps (max 3 chips)
+     - CTA button: “View full diagnostic →” (routes to /diagnostic)
+   - If no resume uploaded, show a premium banner: “Upload resume to unlock match scores & diagnostic” with upload CTA
+
+3) Upgrade job cards to be “intelligent”
+   - Add tags on each job card:
+     - Fit % (if resume exists)
+     - AI intensity (Low/Med/High)
+     - Transition difficulty (Easy/Medium/Hard)
+     - 1-line “Why this score?” snippet (evidence-based)
+   - Add expandable “Why this score?” accordion inside job detail page with the breakdown + matched keywords
+
+4) Pro Gating (must feel fair, conversion-ready)
+   - Free users get:
+     - Overall fit score, 1 best path, top 3 matches, summary charts in low detail
+   - Pro users get:
+     - Full fit breakdown, all paths, full radar, full 30-day plan, full “why this score” evidence, full resume tailoring exports
+   - Implement in-product upgrade prompts ONLY at moments of value:
+     - After showing preview of the diagnostic (“Unlock full 30-day plan + evidence breakdown”)
+     - When user clicks “See full gaps” or “Export tailored resume”
+
+5) Charts & Graphs: make clean and consistent
+   - Use Recharts, minimalist styling:
+     - No heavy grid lines
+     - Subtle axis labels
+     - Responsive containers
+     - Consistent spacing and typography
+   - Create a shared <ChartCard/> component for all charts (title, subtitle, info tooltip, chart area)
+   - Ensure charts look good in light mode and dark mode
+
+6) Data + Storage
+   - Add a server function to compute and store:
+     - resume_skill_clusters (7 categories)
+     - deterministic fit scoring components
+     - ai_intensity score per job
+     - transition_difficulty per job for that resume
+     - market_demand per path (based on jobs DB counts)
+   - Store computed results in DB for instant reload (cache by resume_id + job_id + updated_at)
+   - Add a “last computed” timestamp and “recompute” button
+
+7) Fix Map bug (France mismatch)
+   - Ensure the hovered/selected country uses the correct ISO code mapping
+   - Validate country counts and tooltip label matches selection
+   - Add a small debug log in dev mode to verify mapping
+
+UX COPY (important)
+- Replace generic language with value language:
+  - “Your readiness: Almost” → “You’re 2 improvements away from Strong Fit”
+  - “Tailor your resume” → “Tailor to raise match score”
+  - “Go further with Pro” → “Unlock the full diagnostic + 30-day plan”
+- Make CTAs action-first:
+  - “Get my diagnostic”
+  - “See what to fix”
+  - “Unlock full plan”
+
+DELIVERABLES
+- Implement /diagnostic page
+- Implement Jobs intelligence header + job card intelligence tags
+- Implement Pro gating rules (server + UI)
+- Implement clean chart system with ChartCard component
+- Fix France map ISO mismatch bug
+- Keep design premium and consistent with current UI
+- Provide final file changes and key components created/updated
+- Do not break existing flows; refactor carefully.
+
+Acceptance criteria
+- A new user can land on the site, upload resume, and see a diagnostic within 60 seconds.
+- Pro prompts only appear after the user sees real value.
+- Charts are clean and consistent.
+- France selection/tooltip is correct.

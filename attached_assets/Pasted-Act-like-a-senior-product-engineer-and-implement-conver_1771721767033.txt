@@ -1,0 +1,65 @@
+Act like a senior product engineer and implement conversion-ready UX for Legal Tech Careers.
+
+Goals:
+- Increase signups and resume uploads
+- Make the platform feel premium, credible, and action-driven
+- Add clean charts/graphs that help users make decisions
+
+Implement the following:
+
+1) Primary CTA System
+- Add a persistent primary CTA button in the top nav: “Upload Resume”
+- On Jobs page hero: add a headline + subheadline focused on outcomes:
+  “Upload your resume. Get matched. Apply faster.”
+- Add secondary CTA: “Browse without uploading” (less prominent)
+
+2) Conversion Funnel Banner (above job list)
+- Add a slim premium banner card with:
+  - “Resume Match Score (beta)”
+  - “Curated roles (live count)”
+  - “Time saved per application (estimate)”
+- Include CTA button: “Get My Match Score”
+
+3) Job Card Trust + Value
+Update job cards to include:
+- “Last checked” timestamp
+- “Verified source” badge if apply URL works
+- “Why this role is legal tech” one-liner
+- Fit tags (e.g., Legal AI, eDiscovery, CLM, Privacy, Ops)
+- Add button: “See Fit” (if resume exists) otherwise “Upload resume to see fit”
+
+4) Map Page Fix + Conversion
+- Fix country highlighting by standardizing country codes (ISO-2 or ISO-3) consistently
+- Add a right-side panel on Map page:
+  - Top companies in selected region
+  - Top roles
+  - CTA: “Create alert for this region” (email capture + save preference)
+
+5) Clean Charts & Graphs (Premium)
+Add a new “Insights” page OR section in Dashboard:
+- Roles by category (bar chart)
+- Roles by region (bar chart)
+- Remote vs Hybrid vs On-site (donut/pie)
+- Roles posted over time (last 30 days line chart)
+
+Design requirements:
+- Minimal, clean, whitespace-heavy layout
+- No heavy gridlines, no visual clutter
+- Consistent typography and spacing
+- Skeleton loading states
+- Empty states that drive actions
+
+Tech requirements:
+- Use a stable chart library (e.g., Recharts) with responsive containers
+- Charts must pull from live aggregated API endpoints
+- Add aggregation endpoints:
+  /api/insights/roles-by-category
+  /api/insights/roles-by-region
+  /api/insights/roles-by-workmode
+  /api/insights/roles-over-time
+
+Deliverables:
+- Updated UI components
+- API endpoints
+- Data normalization fix for map country codes
+- Basic tests for country mapping and insights endpoints
