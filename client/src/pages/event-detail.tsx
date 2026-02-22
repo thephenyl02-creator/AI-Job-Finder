@@ -192,6 +192,7 @@ export default function EventDetail() {
   const AttendanceIcon = ATTENDANCE_ICONS[event.attendanceType] || Globe;
   const speakers = (event.speakers as EventSpeaker[] | null) || [];
   const topics = event.topics || [];
+  const isPastEvent = new Date(event.endDate || event.startDate) < new Date();
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -207,6 +208,15 @@ export default function EventDetail() {
               </Button>
             </Link>
           </ScrollReveal>
+
+          {isPastEvent && (
+            <ScrollReveal>
+              <div className="mb-6 rounded-lg border border-amber-200 dark:border-amber-800/50 bg-amber-50/50 dark:bg-amber-900/10 p-4 flex items-start gap-3" data-testid="banner-past-event">
+                <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                <p className="text-sm text-amber-700 dark:text-amber-300">This event has already taken place. Check our <Link href="/events" className="underline font-medium">events page</Link> for upcoming events.</p>
+              </div>
+            </ScrollReveal>
+          )}
 
           <ScrollReveal delay={0.05}>
             <div className="mb-8">
@@ -293,15 +303,15 @@ export default function EventDetail() {
 
           <ScrollReveal delay={0.15}>
             <div className="flex flex-wrap gap-3 mb-6">
-              {(event as any).linkStatus === "broken" ? (
+              {!event.registrationUrl ? (
                 <Button variant="secondary" disabled data-testid="button-register">
                   <AlertCircle className="h-4 w-4 mr-2" />
                   Registration link unavailable
                 </Button>
               ) : (
-                <Button onClick={handleRegisterClick} data-testid="button-register">
+                <Button onClick={handleRegisterClick} disabled={isPastEvent} data-testid="button-register">
                   <ExternalLink className="h-4 w-4 mr-2" />
-                  Register
+                  {isPastEvent ? "Event has ended" : "Register"}
                 </Button>
               )}
               <Button variant="outline" onClick={handleShare} data-testid="button-share">
@@ -309,12 +319,6 @@ export default function EventDetail() {
                 Share
               </Button>
             </div>
-            {(event as any).linkStatus === "broken" && (
-              <p className="text-xs text-amber-600 dark:text-amber-400 mb-2 flex items-center gap-1.5" data-testid="text-broken-link-notice">
-                <AlertCircle className="h-3 w-3 shrink-0" />
-                The registration link for this event could not be verified. Try searching for the event directly on the organizer's website.
-              </p>
-            )}
             <p className="text-xs text-muted-foreground/60 mt-2" data-testid="text-event-disclaimer">
               Event details are sourced from public information and may change. Please verify directly with the organizer before registering.
             </p>

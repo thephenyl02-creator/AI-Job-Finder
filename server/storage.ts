@@ -2250,10 +2250,14 @@ class DatabaseStorage implements IStorage {
     return fallback;
   }
 
-  async getEvents(filters?: { eventType?: string; attendanceType?: string; isFree?: boolean; topic?: string; upcoming?: boolean }): Promise<Event[]> {
+  async getEvents(filters?: { eventType?: string; attendanceType?: string; isFree?: boolean; topic?: string; upcoming?: boolean; includeUnverified?: boolean }): Promise<Event[]> {
     const conditions: any[] = [
       eq(events.isActive, true),
     ];
+
+    if (!filters?.includeUnverified) {
+      conditions.push(eq(events.linkStatus, 'verified'));
+    }
 
     if (filters?.eventType) {
       conditions.push(eq(events.eventType, filters.eventType));
@@ -2378,6 +2382,7 @@ class DatabaseStorage implements IStorage {
       .from(events)
       .where(and(
         eq(events.isActive, true),
+        eq(events.linkStatus, 'verified'),
         gte(events.startDate, new Date()),
       ))
       .orderBy(events.isFeatured, events.startDate)

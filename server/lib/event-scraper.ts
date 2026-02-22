@@ -102,7 +102,7 @@ Return a JSON object with an "events" key containing an array. Each event MUST h
 Today's date is: ${new Date().toISOString().split('T')[0]}
 Return ONLY the JSON object.`;
 
-function checkUrlExists(url: string): Promise<{ ok: boolean; status: number }> {
+export function checkUrlExists(url: string): Promise<{ ok: boolean; status: number }> {
   return new Promise((resolve) => {
     try {
       const parsed = new URL(url);
@@ -350,80 +350,12 @@ export async function runEventDiscovery(): Promise<{
   deactivated: number;
   errors: string[];
 }> {
-  if (scraperState.isRunning) {
-    logWarn('EVENTS', 'Event discovery already running, skipping');
-    return { discovered: 0, inserted: 0, updated: 0, deactivated: 0, errors: ['Already running'] };
-  }
-
-  scraperState.isRunning = true;
-  const errors: string[] = [];
-  let totalDiscovered = 0;
-  let totalInserted = 0;
-  let totalUpdated = 0;
-  let totalDeactivated = 0;
-
-  try {
-    logInfo('EVENTS', '=== Starting Global Event Discovery ===');
-
-    for (const regionQuery of REGION_QUERIES) {
-      try {
-        const events = await discoverEventsForRegion(regionQuery);
-        totalDiscovered += events.length;
-
-        if (events.length > 0) {
-          const { inserted, updated } = await storage.bulkUpsertEvents(events);
-          totalInserted += inserted;
-          totalUpdated += updated;
-          logSuccess('EVENTS', `${regionQuery.region}: +${inserted} new, ~${updated} updated`);
-        }
-      } catch (error: any) {
-        const msg = `${regionQuery.region}: ${error.message}`;
-        errors.push(msg);
-        logError('EVENTS', msg);
-      }
-    }
-
-    totalDeactivated = await storage.deactivatePastEvents();
-    if (totalDeactivated > 0) {
-      logInfo('EVENTS', `Deactivated ${totalDeactivated} past events`);
-    }
-
-    logSuccess('EVENTS', `=== Event Discovery Complete: ${totalDiscovered} found, +${totalInserted} new, ~${totalUpdated} updated, -${totalDeactivated} deactivated ===`);
-  } catch (error: any) {
-    errors.push(error.message);
-    logError('EVENTS', `Fatal error in event discovery: ${error.message}`);
-  } finally {
-    scraperState.isRunning = false;
-    scraperState.lastRunAt = new Date();
-    scraperState.lastResult = {
-      discovered: totalDiscovered,
-      inserted: totalInserted,
-      updated: totalUpdated,
-      deactivated: totalDeactivated,
-      errors,
-    };
-  }
-
-  return { discovered: totalDiscovered, inserted: totalInserted, updated: totalUpdated, deactivated: totalDeactivated, errors };
+  logWarn('EVENTS', 'AI event discovery is disabled — events must be added manually through admin tools with verified URLs');
+  return { discovered: 0, inserted: 0, updated: 0, deactivated: 0, errors: ['AI event discovery is disabled. Add events manually via admin panel.'] };
 }
 
 export function startEventScheduler() {
-  if (scraperState.intervalId) {
-    clearInterval(scraperState.intervalId);
-  }
-
-  scraperState.nextRunAt = new Date(Date.now() + EVENT_REFRESH_INTERVAL_MS);
-  logInfo('EVENTS', `Event scheduler started - will refresh every 7 days`);
-  logInfo('EVENTS', `Next event refresh at: ${scraperState.nextRunAt.toISOString()}`);
-
-  scraperState.intervalId = setInterval(async () => {
-    scraperState.nextRunAt = new Date(Date.now() + EVENT_REFRESH_INTERVAL_MS);
-    await runEventDiscovery();
-  }, EVENT_REFRESH_INTERVAL_MS);
-
-  setTimeout(() => {
-    runEventDiscovery().catch(err => logError('EVENTS', `Initial event discovery failed: ${err.message}`));
-  }, 30000);
+  logWarn('EVENTS', 'Event scheduler is disabled — AI event discovery has been turned off');
 }
 
 export function stopEventScheduler() {

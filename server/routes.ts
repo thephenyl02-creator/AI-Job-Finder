@@ -75,7 +75,7 @@ import {
 } from "./lib/scheduled-scraper";
 import { getLogFiles, readLogFile, getRecentLogs, runStartupCleanup } from "./lib/logger";
 import { scrapeYCCompanies } from "./lib/yc-scraper";
-import { startEventScheduler, runEventDiscovery, getEventScraperStatus } from "./lib/event-scraper";
+import { startEventScheduler, runEventDiscovery, getEventScraperStatus, checkUrlExists } from "./lib/event-scraper";
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -639,7 +639,7 @@ export async function registerRoutes(
       const id = parseInt(req.params.id as string);
       const event = await storage.getEvent(id);
       if (!event) return res.status(404).json({ error: "Event not found" });
-      if (!event.isActive || event.linkStatus === 'broken') {
+      if (!event.isActive || event.linkStatus !== 'verified') {
         return res.status(404).json({ error: "Event not found" });
       }
       res.json(event);
@@ -664,6 +664,21 @@ export async function registerRoutes(
     try {
       const user = req.user as any;
       if (!(await storage.isUserAdmin(user?.id))) return res.status(403).json({ error: "Admin access required" });
+
+      const regUrl = req.body.registrationUrl;
+      if (regUrl && typeof regUrl === 'string' && regUrl.startsWith('http')) {
+        const { ok } = await checkUrlExists(regUrl);
+        if (ok) {
+          req.body.linkStatus = 'verified';
+        } else {
+          req.body.linkStatus = 'broken';
+          req.body.isActive = false;
+        }
+      } else {
+        req.body.linkStatus = 'unchecked';
+      }
+      req.body.linkLastChecked = new Date();
+
       const event = await storage.createEvent(req.body);
       res.status(201).json(event);
     } catch (error) {
@@ -677,6 +692,15 @@ export async function registerRoutes(
       const user = req.user as any;
       if (!(await storage.isUserAdmin(user?.id))) return res.status(403).json({ error: "Admin access required" });
       const id = parseInt(req.params.id as string);
+
+      const regUrl = req.body.registrationUrl;
+      if (regUrl && typeof regUrl === 'string' && regUrl.startsWith('http')) {
+        const { ok } = await checkUrlExists(regUrl);
+        req.body.linkStatus = ok ? 'verified' : 'broken';
+        if (!ok) req.body.isActive = false;
+        req.body.linkLastChecked = new Date();
+      }
+
       const updated = await storage.updateEvent(id, req.body);
       if (!updated) return res.status(404).json({ error: "Event not found" });
       res.json(updated);
