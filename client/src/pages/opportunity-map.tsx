@@ -219,6 +219,58 @@ const COUNTRY_NAME_TO_ISO2: Record<string, string> = {
   "S. Sudan": "SS",
 };
 
+const MAINLAND_BOUNDS: Record<string, { minLon: number; maxLon: number; minLat: number; maxLat: number }[]> = {
+  "France": [{ minLon: -10, maxLon: 15, minLat: 40, maxLat: 52 }],
+  "Norway": [{ minLon: -5, maxLon: 35, minLat: 55, maxLat: 82 }],
+  "Denmark": [{ minLon: 7, maxLon: 16, minLat: 54, maxLat: 58 }],
+  "Netherlands": [{ minLon: 3, maxLon: 8, minLat: 50, maxLat: 54 }],
+  "United States of America": [
+    { minLon: -130, maxLon: -65, minLat: 24, maxLat: 50 },
+    { minLon: -170, maxLon: -130, minLat: 50, maxLat: 72 },
+    { minLon: -162, maxLon: -154, minLat: 18, maxLat: 23 },
+  ],
+  "United Kingdom": [{ minLon: -12, maxLon: 4, minLat: 49, maxLat: 62 }],
+  "Spain": [{ minLon: -12, maxLon: 6, minLat: 35, maxLat: 44 }],
+  "Portugal": [{ minLon: -35, maxLon: -5, minLat: 32, maxLat: 43 }],
+};
+
+function filterMainlandGeometry(geo: any): any {
+  const name = geo.properties?.NAME || geo.properties?.ADMIN || geo.properties?.name || "";
+  const boundsArr = MAINLAND_BOUNDS[name];
+  if (!boundsArr) return geo;
+
+  const geom = geo.geometry;
+  if (!geom) return geo;
+
+  function polygonInBounds(coords: number[][]): boolean {
+    if (!coords || coords.length === 0) return true;
+    let sumLon = 0, sumLat = 0;
+    const pts = coords[0] || coords;
+    if (!Array.isArray(pts) || pts.length === 0) return true;
+    for (const pt of pts) {
+      if (Array.isArray(pt) && pt.length >= 2) {
+        sumLon += pt[0];
+        sumLat += pt[1];
+      }
+    }
+    const n = pts.length || 1;
+    const cLon = sumLon / n;
+    const cLat = sumLat / n;
+    return boundsArr.some(b => cLon >= b.minLon && cLon <= b.maxLon && cLat >= b.minLat && cLat <= b.maxLat);
+  }
+
+  if (geom.type === "MultiPolygon" && Array.isArray(geom.coordinates)) {
+    const filtered = geom.coordinates.filter(polygonInBounds);
+    if (filtered.length === 0) return geo;
+    return {
+      ...geo,
+      geometry: { ...geom, type: filtered.length === 1 ? "Polygon" : "MultiPolygon", coordinates: filtered.length === 1 ? filtered[0] : filtered },
+    };
+  }
+
+  return geo;
+}
+
 function getCountryCode(geo: any): string {
   const iso2 = geo.properties?.ISO_A2;
   if (iso2 && iso2 !== "-99") return iso2;
@@ -493,7 +545,7 @@ export default function OpportunityMap() {
                   height={isMobile ? 340 : 500}
                   width={800}
                 >
-                  <Geographies geography={GEO_URL}>
+                  <Geographies geography={GEO_URL} parseGeographies={(geos: any[]) => geos.map(filterMainlandGeometry)}>
                     {({ geographies }) =>
                       geographies
                         .filter((geo) => !isAntarctica(geo))
