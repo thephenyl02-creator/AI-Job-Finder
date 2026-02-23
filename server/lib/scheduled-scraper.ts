@@ -390,7 +390,18 @@ export async function runScheduledScrape(triggeredBy: string = 'scheduler'): Pro
       logInfo('ALERTS', 'No new jobs to match against alerts');
     }
 
-    logInfo('PHASE', '--- Phase 5: Link validation (sample) ---');
+    logInfo('PHASE', '--- Phase 5: Deduplication sweep ---');
+    try {
+      const dedupResult = await deduplicatePublishedJobs();
+      if (dedupResult.merged > 0) {
+        logInfo('DEDUP', `Merged ${dedupResult.merged} duplicate jobs`);
+        dedupResult.details.forEach(d => logInfo('DEDUP', d));
+      }
+    } catch (err: any) {
+      logError('DEDUP', 'Dedup sweep failed', { error: err.message });
+    }
+
+    logInfo('PHASE', '--- Phase 6: Link validation (sample) ---');
 
     try {
       const allActiveJobs = await storage.getActiveJobs();
@@ -508,6 +519,61 @@ export function stopScheduler(): void {
 
 export function isSchedulerRunning(): boolean {
   return schedulerInterval !== null;
+}
+
+export async function deduplicatePublishedJobs(): Promise<{ merged: number; details: string[] }> {
+  logInfo('DEDUP', 'Starting deduplication sweep...');
+  const details: string[] = [];
+  let merged = 0;
+
+  try {
+    const publishedJobs = await storage.getActiveJobs();
+    const seen = new Map<string, typeof publishedJobs[0]>();
+    const deactivatedIds = new Set<number>();
+
+    for (const job of publishedJobs) {
+      if (!job.applyUrl) continue;
+      const normalizedUrl = job.applyUrl.toLowerCase().replace(/\/+$/, '').replace(/\?.*$/, '');
+      if (seen.has(normalizedUrl)) {
+        const existing = seen.get(normalizedUrl)!;
+        const keepId = existing.id > job.id ? existing.id : job.id;
+        const removeId = existing.id > job.id ? job.id : existing.id;
+        await storage.updateJob(removeId, { isActive: false, isPublished: false } as any);
+        deactivatedIds.add(removeId);
+        details.push(`Merged duplicate: "${job.title}" at ${job.company} (kept #${keepId}, removed #${removeId})`);
+        merged++;
+        if (keepId !== existing.id) seen.set(normalizedUrl, job);
+      } else {
+        seen.set(normalizedUrl, job);
+      }
+    }
+
+    const titleCompanyMap = new Map<string, typeof publishedJobs[0]>();
+    for (const job of publishedJobs) {
+      if (deactivatedIds.has(job.id)) continue;
+      const key = `${(job.title || '').toLowerCase().trim()}|||${(job.company || '').toLowerCase().trim()}`;
+      if (!key || key === '|||') continue;
+      if (titleCompanyMap.has(key)) {
+        const existing = titleCompanyMap.get(key)!;
+        if (existing.applyUrl === job.applyUrl) continue;
+        const keepId = existing.id > job.id ? existing.id : job.id;
+        const removeId = existing.id > job.id ? job.id : existing.id;
+        await storage.updateJob(removeId, { isActive: false, isPublished: false } as any);
+        deactivatedIds.add(removeId);
+        details.push(`Merged title+company duplicate: "${job.title}" at ${job.company} (kept #${keepId}, removed #${removeId})`);
+        merged++;
+        if (keepId !== existing.id) titleCompanyMap.set(key, job);
+      } else {
+        titleCompanyMap.set(key, job);
+      }
+    }
+
+    logInfo('DEDUP', `Deduplication complete. Merged ${merged} duplicates.`);
+  } catch (error: any) {
+    logError('DEDUP', 'Deduplication sweep failed', { error: error.message });
+  }
+
+  return { merged, details };
 }
 
 export async function enrichShortDescriptions(): Promise<number> {

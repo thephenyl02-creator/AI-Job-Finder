@@ -1203,6 +1203,27 @@ export function isLegalTechRole(title: string, companyType?: string): boolean {
     'business systems analyst', 'security workforce',
     'regional state and local affairs',
     'chief of staff',
+    'executive assistant', 'personal assistant',
+    'creative producer', 'video producer', 'content producer',
+    'communications manager', 'communications director', 'comms manager',
+    'editorial manager', 'editorial director',
+    'site lead', 'office lead',
+    'procurement director', 'procurement manager', 'procurement specialist', 'procurement analyst',
+    'it procurement',
+    'global mobility', 'relocation',
+    'onboarding manager', 'onboarding specialist', 'onboarding coordinator',
+    'program manager, global onboarding', 'gtm onboarding',
+    'workplace manager', 'workplace operations', 'workplace coordinator',
+    'deal desk', 'pricing & strategy', 'pricing specialist',
+    'financial analyst', 'fp&a', 'accounts payable', 'accounts receivable',
+    'connector development representative',
+    'graphic designer', 'brand designer', 'motion designer', 'visual designer',
+    'video editor', 'photographer',
+    'event coordinator', 'event planner',
+    'data entry', 'office coordinator',
+    'maintenance', 'security guard', 'warehouse', 'cleaning',
+    'cook', 'driver', 'cashier', 'barista',
+    'culture camp',
   ];
   if (hardExclude.some(k => t.includes(k))) return false;
 
@@ -1243,17 +1264,23 @@ export function isLegalTechRole(title: string, companyType?: string): boolean {
   const isLegalTechCompanyType = companyType === 'startup' || companyType === 'tech-legal';
 
   if (isLegalTechCompanyType) {
-    const businessRoles = [
-      'manager', 'director', 'head of', 'vp ', 'vice president',
-      'lead', 'senior', 'coordinator', 'specialist', 'associate',
-      'analyst', 'consultant', 'advisor', 'strategist',
-      'operations', 'success', 'support', 'sales', 'marketing',
-      'content', 'writer', 'communications', 'product',
-      'account', 'partner', 'business development',
-      'customer', 'client', 'counsel', 'legal',
+    const productFacingRoles = [
+      'product manager', 'product lead', 'product director', 'head of product',
+      'customer success', 'client success',
+      'solutions architect', 'solutions consultant', 'solutions engineer',
+      'sales engineer', 'pre-sales',
+      'account executive', 'account manager', 'enterprise sales',
+      'business development', 'partnerships',
+      'implementation', 'professional services',
+      'customer support', 'technical support',
+      'marketing manager', 'product marketing', 'growth',
+      'content strategist', 'content marketing',
+      'counsel', 'legal', 'attorney', 'lawyer',
       'paralegal', 'compliance', 'privacy', 'policy',
+      'operations manager', 'operations director',
+      'success manager', 'success director',
     ];
-    return businessRoles.some(k => t.includes(k));
+    return productFacingRoles.some(k => t.includes(k));
   }
 
   return false;

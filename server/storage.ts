@@ -507,6 +507,35 @@ class DatabaseStorage implements IStorage {
         .returning();
       return { job: updatedJob, isNew: false };
     } else {
+      if (job.applyUrl) {
+        const [applyUrlDupe] = await db.select().from(jobs).where(
+          eq(jobs.applyUrl, job.applyUrl)
+        ).limit(1);
+        if (applyUrlDupe) {
+          const updateData: Record<string, any> = {
+            lastScrapedAt: new Date(),
+            lastSeenAt: new Date(),
+            isActive: true,
+          };
+          if (job.salaryMin && !applyUrlDupe.salaryMin) updateData.salaryMin = job.salaryMin;
+          if (job.salaryMax && !applyUrlDupe.salaryMax) updateData.salaryMax = job.salaryMax;
+          const newDesc = job.description ? cleanJobDescription(job.description) : '';
+          const existingDesc = applyUrlDupe.description || '';
+          if (newDesc.length > existingDesc.length) {
+            updateData.description = newDesc;
+          }
+          if (!applyUrlDupe.externalId && job.externalId) {
+            updateData.externalId = job.externalId;
+          }
+          const [updatedJob] = await db
+            .update(jobs)
+            .set(updateData)
+            .where(eq(jobs.id, applyUrlDupe.id))
+            .returning();
+          return { job: updatedJob, isNew: false };
+        }
+      }
+
       const normalizedTitle = (job.title || '').trim().toLowerCase();
       const normalizedCompany = (job.company || '').trim().toLowerCase();
       if (normalizedTitle && normalizedCompany) {
