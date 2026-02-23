@@ -3,7 +3,7 @@ import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
 import { startEventLinkValidation } from "./lib/event-link-validator";
-import { startEnrichmentWorker } from "./workers/enrichment-worker";
+import { startEnrichmentWorker, recoverStuckReadyJobs } from "./workers/enrichment-worker";
 import { startReliabilityWorker } from "./workers/reliability-worker";
 import { runScheduledScrape } from "./lib/scheduled-scraper";
 import { storage } from "./storage";
@@ -159,6 +159,17 @@ app.use((req, res, next) => {
       startEventLinkValidation();
       startEnrichmentWorker();
       startReliabilityWorker();
+
+      setTimeout(async () => {
+        try {
+          const result = await recoverStuckReadyJobs();
+          if (result.promoted > 0) {
+            log(`Recovery: ${result.promoted} stuck jobs published`);
+          }
+        } catch (err: any) {
+          console.error('[Recovery] Failed:', err.message);
+        }
+      }, 30000);
 
       setTimeout(async () => {
         try {

@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { useCallback, useState, useMemo, useEffect, useRef } from "react";
+import { useCallback, useState, useMemo, useEffect, useRef, memo } from "react";
 import { ComposableMap, Geographies, Geography } from "react-simple-maps";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -438,11 +438,40 @@ export default function OpportunityMap() {
     }
   }, [isMobile]);
 
+  const stableParseGeographies = useCallback(
+    (geos: any[]) => geos.map(filterMainlandGeometry),
+    []
+  );
+
   const activeCode = hoveredCode || selectedCode;
   const activeCountry = activeCode ? countryMap.get(activeCode) ?? null : null;
   const emptyFill = isDark ? "hsl(220, 10%, 15%)" : "hsl(220, 14%, 96%)";
   const strokeColor = isDark ? "hsl(220, 10%, 20%)" : "hsl(220, 14%, 90%)";
   const activeStroke = isDark ? "hsl(217, 40%, 45%)" : "hsl(217, 50%, 60%)";
+
+  const geoStyleWithJobs = useMemo(() => ({
+    default: { outline: "none" } as const,
+    hover: {
+      outline: "none" as const,
+      fill: isDark ? "hsl(217, 70%, 55%)" : "hsl(217, 65%, 45%)",
+      stroke: activeStroke,
+      strokeWidth: 1.2,
+      cursor: "pointer" as const,
+    },
+    pressed: { outline: "none" } as const,
+  }), [isDark, activeStroke]);
+
+  const geoStyleNoJobs = useMemo(() => ({
+    default: { outline: "none" } as const,
+    hover: {
+      outline: "none" as const,
+      fill: isDark ? "hsl(220, 10%, 18%)" : "hsl(220, 14%, 92%)",
+      stroke: strokeColor,
+      strokeWidth: 0.4,
+      cursor: "default" as const,
+    },
+    pressed: { outline: "none" } as const,
+  }), [isDark, strokeColor]);
 
   if (isLoading) {
     return (
@@ -545,7 +574,7 @@ export default function OpportunityMap() {
                   height={isMobile ? 340 : 500}
                   width={800}
                 >
-                  <Geographies geography={GEO_URL} parseGeographies={(geos: any[]) => geos.map(filterMainlandGeometry)}>
+                  <Geographies geography={GEO_URL} parseGeographies={stableParseGeographies}>
                     {({ geographies }) =>
                       geographies
                         .filter((geo) => !isAntarctica(geo))
@@ -556,13 +585,9 @@ export default function OpportunityMap() {
                           const t = hasJobs ? Math.pow(country.jobCount / maxCount, 0.5) : 0;
                           const fillColor = hasJobs ? interpolateColor(t, isDark) : emptyFill;
 
-                          const hoverFill = hasJobs
-                            ? isDark
-                              ? "hsl(217, 70%, 55%)"
-                              : "hsl(217, 65%, 45%)"
-                            : isDark
-                              ? "hsl(220, 10%, 18%)"
-                              : "hsl(220, 14%, 92%)";
+                          const hoverFillJobs = isDark ? "hsl(217, 70%, 55%)" : "hsl(217, 65%, 45%)";
+                          const hoverFillEmpty = isDark ? "hsl(220, 10%, 18%)" : "hsl(220, 14%, 92%)";
+                          const hoverFill = hasJobs ? hoverFillJobs : hoverFillEmpty;
 
                           const isPanelHovered = hoveredCode === code && hasJobs;
                           const activeFill = isPanelHovered ? hoverFill : fillColor;
@@ -576,17 +601,7 @@ export default function OpportunityMap() {
                               fill={activeFill}
                               stroke={activeStrokeColor}
                               strokeWidth={activeStrokeWidth}
-                              style={{
-                                default: { outline: "none" },
-                                hover: {
-                                  outline: "none",
-                                  fill: hoverFill,
-                                  stroke: hasJobs ? activeStroke : strokeColor,
-                                  strokeWidth: hasJobs ? 1.2 : 0.4,
-                                  cursor: hasJobs ? "pointer" : "default",
-                                },
-                                pressed: { outline: "none" },
-                              }}
+                              style={hasJobs ? geoStyleWithJobs : geoStyleNoJobs}
                               onMouseEnter={() => {
                                 if (isMobile) return;
                                 setHover(code);

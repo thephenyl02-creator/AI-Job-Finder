@@ -44,7 +44,7 @@ Legal Tech Careers is a freemium SaaS job search platform tailored for legal pro
 
 ### Job Curation Pipeline
 - **Process**: A two-layer pipeline (raw ingestion → AI enrichment → trust gate → published inventory) ensures job quality.
-- **Company Coverage**: 97 companies tracked across 7 categories (20 startups, 16 companies, 31 tech-legal, 27 biglaw, 3 ALSPs). ATS integrations: 27 Greenhouse, 8 Lever, 14 Ashby, 34 Workday, 2 Workable, 1 SmartRecruiters, 5 iCIMS, 1 BambooHR, 5 generic.
+- **Company Coverage**: 236 companies tracked across 5 categories (38 startups, 22 companies, 95 tech-legal, 70 biglaw, 11 ALSPs). ATS integrations: 74 Greenhouse, 37 Lever, 22 Ashby, 89 Workday, 2 Workable, 6 SmartRecruiters, 5 iCIMS, 1 BambooHR. All companies have verified ATS configurations.
 - **Scrapers**: Utilizes various APIs (Greenhouse, Lever, Ashby, Workday CXS) and generic HTML scrapers for broad job coverage across global regions.
 - **Automation**: Scheduled scrapers, enrichment workers, and reliability workers manage job ingestion, quality scoring, deduplication, and link validation.
 - **Quality Assurance**: A comprehensive QA validation system with persisted results and an admin review queue ensures high data integrity.
@@ -60,7 +60,7 @@ Legal Tech Careers is a freemium SaaS job search platform tailored for legal pro
 - **Per-Job Fit Scoring**: AI-computed fit scores (skills/experience/domain/seniority breakdown), AI intensity, and transition difficulty cached per resume-job pair. Displayed as badges on job cards.
 - **Career Intelligence Header**: On /jobs page, shows readiness score + top path + skill chips when diagnostic exists, or prompts to run diagnostic / upload resume.
 - **Job Alerts & Notifications**: Users receive alerts for new matching jobs.
-- **Opportunity Map**: An interactive global map displaying job density by country.
+- **Opportunity Map**: An interactive global map displaying job density by country, with memoized rendering for smooth hover/zoom/pan interactions.
 - **SEO**: Dynamic meta tags, `JobPosting` JSON-LD, and an XML sitemap for enhanced search visibility.
 - **Pro Feature Gates**: Backend and frontend implement checks to gate Pro features, with upgrade prompts for Free users.
 
