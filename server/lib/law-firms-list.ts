@@ -574,6 +574,88 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   },
 
   // ===================================================
+  // DOCUMENT AUTOMATION & E-SIGNATURE (Global)
+  // ===================================================
+  {
+    name: 'Conga',
+    careerUrl: 'https://conga.com/careers',
+    greenhouseId: 'conga',
+    type: 'tech-legal',
+  },
+  {
+    name: 'PandaDoc',
+    careerUrl: 'https://www.pandadoc.com/careers/',
+    greenhouseId: 'pandadoc',
+    type: 'tech-legal',
+  },
+  {
+    name: 'OneSpan',
+    careerUrl: 'https://www.onespan.com/careers',
+    greenhouseId: 'onespan',
+    type: 'tech-legal',
+  },
+  {
+    name: 'Nintex',
+    careerUrl: 'https://www.nintex.com/careers/',
+    greenhouseId: 'nintex',
+    type: 'tech-legal',
+  },
+
+  // ===================================================
+  // DOCUMENT AI & INTELLIGENT AUTOMATION (Global)
+  // ===================================================
+  {
+    name: 'ABBYY',
+    careerUrl: 'https://www.abbyy.com/company/careers/',
+    greenhouseId: 'abbyy',
+    type: 'company',
+  },
+  {
+    name: 'Appian',
+    careerUrl: 'https://appian.com/careers.html',
+    greenhouseId: 'appian',
+    type: 'company',
+  },
+  {
+    name: 'Celonis',
+    careerUrl: 'https://www.celonis.com/careers/',
+    greenhouseId: 'celonis',
+    type: 'company',
+  },
+
+  // ===================================================
+  // COMPLIANCE, GRC & RISK MANAGEMENT (Global)
+  // ===================================================
+  {
+    name: 'Exiger',
+    careerUrl: 'https://www.exiger.com/careers/',
+    greenhouseId: 'exiger',
+    type: 'tech-legal',
+  },
+  {
+    name: 'Hyperproof',
+    careerUrl: 'https://hyperproof.io/careers/',
+    greenhouseId: 'hyperproof',
+    type: 'tech-legal',
+  },
+  {
+    name: 'SAI360',
+    careerUrl: 'https://www.sai360.com/careers',
+    greenhouseId: 'saigroup',
+    type: 'tech-legal',
+  },
+
+  // ===================================================
+  // ONLINE LEGAL SERVICES (Global)
+  // ===================================================
+  {
+    name: 'Rocket Lawyer',
+    careerUrl: 'https://www.rocketlawyer.com/careers',
+    greenhouseId: 'rocketlawyer',
+    type: 'tech-legal',
+  },
+
+  // ===================================================
   // ALTERNATIVE LEGAL SERVICE PROVIDERS (ALSPs)
   // ===================================================
   {
