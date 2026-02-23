@@ -1514,29 +1514,38 @@ export async function scrapeAllLawFirms(): Promise<{
     }
     
     try {
+      const PER_COMPANY_TIMEOUT = 60000;
       let scrapedJobs: ScrapedJob[] = [];
       
-      if (firm.greenhouseId) {
-        scrapedJobs = await scrapeGreenhouse(firm.greenhouseId, firm.name);
-      } else if (firm.leverPostingsUrl) {
-        scrapedJobs = await scrapeLever(firm.leverPostingsUrl, firm.name);
-      } else if (firm.ashbyUrl) {
-        scrapedJobs = await scrapeAshby(firm.ashbyUrl, firm.name);
-      } else if (firm.workday) {
-        scrapedJobs = await scrapeWorkday(firm.workday, firm.name);
-      } else if (firm.rippling) {
-        scrapedJobs = await scrapeRippling(firm.rippling, firm.name);
-      } else if (firm.icims) {
-        scrapedJobs = await scrapeICIMS(firm.icims, firm.name);
-      } else if (firm.workableId) {
-        scrapedJobs = await scrapeWorkable(firm.workableId, firm.name);
-      } else if (firm.smartrecruitersId) {
-        scrapedJobs = await scrapeSmartRecruiters(firm.smartrecruitersId, firm.name);
-      } else if (firm.bamboohrId) {
-        scrapedJobs = await scrapeBambooHR(firm.bamboohrId, firm.name);
-      } else {
-        scrapedJobs = await scrapeGenericCareerPage(firm.careerUrl, firm.name, firm.selectors);
-      }
+      const scrapePromise = (async () => {
+        if (firm.greenhouseId) {
+          return await scrapeGreenhouse(firm.greenhouseId, firm.name);
+        } else if (firm.leverPostingsUrl) {
+          return await scrapeLever(firm.leverPostingsUrl, firm.name);
+        } else if (firm.ashbyUrl) {
+          return await scrapeAshby(firm.ashbyUrl, firm.name);
+        } else if (firm.workday) {
+          return await scrapeWorkday(firm.workday, firm.name);
+        } else if (firm.rippling) {
+          return await scrapeRippling(firm.rippling, firm.name);
+        } else if (firm.icims) {
+          return await scrapeICIMS(firm.icims, firm.name);
+        } else if (firm.workableId) {
+          return await scrapeWorkable(firm.workableId, firm.name);
+        } else if (firm.smartrecruitersId) {
+          return await scrapeSmartRecruiters(firm.smartrecruitersId, firm.name);
+        } else if (firm.bamboohrId) {
+          return await scrapeBambooHR(firm.bamboohrId, firm.name);
+        } else {
+          return await scrapeGenericCareerPage(firm.careerUrl, firm.name, firm.selectors);
+        }
+      })();
+
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error(`Scrape timed out after ${PER_COMPANY_TIMEOUT / 1000}s`)), PER_COMPANY_TIMEOUT)
+      );
+
+      scrapedJobs = await Promise.race([scrapePromise, timeoutPromise]);
       
       recordSuccess(atsKey);
       

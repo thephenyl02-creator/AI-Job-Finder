@@ -10,6 +10,7 @@ const SCRAPE_INTERVAL_MS = 12 * 60 * 60 * 1000; // 12 hours
 const LINK_CHECK_TIMEOUT = 10000;
 const VALIDATION_DELAY_MS = 10000;
 const MAX_NEW_JOBS_PER_RUN = 500;
+const SCRAPE_STUCK_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes max per scrape run
 
 interface ScrapeState {
   isRunning: boolean;
@@ -245,12 +246,19 @@ export async function runScheduledScrape(triggeredBy: string = 'scheduler'): Pro
   jobsRejectedValidation: number;
 }> {
   if (scrapeState.isRunning) {
-    logWarn('SCHEDULER', `Scrape already running (started at ${scrapeState.startedAt?.toISOString()}, triggered by ${scrapeState.triggeredBy})`);
-    return {
-      newJobs: 0, updatedJobs: 0, totalJobs: 0, brokenLinks: 0,
-      alertsTriggered: 0, sources: [], companiesScraped: 0,
-      companiesFailed: 0, jobsValidated: 0, jobsRejectedValidation: 0,
-    };
+    const elapsed = scrapeState.startedAt ? Date.now() - scrapeState.startedAt.getTime() : 0;
+    if (elapsed > SCRAPE_STUCK_TIMEOUT_MS) {
+      logWarn('SCHEDULER', `Previous scrape stuck for ${(elapsed / 60000).toFixed(0)}min — force-resetting lock`);
+      scrapeState.isRunning = false;
+      scrapeState.currentCompany = null;
+    } else {
+      logWarn('SCHEDULER', `Scrape already running (started at ${scrapeState.startedAt?.toISOString()}, triggered by ${scrapeState.triggeredBy})`);
+      return {
+        newJobs: 0, updatedJobs: 0, totalJobs: 0, brokenLinks: 0,
+        alertsTriggered: 0, sources: [], companiesScraped: 0,
+        companiesFailed: 0, jobsValidated: 0, jobsRejectedValidation: 0,
+      };
+    }
   }
 
   scrapeState.isRunning = true;
@@ -491,11 +499,33 @@ export async function runScheduledScrape(triggeredBy: string = 'scheduler'): Pro
 
 let schedulerInterval: NodeJS.Timeout | null = null;
 
+async function cleanupStaleScrapeRuns(): Promise<void> {
+  try {
+    const { db } = await import('../db');
+    const { scrapeRuns } = await import('../../shared/schema');
+    const { eq } = await import('drizzle-orm');
+    const staleRuns = await db.update(scrapeRuns)
+      .set({ status: 'failed', completedAt: new Date(), errors: ['Cleaned up: stuck in running state on server restart'] })
+      .where(eq(scrapeRuns.status, 'running'))
+      .returning();
+    if (staleRuns.length > 0) {
+      logWarn('SCHEDULER', `Cleaned up ${staleRuns.length} stale scrape runs stuck in 'running' state`);
+    }
+  } catch (err: any) {
+    logWarn('SCHEDULER', `Failed to clean up stale scrape runs: ${err.message}`);
+  }
+}
+
 export function startScheduler(): void {
   if (schedulerInterval) {
     logWarn('SCHEDULER', 'Scheduler already running');
     return;
   }
+
+  scrapeState.isRunning = false;
+  scrapeState.currentCompany = null;
+
+  cleanupStaleScrapeRuns().catch(() => {});
 
   logInfo('SCHEDULER', `Scheduler started - will run every 12 hours`);
   logInfo('SCHEDULER', `Next run at: ${new Date(Date.now() + SCRAPE_INTERVAL_MS).toISOString()}`);
