@@ -15,6 +15,7 @@ import {
   AlertTriangle,
   CheckCircle2,
   Clock,
+  ArrowLeft,
   ArrowRight,
   Lock,
   Zap,
@@ -480,7 +481,15 @@ export default function DiagnosticPage() {
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-[60vh] flex items-center justify-center px-4">
+      <div className="min-h-[60vh] flex flex-col items-center justify-center px-4">
+        <div className="max-w-md w-full mb-4">
+          <Link href="/jobs">
+            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground" data-testid="button-back-jobs">
+              <ArrowLeft className="h-4 w-4 mr-1.5" />
+              Back to Jobs
+            </Button>
+          </Link>
+        </div>
         <Card className="max-w-md w-full text-center p-8">
           <Brain className="h-12 w-12 text-primary mx-auto mb-4" />
           <h2 className="text-xl font-bold mb-2 font-serif">Career Diagnostic</h2>
@@ -497,7 +506,15 @@ export default function DiagnosticPage() {
 
   if (!hasResume && !diagLoading) {
     return (
-      <div className="min-h-[60vh] flex items-center justify-center px-4">
+      <div className="min-h-[60vh] flex flex-col items-center justify-center px-4">
+        <div className="max-w-md w-full mb-4">
+          <Link href="/dashboard">
+            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground" data-testid="button-back-dashboard">
+              <ArrowLeft className="h-4 w-4 mr-1.5" />
+              Back to Dashboard
+            </Button>
+          </Link>
+        </div>
         <Card className="max-w-md w-full text-center p-8">
           <FileText className="h-12 w-12 text-primary mx-auto mb-4" />
           <h2 className="text-xl font-bold mb-2 font-serif">Upload your resume first</h2>
@@ -515,6 +532,14 @@ export default function DiagnosticPage() {
   return (
     <div className="max-w-5xl mx-auto px-4 py-6 space-y-6">
       {/* Header */}
+      <div className="mb-1">
+        <Link href="/dashboard">
+          <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground -ml-2" data-testid="button-back-dashboard-main">
+            <ArrowLeft className="h-4 w-4 mr-1.5" />
+            Back to Dashboard
+          </Button>
+        </Link>
+      </div>
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold font-serif text-foreground" data-testid="diagnostic-title">

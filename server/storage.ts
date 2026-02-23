@@ -2034,13 +2034,14 @@ class DatabaseStorage implements IStorage {
       }).from(jobs)
         .where(and(
           eq(jobs.isActive, true),
+          eq(jobs.isPublished, true),
           inArray(jobs.roleCategory, topCats),
         ))
         .groupBy(jobs.roleCategory);
       marketAlignment = rawAlignment.filter(m => m.category !== null) as { category: string; availableJobs: number }[];
     }
 
-    const [totalActiveJobs] = await db.select({ cnt: count() }).from(jobs).where(eq(jobs.isActive, true));
+    const [totalActiveJobs] = await db.select({ cnt: count() }).from(jobs).where(and(eq(jobs.isActive, true), eq(jobs.isPublished, true)));
 
     const recommendations: { type: string; title: string; description: string; action: string; priority: number }[] = [];
 

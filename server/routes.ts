@@ -284,11 +284,18 @@ export async function registerRoutes(
   app.get("/api/featured-jobs", async (req, res) => {
     try {
       const jobs = await storage.getActiveJobs();
+
+      const shuffled = [...jobs];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+
       const seenCompanies = new Set<string>();
       const seenCategories = new Set<string>();
       const featured: typeof jobs = [];
 
-      for (const job of jobs) {
+      for (const job of shuffled) {
         if (featured.length >= 6) break;
         const company = (job.company || "").toLowerCase();
         const category = (job.roleCategory || "").toLowerCase();
@@ -300,7 +307,7 @@ export async function registerRoutes(
       }
 
       if (featured.length < 6) {
-        for (const job of jobs) {
+        for (const job of shuffled) {
           if (featured.length >= 6) break;
           if (featured.some(f => f.id === job.id)) continue;
           const company = (job.company || "").toLowerCase();
@@ -1926,7 +1933,7 @@ Be specific and actionable. Focus on legal tech industry keywords and ATS best p
 
       if (lastActive) {
         const allActiveJobs = await storage.getActiveJobs();
-        const newJobs = allActiveJobs.filter(j => j.publishedAt && new Date(j.publishedAt) > new Date(lastActive));
+        const newJobs = allActiveJobs.filter(j => j.postedDate && new Date(j.postedDate) > new Date(lastActive));
         newJobCount = newJobs.length;
         if (topCategory) {
           topCategoryNewJobs = newJobs.filter(j => j.roleCategory === topCategory).length;
@@ -7632,7 +7639,7 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
       const userId = user?.id;
       if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
-      const jobId = parseInt(req.params.id);
+      const jobId = parseInt(req.params.id as string);
       if (isNaN(jobId)) return res.status(400).json({ error: "Invalid job ID" });
 
       const userResumes = await storage.getUserResumes(userId);
