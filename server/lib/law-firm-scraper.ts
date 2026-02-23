@@ -384,14 +384,27 @@ export async function scrapeAshby(ashbyUrl: string, companyName: string): Promis
 
 export async function scrapeWorkday(
   config: { company: string; instance: string; site: string },
-  companyName: string
+  companyName: string,
+  companyType?: string
 ): Promise<ScrapedJob[]> {
   const baseUrl = `https://${config.company}.${config.instance}.myworkdayjobs.com`;
   const apiUrl = `${baseUrl}/wday/cxs/${config.company}/${config.site}/jobs`;
-  const allJobs: ScrapedJob[] = [];
   const pageSize = 20;
   let offset = 0;
   let total = 0;
+
+  interface ListingData {
+    title: string;
+    externalPath: string;
+    locationsText: string;
+    postedOn: string;
+    bulletFields: string[];
+    locationType: string;
+    applyUrl: string;
+    jobId: string;
+  }
+
+  const listings: ListingData[] = [];
 
   try {
     do {
@@ -430,47 +443,79 @@ export async function scrapeWorkday(
         }
         const locationType = detectLocationType(locationText + ' ' + (posting.title || ''));
 
-        let description = posting.title || '';
-        try {
-          const detailUrl = `${baseUrl}/wday/cxs/${config.company}/${config.site}${externalPath}`;
-          const detailResp = await axios.get(detailUrl, {
-            headers: {
-              'Accept': 'application/json',
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            },
-            timeout: 15000,
-          });
-          const detail = detailResp.data;
-          if (detail.jobPostingInfo) {
-            description = detail.jobPostingInfo.jobDescription || detail.jobPostingInfo.externalDescription || description;
-          }
-        } catch {
-          // detail fetch failed, use listing data only
-        }
-
-        const salary = parseSalaryFromText(description);
-
-        allJobs.push({
+        listings.push({
           title: posting.title || '',
-          company: companyName,
-          location: locationText,
-          description,
-          applyUrl,
-          postedDate: posting.postedOn || new Date().toISOString(),
-          source: 'workday',
-          externalId: `wd_${config.company}_${jobId}`,
-          salaryMin: salary.min,
-          salaryMax: salary.max,
+          externalPath,
+          locationsText: locationText,
+          postedOn: posting.postedOn || new Date().toISOString(),
+          bulletFields: posting.bulletFields || [],
           locationType,
-          department: (posting.bulletFields || [])[1] || undefined,
+          applyUrl,
+          jobId,
         });
       }
 
       offset += pageSize;
       if (postings.length > 0) {
-        await delay(1500);
+        await delay(1000);
       }
     } while (offset < total && offset < 200);
+
+    const relevant = listings.filter(l => isLegalTechRole(l.title, companyType));
+    console.log(`[Workday] ${companyName}: ${total} total, ${listings.length} listed, ${relevant.length} relevant titles`);
+
+    if (relevant.length === 0) return [];
+
+    const allJobs: ScrapedJob[] = [];
+    const BATCH_SIZE = 5;
+    for (let i = 0; i < relevant.length; i += BATCH_SIZE) {
+      const batch = relevant.slice(i, i + BATCH_SIZE);
+      const results = await Promise.allSettled(
+        batch.map(async (listing) => {
+          let description = listing.title;
+          try {
+            const detailUrl = `${baseUrl}/wday/cxs/${config.company}/${config.site}${listing.externalPath}`;
+            const detailResp = await axios.get(detailUrl, {
+              headers: {
+                'Accept': 'application/json',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+              },
+              timeout: 15000,
+            });
+            const detail = detailResp.data;
+            if (detail.jobPostingInfo) {
+              description = detail.jobPostingInfo.jobDescription || detail.jobPostingInfo.externalDescription || description;
+            }
+          } catch {
+          }
+
+          const salary = parseSalaryFromText(description);
+          return {
+            title: listing.title,
+            company: companyName,
+            location: listing.locationsText,
+            description,
+            applyUrl: listing.applyUrl,
+            postedDate: listing.postedOn,
+            source: 'workday' as const,
+            externalId: `wd_${config.company}_${listing.jobId}`,
+            salaryMin: salary.min,
+            salaryMax: salary.max,
+            locationType: listing.locationType,
+            department: listing.bulletFields[1] || undefined,
+          };
+        })
+      );
+
+      for (const result of results) {
+        if (result.status === 'fulfilled') {
+          allJobs.push(result.value);
+        }
+      }
+      if (i + BATCH_SIZE < relevant.length) {
+        await delay(500);
+      }
+    }
 
     return allJobs;
   } catch (error: any) {
@@ -1514,7 +1559,7 @@ export async function scrapeAllLawFirms(): Promise<{
     }
     
     try {
-      const PER_COMPANY_TIMEOUT = 60000;
+      const PER_COMPANY_TIMEOUT = firm.workday ? 180000 : 60000;
       let scrapedJobs: ScrapedJob[] = [];
       
       const scrapePromise = (async () => {
@@ -1525,7 +1570,7 @@ export async function scrapeAllLawFirms(): Promise<{
         } else if (firm.ashbyUrl) {
           return await scrapeAshby(firm.ashbyUrl, firm.name);
         } else if (firm.workday) {
-          return await scrapeWorkday(firm.workday, firm.name);
+          return await scrapeWorkday(firm.workday, firm.name, firm.type);
         } else if (firm.rippling) {
           return await scrapeRippling(firm.rippling, firm.name);
         } else if (firm.icims) {
@@ -1613,7 +1658,7 @@ export async function scrapeSingleCompany(companyName: string): Promise<InsertJo
   } else if (firm.ashbyUrl) {
     scrapedJobs = await scrapeAshby(firm.ashbyUrl, firm.name);
   } else if (firm.workday) {
-    scrapedJobs = await scrapeWorkday(firm.workday, firm.name);
+    scrapedJobs = await scrapeWorkday(firm.workday, firm.name, firm.type);
   } else if (firm.rippling) {
     scrapedJobs = await scrapeRippling(firm.rippling, firm.name);
   } else if (firm.icims) {
@@ -1662,7 +1707,7 @@ export async function scrapeAllLawFirmsWithAI(
       } else if (firm.ashbyUrl) {
         scrapedJobs = await scrapeAshby(firm.ashbyUrl, firm.name);
       } else if (firm.workday) {
-        scrapedJobs = await scrapeWorkday(firm.workday, firm.name);
+        scrapedJobs = await scrapeWorkday(firm.workday, firm.name, firm.type);
       } else if (firm.rippling) {
         scrapedJobs = await scrapeRippling(firm.rippling, firm.name);
       } else if (firm.icims) {

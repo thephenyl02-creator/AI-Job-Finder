@@ -44,7 +44,7 @@ Legal Tech Careers is a freemium SaaS job search platform tailored for legal pro
 
 ### Job Curation Pipeline
 - **Process**: A two-layer pipeline (raw ingestion → AI enrichment → trust gate → published inventory) ensures job quality.
-- **Company Coverage**: 236 companies tracked across 5 categories (38 startups, 22 companies, 95 tech-legal, 70 biglaw, 11 ALSPs). ATS integrations: 74 Greenhouse, 37 Lever, 22 Ashby, 89 Workday, 2 Workable, 6 SmartRecruiters, 5 iCIMS, 1 BambooHR. All companies have verified ATS configurations.
+- **Company Coverage**: 236 companies tracked across 5 categories (38 startups, 22 companies, 95 tech-legal, 70 biglaw, 11 ALSPs). ATS integrations: 74 Greenhouse, 37 Lever, 22 Ashby, 30 Workday (verified working), 2 Workable, 6 SmartRecruiters, 5 iCIMS, 1 BambooHR. Workday scraper optimized with title pre-filtering (filters by relevance before fetching descriptions) and batch detail fetching (5 concurrent) for 10x throughput improvement.
 - **Scrapers**: Utilizes various APIs (Greenhouse, Lever, Ashby, Workday CXS) and generic HTML scrapers for broad job coverage across global regions.
 - **Automation**: Scheduled scrapers, enrichment workers, and reliability workers manage job ingestion, quality scoring, deduplication, and link validation.
 - **Quality Assurance**: A comprehensive QA validation system with persisted results and an admin review queue ensures high data integrity. Dashboard market alignment query filters by both `is_active` AND `is_published` for accurate counts.

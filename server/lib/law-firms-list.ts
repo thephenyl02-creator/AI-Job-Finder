@@ -380,7 +380,6 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   {
     name: 'Precisely',
     careerUrl: 'https://www.precisely.com/careers',
-    workday: { company: 'precisely', instance: 'wd1', site: 'Careers' },
     type: 'company',
   },
   {
@@ -574,7 +573,6 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   {
     name: 'Workiva',
     careerUrl: 'https://www.workiva.com/careers',
-    workday: { company: 'workiva', instance: 'wd1', site: 'Workiva' },
     type: 'tech-legal',
   },
   {
@@ -586,7 +584,6 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   {
     name: 'NICE Actimize',
     careerUrl: 'https://www.niceactimize.com/careers/',
-    workday: { company: 'nice', instance: 'wd1', site: 'NICE' },
     type: 'tech-legal',
   },
   {
@@ -724,7 +721,6 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   {
     name: 'Kirkland & Ellis',
     careerUrl: 'https://staffjobsus.kirkland.com/',
-    workday: { company: 'kirkland', instance: 'wd1', site: 'Kirkland' },
     type: 'biglaw',
   },
   {
@@ -814,169 +810,142 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   {
     name: 'White & Case',
     careerUrl: 'https://www.whitecase.com/careers',
-    workday: { company: 'whitecase', instance: 'wd1', site: 'ExternalSite' },
     type: 'biglaw',
   },
   {
     name: 'Weil Gotshal & Manges',
     careerUrl: 'https://www.weil.com/careers',
-    workday: { company: 'weil', instance: 'wd5', site: 'weil_careers' },
     type: 'biglaw',
   },
   {
     name: 'Davis Polk & Wardwell',
     careerUrl: 'https://www.davispolk.com/careers',
-    workday: { company: 'davispolk', instance: 'wd1', site: 'DavisPolk' },
     type: 'biglaw',
   },
   {
     name: 'Cravath Swaine & Moore',
     careerUrl: 'https://www.cravath.com/careers',
-    workday: { company: 'cravath', instance: 'wd1', site: 'Cravath' },
     type: 'biglaw',
   },
   {
     name: 'Paul Weiss',
     careerUrl: 'https://www.paulweiss.com/careers',
-    workday: { company: 'paulweiss', instance: 'wd5', site: 'paulweiss' },
     type: 'biglaw',
   },
   {
     name: 'Simpson Thacher & Bartlett',
     careerUrl: 'https://www.simpsonthacher.com/careers',
-    workday: { company: 'simpsonthacher', instance: 'wd5', site: 'STB' },
     type: 'biglaw',
   },
   {
     name: 'Debevoise & Plimpton',
     careerUrl: 'https://www.debevoise.com/careers',
-    workday: { company: 'debevoise', instance: 'wd1', site: 'External' },
     type: 'biglaw',
   },
   {
     name: 'Cleary Gottlieb',
     careerUrl: 'https://www.clearygottlieb.com/careers',
-    workday: { company: 'clearygottlieb', instance: 'wd1', site: 'External' },
     type: 'biglaw',
   },
   {
     name: 'Baker McKenzie',
     careerUrl: 'https://www.bakermckenzie.com/en/careers',
-    workday: { company: 'bakermckenzie', instance: 'wd3', site: 'BakerMcKenzie' },
     type: 'biglaw',
   },
   {
     name: 'Dentons',
     careerUrl: 'https://www.dentons.com/en/careers',
-    workday: { company: 'dentons', instance: 'wd3', site: 'Dentons_Careers' },
     type: 'biglaw',
   },
   {
     name: 'Reed Smith',
     careerUrl: 'https://www.reedsmith.com/en/careers',
-    workday: { company: 'reedsmith', instance: 'wd5', site: 'ReedSmith' },
     type: 'biglaw',
   },
   {
     name: 'Jones Day',
     careerUrl: 'https://www.jonesday.com/en/careers',
-    workday: { company: 'jonesday', instance: 'wd1', site: 'JonesDay' },
     type: 'biglaw',
   },
   {
     name: 'King & Spalding',
     careerUrl: 'https://www.kslaw.com/pages/careers',
-    workday: { company: 'kslaw', instance: 'wd1', site: 'KS_Careers' },
+    workday: { company: 'kslaw', instance: 'wd1', site: 'Careers' },
     type: 'biglaw',
   },
   {
     name: 'Sidley Austin',
     careerUrl: 'https://www.sidley.com/en/careers',
-    workday: { company: 'sidley', instance: 'wd5', site: 'sidley' },
     type: 'biglaw',
   },
   {
     name: 'Mayer Brown',
     careerUrl: 'https://www.mayerbrown.com/en/careers',
-    workday: { company: 'mayerbrown', instance: 'wd5', site: 'MayerBrown' },
     type: 'biglaw',
   },
   {
     name: 'Milbank',
     careerUrl: 'https://www.milbank.com/en/careers',
-    workday: { company: 'milbank', instance: 'wd1', site: 'Milbank' },
     type: 'biglaw',
   },
   {
     name: 'Quinn Emanuel',
     careerUrl: 'https://www.quinnemanuel.com/careers/',
-    workday: { company: 'quinnemanuel', instance: 'wd5', site: 'QuinnEmanuel' },
     type: 'biglaw',
   },
   {
     name: 'WilmerHale',
     careerUrl: 'https://www.wilmerhale.com/careers',
-    workday: { company: 'wilmerhale', instance: 'wd1', site: 'WilmerHale' },
     type: 'biglaw',
   },
   {
     name: 'Gibson Dunn',
     careerUrl: 'https://www.gibsondunn.com/careers/',
-    workday: { company: 'gibsondunn', instance: 'wd5', site: 'GibsonDunn' },
     type: 'biglaw',
   },
   {
     name: 'Orrick',
     careerUrl: 'https://www.orrick.com/en/Careers',
-    workday: { company: 'orrick', instance: 'wd1', site: 'Orrick' },
     type: 'biglaw',
   },
   {
     name: 'Ropes & Gray',
     careerUrl: 'https://www.ropesgray.com/en/careers',
-    workday: { company: 'ropesgray', instance: 'wd5', site: 'RopesGray' },
     type: 'biglaw',
   },
   {
     name: 'Morrison & Foerster',
     careerUrl: 'https://www.mofo.com/careers',
-    workday: { company: 'mofo', instance: 'wd1', site: 'MoFo_Careers' },
     type: 'biglaw',
   },
   {
     name: 'Willkie Farr & Gallagher',
     careerUrl: 'https://www.willkie.com/careers',
-    workday: { company: 'willkie', instance: 'wd1', site: 'Willkie' },
     type: 'biglaw',
   },
   {
     name: 'Proskauer Rose',
     careerUrl: 'https://www.proskauer.com/careers',
-    workday: { company: 'proskauer', instance: 'wd5', site: 'proskauer' },
     type: 'biglaw',
   },
   {
     name: 'Dechert',
     careerUrl: 'https://www.dechert.com/careers.html',
-    workday: { company: 'dechert', instance: 'wd1', site: 'External' },
     type: 'biglaw',
   },
   {
     name: 'Shearman & Sterling',
     careerUrl: 'https://www.aoshearman.com/careers',
-    workday: { company: 'aoshearman', instance: 'wd3', site: 'AOShearman' },
     type: 'biglaw',
   },
   {
     name: 'Akin Gump',
     careerUrl: 'https://www.akingump.com/en/careers',
-    workday: { company: 'akingump', instance: 'wd5', site: 'AkinGump' },
     type: 'biglaw',
   },
   {
     name: 'Arnold & Porter',
     careerUrl: 'https://www.arnoldporter.com/en/careers',
-    workday: { company: 'arnoldporter', instance: 'wd1', site: 'AP_Careers' },
     type: 'biglaw',
   },
 
@@ -986,19 +955,16 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   {
     name: 'Clifford Chance',
     careerUrl: 'https://www.cliffordchance.com/careers.html',
-    workday: { company: 'cliffordchance', instance: 'wd1', site: 'CliffordChance' },
     type: 'biglaw',
   },
   {
     name: 'Allen & Overy (A&O Shearman)',
     careerUrl: 'https://www.aoshearman.com/careers',
-    workday: { company: 'aoshearman', instance: 'wd3', site: 'AOShearman' },
     type: 'biglaw',
   },
   {
     name: 'Freshfields',
     careerUrl: 'https://www.freshfields.com/en-gb/careers/',
-    workday: { company: 'freshfields', instance: 'wd3', site: 'Freshfields' },
     type: 'biglaw',
   },
   {
@@ -1034,49 +1000,41 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   {
     name: 'Slaughter and May',
     careerUrl: 'https://www.slaughterandmay.com/careers/',
-    workday: { company: 'slaughterandmay', instance: 'wd3', site: 'External' },
     type: 'biglaw',
   },
   {
     name: 'Ashurst',
     careerUrl: 'https://www.ashurst.com/en/careers/',
-    workday: { company: 'ashurst', instance: 'wd3', site: 'Ashurst' },
     type: 'biglaw',
   },
   {
     name: 'Simmons & Simmons',
     careerUrl: 'https://www.simmons-simmons.com/en/careers',
-    workday: { company: 'simmonssimmons', instance: 'wd3', site: 'SimmonsCareers' },
     type: 'biglaw',
   },
   {
     name: 'Travers Smith',
     careerUrl: 'https://www.traverssmith.com/careers/',
-    workday: { company: 'traverssmith', instance: 'wd3', site: 'TraversSmith' },
     type: 'biglaw',
   },
   {
     name: 'Macfarlanes',
     careerUrl: 'https://www.macfarlanes.com/careers/',
-    workday: { company: 'macfarlanes', instance: 'wd3', site: 'Macfarlanes' },
     type: 'biglaw',
   },
   {
     name: 'Mishcon de Reya',
     careerUrl: 'https://www.mishcon.com/careers',
-    workday: { company: 'mishcon', instance: 'wd3', site: 'Mishcon' },
     type: 'biglaw',
   },
   {
     name: 'Pinsent Masons',
     careerUrl: 'https://www.pinsentmasons.com/careers',
-    workday: { company: 'pinsentmasons', instance: 'wd3', site: 'PinsentMasons' },
     type: 'biglaw',
   },
   {
     name: 'Eversheds Sutherland',
     careerUrl: 'https://www.eversheds-sutherland.com/careers',
-    workday: { company: 'eversheds', instance: 'wd3', site: 'Eversheds_Careers' },
     type: 'biglaw',
   },
 
@@ -1104,25 +1062,21 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   {
     name: 'Rajah & Tann',
     careerUrl: 'https://www.rajahtannasia.com/careers',
-    workday: { company: 'rajahtann', instance: 'wd3', site: 'RajahTann' },
     type: 'biglaw',
   },
   {
     name: 'King & Wood Mallesons',
     careerUrl: 'https://www.kwm.com/en/careers',
-    workday: { company: 'kwm', instance: 'wd3', site: 'KWM' },
     type: 'biglaw',
   },
   {
     name: 'MinterEllison',
     careerUrl: 'https://www.minterellison.com/careers',
-    workday: { company: 'minterellison', instance: 'wd3', site: 'MinterEllison' },
     type: 'biglaw',
   },
   {
     name: 'Corrs Chambers Westgarth',
     careerUrl: 'https://www.corrs.com.au/careers',
-    workday: { company: 'corrs', instance: 'wd3', site: 'Corrs' },
     type: 'biglaw',
   },
 
@@ -1132,25 +1086,21 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   {
     name: 'Norton Rose Fulbright Canada',
     careerUrl: 'https://www.nortonrosefulbright.com/en-ca/careers',
-    workday: { company: 'nrfcanada', instance: 'wd10', site: 'en-CA' },
     type: 'biglaw',
   },
   {
     name: 'Osler Hoskin & Harcourt',
     careerUrl: 'https://www.osler.com/en/careers',
-    workday: { company: 'osler', instance: 'wd3', site: 'Osler' },
     type: 'biglaw',
   },
   {
     name: 'Blake Cassels & Graydon',
     careerUrl: 'https://www.blakes.com/careers',
-    workday: { company: 'blakes', instance: 'wd3', site: 'Blakes' },
     type: 'biglaw',
   },
   {
     name: 'McCarthy Tetrault',
     careerUrl: 'https://www.mccarthy.ca/en/careers',
-    workday: { company: 'mccarthytetrault', instance: 'wd3', site: 'McCarthy' },
     type: 'biglaw',
   },
 
@@ -1276,7 +1226,6 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   {
     name: 'Archer (RSA)',
     careerUrl: 'https://www.archerirm.com/careers',
-    workday: { company: 'rsa', instance: 'wd1', site: 'RSA_Careers' },
     type: 'tech-legal',
   },
 
@@ -1326,7 +1275,6 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   {
     name: 'EY Law',
     careerUrl: 'https://www.ey.com/en_us/careers',
-    workday: { company: 'ey', instance: 'wd5', site: 'EY_Careers' },
     type: 'alsp',
   },
   {
@@ -1344,7 +1292,6 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   {
     name: 'KPMG Legal',
     careerUrl: 'https://www.kpmg.com/xx/en/home/careers.html',
-    workday: { company: 'kpmg', instance: 'wd3', site: 'KPMG_External' },
     type: 'alsp',
   },
   {
@@ -1468,7 +1415,6 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   {
     name: 'Tyler Technologies',
     careerUrl: 'https://www.tylertech.com/careers',
-    workday: { company: 'tylertech', instance: 'wd1', site: 'Tyler' },
     type: 'company',
   },
   {
