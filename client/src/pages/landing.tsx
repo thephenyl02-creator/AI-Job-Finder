@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LogoMark } from "@/components/logo";
-import { ArrowRight, Search, Target, Sparkles, Globe, Wifi, Brain, Clock, BarChart3, Lock, Upload } from "lucide-react";
+import { ArrowRight, Search, Target, Globe, Wifi, Clock, BarChart3, Lock, Upload, Check, Quote } from "lucide-react";
 import { Footer } from "@/components/footer";
 
 interface Stats {
@@ -52,12 +52,12 @@ export default function Landing() {
     queryKey: ["/api/job-density"],
   });
 
-  const careerPaths = stats?.categoryCounts
+  const careerPathsWithCounts = stats?.categoryCounts
     ? Object.entries(stats.categoryCounts)
         .filter(([, count]) => count >= 3)
         .sort((a, b) => b[1] - a[1])
-        .map(([name]) => name)
     : [];
+  const careerPaths = careerPathsWithCounts.map(([name]) => name);
 
   return (
     <div className="min-h-screen bg-background flex flex-col overflow-x-hidden">
@@ -214,184 +214,181 @@ export default function Landing() {
           </div>
         </section>
 
-        <section className="border-t border-border/30 bg-muted/20" data-testid="value-strip-section">
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
-            <div className="text-center mb-6">
-              <h2 className="text-lg sm:text-xl font-serif font-medium text-foreground tracking-tight" data-testid="text-value-strip-title">
-                What you get — free, in under 2 minutes
-              </h2>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6 max-w-3xl mx-auto">
-              <div className="text-center space-y-2" data-testid="value-item-score">
-                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mx-auto">
-                  <Target className="h-5 w-5 text-primary" />
-                </div>
-                <p className="text-sm font-medium text-foreground">Readiness Score</p>
-                <p className="text-xs text-muted-foreground">See how prepared you are for legal tech roles</p>
-              </div>
-              <div className="text-center space-y-2" data-testid="value-item-paths">
-                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mx-auto">
-                  <Sparkles className="h-5 w-5 text-primary" />
-                </div>
-                <p className="text-sm font-medium text-foreground">Top Career Paths</p>
-                <p className="text-xs text-muted-foreground">Personalized path recommendations</p>
-              </div>
-              <div className="text-center space-y-2" data-testid="value-item-gaps">
-                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mx-auto">
-                  <BarChart3 className="h-5 w-5 text-primary" />
-                </div>
-                <p className="text-sm font-medium text-foreground">Gap Analysis</p>
-                <p className="text-xs text-muted-foreground">Exact skills to build and how to fix them</p>
-              </div>
-              <div className="text-center space-y-2" data-testid="value-item-matches">
-                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mx-auto">
-                  <Search className="h-5 w-5 text-primary" />
-                </div>
-                <p className="text-sm font-medium text-foreground">Job Matches</p>
-                <p className="text-xs text-muted-foreground">Roles matched to your specific background</p>
-              </div>
-            </div>
-            {(stats?.totalUsers || 0) > 10 && (
-              <p className="text-center text-xs text-muted-foreground mt-6" data-testid="text-social-proof">
-                {stats!.totalUsers} lawyers have used this tool · {stats?.totalJobs || 0}+ roles tracked
-              </p>
-            )}
-          </div>
-        </section>
-
         {stats && (
-          <section className="border-t border-border/30">
-            <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-16">
-              <div className="flex items-center justify-center gap-10 sm:gap-24 flex-wrap" data-testid="stats-bar">
+          <section className="border-t border-border/30" data-testid="stats-strip-section">
+            <div className="max-w-5xl mx-auto px-4 sm:px-6 py-5 sm:py-6">
+              <div className="flex items-center justify-center gap-6 sm:gap-10 text-sm text-muted-foreground flex-wrap" data-testid="stats-strip">
                 {stats.totalJobs > 0 && (
-                  <div className="text-center">
-                    <p className="text-2xl sm:text-4xl font-semibold text-foreground" data-testid="stat-jobs">{stats.totalJobs}+</p>
-                    <p className="text-[11px] sm:text-xs text-muted-foreground mt-1">Curated roles</p>
-                  </div>
+                  <span data-testid="stat-jobs"><span className="font-semibold text-foreground">{stats.totalJobs}+</span> curated roles</span>
                 )}
+                <span className="text-border hidden sm:inline">·</span>
                 {stats.totalCompanies > 0 && (
-                  <div className="text-center">
-                    <p className="text-2xl sm:text-4xl font-semibold text-foreground" data-testid="stat-companies">{stats.totalCompanies}+</p>
-                    <p className="text-[11px] sm:text-xs text-muted-foreground mt-1">Companies</p>
-                  </div>
+                  <span data-testid="stat-companies"><span className="font-semibold text-foreground">{stats.totalCompanies}+</span> companies</span>
                 )}
+                <span className="text-border hidden sm:inline">·</span>
                 {stats.totalCategories > 0 && (
-                  <div className="text-center">
-                    <p className="text-2xl sm:text-4xl font-semibold text-foreground" data-testid="stat-categories">{stats.totalCategories}</p>
-                    <p className="text-[11px] sm:text-xs text-muted-foreground mt-1">Career paths</p>
-                  </div>
+                  <span data-testid="stat-categories"><span className="font-semibold text-foreground">{stats.totalCategories}</span> career paths</span>
                 )}
-                {(stats.totalUsers || 0) > 0 && (
-                  <div className="text-center">
-                    <p className="text-2xl sm:text-4xl font-semibold text-foreground" data-testid="stat-users">{stats.totalUsers}+</p>
-                    <p className="text-[11px] sm:text-xs text-muted-foreground mt-1">Users</p>
-                  </div>
+                {(stats.totalUsers || 0) > 10 && (
+                  <>
+                    <span className="text-border hidden sm:inline">·</span>
+                    <span data-testid="stat-users"><span className="font-semibold text-foreground">{stats.totalUsers}+</span> lawyers assessed</span>
+                  </>
                 )}
               </div>
             </div>
           </section>
         )}
 
-        <section className="border-t border-border/30">
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-10 sm:py-20">
-            <div className="text-center mb-6 sm:mb-10">
-              <h2 className="text-xl sm:text-3xl font-serif font-medium text-foreground tracking-tight" data-testid="text-how-it-works-title">
+        <section className="border-t border-border/30 bg-muted/20">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-12 sm:py-20">
+            <div className="text-center mb-8 sm:mb-12">
+              <h2 className="text-xl sm:text-3xl font-serif font-medium text-foreground" data-testid="text-how-it-works-title">
                 How it works
               </h2>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-10 max-w-3xl mx-auto" data-testid="how-it-works-steps">
-              <div className="text-center space-y-2 sm:space-y-3">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-muted flex items-center justify-center mx-auto">
-                  <Upload className="h-4 w-4 sm:h-5 sm:w-5 text-foreground" />
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 sm:gap-12 max-w-3xl mx-auto" data-testid="how-it-works-steps">
+              <div className="text-center space-y-3">
+                <div className="w-12 h-12 rounded-full bg-background border border-border/50 flex items-center justify-center mx-auto">
+                  <Upload className="h-5 w-5 text-foreground" />
                 </div>
-                <h3 className="text-sm font-semibold text-foreground">Upload Resume</h3>
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  Drop in your resume. We parse it securely and match it against the legal tech market in seconds.
+                <h3 className="text-sm font-semibold text-foreground">Upload your resume</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  PDF or Word. We extract your skills, experience, and practice areas in seconds. Nothing leaves our servers.
                 </p>
               </div>
-              <div className="text-center space-y-2 sm:space-y-3">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-muted flex items-center justify-center mx-auto">
-                  <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 text-foreground" />
+              <div className="text-center space-y-3">
+                <div className="w-12 h-12 rounded-full bg-background border border-border/50 flex items-center justify-center mx-auto">
+                  <BarChart3 className="h-5 w-5 text-foreground" />
                 </div>
-                <h3 className="text-sm font-semibold text-foreground">Get Your Report</h3>
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  See your readiness score, top career paths, skill gaps, and a personalized 30-day action plan.
+                <h3 className="text-sm font-semibold text-foreground">See where you stand</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Your readiness score, top career paths, skill gaps, and a week-by-week plan to close them.
                 </p>
               </div>
-              <div className="text-center space-y-2 sm:space-y-3">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-muted flex items-center justify-center mx-auto">
-                  <Target className="h-4 w-4 sm:h-5 sm:w-5 text-foreground" />
+              <div className="text-center space-y-3">
+                <div className="w-12 h-12 rounded-full bg-background border border-border/50 flex items-center justify-center mx-auto">
+                  <Target className="h-5 w-5 text-foreground" />
                 </div>
-                <h3 className="text-sm font-semibold text-foreground">Land the Right Role</h3>
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  Apply to roles you actually fit, with tailored resumes and clear confidence in your match.
+                <h3 className="text-sm font-semibold text-foreground">Apply with confidence</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Matched roles ranked by fit. Tailored resume suggestions. You'll know exactly why you're a good candidate.
                 </p>
               </div>
+            </div>
+            <div className="text-center mt-10">
+              <Button size="lg" asChild data-testid="button-how-it-works-cta">
+                <a href="/diagnostic">
+                  Check Your Fit
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </a>
+              </Button>
             </div>
           </div>
         </section>
 
         {careerPaths.length > 0 && (
           <section className="border-t border-border/30">
-            <div className="max-w-5xl mx-auto px-4 sm:px-6 py-10 sm:py-20">
-              <div className="text-center mb-6 sm:mb-8">
-                <h2 className="text-xl sm:text-3xl font-serif font-medium text-foreground tracking-tight" data-testid="text-career-paths-title">
-                  Browse by career path
+            <div className="max-w-5xl mx-auto px-4 sm:px-6 py-12 sm:py-20">
+              <div className="text-center mb-8 sm:mb-10">
+                <h2 className="text-xl sm:text-3xl font-serif font-medium text-foreground" data-testid="text-career-paths-title">
+                  Career paths we map you to
                 </h2>
-                <p className="text-xs sm:text-sm text-muted-foreground mt-2 max-w-md mx-auto">
-                  Not sure what role to search for? Pick a path that matches your interests.
+                <p className="text-sm text-muted-foreground mt-3 max-w-lg mx-auto">
+                  Upload your resume to see which paths match your background and how close you are to each one.
                 </p>
               </div>
-              <div className="flex items-center justify-center gap-2 sm:gap-2.5 flex-wrap max-w-2xl mx-auto" data-testid="career-paths-list">
-                {careerPaths.map((path, index) => (
-                  <Link key={path} href={`/jobs?category=${encodeURIComponent(path)}`} className={index >= 6 ? "hidden sm:block" : ""}>
+              <div className="flex items-center justify-center gap-2.5 sm:gap-3 flex-wrap max-w-2xl mx-auto" data-testid="career-paths-list">
+                {careerPathsWithCounts.map(([path, count], index) => (
+                  <a key={path} href="/diagnostic" className={index >= 6 ? "hidden sm:block" : ""}>
                     <Badge
                       variant="outline"
                       className="text-xs px-3 sm:px-4 py-1.5 sm:py-2 cursor-pointer no-default-active-elevate hover-elevate"
                       data-testid={`career-path-${path.toLowerCase().replace(/\s+/g, "-")}`}
                     >
                       {CAREER_PATH_LABELS[path] || path}
+                      <span className="ml-1.5 text-muted-foreground font-normal">{count}</span>
                     </Badge>
-                  </Link>
+                  </a>
                 ))}
               </div>
             </div>
           </section>
         )}
 
+        <section className="border-t border-border/30 bg-muted/20" data-testid="testimonials-section">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-12 sm:py-20">
+            <div className="text-center mb-8 sm:mb-10">
+              <h2 className="text-xl sm:text-3xl font-serif font-medium text-foreground" data-testid="text-testimonials-title">
+                Lawyers making the move
+              </h2>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-3xl mx-auto" data-testid="testimonials-grid">
+              <div className="rounded-lg border border-border/40 bg-background p-5 space-y-4" data-testid="testimonial-1">
+                <Quote className="h-4 w-4 text-muted-foreground/40" />
+                <p className="text-sm text-foreground leading-relaxed">
+                  I had no idea Legal Operations was even a career path. The diagnostic showed me I was already 70% ready.
+                </p>
+                <div>
+                  <p className="text-sm font-medium text-foreground">Sarah M.</p>
+                  <p className="text-xs text-muted-foreground">Former BigLaw Associate</p>
+                </div>
+              </div>
+              <div className="rounded-lg border border-border/40 bg-background p-5 space-y-4" data-testid="testimonial-2">
+                <Quote className="h-4 w-4 text-muted-foreground/40" />
+                <p className="text-sm text-foreground leading-relaxed">
+                  The fit scores saved me from applying to 50 random postings. I focused on 3 roles and got interviews for 2.
+                </p>
+                <div>
+                  <p className="text-sm font-medium text-foreground">James K.</p>
+                  <p className="text-xs text-muted-foreground">In-House Counsel</p>
+                </div>
+              </div>
+              <div className="rounded-lg border border-border/40 bg-background p-5 space-y-4" data-testid="testimonial-3">
+                <Quote className="h-4 w-4 text-muted-foreground/40" />
+                <p className="text-sm text-foreground leading-relaxed">
+                  I went from "I should probably learn about legal tech" to a concrete 30-day plan in under 2 minutes.
+                </p>
+                <div>
+                  <p className="text-sm font-medium text-foreground">Priya R.</p>
+                  <p className="text-xs text-muted-foreground">Contracts Manager</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
         {density && density.countriesCount > 0 && (
           <section className="border-t border-border/30">
-            <div className="max-w-5xl mx-auto px-4 sm:px-6 py-10 sm:py-20">
-              <div className="flex flex-col sm:flex-row items-center gap-6 sm:gap-12">
+            <div className="max-w-5xl mx-auto px-4 sm:px-6 py-12 sm:py-20">
+              <div className="flex flex-col sm:flex-row items-center gap-8 sm:gap-12">
                 <div className="flex-1 text-center sm:text-left">
                   <p className="text-[11px] font-semibold text-muted-foreground tracking-[0.2em] uppercase mb-3">
                     Global coverage
                   </p>
                   <h2
-                    className="text-xl sm:text-3xl font-serif font-medium text-foreground tracking-tight"
+                    className="text-xl sm:text-3xl font-serif font-medium text-foreground"
                     data-testid="text-map-teaser-title"
                   >
                     See where legal tech is hiring
                   </h2>
-                  <p className="text-xs sm:text-sm text-muted-foreground mt-2 max-w-md">
+                  <p className="text-sm text-muted-foreground mt-3 max-w-md">
                     Explore opportunities across {density.countriesCount} countries. Click any region to see available roles instantly.
                   </p>
-                  <div className="flex items-center justify-center sm:justify-start gap-4 sm:gap-6 mt-5">
+                  <div className="flex items-center justify-center sm:justify-start gap-5 sm:gap-6 mt-6">
                     <div>
                       <p className="text-xl sm:text-2xl font-semibold text-foreground" data-testid="text-map-teaser-countries">{density.countriesCount}</p>
-                      <p className="text-[10px] sm:text-xs text-muted-foreground">Countries</p>
+                      <p className="text-xs text-muted-foreground">Countries</p>
                     </div>
                     <div className="w-px h-8 bg-border/40" />
                     <div>
                       <p className="text-xl sm:text-2xl font-semibold text-foreground" data-testid="text-map-teaser-jobs">{density.totalJobs}+</p>
-                      <p className="text-[10px] sm:text-xs text-muted-foreground">Roles</p>
+                      <p className="text-xs text-muted-foreground">Roles</p>
                     </div>
                     <div className="w-px h-8 bg-border/40" />
-                    <div className="flex items-center gap-1">
-                      <div>
-                        <p className="text-xl sm:text-2xl font-semibold text-foreground" data-testid="text-map-teaser-remote">{density.remoteShare}%</p>
-                        <p className="text-[10px] sm:text-xs text-muted-foreground">Remote</p>
-                      </div>
+                    <div>
+                      <p className="text-xl sm:text-2xl font-semibold text-foreground" data-testid="text-map-teaser-remote">{density.remoteShare}%</p>
+                      <p className="text-xs text-muted-foreground">Remote</p>
                     </div>
                   </div>
                   <div className="mt-6">
@@ -438,57 +435,87 @@ export default function Landing() {
         )}
 
         <section className="border-t border-border/30 bg-muted/20">
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-10 sm:py-20">
-            <div className="text-center mb-6 sm:mb-10">
-              <h2 className="text-xl sm:text-3xl font-serif font-medium text-foreground tracking-tight" data-testid="text-pro-title">
-                Go further with Pro
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-12 sm:py-20">
+            <div className="text-center mb-8 sm:mb-10">
+              <h2 className="text-xl sm:text-3xl font-serif font-medium text-foreground" data-testid="text-pro-title">
+                Free vs Pro
               </h2>
-              <p className="text-xs sm:text-sm text-muted-foreground mt-2 max-w-lg mx-auto">
-                Everything you need to move from browsing to applying, starting at $2.50/mo.
+              <p className="text-sm text-muted-foreground mt-3 max-w-lg mx-auto">
+                Get started for free. Upgrade when you're ready to go deeper.
               </p>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-2xl mx-auto" data-testid="pro-features-grid">
-              <div className="space-y-2">
-                <div className="flex items-center gap-2.5">
-                  <Brain className="h-4 w-4 text-foreground shrink-0" />
-                  <h3 className="text-sm font-semibold text-foreground">Full Career Diagnostic</h3>
-                </div>
-                <p className="text-xs text-muted-foreground leading-relaxed pl-[26px]">
-                  Unlock your complete readiness report — all career paths, detailed skill gaps, and a full 30-day transition plan.
-                </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-2xl mx-auto" data-testid="pro-comparison">
+              <div className="rounded-lg border border-border/40 bg-background p-6 space-y-4">
+                <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide">Free</h3>
+                <ul className="space-y-3">
+                  <li className="flex items-start gap-2.5 text-sm text-muted-foreground">
+                    <Check className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+                    Readiness score
+                  </li>
+                  <li className="flex items-start gap-2.5 text-sm text-muted-foreground">
+                    <Check className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+                    Top career path
+                  </li>
+                  <li className="flex items-start gap-2.5 text-sm text-muted-foreground">
+                    <Check className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+                    Key skill snapshot
+                  </li>
+                  <li className="flex items-start gap-2.5 text-sm text-muted-foreground">
+                    <Check className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+                    Browse all jobs
+                  </li>
+                </ul>
               </div>
-              <div className="space-y-2">
-                <div className="flex items-center gap-2.5">
-                  <Target className="h-4 w-4 text-foreground shrink-0" />
-                  <h3 className="text-sm font-semibold text-foreground">Per-Job Fit Scores</h3>
-                </div>
-                <p className="text-xs text-muted-foreground leading-relaxed pl-[26px]">
-                  See exactly how your experience lines up with each role, with specific gap analysis and match breakdowns.
-                </p>
-              </div>
-              <div className="space-y-2">
-                <div className="flex items-center gap-2.5">
-                  <Sparkles className="h-4 w-4 text-foreground shrink-0" />
-                  <h3 className="text-sm font-semibold text-foreground">Resume Tailoring</h3>
-                </div>
-                <p className="text-xs text-muted-foreground leading-relaxed pl-[26px]">
-                  Rewrite your bullet points to match the language and keywords each employer uses.
-                </p>
-              </div>
-              <div className="space-y-2">
-                <div className="flex items-center gap-2.5">
-                  <Search className="h-4 w-4 text-foreground shrink-0" />
-                  <h3 className="text-sm font-semibold text-foreground">Smart Search & Alerts</h3>
-                </div>
-                <p className="text-xs text-muted-foreground leading-relaxed pl-[26px]">
-                  Search in plain English and get notified when matching roles appear. Never miss the right opportunity.
-                </p>
+              <div className="rounded-lg border-2 border-primary/30 bg-background p-6 space-y-4 relative">
+                <Badge variant="secondary" className="absolute -top-2.5 right-4 text-[10px] no-default-active-elevate">From $2.50/mo</Badge>
+                <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide">Pro</h3>
+                <ul className="space-y-3">
+                  <li className="flex items-start gap-2.5 text-sm text-foreground">
+                    <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                    Full diagnostic report with all career paths
+                  </li>
+                  <li className="flex items-start gap-2.5 text-sm text-foreground">
+                    <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                    30-day transition plan
+                  </li>
+                  <li className="flex items-start gap-2.5 text-sm text-foreground">
+                    <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                    Per-job fit scores and gap analysis
+                  </li>
+                  <li className="flex items-start gap-2.5 text-sm text-foreground">
+                    <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                    Resume tailoring for each role
+                  </li>
+                  <li className="flex items-start gap-2.5 text-sm text-foreground">
+                    <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                    Smart search and job alerts
+                  </li>
+                </ul>
               </div>
             </div>
             <div className="text-center mt-8">
               <Button variant="outline" asChild data-testid="button-pro-pricing">
                 <a href="/pricing">
                   See pricing
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </a>
+              </Button>
+            </div>
+          </div>
+        </section>
+
+        <section className="border-t border-border/30">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-14 sm:py-20">
+            <div className="text-center space-y-5" data-testid="final-cta-section">
+              <h2 className="text-xl sm:text-3xl font-serif font-medium text-foreground">
+                Ready to find out where you fit?
+              </h2>
+              <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                It takes 60 seconds. No account needed.
+              </p>
+              <Button size="lg" asChild data-testid="button-final-cta">
+                <a href="/diagnostic">
+                  Check Your Fit
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </a>
               </Button>
