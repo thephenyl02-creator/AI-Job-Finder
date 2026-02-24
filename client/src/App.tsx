@@ -80,7 +80,7 @@ function AppRouter() {
 
   return (
     <Switch>
-      <Route path="/">{isAuthenticated ? <Redirect to="/jobs" /> : <Landing />}</Route>
+      <Route path="/">{isAuthenticated ? <Redirect to="/dashboard" /> : <Landing />}</Route>
       <Route path="/jobs" component={Jobs} />
       <Route path="/jobs/:id" component={JobDetail} />
       <Route path="/admin"><AdminRoute component={Admin} /></Route>

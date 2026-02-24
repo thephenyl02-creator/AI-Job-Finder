@@ -157,6 +157,14 @@ export interface IStorage {
   getReportCountForJob(jobId: number): Promise<number>;
   updateJobReportStatus(id: number, status: string, adminNotes?: string): Promise<JobReport | undefined>;
   getPublicJob(id: number): Promise<Job | undefined>;
+  getMarketPulse(topCategory?: string): Promise<{
+    newJobsThisWeek: number;
+    topHiringCompanies: { name: string; count: number }[];
+    trendingSkill: { name: string; count: number } | null;
+    workModeSplit: { remote: number; hybrid: number; onsite: number };
+    totalJobs: number;
+    salaryInsight: { category: string; avgMin: number; avgMax: number } | null;
+  }>;
 }
 
 class DatabaseStorage implements IStorage {
@@ -2971,6 +2979,115 @@ class DatabaseStorage implements IStorage {
       }
     }
     return stats;
+  }
+
+  async getMarketPulse(topCategory?: string): Promise<{
+    newJobsThisWeek: number;
+    topHiringCompanies: { name: string; count: number }[];
+    trendingSkill: { name: string; count: number } | null;
+    workModeSplit: { remote: number; hybrid: number; onsite: number };
+    totalJobs: number;
+    salaryInsight: { category: string; avgMin: number; avgMax: number } | null;
+  }> {
+    const publishedConditions = and(
+      eq(jobs.isActive, true),
+      eq(jobs.isPublished, true),
+      eq(jobs.pipelineStatus, 'ready'),
+      eq(jobs.jobStatus, 'open'),
+    );
+
+    const [totalResult] = await db
+      .select({ cnt: count() })
+      .from(jobs)
+      .where(publishedConditions);
+    const totalJobs = Number(totalResult?.cnt || 0);
+
+    const [newThisWeekResult] = await db
+      .select({ cnt: count() })
+      .from(jobs)
+      .where(and(
+        publishedConditions,
+        gte(jobs.firstSeenAt, sql`NOW() - INTERVAL '7 days'`),
+      ));
+    const newJobsThisWeek = Number(newThisWeekResult?.cnt || 0);
+
+    const topCompaniesRaw = await db
+      .select({
+        name: jobs.company,
+        cnt: count(),
+      })
+      .from(jobs)
+      .where(publishedConditions)
+      .groupBy(jobs.company)
+      .orderBy(sql`count(*) DESC`)
+      .limit(5);
+    const topHiringCompanies = topCompaniesRaw.map(r => ({
+      name: r.name,
+      count: Number(r.cnt),
+    }));
+
+    const allPublished = await db
+      .select({ keySkills: jobs.keySkills, locationType: jobs.locationType })
+      .from(jobs)
+      .where(publishedConditions);
+
+    const skillCounts = new Map<string, number>();
+    let remote = 0, hybrid = 0, onsite = 0;
+    for (const j of allPublished) {
+      if (j.keySkills) {
+        for (const skill of j.keySkills) {
+          const s = skill.trim();
+          if (s) skillCounts.set(s, (skillCounts.get(s) || 0) + 1);
+        }
+      }
+      const lt = (j.locationType || '').toLowerCase();
+      if (lt === 'remote') remote++;
+      else if (lt === 'hybrid') hybrid++;
+      else onsite++;
+    }
+
+    let trendingSkill: { name: string; count: number } | null = null;
+    let maxSkillCount = 0;
+    for (const [skill, cnt] of skillCounts) {
+      if (cnt > maxSkillCount) {
+        maxSkillCount = cnt;
+        trendingSkill = { name: skill, count: cnt };
+      }
+    }
+
+    let salaryInsight: { category: string; avgMin: number; avgMax: number } | null = null;
+    if (topCategory) {
+      const [salaryResult] = await db
+        .select({
+          avgMin: sql<number>`AVG(${jobs.salaryMin})`,
+          avgMax: sql<number>`AVG(${jobs.salaryMax})`,
+        })
+        .from(jobs)
+        .where(and(
+          publishedConditions,
+          eq(jobs.roleCategory, topCategory),
+          sql`${jobs.salaryMin} IS NOT NULL`,
+          sql`${jobs.salaryMax} IS NOT NULL`,
+          sql`${jobs.salaryMin} > 0`,
+          sql`${jobs.salaryMax} > 0`,
+        ));
+      if (salaryResult?.avgMin && salaryResult?.avgMax) {
+        salaryInsight = {
+          category: topCategory,
+          avgMin: Math.round(Number(salaryResult.avgMin)),
+          avgMax: Math.round(Number(salaryResult.avgMax)),
+        };
+      }
+    }
+
+    return {
+      newJobsThisWeek,
+      topHiringCompanies,
+      trendingSkill,
+      workModeSplit: { remote, hybrid, onsite },
+      totalJobs,
+      salaryInsight,
+    };
   }
 }
 

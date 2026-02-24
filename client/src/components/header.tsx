@@ -67,7 +67,7 @@ export function Header() {
   };
 
   const isActive = (path: string) => location === path;
-  const isJobsActive = isActive("/jobs") || isActive("/") || location.startsWith("/jobs/");
+  const isJobsActive = isActive("/jobs") || location.startsWith("/jobs/");
   const isDashboardActive = isActive("/dashboard");
   const isResumesActive = isActive("/resumes") || isActive("/resume-builder") || location.startsWith("/resume-editor/");
   const isDiagnosticActive = isActive("/diagnostic");
@@ -76,7 +76,7 @@ export function Header() {
     <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border/40 header-elev">
       <Container className="h-14 flex items-center justify-between gap-2">
         <div className="flex items-center gap-4 lg:gap-6">
-          <Link href={isAuthenticated ? "/jobs" : "/"} className="flex items-center gap-2.5 hover:opacity-80 transition-opacity" data-testid="logo-header">
+          <Link href={isAuthenticated ? "/dashboard" : "/"} className="flex items-center gap-2.5 hover:opacity-80 transition-opacity" data-testid="logo-header">
             <Logo className="h-5 w-5 text-foreground" />
             <span className="text-sm font-semibold text-foreground tracking-tight hidden sm:inline">
               Legal Tech Careers
@@ -85,11 +85,11 @@ export function Header() {
 
           {isAuthenticated ? (
             <div className="hidden md:flex items-center gap-0.5">
-              <NavLink href="/jobs" icon={Search} label="Jobs" isActive={isJobsActive} testId="link-jobs" />
-              <NavLink href="/opportunity-map" icon={Globe} label="Map" isActive={isActive("/opportunity-map")} testId="link-map" />
               <NavLink href="/dashboard" icon={LayoutDashboard} label="Dashboard" isActive={isDashboardActive} testId="link-dashboard" />
+              <NavLink href="/jobs" icon={Search} label="Jobs" isActive={isJobsActive} testId="link-jobs" />
               <NavLink href="/resumes" icon={FileText} label="Resumes" isActive={isResumesActive} testId="link-resumes" />
               <NavLink href="/diagnostic" icon={Brain} label="Diagnostic" isActive={isDiagnosticActive} testId="link-diagnostic" />
+              <NavLink href="/opportunity-map" icon={Globe} label="Map" isActive={isActive("/opportunity-map")} testId="link-map" />
               <NavLink href="/events" icon={Calendar} label="Events" isActive={isActive("/events") || location.startsWith("/events/")} testId="link-events" />
             </div>
           ) : (
@@ -137,11 +137,11 @@ export function Header() {
                     </div>
 
                     <div className="flex-1 overflow-y-auto py-2 px-3 space-y-0.5">
-                      <MobileNavItem href="/jobs" icon={Search} label="Jobs" active={isJobsActive} testId="link-jobs-mobile" />
-                      <MobileNavItem href="/opportunity-map" icon={Globe} label="Opportunity Map" active={isActive("/opportunity-map")} testId="link-map-mobile" />
                       <MobileNavItem href="/dashboard" icon={LayoutDashboard} label="Dashboard" active={isDashboardActive} testId="link-dashboard-mobile" />
+                      <MobileNavItem href="/jobs" icon={Search} label="Jobs" active={isJobsActive} testId="link-jobs-mobile" />
                       <MobileNavItem href="/resumes" icon={FileText} label="Resumes" active={isResumesActive} testId="link-resumes-mobile" />
                       <MobileNavItem href="/diagnostic" icon={Brain} label="Diagnostic" active={isDiagnosticActive} testId="link-diagnostic-mobile" />
+                      <MobileNavItem href="/opportunity-map" icon={Globe} label="Opportunity Map" active={isActive("/opportunity-map")} testId="link-map-mobile" />
                       <div className="h-px bg-border/40 my-2" />
                       <MobileNavItem href="/saved-jobs" icon={Bookmark} label="Saved Jobs" active={isActive("/saved-jobs")} testId="link-saved-jobs-mobile" />
                       <MobileNavItem href="/alerts" icon={Bell} label="Alerts" active={isActive("/alerts")} testId="link-alerts-mobile" />

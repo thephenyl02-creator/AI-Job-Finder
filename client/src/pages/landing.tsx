@@ -1,14 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { usePageTitle } from "@/hooks/use-page-title";
 import { Link } from "wouter";
-import { cleanStructuredText } from "@/lib/structured-description";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LogoMark } from "@/components/logo";
-import { ArrowRight, Building2, Search, Target, FileText, Sparkles, Bell, Globe, Wifi, Brain, CheckCircle2, Clock, Shield, BarChart3, Lock } from "lucide-react";
+import { ArrowRight, Search, Target, Sparkles, Globe, Wifi, Brain, Clock, BarChart3, Lock, Upload } from "lucide-react";
 import { Footer } from "@/components/footer";
 
 interface Stats {
@@ -17,17 +16,6 @@ interface Stats {
   totalCategories: number;
   categoryCounts: Record<string, number>;
   totalUsers?: number;
-}
-
-interface FeaturedJob {
-  id: number;
-  title: string;
-  company: string;
-  location: string | null;
-  isRemote: boolean | null;
-  locationType: string | null;
-  roleCategory: string | null;
-  seniorityLevel: string | null;
 }
 
 const CAREER_PATH_LABELS: Record<string, string> = {
@@ -60,16 +48,9 @@ export default function Landing() {
 
   const hasDiagnostic = !!latestDiag?.report;
 
-  const { data: featuredJobs } = useQuery<FeaturedJob[]>({
-    queryKey: ["/api/featured-jobs"],
-    staleTime: 5 * 60 * 1000,
-  });
-
   const { data: density } = useQuery<{ totalJobs: number; countriesCount: number; remoteShare: number; byCountry: { countryCode: string; countryName: string; jobCount: number; topCategories: string[] }[] }>({
     queryKey: ["/api/job-density"],
   });
-
-  const topJobs = featuredJobs?.slice(0, 3);
 
   const careerPaths = stats?.categoryCounts
     ? Object.entries(stats.categoryCounts)
@@ -122,21 +103,21 @@ export default function Landing() {
           <div className="flex flex-col lg:flex-row items-start gap-8 lg:gap-16">
             <div className="flex-1 max-w-md lg:max-w-lg lg:pt-4">
               <p className="text-[11px] font-semibold text-muted-foreground tracking-[0.2em] uppercase mb-4" data-testid="text-hero-label">
-                Your next career move starts here
+                Career intelligence for legal professionals
               </p>
 
               <h1
                 className="text-4xl sm:text-5xl font-serif font-medium text-foreground leading-[1.08] tracking-tight"
                 data-testid="text-hero-title"
               >
-                Legal tech careers, made clear.
+                Where do you fit in legal tech?
               </h1>
 
               <p
                 className="text-base text-muted-foreground mt-5 leading-relaxed"
                 data-testid="text-hero-subtitle"
               >
-                Curated roles for legal professionals at every level. See where you fit, check your match, and apply with confidence.
+                Upload your resume. In 60 seconds, see your readiness score, matching career paths, and a plan to get there.
               </p>
 
               <div className="mt-8 flex items-center gap-3 flex-wrap">
@@ -150,11 +131,11 @@ export default function Landing() {
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </a>
                 </Button>
-                <Button size="lg" variant="outline" asChild data-testid="button-hero-browse">
-                  <a href="/jobs">
-                    Browse {stats?.totalJobs ? `${stats.totalJobs}+` : ""} roles
-                  </a>
-                </Button>
+              </div>
+              <div className="mt-4">
+                <a href="/jobs" className="text-xs text-muted-foreground hover:text-foreground transition-colors" data-testid="link-hero-browse">
+                  Or browse {stats?.totalJobs ? `${stats.totalJobs}+` : ""} open roles →
+                </a>
               </div>
               <div className="mt-3 flex items-center gap-3 text-xs text-muted-foreground flex-wrap" data-testid="text-hero-trust">
                 <span className="flex items-center gap-1"><Lock className="h-3 w-3" /> Private by default</span>
@@ -171,49 +152,61 @@ export default function Landing() {
             </div>
 
             <div className="w-full lg:w-[420px] shrink-0">
-              <Card className="overflow-visible" data-testid="live-roles-card">
+              <Card className="overflow-visible" data-testid="diagnostic-preview-card">
                 <CardContent className="p-5">
-                  <div className="flex items-center justify-between gap-2 mb-4">
-                    <p className="text-xs font-semibold text-muted-foreground tracking-wide uppercase">Live Roles</p>
-                    {stats?.totalJobs && (
-                      <Badge variant="secondary" className="text-[10px] font-semibold no-default-active-elevate" data-testid="badge-job-count">
-                        {stats.totalJobs}+ open
-                      </Badge>
-                    )}
+                  <p className="text-[10px] font-semibold text-muted-foreground tracking-wide uppercase mb-4">Sample Readiness Report</p>
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="relative flex items-center justify-center shrink-0">
+                      <svg className="w-[72px] h-[72px] -rotate-90" viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" r="42" fill="none" stroke="hsl(var(--muted))" strokeWidth="6" />
+                        <circle cx="50" cy="50" r="42" fill="none" stroke="#f59e0b" strokeWidth="6" strokeLinecap="round"
+                          strokeDasharray={`${2 * Math.PI * 42}`}
+                          strokeDashoffset={`${2 * Math.PI * 42 - (58 / 100) * 2 * Math.PI * 42}`}
+                        />
+                      </svg>
+                      <div className="absolute flex flex-col items-center">
+                        <span className="text-lg font-bold text-foreground">58</span>
+                        <span className="text-[8px] text-muted-foreground">Readiness</span>
+                      </div>
+                    </div>
+                    <div className="space-y-1.5 min-w-0">
+                      <Badge variant="secondary" className="text-[10px] bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20 no-default-active-elevate">3 Ready roles</Badge>
+                      <Badge variant="secondary" className="text-[10px] bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20 no-default-active-elevate">5 Near-Ready</Badge>
+                      <Badge variant="secondary" className="text-[10px] bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/20 no-default-active-elevate">2 Stretch</Badge>
+                    </div>
                   </div>
-                  {topJobs && topJobs.length > 0 ? (
-                    <div className="space-y-2">
-                      {topJobs.map((job) => (
-                        <Link key={job.id} href={`/jobs/${job.id}`}>
-                          <div
-                            className="rounded-md border border-border/50 p-3 hover-elevate cursor-pointer"
-                            data-testid={`featured-job-${job.id}`}
-                          >
-                            <p className="text-sm font-medium text-foreground leading-snug" data-testid={`text-job-title-${job.id}`}>
-                              {cleanStructuredText(job.title)}
-                            </p>
-                            <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                              <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                                <Building2 className="h-3 w-3 shrink-0" />
-                                {cleanStructuredText(job.company)}
-                              </span>
-                              {job.roleCategory && (
-                                <Badge variant="outline" className="text-[9px] no-default-active-elevate">
-                                  {cleanStructuredText(job.roleCategory)}
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                        </Link>
-                      ))}
+                  <div className="space-y-1.5 mb-3">
+                    <div className="flex items-center justify-between gap-3 text-xs">
+                      <span className="text-muted-foreground">Contract Drafting</span>
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-16 h-1.5 bg-muted/40 rounded-full overflow-hidden">
+                          <div className="h-full bg-emerald-500 rounded-full" style={{ width: "82%" }} />
+                        </div>
+                        <span className="text-foreground font-medium w-6 text-right">82</span>
+                      </div>
                     </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {[...Array(3)].map((_, i) => (
-                        <div key={i} className="h-[72px] rounded-md bg-muted/20 animate-pulse" />
-                      ))}
+                    <div className="flex items-center justify-between gap-3 text-xs">
+                      <span className="text-muted-foreground">Legal Tech Tools</span>
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-16 h-1.5 bg-muted/40 rounded-full overflow-hidden">
+                          <div className="h-full bg-amber-500 rounded-full" style={{ width: "54%" }} />
+                        </div>
+                        <span className="text-foreground font-medium w-6 text-right">54</span>
+                      </div>
                     </div>
-                  )}
+                    <div className="flex items-center justify-between gap-3 text-xs">
+                      <span className="text-muted-foreground">Data Analytics</span>
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-16 h-1.5 bg-muted/40 rounded-full overflow-hidden">
+                          <div className="h-full bg-rose-500/60 rounded-full" style={{ width: "28%" }} />
+                        </div>
+                        <span className="text-foreground font-medium w-6 text-right">28</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-[10px] text-muted-foreground border-t border-border/30 pt-2.5">
+                    Top path: <span className="font-medium text-foreground">Legal Operations</span> · 87% match
+                  </div>
                 </CardContent>
               </Card>
             </div>
@@ -262,6 +255,78 @@ export default function Landing() {
                 {stats!.totalUsers} lawyers have used this tool · {stats?.totalJobs || 0}+ roles tracked
               </p>
             )}
+          </div>
+        </section>
+
+        {stats && (
+          <section className="border-t border-border/30">
+            <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-16">
+              <div className="flex items-center justify-center gap-10 sm:gap-24 flex-wrap" data-testid="stats-bar">
+                {stats.totalJobs > 0 && (
+                  <div className="text-center">
+                    <p className="text-2xl sm:text-4xl font-semibold text-foreground" data-testid="stat-jobs">{stats.totalJobs}+</p>
+                    <p className="text-[11px] sm:text-xs text-muted-foreground mt-1">Curated roles</p>
+                  </div>
+                )}
+                {stats.totalCompanies > 0 && (
+                  <div className="text-center">
+                    <p className="text-2xl sm:text-4xl font-semibold text-foreground" data-testid="stat-companies">{stats.totalCompanies}+</p>
+                    <p className="text-[11px] sm:text-xs text-muted-foreground mt-1">Companies</p>
+                  </div>
+                )}
+                {stats.totalCategories > 0 && (
+                  <div className="text-center">
+                    <p className="text-2xl sm:text-4xl font-semibold text-foreground" data-testid="stat-categories">{stats.totalCategories}</p>
+                    <p className="text-[11px] sm:text-xs text-muted-foreground mt-1">Career paths</p>
+                  </div>
+                )}
+                {(stats.totalUsers || 0) > 0 && (
+                  <div className="text-center">
+                    <p className="text-2xl sm:text-4xl font-semibold text-foreground" data-testid="stat-users">{stats.totalUsers}+</p>
+                    <p className="text-[11px] sm:text-xs text-muted-foreground mt-1">Users</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </section>
+        )}
+
+        <section className="border-t border-border/30">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-10 sm:py-20">
+            <div className="text-center mb-6 sm:mb-10">
+              <h2 className="text-xl sm:text-3xl font-serif font-medium text-foreground tracking-tight" data-testid="text-how-it-works-title">
+                How it works
+              </h2>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-10 max-w-3xl mx-auto" data-testid="how-it-works-steps">
+              <div className="text-center space-y-2 sm:space-y-3">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-muted flex items-center justify-center mx-auto">
+                  <Upload className="h-4 w-4 sm:h-5 sm:w-5 text-foreground" />
+                </div>
+                <h3 className="text-sm font-semibold text-foreground">Upload Resume</h3>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Drop in your resume. We parse it securely and match it against the legal tech market in seconds.
+                </p>
+              </div>
+              <div className="text-center space-y-2 sm:space-y-3">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-muted flex items-center justify-center mx-auto">
+                  <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 text-foreground" />
+                </div>
+                <h3 className="text-sm font-semibold text-foreground">Get Your Report</h3>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  See your readiness score, top career paths, skill gaps, and a personalized 30-day action plan.
+                </p>
+              </div>
+              <div className="text-center space-y-2 sm:space-y-3">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-muted flex items-center justify-center mx-auto">
+                  <Target className="h-4 w-4 sm:h-5 sm:w-5 text-foreground" />
+                </div>
+                <h3 className="text-sm font-semibold text-foreground">Land the Right Role</h3>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Apply to roles you actually fit, with tailored resumes and clear confidence in your match.
+                </p>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -366,180 +431,6 @@ export default function Landing() {
                     </div>
                   </div>
                 </div>
-              </div>
-            </div>
-          </section>
-        )}
-
-        <section className="border-t border-border/30">
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-10 sm:py-20">
-            <div className="text-center mb-6 sm:mb-10">
-              <h2 className="text-xl sm:text-3xl font-serif font-medium text-foreground tracking-tight" data-testid="text-how-it-works-title">
-                How it works
-              </h2>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-10 max-w-3xl mx-auto" data-testid="how-it-works-steps">
-              <div className="text-center space-y-2 sm:space-y-3">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-muted flex items-center justify-center mx-auto">
-                  <Search className="h-4 w-4 sm:h-5 sm:w-5 text-foreground" />
-                </div>
-                <h3 className="text-sm font-semibold text-foreground">Browse & Search</h3>
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  Curated roles from {stats?.totalCompanies ? `${stats.totalCompanies}+` : ""} legal tech companies, organized by career path.
-                </p>
-              </div>
-              <div className="text-center space-y-2 sm:space-y-3">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-muted flex items-center justify-center mx-auto">
-                  <Target className="h-4 w-4 sm:h-5 sm:w-5 text-foreground" />
-                </div>
-                <h3 className="text-sm font-semibold text-foreground">Check Your Fit</h3>
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  Upload your resume and see how you match. Get a clear fit score and actionable next steps.
-                </p>
-              </div>
-              <div className="text-center space-y-2 sm:space-y-3">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-muted flex items-center justify-center mx-auto">
-                  <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-foreground" />
-                </div>
-                <h3 className="text-sm font-semibold text-foreground">Apply with Confidence</h3>
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  Tailor your resume, compare offers, and apply knowing where you stand.
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="border-t border-border/30 bg-primary/[0.02] dark:bg-primary/[0.04]">
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-10 sm:py-20">
-            <div className="flex flex-col lg:flex-row items-center gap-8 lg:gap-16">
-              <div className="flex-1 text-center lg:text-left">
-                <p className="text-[11px] font-semibold text-muted-foreground tracking-[0.2em] uppercase mb-3">
-                  Career Diagnostic
-                </p>
-                <h2
-                  className="text-xl sm:text-3xl font-serif font-medium text-foreground tracking-tight"
-                  data-testid="text-diagnostic-teaser-title"
-                >
-                  See where you stand in 60 seconds
-                </h2>
-                <p className="text-xs sm:text-sm text-muted-foreground mt-2 max-w-md mx-auto lg:mx-0">
-                  Upload your resume and get a personalized readiness report — skill gaps, matching roles, and a 30-day action plan to break into legal tech.
-                </p>
-                <div className="space-y-3 mt-6 max-w-sm mx-auto lg:mx-0">
-                  <div className="flex items-center gap-3 text-sm" data-testid="diagnostic-benefit-1">
-                    <div className="shrink-0 w-7 h-7 rounded-full bg-emerald-500/10 flex items-center justify-center">
-                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-                    </div>
-                    <span className="text-foreground">Readiness score across 7 skill categories</span>
-                  </div>
-                  <div className="flex items-center gap-3 text-sm" data-testid="diagnostic-benefit-2">
-                    <div className="shrink-0 w-7 h-7 rounded-full bg-blue-500/10 flex items-center justify-center">
-                      <Target className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
-                    </div>
-                    <span className="text-foreground">Roles you qualify for right now</span>
-                  </div>
-                  <div className="flex items-center gap-3 text-sm" data-testid="diagnostic-benefit-3">
-                    <div className="shrink-0 w-7 h-7 rounded-full bg-amber-500/10 flex items-center justify-center">
-                      <Clock className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
-                    </div>
-                    <span className="text-foreground">30-day transition plan tied to real jobs</span>
-                  </div>
-                </div>
-                <div className="mt-7">
-                  <Button asChild data-testid="button-diagnostic-cta">
-                    <a href="/auth">
-                      <Brain className="mr-2 h-4 w-4" />
-                      Get your diagnostic
-                    </a>
-                  </Button>
-                </div>
-              </div>
-              <div className="w-full lg:w-[340px] shrink-0">
-                <Card className="overflow-hidden" data-testid="diagnostic-preview-card">
-                  <CardContent className="p-5">
-                    <p className="text-[10px] font-semibold text-muted-foreground tracking-wide uppercase mb-4">Sample Report Preview</p>
-                    <div className="flex items-center gap-4 mb-4">
-                      <div className="relative flex items-center justify-center shrink-0">
-                        <svg className="w-[72px] h-[72px] -rotate-90" viewBox="0 0 100 100">
-                          <circle cx="50" cy="50" r="42" fill="none" stroke="hsl(var(--muted))" strokeWidth="6" />
-                          <circle cx="50" cy="50" r="42" fill="none" stroke="#f59e0b" strokeWidth="6" strokeLinecap="round"
-                            strokeDasharray={`${2 * Math.PI * 42}`}
-                            strokeDashoffset={`${2 * Math.PI * 42 - (58 / 100) * 2 * Math.PI * 42}`}
-                          />
-                        </svg>
-                        <div className="absolute flex flex-col items-center">
-                          <span className="text-lg font-bold text-foreground">58</span>
-                          <span className="text-[8px] text-muted-foreground">Readiness</span>
-                        </div>
-                      </div>
-                      <div className="space-y-1.5 min-w-0">
-                        <Badge variant="secondary" className="text-[10px] bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20">3 Ready roles</Badge>
-                        <Badge variant="secondary" className="text-[10px] bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20">5 Near-Ready</Badge>
-                        <Badge variant="secondary" className="text-[10px] bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/20">2 Stretch</Badge>
-                      </div>
-                    </div>
-                    <div className="space-y-1.5 mb-3">
-                      <div className="flex items-center justify-between gap-3 text-xs">
-                        <span className="text-muted-foreground">Contract Drafting</span>
-                        <div className="flex items-center gap-1.5">
-                          <div className="w-16 h-1.5 bg-muted/40 rounded-full overflow-hidden">
-                            <div className="h-full bg-emerald-500 rounded-full" style={{ width: "82%" }} />
-                          </div>
-                          <span className="text-foreground font-medium w-6 text-right">82</span>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between gap-3 text-xs">
-                        <span className="text-muted-foreground">Legal Tech Tools</span>
-                        <div className="flex items-center gap-1.5">
-                          <div className="w-16 h-1.5 bg-muted/40 rounded-full overflow-hidden">
-                            <div className="h-full bg-amber-500 rounded-full" style={{ width: "54%" }} />
-                          </div>
-                          <span className="text-foreground font-medium w-6 text-right">54</span>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between gap-3 text-xs">
-                        <span className="text-muted-foreground">Data Analytics</span>
-                        <div className="flex items-center gap-1.5">
-                          <div className="w-16 h-1.5 bg-muted/40 rounded-full overflow-hidden">
-                            <div className="h-full bg-rose-500/60 rounded-full" style={{ width: "28%" }} />
-                          </div>
-                          <span className="text-foreground font-medium w-6 text-right">28</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="text-[10px] text-muted-foreground border-t border-border/30 pt-2.5">
-                      Top path: <span className="font-medium text-foreground">Legal Operations</span> · 87% match
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {stats && (
-          <section className="border-t border-border/30">
-            <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-16">
-              <div className="flex items-center justify-center gap-10 sm:gap-24 flex-wrap" data-testid="stats-bar">
-                {stats.totalJobs > 0 && (
-                  <div className="text-center">
-                    <p className="text-2xl sm:text-4xl font-semibold text-foreground" data-testid="stat-jobs">{stats.totalJobs}+</p>
-                    <p className="text-[11px] sm:text-xs text-muted-foreground mt-1">Curated roles</p>
-                  </div>
-                )}
-                {stats.totalCompanies > 0 && (
-                  <div className="text-center">
-                    <p className="text-2xl sm:text-4xl font-semibold text-foreground" data-testid="stat-companies">{stats.totalCompanies}+</p>
-                    <p className="text-[11px] sm:text-xs text-muted-foreground mt-1">Companies</p>
-                  </div>
-                )}
-                {stats.totalCategories > 0 && (
-                  <div className="text-center">
-                    <p className="text-2xl sm:text-4xl font-semibold text-foreground" data-testid="stat-categories">{stats.totalCategories}</p>
-                    <p className="text-[11px] sm:text-xs text-muted-foreground mt-1">Career paths</p>
-                  </div>
-                )}
               </div>
             </div>
           </section>

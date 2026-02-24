@@ -2,7 +2,7 @@
 
 ## Overview
 
-Legal Tech Careers is a freemium SaaS job search platform tailored for legal professionals targeting the legal technology industry. It aims to be the leading resource for connecting legal talent with innovative legal tech companies, offering features like guided search, resume analysis, job comparison, and strategic career guidance. The platform's vision is to fill a critical niche in the legal employment market by providing specialized tools and insights for this rapidly growing sector.
+Legal Tech Careers is a career intelligence platform for legal professionals transitioning into legal technology. It's positioned as a career intelligence hub (not a job board) — the diagnostic system drives Pro conversions, the resume data creates a defensible moat, and market intelligence differentiates from generic job boards. The logged-in experience is a personalized career command center, not another job aggregator.
 
 ## User Preferences
 
@@ -53,6 +53,9 @@ Legal Tech Careers is a freemium SaaS job search platform tailored for legal pro
 - **Admin Tools**: Features for importing, drafting, and publishing jobs, with robust security measures for admin routes.
 
 ### Core Features
+- **Landing Page**: Leads with career intelligence positioning, not job browsing. Hero headline: "Where do you fit in legal tech?" with diagnostic preview card (readiness score ring, skill bars, role badges) as the primary visual. Primary CTA is "Check Your Fit" (diagnostic), jobs demoted to subtle secondary link. Sections: value strip → stats bar → how it works (Upload → Report → Land Role) → career paths → global map → Pro features.
+- **Career Command Center Dashboard** (`/dashboard`): Authenticated users' home page (redirected from `/`). Sections: (1) Career Snapshot with readiness ring, top career path + confidence, quick stats; (2) "This Week" action feed derived from diagnostic transition plan with current week's tasks, time estimates, skill gap labels, new matching roles count, and top ready job recommendation; (3) Sidebar with saved jobs, alerts, quick links; (4) Market Pulse grid with real-time stats. Pro gating on weeks 2-4 actions and extended market intelligence.
+- **Market Pulse API** (`/api/market-pulse`): Returns newJobsThisWeek, topHiringCompanies, trendingSkill, workModeSplit, totalJobs, salaryInsight. Efficiently aggregates published job data. If authenticated user has diagnostic, returns salary insight for their top career path.
 - **Smart Search**: AI-powered natural language job search.
 - **Resume Management & Editing**: Upload, parse, manage multiple resumes, and an AI-powered resume editor for tailoring resumes to specific jobs with real-time ATS scoring. Editor features: inline contentEditable editing, AI change tracking with revert/unrevert, move up/down reordering for experience entries and bullet points, delete buttons for all entry types (experience/education/certifications), word count indicator with ideal range guidance, contextual empty state messages, section-level help tooltips, undo/redo with keyboard shortcuts, PDF/DOCX/Apply Pack export.
 - **Job Matching**: AI-driven comparison of resumes against job postings, providing match scores and gap analysis.

@@ -273,6 +273,30 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/market-pulse", async (req: any, res) => {
+    try {
+      let topCategory: string | undefined;
+      if (req.user?.id) {
+        const latestDiag = await db.select().from(diagnosticReports)
+          .where(eq(diagnosticReports.userId, req.user.id))
+          .orderBy(desc(diagnosticReports.createdAt))
+          .limit(1);
+        if (latestDiag.length > 0 && latestDiag[0].report) {
+          const report = latestDiag[0].report as any;
+          const topPath = report?.careerPaths?.[0];
+          if (topPath?.title) {
+            topCategory = topPath.title;
+          }
+        }
+      }
+      const pulse = await storage.getMarketPulse(topCategory);
+      res.json(pulse);
+    } catch (error) {
+      console.error("Error fetching market pulse:", error);
+      res.status(500).json({ error: "Failed to fetch market pulse" });
+    }
+  });
+
   const VALID_ANON_EVENTS = ["landing_cta_click", "quiz_completion", "anon_diagnostic_upload"];
   app.post("/api/track", async (req, res) => {
     try {
