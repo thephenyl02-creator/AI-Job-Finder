@@ -381,7 +381,7 @@ export default function Landing() {
                 </div>
                 <h3 className="text-sm font-semibold text-foreground">Browse & Search</h3>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  Curated roles from {stats?.totalCompanies ? `${stats.totalCompanies}+` : "200+"} legal tech companies, organized by career path.
+                  Curated roles from {stats?.totalCompanies ? `${stats.totalCompanies}+` : ""} legal tech companies, organized by career path.
                 </p>
               </div>
               <div className="text-center space-y-2 sm:space-y-3">
