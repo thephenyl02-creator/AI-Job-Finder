@@ -19,9 +19,10 @@ import {
   Loader2, ArrowLeft, CheckCircle, AlertTriangle, Undo2, Redo2,
   Download, FileText, FileDown, Package, RotateCcw, X, Sparkles,
   Plus, Diff, Info, PanelRightClose, PanelRightOpen, ChevronLeft,
-  ChevronRight, CircleCheck, CircleDashed, CircleMinus, Shield,
-  Wrench, Star, Eye, EyeOff, ExternalLink,
+  ChevronRight, ChevronUp, ChevronDown, CircleCheck, CircleDashed, CircleMinus, Shield,
+  Wrench, Star, Eye, EyeOff, ExternalLink, Trash2, HelpCircle,
 } from "lucide-react";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import type { EditorSections, EditorBullet, EditorSkill, EditorExperience, EditorEducation, RequirementItem } from "@shared/schema";
 
 type SaveStatus = "saved" | "saving" | "unsaved" | "error" | "conflict";
@@ -690,6 +691,52 @@ export default function ResumeEditor() {
     }));
   }, [updateSections]);
 
+  const moveExperience = useCallback((index: number, direction: -1 | 1) => {
+    updateSections(s => {
+      const arr = [...s.experience];
+      const targetIdx = index + direction;
+      if (targetIdx < 0 || targetIdx >= arr.length) return s;
+      [arr[index], arr[targetIdx]] = [arr[targetIdx], arr[index]];
+      return { ...s, experience: arr };
+    });
+  }, [updateSections]);
+
+  const moveBullet = useCallback((expId: string, bulletIndex: number, direction: -1 | 1) => {
+    updateSections(s => ({
+      ...s,
+      experience: s.experience.map(e => {
+        if (e.id !== expId) return e;
+        const arr = [...e.bullets];
+        const targetIdx = bulletIndex + direction;
+        if (targetIdx < 0 || targetIdx >= arr.length) return e;
+        [arr[bulletIndex], arr[targetIdx]] = [arr[targetIdx], arr[targetIdx]];
+        [arr[bulletIndex], arr[targetIdx]] = [arr[targetIdx], arr[bulletIndex]];
+        return { ...e, bullets: arr };
+      }),
+    }));
+  }, [updateSections]);
+
+  const removeExperience = useCallback((expId: string) => {
+    updateSections(s => ({
+      ...s,
+      experience: s.experience.filter(e => e.id !== expId),
+    }));
+  }, [updateSections]);
+
+  const removeEducation = useCallback((eduId: string) => {
+    updateSections(s => ({
+      ...s,
+      education: s.education.filter(e => e.id !== eduId),
+    }));
+  }, [updateSections]);
+
+  const removeCertification = useCallback((certId: string) => {
+    updateSections(s => ({
+      ...s,
+      certifications: s.certifications.filter(c => c.id !== certId),
+    }));
+  }, [updateSections]);
+
   const addEducation = useCallback(() => {
     updateSections(s => ({
       ...s,
@@ -901,21 +948,41 @@ export default function ResumeEditor() {
 
               <section data-testid="section-experience">
                 <div className="flex items-center justify-between gap-2 mb-4">
-                  <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Experience</h2>
+                  <div className="flex items-center gap-1.5">
+                    <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Experience</h2>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button className="text-muted-foreground/40 hover:text-muted-foreground transition-colors" data-testid="tooltip-experience-help">
+                          <HelpCircle className="w-3.5 h-3.5" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="right" className="max-w-xs text-xs leading-relaxed">
+                        Lead with your most relevant role. Focus each bullet on a specific achievement with measurable impact — the AI tailoring works best with concrete results.
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
                   <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={addExperience} data-testid="button-add-experience">
                     <Plus className="w-3 h-3 mr-1" />Add
                   </Button>
                 </div>
                 {sections.experience.length === 0 && (
-                  <p className="text-sm text-muted-foreground italic" data-testid="text-no-experience">No experience entries yet. Click Add to create one.</p>
+                  <div className="py-4 text-center" data-testid="text-no-experience">
+                    <p className="text-sm text-muted-foreground">Add your most relevant experience first</p>
+                    <p className="text-xs text-muted-foreground/70 mt-1">The AI will help tailor each entry to match the role requirements</p>
+                  </div>
                 )}
-                {sections.experience.map(exp => (
+                {sections.experience.map((exp, expIndex) => (
                   <ExperienceBlock
                     key={exp.id}
                     exp={exp}
+                    expIndex={expIndex}
+                    totalExperiences={sections.experience.length}
                     onUpdate={updateSections}
                     onAddBullet={addBullet}
                     onRemoveBullet={removeBullet}
+                    onRemoveExperience={removeExperience}
+                    onMoveExperience={moveExperience}
+                    onMoveBullet={moveBullet}
                     showChanges={changesVisible}
                   />
                 ))}
@@ -931,10 +998,13 @@ export default function ResumeEditor() {
                   </Button>
                 </div>
                 {sections.education.length === 0 && (
-                  <p className="text-sm text-muted-foreground italic" data-testid="text-no-education">No education entries yet.</p>
+                  <div className="py-3 text-center" data-testid="text-no-education">
+                    <p className="text-sm text-muted-foreground">No education entries yet</p>
+                    <p className="text-xs text-muted-foreground/70 mt-1">Include degrees, certifications, or relevant coursework</p>
+                  </div>
                 )}
                 {sections.education.map(edu => (
-                  <EducationBlock key={edu.id} edu={edu} onUpdate={updateSections} />
+                  <EducationBlock key={edu.id} edu={edu} onUpdate={updateSections} onRemove={() => removeEducation(edu.id)} />
                 ))}
               </section>
 
@@ -977,12 +1047,17 @@ export default function ResumeEditor() {
                   </Button>
                 </div>
                 {sections.certifications.length === 0 && (
-                  <p className="text-sm text-muted-foreground italic" data-testid="text-no-certifications">No certifications yet.</p>
+                  <div className="py-3 text-center" data-testid="text-no-certifications">
+                    <p className="text-sm text-muted-foreground">No certifications yet</p>
+                    <p className="text-xs text-muted-foreground/70 mt-1">Bar admissions, tech certifications, and professional credentials strengthen your profile</p>
+                  </div>
                 )}
                 {sections.certifications.map(cert => (
-                  <CertificationBlock key={cert.id} cert={cert} onUpdate={updateSections} />
+                  <CertificationBlock key={cert.id} cert={cert} onUpdate={updateSections} onRemove={() => removeCertification(cert.id)} />
                 ))}
               </section>
+
+              <WordCountIndicator sections={sections} />
             </div>
           </div>
         </div>
@@ -1181,7 +1256,7 @@ function SummaryBlock({ sections, onUpdate, showChanges }: { sections: EditorSec
           onChange={v => onUpdate(s => ({ ...s, summary: v, summaryReverted: false }))}
           className="text-sm leading-relaxed"
           testId="editable-summary"
-          placeholder="Write a professional summary..."
+          placeholder="Summarize your expertise and what you bring to this role..."
         />
       </div>
       {showChanges && sections.originalSummary && (
@@ -1199,16 +1274,46 @@ function SummaryBlock({ sections, onUpdate, showChanges }: { sections: EditorSec
 }
 
 function ExperienceBlock({
-  exp, onUpdate, onAddBullet, onRemoveBullet, showChanges,
+  exp, expIndex, totalExperiences, onUpdate, onAddBullet, onRemoveBullet, onRemoveExperience, onMoveExperience, onMoveBullet, showChanges,
 }: {
   exp: EditorExperience;
+  expIndex: number;
+  totalExperiences: number;
   onUpdate: (updater: (prev: EditorSections) => EditorSections) => void;
   onAddBullet: (expId: string) => void;
   onRemoveBullet: (expId: string, bulletId: string) => void;
+  onRemoveExperience: (expId: string) => void;
+  onMoveExperience: (index: number, direction: -1 | 1) => void;
+  onMoveBullet: (expId: string, bulletIndex: number, direction: -1 | 1) => void;
   showChanges: boolean;
 }) {
   return (
-    <div className="mb-6" data-testid={`experience-${exp.id}`}>
+    <div className="mb-6 group/exp relative" data-testid={`experience-${exp.id}`}>
+      <div className="invisible group-hover/exp:visible absolute -right-1 -top-1 flex items-center gap-0.5 z-10">
+        <button
+          onClick={() => onMoveExperience(expIndex, -1)}
+          disabled={expIndex === 0}
+          className="w-6 h-6 flex items-center justify-center rounded-full bg-card border text-muted-foreground hover:text-foreground transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+          data-testid={`button-move-up-experience-${exp.id}`}
+        >
+          <ChevronUp className="w-3 h-3" />
+        </button>
+        <button
+          onClick={() => onMoveExperience(expIndex, 1)}
+          disabled={expIndex === totalExperiences - 1}
+          className="w-6 h-6 flex items-center justify-center rounded-full bg-card border text-muted-foreground hover:text-foreground transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+          data-testid={`button-move-down-experience-${exp.id}`}
+        >
+          <ChevronDown className="w-3 h-3" />
+        </button>
+        <button
+          onClick={() => onRemoveExperience(exp.id)}
+          className="w-6 h-6 flex items-center justify-center rounded-full bg-card border text-muted-foreground hover:text-destructive hover:border-destructive/30 transition-colors"
+          data-testid={`button-remove-experience-${exp.id}`}
+        >
+          <Trash2 className="w-3 h-3" />
+        </button>
+      </div>
       <div className="flex flex-wrap items-baseline justify-between gap-2 mb-1">
         <div className="flex items-baseline gap-1 flex-wrap">
           <EditableText
@@ -1256,10 +1361,12 @@ function ExperienceBlock({
         placeholder="Location"
       />
       <ul className="space-y-1.5">
-        {exp.bullets.map(bullet => (
+        {exp.bullets.map((bullet, bulletIndex) => (
           <BulletItem
             key={bullet.id}
             bullet={bullet}
+            bulletIndex={bulletIndex}
+            totalBullets={exp.bullets.length}
             expId={exp.id}
             onUpdate={(updater) => {
               onUpdate(s => ({
@@ -1271,12 +1378,17 @@ function ExperienceBlock({
               }));
             }}
             onRemove={() => onRemoveBullet(exp.id, bullet.id)}
+            onMoveUp={() => onMoveBullet(exp.id, bulletIndex, -1)}
+            onMoveDown={() => onMoveBullet(exp.id, bulletIndex, 1)}
             showChanges={showChanges}
           />
         ))}
       </ul>
       {exp.bullets.length === 0 && (
-        <p className="text-xs text-muted-foreground italic ml-4" data-testid={`text-no-bullets-${exp.id}`}>No bullet points yet.</p>
+        <div className="ml-4 py-2" data-testid={`text-no-bullets-${exp.id}`}>
+          <p className="text-xs text-muted-foreground">No bullet points yet</p>
+          <p className="text-[11px] text-muted-foreground/60 mt-0.5">Add accomplishments with measurable results to showcase your impact</p>
+        </div>
       )}
       <Button variant="ghost" size="sm" className="mt-2 text-xs h-6" onClick={() => onAddBullet(exp.id)} data-testid={`button-add-bullet-${exp.id}`}>
         <Plus className="w-3 h-3 mr-1" />Add bullet
@@ -1285,11 +1397,15 @@ function ExperienceBlock({
   );
 }
 
-function BulletItem({ bullet, expId, onUpdate, onRemove, showChanges }: {
+function BulletItem({ bullet, bulletIndex, totalBullets, expId, onUpdate, onRemove, onMoveUp, onMoveDown, showChanges }: {
   bullet: EditorBullet;
+  bulletIndex: number;
+  totalBullets: number;
   expId: string;
   onUpdate: (updater: (b: EditorBullet) => EditorBullet) => void;
   onRemove: () => void;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
   showChanges: boolean;
 }) {
   const isChanged = !!(bullet.originalText || bullet.addedByAI) && !bullet.reverted;
@@ -1316,7 +1432,7 @@ function BulletItem({ bullet, expId, onUpdate, onRemove, showChanges }: {
           onChange={v => onUpdate(b => ({ ...b, text: v, reverted: false }))}
           className="text-sm leading-relaxed"
           testId={`editable-bullet-${bullet.id}`}
-          placeholder="Describe an accomplishment..."
+          placeholder="Describe a specific achievement with measurable impact..."
         />
       </div>
       {showChanges && (bullet.originalText || bullet.addedByAI) && (
@@ -1329,20 +1445,45 @@ function BulletItem({ bullet, expId, onUpdate, onRemove, showChanges }: {
           onUnrevert={handleUnrevert}
         />
       )}
-      <button
-        onClick={onRemove}
-        className="invisible group-hover:visible w-5 h-5 flex items-center justify-center rounded text-muted-foreground hover:text-destructive shrink-0 mt-0.5"
-        data-testid={`button-remove-bullet-${bullet.id}`}
-      >
-        <X className="w-3 h-3" />
-      </button>
+      <div className="invisible group-hover:visible flex items-center gap-0.5 shrink-0 mt-0.5">
+        <button
+          onClick={onMoveUp}
+          disabled={bulletIndex === 0}
+          className="w-5 h-5 flex items-center justify-center rounded text-muted-foreground hover:text-foreground transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+          data-testid={`button-move-up-bullet-${bullet.id}`}
+        >
+          <ChevronUp className="w-3 h-3" />
+        </button>
+        <button
+          onClick={onMoveDown}
+          disabled={bulletIndex === totalBullets - 1}
+          className="w-5 h-5 flex items-center justify-center rounded text-muted-foreground hover:text-foreground transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+          data-testid={`button-move-down-bullet-${bullet.id}`}
+        >
+          <ChevronDown className="w-3 h-3" />
+        </button>
+        <button
+          onClick={onRemove}
+          className="w-5 h-5 flex items-center justify-center rounded text-muted-foreground hover:text-destructive shrink-0"
+          data-testid={`button-remove-bullet-${bullet.id}`}
+        >
+          <X className="w-3 h-3" />
+        </button>
+      </div>
     </li>
   );
 }
 
-function EducationBlock({ edu, onUpdate }: { edu: EditorEducation; onUpdate: (updater: (prev: EditorSections) => EditorSections) => void }) {
+function EducationBlock({ edu, onUpdate, onRemove }: { edu: EditorEducation; onUpdate: (updater: (prev: EditorSections) => EditorSections) => void; onRemove: () => void }) {
   return (
-    <div className="mb-3" data-testid={`education-${edu.id}`}>
+    <div className="mb-3 group/edu relative" data-testid={`education-${edu.id}`}>
+      <button
+        onClick={onRemove}
+        className="invisible group-hover/edu:visible absolute -right-1 -top-1 w-6 h-6 flex items-center justify-center rounded-full bg-card border text-muted-foreground hover:text-destructive hover:border-destructive/30 transition-colors z-10"
+        data-testid={`button-remove-education-${edu.id}`}
+      >
+        <Trash2 className="w-3 h-3" />
+      </button>
       <div className="flex items-baseline gap-1 flex-wrap">
         <EditableText
           value={edu.degree}
@@ -1395,9 +1536,16 @@ function EducationBlock({ edu, onUpdate }: { edu: EditorEducation; onUpdate: (up
   );
 }
 
-function CertificationBlock({ cert, onUpdate }: { cert: { id: string; name: string; issuer: string; date: string }; onUpdate: (updater: (prev: EditorSections) => EditorSections) => void }) {
+function CertificationBlock({ cert, onUpdate, onRemove }: { cert: { id: string; name: string; issuer: string; date: string }; onUpdate: (updater: (prev: EditorSections) => EditorSections) => void; onRemove: () => void }) {
   return (
-    <div className="mb-2" data-testid={`certification-${cert.id}`}>
+    <div className="mb-2 group/cert relative" data-testid={`certification-${cert.id}`}>
+      <button
+        onClick={onRemove}
+        className="invisible group-hover/cert:visible absolute -right-1 -top-1 w-6 h-6 flex items-center justify-center rounded-full bg-card border text-muted-foreground hover:text-destructive hover:border-destructive/30 transition-colors z-10"
+        data-testid={`button-remove-certification-${cert.id}`}
+      >
+        <Trash2 className="w-3 h-3" />
+      </button>
       <EditableText
         value={cert.name}
         onChange={v => onUpdate(s => ({ ...s, certifications: s.certifications.map(c => c.id === cert.id ? { ...c, name: v } : c) }))}
@@ -1425,6 +1573,66 @@ function CertificationBlock({ cert, onUpdate }: { cert: { id: string; name: stri
           placeholder="Date"
         />
       </div>
+    </div>
+  );
+}
+
+function WordCountIndicator({ sections }: { sections: EditorSections }) {
+  const wordCount = useMemo(() => {
+    let text = "";
+    if (sections.contact?.fullName) text += sections.contact.fullName + " ";
+    if (sections.contact?.email) text += sections.contact.email + " ";
+    if (sections.contact?.phone) text += sections.contact.phone + " ";
+    if (sections.contact?.location) text += sections.contact.location + " ";
+    if (sections.contact?.linkedin) text += sections.contact.linkedin + " ";
+    if (sections.summary) text += sections.summary + " ";
+    for (const exp of sections.experience) {
+      if (exp.title) text += exp.title + " ";
+      if (exp.company) text += exp.company + " ";
+      if (exp.location) text += exp.location + " ";
+      if (exp.startDate) text += exp.startDate + " ";
+      if (exp.endDate) text += exp.endDate + " ";
+      for (const b of exp.bullets) {
+        if (b.text) text += b.text + " ";
+      }
+    }
+    for (const edu of sections.education) {
+      if (edu.degree) text += edu.degree + " ";
+      if (edu.field) text += edu.field + " ";
+      if (edu.institution) text += edu.institution + " ";
+      if (edu.graduationDate) text += edu.graduationDate + " ";
+      if (edu.honors) text += edu.honors + " ";
+    }
+    for (const cert of sections.certifications) {
+      if (cert.name) text += cert.name + " ";
+      if (cert.issuer) text += cert.issuer + " ";
+      if (cert.date) text += cert.date + " ";
+    }
+    for (const skill of sections.skills) {
+      if (skill.name) text += skill.name + " ";
+    }
+    const words = text.trim().split(/\s+/).filter(w => w.length > 0);
+    return words.length;
+  }, [sections]);
+
+  const isGood = wordCount >= 300 && wordCount <= 600;
+  const isTooShort = wordCount < 300;
+  const colorClass = isGood
+    ? "text-emerald-600 dark:text-emerald-400"
+    : "text-amber-600 dark:text-amber-400";
+  const hint = isGood
+    ? "Ideal length"
+    : isTooShort
+      ? "Consider adding more detail"
+      : "Consider trimming for conciseness";
+
+  return (
+    <div className="flex items-center justify-center gap-2 py-3 text-xs text-muted-foreground" data-testid="word-count-indicator">
+      <span className={colorClass} data-testid="text-word-count">{wordCount} words</span>
+      <span className="text-muted-foreground/40">·</span>
+      <span>{hint}</span>
+      <span className="text-muted-foreground/40">·</span>
+      <span>Optimal: 300–600</span>
     </div>
   );
 }

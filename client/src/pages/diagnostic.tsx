@@ -31,6 +31,7 @@ import {
   Upload,
   Loader2,
   Sparkles,
+  User,
 } from "lucide-react";
 import {
   RadarChart,
@@ -420,6 +421,269 @@ function TransitionPlan({ plan, isPro }: { plan: TransitionWeek[]; isPro: boolea
           </div>
         );
       })}
+    </div>
+  );
+}
+
+function CareerPathFlow({
+  topPaths,
+  readinessLadder,
+  isPro,
+  currentRole,
+  readinessScore,
+}: {
+  topPaths: CareerPath[];
+  readinessLadder: DiagnosticReportData["readinessLadder"];
+  isPro: boolean;
+  currentRole: string;
+  readinessScore: number;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [dims, setDims] = useState({ w: 0, h: 0 });
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const obs = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (entry) setDims({ w: entry.contentRect.width, h: entry.contentRect.height });
+    });
+    obs.observe(containerRef.current);
+    return () => obs.disconnect();
+  }, []);
+
+  const paths = topPaths.slice(0, 3);
+  const scoreColor = readinessScore >= 70 ? "#10b981" : readinessScore >= 45 ? "#f59e0b" : "#ef4444";
+
+  const allRoles = [
+    ...readinessLadder.ready.map((r) => ({ ...r, tierColor: "emerald" as const })),
+    ...readinessLadder.nearReady.map((r) => ({ ...r, tierColor: "amber" as const })),
+  ];
+
+  const getRolesForPath = (pathName: string) => {
+    const lcName = pathName.toLowerCase();
+    const matched = allRoles.filter(
+      (r) =>
+        r.title.toLowerCase().includes(lcName.split(" ")[0].toLowerCase()) ||
+        lcName.includes(r.title.toLowerCase().split(" ")[0])
+    );
+    if (matched.length > 0) return matched.slice(0, 2);
+    return allRoles.slice(0, 2);
+  };
+
+  const fitColor = (fitLevel: string) => {
+    if (fitLevel === "high") return "text-emerald-600 dark:text-emerald-400";
+    if (fitLevel === "medium") return "text-amber-600 dark:text-amber-400";
+    return "text-muted-foreground";
+  };
+
+  const fitBorder = (fitLevel: string) => {
+    if (fitLevel === "high") return "border-emerald-500/30";
+    if (fitLevel === "medium") return "border-amber-500/30";
+    return "border-border/50";
+  };
+
+  const connectorOpacity = (confidence: number) => {
+    if (confidence >= 70) return 0.8;
+    if (confidence >= 50) return 0.5;
+    return 0.3;
+  };
+
+  const connectorWidth = (confidence: number) => {
+    if (confidence >= 70) return 2.5;
+    if (confidence >= 50) return 1.8;
+    return 1.2;
+  };
+
+  if (isMobile) {
+    return (
+      <div className="space-y-3" data-testid="career-path-flow">
+        <div className="flex items-center gap-3 p-3 rounded-lg border border-border/50 bg-muted/20" data-testid="career-flow-origin">
+          <div className="relative shrink-0">
+            <div className="w-10 h-10 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center">
+              <User className="h-5 w-5 text-primary" />
+            </div>
+            <div
+              className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white"
+              style={{ backgroundColor: scoreColor }}
+              data-testid="career-flow-score"
+            >
+              {readinessScore}
+            </div>
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-foreground truncate">{currentRole}</p>
+            <p className="text-[11px] text-muted-foreground">Your starting point</p>
+          </div>
+        </div>
+
+        {paths.map((path, i) => {
+          const isLocked = !isPro && i >= 1;
+          const roles = getRolesForPath(path.name);
+          return (
+            <div key={i} className="relative" data-testid={`career-flow-path-${i}`}>
+              <div className="flex justify-center py-1">
+                <svg width="2" height="24" className="text-muted-foreground/40">
+                  <line x1="1" y1="0" x2="1" y2="24" stroke="currentColor" strokeWidth={connectorWidth(path.confidence)} strokeDasharray="4 3" opacity={connectorOpacity(path.confidence)} />
+                </svg>
+              </div>
+              {path.topGaps[0] && (
+                <div className="flex justify-center -mt-1 -mb-1 relative z-10">
+                  <span className="text-[9px] text-muted-foreground bg-background px-1.5 py-0.5 rounded border border-border/30" data-testid={`career-flow-gap-${i}`}>
+                    {path.topGaps[0]}
+                  </span>
+                </div>
+              )}
+              <div className={`relative rounded-lg border p-3 ${fitBorder(path.fitLevel)} ${isLocked ? "select-none" : ""}`}>
+                {isLocked && (
+                  <div className="absolute inset-0 bg-background/70 backdrop-blur-[3px] rounded-lg z-10 flex items-center justify-center gap-2">
+                    <Lock className="h-3.5 w-3.5 text-muted-foreground" />
+                    <Link href="/pricing">
+                      <Button variant="ghost" size="sm" className="h-auto p-0 text-xs" data-testid={`unlock-path-flow-${i}`}>
+                        Unlock
+                      </Button>
+                    </Link>
+                  </div>
+                )}
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <span className={`text-sm font-semibold ${fitColor(path.fitLevel)}`}>{path.name}</span>
+                  <Badge variant="outline" className="text-[10px] shrink-0">{path.confidence}%</Badge>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{path.description}</p>
+                {roles.length > 0 && (
+                  <div className="mt-2 space-y-1">
+                    {roles.slice(0, 2).map((role) => (
+                      <Link key={role.jobId} href={`/jobs/${role.jobId}`}>
+                        <div className="flex items-center gap-1.5 text-[11px] cursor-pointer hover:text-foreground transition-colors" data-testid={`career-flow-role-${role.jobId}`}>
+                          <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${role.tierColor === "emerald" ? "bg-emerald-500" : "bg-amber-500"}`} />
+                          <span className="text-foreground/80 truncate">{role.title}</span>
+                          <span className="text-muted-foreground shrink-0">@ {role.company}</span>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
+  const originX = 40;
+  const svgH = paths.length <= 1 ? 100 : paths.length === 2 ? 160 : 220;
+  const originY = svgH / 2;
+  const destX = dims.w > 0 ? dims.w * 0.35 : 280;
+  const ySpacing = paths.length <= 1 ? 0 : svgH / (paths.length + 1);
+  const destYs = paths.map((_, i) => ySpacing * (i + 1));
+
+  return (
+    <div className="relative" ref={containerRef} data-testid="career-path-flow">
+      <div className="flex items-start gap-0">
+        <div className="shrink-0 flex flex-col items-center pt-2" style={{ width: "120px", marginTop: `${originY - 40}px` }} data-testid="career-flow-origin">
+          <div className="relative">
+            <div className="w-14 h-14 rounded-full bg-primary/10 border-2 border-primary/30 flex items-center justify-center">
+              <User className="h-7 w-7 text-primary" />
+            </div>
+            <div
+              className="absolute -bottom-1.5 -right-1.5 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white shadow-sm"
+              style={{ backgroundColor: scoreColor }}
+              data-testid="career-flow-score"
+            >
+              {readinessScore}
+            </div>
+          </div>
+          <p className="text-xs font-semibold text-foreground mt-2 text-center leading-tight max-w-[110px] truncate">{currentRole}</p>
+          <p className="text-[10px] text-muted-foreground">You</p>
+        </div>
+
+        <div className="shrink-0" style={{ width: `${destX - 60}px` }}>
+          <svg width="100%" height={svgH} className="overflow-visible">
+            {paths.map((path, i) => {
+              const startX = 0;
+              const startY = originY;
+              const endX = destX - 80;
+              const endY = destYs[i];
+              const cpX = endX * 0.5;
+
+              return (
+                <g key={i}>
+                  <path
+                    d={`M ${startX} ${startY} C ${cpX} ${startY}, ${cpX} ${endY}, ${endX} ${endY}`}
+                    fill="none"
+                    stroke="hsl(var(--muted-foreground))"
+                    strokeWidth={connectorWidth(path.confidence)}
+                    strokeDasharray={path.fitLevel === "low" ? "6 4" : "none"}
+                    opacity={connectorOpacity(path.confidence)}
+                    data-testid={`career-flow-connector-${i}`}
+                  />
+                  {path.topGaps[0] && (
+                    <text
+                      x={cpX}
+                      y={startY + (endY - startY) * 0.5 - 6}
+                      textAnchor="middle"
+                      className="fill-muted-foreground"
+                      fontSize="9"
+                      data-testid={`career-flow-gap-${i}`}
+                    >
+                      {path.topGaps[0].length > 28 ? path.topGaps[0].slice(0, 26) + "..." : path.topGaps[0]}
+                    </text>
+                  )}
+                </g>
+              );
+            })}
+          </svg>
+        </div>
+
+        <div className="flex-1 flex flex-col justify-center" style={{ minHeight: `${svgH}px` }}>
+          <div className="space-y-3" style={{ paddingTop: `${destYs[0] - 30}px` }}>
+            {paths.map((path, i) => {
+              const isLocked = !isPro && i >= 1;
+              const roles = getRolesForPath(path.name);
+              return (
+                <div key={i} className={`relative rounded-lg border p-3 ${fitBorder(path.fitLevel)} ${isLocked ? "select-none" : ""}`} data-testid={`career-flow-path-${i}`}>
+                  {isLocked && (
+                    <div className="absolute inset-0 bg-background/70 backdrop-blur-[3px] rounded-lg z-10 flex items-center justify-center gap-2">
+                      <Lock className="h-3.5 w-3.5 text-muted-foreground" />
+                      <Link href="/pricing">
+                        <Button variant="ghost" size="sm" className="h-auto p-0 text-xs" data-testid={`unlock-path-flow-${i}`}>
+                          Unlock
+                        </Button>
+                      </Link>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <span className={`text-sm font-semibold ${fitColor(path.fitLevel)}`}>{path.name}</span>
+                    <Badge variant="outline" className="text-[10px] shrink-0">{path.confidence}%</Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{path.description}</p>
+                  {roles.length > 0 && (
+                    <div className="mt-2 space-y-1">
+                      {roles.slice(0, 2).map((role) => (
+                        <Link key={role.jobId} href={`/jobs/${role.jobId}`}>
+                          <div className="flex items-center gap-1.5 text-[11px] cursor-pointer hover:text-foreground transition-colors" data-testid={`career-flow-role-${role.jobId}`}>
+                            <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${role.tierColor === "emerald" ? "bg-emerald-500" : "bg-amber-500"}`} />
+                            <span className="text-foreground/80 truncate">{role.title}</span>
+                            <span className="text-muted-foreground shrink-0">@ {role.company}</span>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -1147,33 +1411,6 @@ export default function DiagnosticPage() {
               )}
             </div>
             <div className="space-y-3">
-              <div>
-                <h3 className="text-sm font-semibold text-foreground mb-1.5">Top Career Paths</h3>
-                <div className="space-y-2">
-                  {report.topPaths.slice(0, isPro ? 3 : 1).map((path, i) => (
-                    <div key={i} className="flex items-center gap-3 bg-muted/30 rounded-md p-2.5 border border-border/30" data-testid={`career-path-${i}`}>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-semibold text-foreground">{path.name}</span>
-                          <Badge variant={path.fitLevel === "high" ? "default" : "secondary"} className={`text-[10px] px-1.5 py-0 ${path.fitLevel === "high" ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400" : ""}`}>
-                            {path.confidence}% match
-                          </Badge>
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{path.description}</p>
-                      </div>
-                    </div>
-                  ))}
-                  {!isPro && report.topPaths.length > 1 && (
-                    <div className="flex items-center gap-2 p-2 rounded-md border border-dashed border-border bg-muted/20">
-                      <Lock className="h-3.5 w-3.5 text-muted-foreground" />
-                      <span className="text-xs text-muted-foreground">+{report.topPaths.length - 1} more career {report.topPaths.length - 1 === 1 ? "path" : "paths"} matched to you</span>
-                      <Link href="/pricing">
-                        <Button variant="ghost" size="sm" className="h-auto p-0 text-xs" data-testid="unlock-paths-cta">Explore paths</Button>
-                      </Link>
-                    </div>
-                  )}
-                </div>
-              </div>
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-3 text-xs text-muted-foreground">
                   <span className="flex items-center gap-1"><CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> {report.readinessLadder.ready.length} Ready</span>
@@ -1183,6 +1420,15 @@ export default function DiagnosticPage() {
               </div>
             </div>
           </div>
+
+          {/* Career Path Flow */}
+          <CareerPathFlow
+            topPaths={report.topPaths}
+            readinessLadder={report.readinessLadder}
+            isPro={isPro}
+            currentRole={(resumeData as any)?.[0]?.extractedData?.experience?.[0]?.title || "Your Current Role"}
+            readinessScore={report.overallReadinessScore}
+          />
 
           {/* Charts Row */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
