@@ -399,7 +399,7 @@ export async function scrapeWorkday(
     locationsText: string;
     postedOn: string;
     bulletFields: string[];
-    locationType: string;
+    locationType: 'remote' | 'hybrid' | 'onsite' | undefined;
     applyUrl: string;
     jobId: string;
   }
@@ -1396,11 +1396,20 @@ function isGarbageScrapedJob(job: Partial<ScrapedJob>): boolean {
     /^apply$/i,
     /^back to/i,
     /^cookie/i,
+    /^about\s+us$/i,
+    /^contact$/i,
+    /^join\s+(?:our\s+)?team$/i,
+    /^open\s+positions$/i,
+    /^current\s+openings$/i,
+    /^we.re\s+hiring$/i,
+    /^career\s+opportunities$/i,
   ];
   if (navGarbagePatterns.some(p => p.test(title))) return true;
 
+  if (title.length > 150) return true;
+
   const descLower = desc.toLowerCase();
-  const navKeywords = ['skip to main content', 'careers @', 'returning candidates', 'current employees', 'stay connected', 'visit linkedin', 'visit facebook'];
+  const navKeywords = ['skip to main content', 'careers @', 'returning candidates', 'current employees', 'stay connected', 'visit linkedin', 'visit facebook', 'cookie policy', 'privacy policy', 'terms of use', 'accept cookies'];
   const navKeywordCount = navKeywords.filter(kw => descLower.includes(kw)).length;
   if (navKeywordCount >= 2) return true;
 
@@ -1418,6 +1427,27 @@ function isGarbageScrapedJob(job: Partial<ScrapedJob>): boolean {
       const hasJobContent = /(?:responsibilit|qualificat|requirement|experience|you will|you'll|we are|we're looking)/i.test(desc);
       if (!hasJobContent) return true;
     }
+  }
+
+  const jobContentSignals = /(?:responsibilit|qualificat|requirement|experience|you will|you'll|we are looking|we're looking|about the role|about this role|what you'll do|key duties|must have|preferred|desired|compensation|salary|benefits|who you are|ideal candidate|the opportunity|position|role|team|department|report to|reports to|working with)/i;
+  if (!jobContentSignals.test(desc) && desc.length < 300) {
+    return true;
+  }
+
+  if (job.source === 'ai_extracted') {
+    if (desc.length < 100) return true;
+
+    const hasSpecificRequirements = /\b(?:\d+\+?\s*years?|bachelor|master|JD|MBA|bar\s+admission|degree|proficien|certified|PMP|CPA|CIPP)/i.test(desc);
+    const hasActionVerbs = /\b(?:manage|develop|implement|analyze|draft|review|negotiate|coordinate|oversee|advise|counsel)/i.test(desc);
+    if (!hasSpecificRequirements && !hasActionVerbs) return true;
+
+    const genericOnlyPhrases = [
+      'exciting opportunity', 'dynamic team', 'competitive compensation',
+      'great culture', 'innovative environment', 'passionate individuals',
+      'make a difference', 'world-class team', 'cutting-edge',
+    ];
+    const genericHits = genericOnlyPhrases.filter(p => descLower.includes(p)).length;
+    if (genericHits >= 3 && desc.length < 300) return true;
   }
 
   return false;
@@ -2058,6 +2088,123 @@ function smartExtractFromHTML($: cheerio.CheerioAPI, platform: ATSPlatform): Par
   return result;
 }
 
+function fuzzyMatchInSource(needle: string, haystack: string): boolean {
+  if (!needle || !haystack) return false;
+  const needleLower = needle.toLowerCase().trim();
+  const haystackLower = haystack.toLowerCase();
+  if (haystackLower.includes(needleLower)) return true;
+  const words = needleLower.split(/\s+/).filter(w => w.length > 2);
+  if (words.length === 0) return false;
+  const matchedWords = words.filter(w => haystackLower.includes(w));
+  return matchedWords.length >= Math.ceil(words.length * 0.6);
+}
+
+function isJSRenderedPage(rawHtml: string): boolean {
+  const $ = cheerio.load(rawHtml);
+  $('script, style, noscript, link, meta').remove();
+  const visibleText = $('body').text().replace(/\s+/g, ' ').trim();
+  const scriptCount = (rawHtml.match(/<script[\s>]/gi) || []).length;
+  const spaMarkers = [
+    /id\s*=\s*["'](?:root|app|__next|__nuxt|__gatsby)/i,
+    /data-reactroot/i,
+    /ng-app|ng-version/i,
+    /data-v-[a-f0-9]/i,
+  ];
+  const isSPA = spaMarkers.some(p => p.test(rawHtml));
+  return (visibleText.length < 200 && scriptCount > 3) || (isSPA && visibleText.length < 500);
+}
+
+function detectATSFromScripts(rawHtml: string): { platform: ATSPlatform; url: string } | null {
+  const ghScriptMatch = rawHtml.match(/(?:boards|board)\.greenhouse\.io\/embed\/job_board\/js\?for=([a-zA-Z0-9_-]+)/i)
+    || rawHtml.match(/grnhse_app\s*=\s*["']([^"']+)/i)
+    || rawHtml.match(/greenhouse\.io\/(?:embed\/)?job_board\?for=([a-zA-Z0-9_-]+)/i);
+  if (ghScriptMatch) {
+    const slug = ghScriptMatch[1];
+    return { platform: 'greenhouse', url: `https://boards.greenhouse.io/${slug}` };
+  }
+
+  const leverScriptMatch = rawHtml.match(/jobs\.lever\.co\/([a-zA-Z0-9_-]+)/i);
+  if (leverScriptMatch) return { platform: 'lever', url: `https://jobs.lever.co/${leverScriptMatch[1]}` };
+
+  const ashbyScriptMatch = rawHtml.match(/jobs\.ashbyhq\.com\/([a-zA-Z0-9_-]+)/i);
+  if (ashbyScriptMatch) return { platform: 'ashby', url: `https://jobs.ashbyhq.com/${ashbyScriptMatch[1]}` };
+
+  const wdScriptMatch = rawHtml.match(/(https?:\/\/[a-zA-Z0-9.-]+\.myworkdayjobs\.com\/[a-zA-Z0-9_/-]+)/i);
+  if (wdScriptMatch) return { platform: 'workday', url: wdScriptMatch[1] };
+
+  const srScriptMatch = rawHtml.match(/jobs\.smartrecruiters\.com\/([a-zA-Z0-9_-]+)/i);
+  if (srScriptMatch) return { platform: 'smartrecruiters', url: `https://jobs.smartrecruiters.com/${srScriptMatch[1]}` };
+
+  const personioMatch = rawHtml.match(/(https?:\/\/[a-zA-Z0-9.-]+\.jobs\.personio\.(?:de|com)\/[^"'\s]+)/i);
+  if (personioMatch) return { platform: 'personio', url: personioMatch[1] };
+
+  const workableScript = rawHtml.match(/apply\.workable\.com\/([a-zA-Z0-9_-]+)/i);
+  if (workableScript) return { platform: 'workable', url: `https://apply.workable.com/${workableScript[1]}` };
+
+  const icimsMatch = rawHtml.match(/(https?:\/\/[a-zA-Z0-9.-]+\.icims\.com\/jobs\/[^"'\s]+)/i);
+  if (icimsMatch) return { platform: 'icims', url: icimsMatch[1] };
+
+  const jobviteMatch = rawHtml.match(/(https?:\/\/jobs\.jobvite\.com\/[a-zA-Z0-9_/-]+)/i);
+  if (jobviteMatch) return { platform: 'jobvite', url: jobviteMatch[1] };
+
+  return null;
+}
+
+function validateAIExtraction(parsed: any, sourceText: string, url: string): { valid: boolean; reason: string } {
+  if (parsed.not_found === true || parsed.is_job_posting === false) {
+    return { valid: false, reason: 'AI determined no job posting found on page' };
+  }
+
+  const title = (parsed.title || '').trim();
+  const company = (parsed.company || '').trim();
+  const description = (parsed.description || '').trim();
+
+  if (!title || title.length < 3) {
+    return { valid: false, reason: 'No valid title extracted' };
+  }
+
+  if (!description || description.length < 50) {
+    return { valid: false, reason: `Description too short (${description.length} chars) — likely fabricated` };
+  }
+
+  if (!fuzzyMatchInSource(title, sourceText)) {
+    return { valid: false, reason: `Title "${title}" not found in source text — likely hallucinated` };
+  }
+
+  if (company && company !== 'Unknown Company') {
+    try {
+      const urlDomain = new URL(url).hostname.replace(/^www\./, '').split('.')[0].toLowerCase();
+      const companyWords = company.toLowerCase().split(/\s+/).filter((w: string) => w.length > 2);
+      const companyInSource = fuzzyMatchInSource(company, sourceText);
+      const companyMatchesDomain = companyWords.some((w: string) => urlDomain.includes(w)) || urlDomain.includes(company.toLowerCase().replace(/\s+/g, ''));
+      if (!companyInSource && !companyMatchesDomain) {
+        return { valid: false, reason: `Company "${company}" not found in source text or URL domain — likely hallucinated` };
+      }
+    } catch {}
+  }
+
+  const genericPhrases = [
+    'exciting opportunity', 'dynamic team', 'competitive salary',
+    'great benefits', 'fast-paced environment', 'innovative company',
+  ];
+  const descLower = description.toLowerCase();
+  const genericCount = genericPhrases.filter(p => descLower.includes(p)).length;
+  const hasSpecifics = /\b(?:years?|degree|bachelor|master|experience|proficien|certification|qualif)/i.test(description);
+  if (genericCount >= 3 && !hasSpecifics) {
+    return { valid: false, reason: 'Description contains mostly generic filler phrases without specific requirements — likely fabricated' };
+  }
+
+  const descSentences = description.split(/[.!?]+/).filter((s: string) => s.trim().length > 15);
+  if (descSentences.length > 5) {
+    const sentencesInSource = descSentences.filter((s: string) => fuzzyMatchInSource(s.trim(), sourceText));
+    if (sentencesInSource.length < Math.ceil(descSentences.length * 0.15)) {
+      return { valid: false, reason: `Only ${sentencesInSource.length}/${descSentences.length} description sentences found in source — likely fabricated` };
+    }
+  }
+
+  return { valid: true, reason: 'Passed all validation checks' };
+}
+
 async function scrapeWithAIFallback(url: string, rawHtml: string, basicResult: Partial<ScrapedJob>): Promise<ScrapedJob | null> {
   const hasGoodTitle = basicResult.title && basicResult.title.length > 3;
   const hasGoodDesc = basicResult.description && basicResult.description.length > 100;
@@ -2089,6 +2236,14 @@ async function scrapeWithAIFallback(url: string, rawHtml: string, basicResult: P
     return null;
   }
 
+  if (isJSRenderedPage(rawHtml) && cleanedText.length < 150) {
+    const scriptATS = detectATSFromScripts(rawHtml);
+    if (!scriptATS) {
+      console.log(`[Smart Scraper] JS-rendered page with minimal content from ${url} — skipping AI to prevent hallucination`);
+      return null;
+    }
+  }
+
   const truncated = cleanedText.substring(0, 8000);
 
   try {
@@ -2098,23 +2253,33 @@ async function scrapeWithAIFallback(url: string, rawHtml: string, basicResult: P
       messages: [
         {
           role: "system",
-          content: `You are an expert job posting extractor. Given raw text from a job posting page, extract structured job data.
-Return ONLY valid JSON:
+          content: `You are a strict job posting extractor. Your ONLY job is to extract REAL job data that EXISTS in the provided text.
+
+CRITICAL ANTI-HALLUCINATION RULES:
+1. NEVER invent, fabricate, or guess any information. Every field you return MUST come directly from the text.
+2. If you cannot find a real, specific job posting in the text, you MUST return: {"not_found": true, "reason": "explanation"}
+3. The job title MUST appear verbatim (or near-verbatim) in the source text. Do NOT infer or construct titles.
+4. The company name MUST appear in the text or be obvious from the URL domain. Do NOT guess company names.
+5. The description MUST be composed of sentences/phrases that actually appear in the source text. Do NOT write your own description.
+6. If the page appears to be a careers listing page, a company homepage, a login page, or any non-job-posting page, return {"not_found": true, "reason": "not a job posting page"}.
+7. If the text is mostly navigation menus, cookie banners, or boilerplate, return {"not_found": true, "reason": "insufficient job content"}.
+
+When a real job posting IS found, return ONLY valid JSON:
 {
-  "title": "Exact job title",
-  "company": "Company name",
-  "location": "Location or 'Remote' or 'Not specified'",
-  "description": "The full job description including responsibilities, requirements, qualifications, and benefits. Preserve important details but remove navigation/menu text, cookie notices, and unrelated content.",
+  "is_job_posting": true,
+  "title": "The exact job title as it appears in the text",
+  "company": "Company name as it appears in the text",
+  "location": "Location as stated, or 'Remote', or 'Not specified' if truly not mentioned",
+  "description": "The actual job description text from the page — responsibilities, requirements, qualifications. Copy from source, do not rewrite.",
   "locationType": "remote" | "hybrid" | "onsite",
   "salaryMin": number or null,
   "salaryMax": number or null
 }
-Rules:
-- Extract the REAL job title (not the page title or company tagline)
-- If multiple jobs appear, extract only the primary/most prominent one
-- For salary, convert to annual USD. Handle hourly ($X/hr * 2080), monthly (*12), and "$XK" formats
-- Clean the description: keep responsibilities, requirements, qualifications, benefits. Remove boilerplate.
-- For locationType: "remote" if fully remote/work from home; "hybrid" if mix of remote and office/flexible; "onsite" if must work in office/on-site only. Default to "onsite" if unclear.`,
+
+Additional rules:
+- For salary, only extract if explicitly stated. Convert to annual USD if needed.
+- For locationType: only set based on explicit statements in the text. Default to "onsite" if not mentioned.
+- Preserve the original wording from the source text as much as possible.`,
         },
         {
           role: "user",
@@ -2129,6 +2294,13 @@ Rules:
     if (!content) return null;
 
     const parsed = JSON.parse(content);
+
+    const validation = validateAIExtraction(parsed, cleanedText, url);
+    if (!validation.valid) {
+      console.log(`[Smart Scraper] AI extraction rejected for ${url}: ${validation.reason}`);
+      return null;
+    }
+
     const aiTitle = parsed.title || basicResult.title;
     if (!aiTitle) return null;
 
@@ -2148,12 +2320,12 @@ Rules:
     };
   } catch (error: any) {
     console.error(`[Smart Scraper] AI fallback failed for ${url}:`, error.message);
-    if (basicResult.title) {
+    if (basicResult.title && basicResult.description && basicResult.description.length > 50) {
       return {
         title: basicResult.title,
         company: basicResult.company || 'Unknown Company',
         location: basicResult.location || 'Not specified',
-        description: basicResult.description || `${basicResult.title} position`,
+        description: basicResult.description,
         applyUrl: url,
         postedDate: new Date().toISOString(),
         source: 'scraped',
@@ -2537,23 +2709,51 @@ export async function scrapeSingleJobUrl(url: string, withTrace?: boolean): Prom
 
       if (platform === 'generic' && !scrapedJob) {
         const embedded = detectEmbeddedATS(rawHtml, effectiveUrl);
-        if (embedded) {
-          console.log(`[Smart Scraper] Found embedded ${embedded.platform} ATS in page: ${embedded.url}`);
-          trace.steps.push({ method: 'Embedded ATS Detection', status: 'success', detail: `Found ${platformLabels[embedded.platform] || embedded.platform} embed → ${embedded.url}` });
-          platform = embedded.platform;
+        const scriptATS = !embedded ? detectATSFromScripts(rawHtml) : null;
+        const atsDiscovery = embedded || scriptATS;
+        if (atsDiscovery) {
+          const discoveryMethod = embedded ? 'Embedded ATS Detection' : 'Script ATS Detection';
+          console.log(`[Smart Scraper] Found ${embedded ? 'embedded' : 'script-referenced'} ${atsDiscovery.platform} ATS in page: ${atsDiscovery.url}`);
+          trace.steps.push({ method: discoveryMethod, status: 'success', detail: `Found ${platformLabels[atsDiscovery.platform] || atsDiscovery.platform} → ${atsDiscovery.url}` });
+          platform = atsDiscovery.platform;
           trace.platform = platform;
           trace.platformLabel = platformLabels[platform] || platform;
 
           const embeddedHandler = atsHandlers[platform];
           if (embeddedHandler) {
-            scrapedJob = await embeddedHandler.fn(embedded.url);
+            scrapedJob = await embeddedHandler.fn(atsDiscovery.url);
             if (scrapedJob) {
-              trace.steps.push({ method: `${embeddedHandler.label} (via embed)`, status: 'success', detail: `Found: ${scrapedJob.title}` });
-              trace.extractionMethod = `${embeddedHandler.label} (discovered via embed)`;
+              trace.steps.push({ method: `${embeddedHandler.label} (via ${embedded ? 'embed' : 'script'})`, status: 'success', detail: `Found: ${scrapedJob.title}` });
+              trace.extractionMethod = `${embeddedHandler.label} (discovered via ${embedded ? 'embed' : 'script'})`;
+            }
+          }
+
+          if (!scrapedJob && !embedded && scriptATS) {
+            try {
+              const atsResp = await axios.get(scriptATS.url, {
+                headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36', 'Accept': 'text/html,application/json' },
+                timeout: 15000, maxRedirects: 5,
+              });
+              const $ats = cheerio.load(atsResp.data);
+              const atsLinks = discoverJobLinksFromPage($ats, scriptATS.url);
+              if (atsLinks.length > 0) {
+                const firstATSLink = atsLinks[0];
+                const linkPlatform = detectATSPlatform(firstATSLink);
+                const linkHandler = atsHandlers[linkPlatform];
+                if (linkHandler) {
+                  scrapedJob = await linkHandler.fn(firstATSLink);
+                  if (scrapedJob) {
+                    trace.extractionMethod = `${linkHandler.label} (via script ATS board)`;
+                    trace.steps.push({ method: `${linkHandler.label} (script board)`, status: 'success', detail: `Found: ${scrapedJob.title}` });
+                  }
+                }
+              }
+            } catch {
+              trace.steps.push({ method: 'Script ATS Follow', status: 'failed', detail: 'Could not fetch ATS board page' });
             }
           }
         } else {
-          trace.steps.push({ method: 'Embedded ATS Detection', status: 'skipped', detail: 'No embedded ATS found in page HTML' });
+          trace.steps.push({ method: 'Embedded ATS Detection', status: 'skipped', detail: 'No embedded ATS found in page HTML or scripts' });
         }
       }
 
@@ -2733,7 +2933,17 @@ export async function scrapeSingleJobUrl(url: string, withTrace?: boolean): Prom
     trace.fieldsMissing = allFields.filter(f => !trace.fieldsExtracted.includes(f));
 
     const extractedRatio = trace.fieldsExtracted.length / allFields.length;
-    trace.confidence = extractedRatio >= 0.7 ? 'high' : extractedRatio >= 0.4 ? 'medium' : 'low';
+    const isAIExtracted = trace.extractionMethod?.includes('AI') || scrapedJob.source === 'ai_extracted';
+    if (isAIExtracted) {
+      trace.confidence = extractedRatio >= 0.7 ? 'medium' : 'low';
+      trace.steps.push({
+        method: 'Verification Warning',
+        status: 'failed',
+        detail: `⚠️ AI-extracted content — review carefully before publishing. Title, company, and description should be verified against the original page.`
+      });
+    } else {
+      trace.confidence = extractedRatio >= 0.7 ? 'high' : extractedRatio >= 0.4 ? 'medium' : 'low';
+    }
     trace.processingTimeMs = Date.now() - startTime;
 
     if (withTrace) {
