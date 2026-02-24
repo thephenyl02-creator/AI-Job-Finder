@@ -102,19 +102,19 @@ export default function Landing() {
         <section className="max-w-5xl mx-auto px-4 sm:px-6 pt-10 sm:pt-20 pb-10 sm:pb-20">
           <div className="flex flex-col lg:flex-row items-start gap-8 lg:gap-16">
             <div className="flex-1 max-w-md lg:max-w-lg lg:pt-4">
-              <p className="text-[11px] font-semibold text-muted-foreground tracking-[0.2em] uppercase mb-6" data-testid="text-hero-label">
+              <p className="text-[11px] font-semibold text-muted-foreground tracking-[0.2em] uppercase mb-8" data-testid="text-hero-label">
                 Career intelligence for legal professionals
               </p>
 
               <h1
-                className="text-4xl sm:text-5xl font-serif font-medium text-foreground leading-[1.35]"
+                className="text-4xl sm:text-5xl font-serif font-medium text-foreground leading-[1.45]"
                 data-testid="text-hero-title"
               >
                 Where do you fit in legal tech?
               </h1>
 
               <p
-                className="text-base text-muted-foreground mt-7 leading-relaxed"
+                className="text-base text-muted-foreground mt-8 leading-relaxed"
                 data-testid="text-hero-subtitle"
               >
                 Upload your resume. In 60 seconds, see your readiness score, matching career paths, and a plan to get there.
