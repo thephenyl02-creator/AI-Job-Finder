@@ -1,0 +1,138 @@
+You are working in Replit on my existing web app: “Legal Technology Careers for Lawyers (AI)”.
+
+Goal:
+Increase conversion (visitor → resume upload → signup → Pro) by improving the funnel, adding a payworthy “Pro Preview”, and making the value obvious within 2 minutes.
+
+IMPORTANT CONTEXT
+- Current stats: 89 users, 3 Pro subscribers, $50 revenue (30d).
+- Many users browse but do not upload their resume.
+- The app already has a strong /diagnostic experience (readiness score, career paths, gaps, job matches, ATS/resume tailoring).
+- Do NOT build a new “/score” clone. Improve the existing funnel and /diagnostic.
+
+PRIMARY METRICS
+1) Resume Upload Rate
+2) Upload → Signup rate
+3) Signup → Pro upgrade rate
+
+BUILD THESE CHANGES
+
+1) Landing Page Funnel (reduce friction, increase trust)
+A) Replace primary CTA with:
+- Primary: “Check Your Fit (Free)”
+- Secondary: “Browse Roles”
+B) Under the CTA add trust + clarity:
+- “Private by default. Your resume is not shared.”
+- “Get results in ~90 seconds.”
+C) Add a 3-step “What you get” strip (icons + 1 line each):
+- “Readiness Score”
+- “Top Career Paths”
+- “Exact Gaps + Fix Plan”
+- “Best Matching Roles”
+D) Add social proof module (even small):
+- “89 lawyers onboarded • 3 Pro members”
+- “Average readiness score: (if available)”
+If you don’t have the average yet, omit it.
+
+2) Add a 30-second “Quick Fit” Intake BEFORE resume upload
+When user clicks “Check Your Fit (Free)”, route to /quick-fit with 4–5 questions (no account):
+- Years of experience (0–2, 3–5, 6–10, 10+)
+- Practice area (litigation, corporate, regulatory, etc.)
+- Target direction (Legal Ops, Product, Compliance, AI/Analytics, Client Solutions)
+- Comfort with tech (low/medium/high)
+- Location preference (US/Canada/UK/EU/Other)
+After submit, show:
+- “Your likely best-fit paths (Top 2)”
+- “Typical gaps for this path”
+Then present a clear CTA:
+- “Upload your resume to get your full readiness score + job matches”
+
+This improves conversions by demonstrating value before asking for a resume.
+
+3) Resume Upload Flow (fast + reassuring)
+A) Allow upload without account.
+B) Show a clean loading screen (no fake progress bar) with:
+- “Parsing resume…”
+- “Building readiness score…”
+- “Matching to roles…”
+C) If parsing fails, show a friendly error and re-upload option.
+
+4) Diagnostic Page Upgrade (make the payoff obvious)
+On /diagnostic, ensure the first screen (above the fold) includes:
+- Readiness Score ring/gauge
+- Top 3 best-fit career paths
+- Top 3 gaps
+- “Share on LinkedIn” button (see item 6)
+Below the fold:
+- Top matching jobs (at least 3)
+- “Why these matches” short bullets
+- Optional: ATS/resume tailoring entry
+
+5) Pro Monetization: Add a “Pro Preview” paywall that converts
+Do NOT lock everything. Use a “teaser → upgrade” pattern.
+
+Free users can see:
+- Overall readiness score
+- Top 1 career path (name only)
+- Top 3 gaps (titles only)
+
+Pro users unlock:
+A) Full diagnostic detail:
+- All career paths with reasons
+- Full gap explanations + “2-week fix plan”
+B) Full job matches:
+- Top 10 job matches + full “why”
+C) Resume tailoring:
+- “Tailor my resume to this job” (1-click)
+- ATS score breakdown with actionable fixes
+D) Interview prep bundle:
+- 10 STAR questions tailored to their top path + top job match
+- 3 “stories to prepare” (based on resume content)
+E) “One-click LinkedIn headline + summary rewrite” for the target path
+
+Paywall placement:
+- After showing the free teaser results, insert an “Unlock Pro” card with:
+  - 3 bullets of what they get
+  - Pricing (monthly)
+  - A clear “Upgrade to Pro” button
+- Also add Pro lock icons on Pro-only sections (so users see what they’re missing)
+
+6) Add the LinkedIn Share Loop (viral distribution)
+On /diagnostic add “Share on LinkedIn”:
+- Opens modal with copy-to-clipboard text + “Open LinkedIn” link.
+Use this share template (non-salesy):
+“I checked my readiness for legal tech roles — {score}/100.
+Top path: {path1}. Biggest gap I’m fixing: {gap1}.
+Tool I used: {site_url}”
+
+7) Data Tracking (minimal, practical)
+Implement event tracking (DB table or simple analytics) for:
+- landing_cta_click
+- quick_fit_completed
+- resume_uploaded
+- diagnostic_viewed
+- pro_paywall_viewed
+- upgrade_clicked
+- upgrade_completed
+- share_clicked
+Store only anonymous/aggregate identifiers unless user is logged in.
+Do NOT store raw resume text in analytics logs.
+
+8) UX and Copy Requirements
+- Keep design premium/minimal.
+- Remove clutter and reduce cognitive load on landing.
+- Make the “result” feel immediate and structured.
+- Avoid hypey “AI-powered” language; keep it professional and lawyer-friendly.
+
+DELIVERABLES
+- /quick-fit page + routing from landing CTA
+- Updated landing hero and “what you get” strip + trust lines
+- Improved /diagnostic above-the-fold layout
+- Pro preview paywall + locked Pro sections
+- LinkedIn share modal (copy + open link)
+- Basic event tracking
+
+TECH
+- Use the existing stack in the repo.
+- Keep code clean and production-ready.
+- No paid APIs required.
+- Ensure the funnel works end-to-end with fast load times.
