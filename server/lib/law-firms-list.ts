@@ -1481,4 +1481,456 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
     leverPostingsUrl: 'https://jobs.lever.co/jusmundi',
     type: 'tech-legal',
   },
+
+  // ===================================================
+  // ADDITIONAL LEGAL AI & LEGAL TECH STARTUPS
+  // ===================================================
+  {
+    name: 'Supio',
+    careerUrl: 'https://www.supio.com/careers',
+    ashbyUrl: 'https://api.ashbyhq.com/posting-api/job-board/supio',
+    type: 'startup',
+  },
+  {
+    name: 'Paxton AI',
+    careerUrl: 'https://www.paxton.ai/careers',
+    ashbyUrl: 'https://api.ashbyhq.com/posting-api/job-board/paxton',
+    type: 'startup',
+  },
+  {
+    name: 'Case Status',
+    careerUrl: 'https://www.casestatus.com/careers',
+    greenhouseId: 'casestatus',
+    type: 'startup',
+  },
+  {
+    name: 'Harbor Global',
+    careerUrl: 'https://www.harborglobal.com/careers',
+    greenhouseId: 'harborglobal',
+    type: 'tech-legal',
+  },
+  {
+    name: 'Checkr',
+    careerUrl: 'https://checkr.com/company/careers',
+    greenhouseId: 'checkr',
+    type: 'company',
+  },
+  {
+    name: 'Kore.ai',
+    careerUrl: 'https://kore.ai/careers/',
+    type: 'company',
+  },
+  {
+    name: 'IntelAgree',
+    careerUrl: 'https://intelagree.com/careers/',
+    greenhouseId: 'intelagree',
+    type: 'tech-legal',
+  },
+  {
+    name: 'Xakia Technologies',
+    careerUrl: 'https://www.xakiatech.com/careers',
+    leverPostingsUrl: 'https://jobs.lever.co/xakia',
+    type: 'tech-legal',
+  },
+  {
+    name: 'ThoughtTrace',
+    careerUrl: 'https://www.thoughttrace.com/careers',
+    greenhouseId: 'thoughttrace',
+    type: 'tech-legal',
+  },
+  {
+    name: 'Legistify',
+    careerUrl: 'https://www.legistify.com/careers',
+    leverPostingsUrl: 'https://jobs.lever.co/legistify',
+    type: 'startup',
+  },
+  {
+    name: 'Lawyaw',
+    careerUrl: 'https://lawyaw.com/careers',
+    greenhouseId: 'lawyaw',
+    type: 'startup',
+  },
+  {
+    name: 'Lawgeex',
+    careerUrl: 'https://www.lawgeex.com/careers/',
+    greenhouseId: 'lawgeex',
+    type: 'startup',
+  },
+  {
+    name: 'Documate',
+    careerUrl: 'https://www.documate.org/careers',
+    leverPostingsUrl: 'https://jobs.lever.co/documate',
+    type: 'startup',
+  },
+  {
+    name: 'Lawyered',
+    careerUrl: 'https://www.lawyered.in/careers',
+    leverPostingsUrl: 'https://jobs.lever.co/lawyered',
+    type: 'startup',
+  },
+  {
+    name: 'ClearAccessIP',
+    careerUrl: 'https://www.clearaccessip.com/careers',
+    greenhouseId: 'clearaccessip',
+    type: 'tech-legal',
+  },
+  {
+    name: 'Legalfit',
+    careerUrl: 'https://www.legalfit.com/careers',
+    leverPostingsUrl: 'https://jobs.lever.co/legalfit',
+    type: 'startup',
+  },
+  {
+    name: 'Apperio',
+    careerUrl: 'https://www.apperio.com/careers',
+    leverPostingsUrl: 'https://jobs.lever.co/apperio',
+    type: 'tech-legal',
+  },
+  {
+    name: 'Tessian',
+    careerUrl: 'https://www.tessian.com/careers/',
+    greenhouseId: 'tessian',
+    type: 'tech-legal',
+  },
+  {
+    name: 'Onna',
+    careerUrl: 'https://onna.com/careers/',
+    greenhouseId: 'onna',
+    type: 'tech-legal',
+  },
+  {
+    name: 'Hive (Legal)',
+    careerUrl: 'https://www.hive.co/careers',
+    type: 'tech-legal',
+  },
+
+  // ===================================================
+  // EUROPEAN BIG LAW FIRMS (UK & Continental)
+  // ===================================================
+  {
+    name: 'CMS',
+    careerUrl: 'https://www.cms.law/en/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'Taylor Wessing',
+    careerUrl: 'https://www.taylorwessing.com/en/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'Osborne Clarke',
+    careerUrl: 'https://www.osborneclarke.com/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'Shoosmiths',
+    careerUrl: 'https://www.shoosmiths.com/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'Fieldfisher',
+    careerUrl: 'https://www.fieldfisher.com/en/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'Bird & Bird',
+    careerUrl: 'https://www.twobirds.com/en/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'Gowling WLG',
+    careerUrl: 'https://gowlingwlg.com/en/careers/',
+    type: 'biglaw',
+  },
+  {
+    name: 'Womble Bond Dickinson',
+    careerUrl: 'https://www.womblebonddickinson.com/us/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'DAC Beachcroft',
+    careerUrl: 'https://www.dacbeachcroft.com/en/careers/',
+    type: 'biglaw',
+  },
+  {
+    name: 'Addleshaw Goddard',
+    careerUrl: 'https://www.addleshawgoddard.com/en/careers/',
+    type: 'biglaw',
+  },
+  {
+    name: 'Kennedys',
+    careerUrl: 'https://www.kennedyslaw.com/en/careers/',
+    type: 'biglaw',
+  },
+  {
+    name: 'Watson Farley & Williams',
+    careerUrl: 'https://www.wfw.com/careers/',
+    type: 'biglaw',
+  },
+  {
+    name: 'Bryan Cave Leighton Paisner',
+    careerUrl: 'https://www.bclplaw.com/en-US/careers/',
+    type: 'biglaw',
+  },
+  {
+    name: 'Mills & Reeve',
+    careerUrl: 'https://www.mills-reeve.com/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'TLT',
+    careerUrl: 'https://www.tltsolicitors.com/careers/',
+    type: 'biglaw',
+  },
+  {
+    name: 'Burges Salmon',
+    careerUrl: 'https://www.burges-salmon.com/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'Bristows',
+    careerUrl: 'https://www.bristows.com/careers/',
+    type: 'biglaw',
+  },
+  {
+    name: 'Uría Menéndez',
+    careerUrl: 'https://www.uria.com/en/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'Garrigues',
+    careerUrl: 'https://www.garrigues.com/en_GB/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'Cuatrecasas',
+    careerUrl: 'https://www.cuatrecasas.com/en/careers',
+    type: 'biglaw',
+  },
+
+  // ===================================================
+  // ASIA-PACIFIC LAW FIRMS (Additional)
+  // ===================================================
+  {
+    name: 'Drew & Napier',
+    careerUrl: 'https://www.drewnapier.com/Careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'WongPartnership',
+    careerUrl: 'https://www.wongpartnership.com/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'Nishith Desai Associates',
+    careerUrl: 'https://www.nishithdesai.com/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'Khaitan & Co',
+    careerUrl: 'https://www.khaitanco.com/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'AZB & Partners',
+    careerUrl: 'https://www.azbpartners.com/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'Cyril Amarchand Mangaldas',
+    careerUrl: 'https://www.cyrilshroff.com/careers/',
+    type: 'biglaw',
+  },
+  {
+    name: 'Trilegal',
+    careerUrl: 'https://www.trilegal.com/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'Anderson Mori & Tomotsune',
+    careerUrl: 'https://www.amt-law.com/en/careers/',
+    type: 'biglaw',
+  },
+  {
+    name: 'TMI Associates',
+    careerUrl: 'https://www.tmi.gr.jp/en/careers/',
+    type: 'biglaw',
+  },
+  {
+    name: 'Nagashima Ohno & Tsunematsu',
+    careerUrl: 'https://www.noandt.com/en/careers/',
+    type: 'biglaw',
+  },
+
+  // ===================================================
+  // MIDDLE EAST & AFRICA LAW FIRMS
+  // ===================================================
+  {
+    name: 'Al Tamimi & Company',
+    careerUrl: 'https://www.tamimi.com/careers/',
+    type: 'biglaw',
+  },
+  {
+    name: 'Hadef & Partners',
+    careerUrl: 'https://www.hadefpartners.com/Careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'BSA Ahmad Bin Hezeem & Associates',
+    careerUrl: 'https://www.bsabh.com/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'Afridi & Angell',
+    careerUrl: 'https://www.afridi-angell.com/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'Bowmans',
+    careerUrl: 'https://www.bowmanslaw.com/careers/',
+    type: 'biglaw',
+  },
+  {
+    name: 'ENSafrica',
+    careerUrl: 'https://www.ensafrica.com/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'Webber Wentzel',
+    careerUrl: 'https://www.webberwentzel.com/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'Werksmans Attorneys',
+    careerUrl: 'https://www.werksmans.com/careers/',
+    type: 'biglaw',
+  },
+  {
+    name: 'AB & David',
+    careerUrl: 'https://www.abdavid.com/careers',
+    type: 'biglaw',
+  },
+
+  // ===================================================
+  // LATIN AMERICAN LAW FIRMS
+  // ===================================================
+  {
+    name: 'Mattos Filho',
+    careerUrl: 'https://www.mattosfilho.com.br/en/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'Pinheiro Neto',
+    careerUrl: 'https://www.pinheironeto.com.br/en/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'Machado Meyer',
+    careerUrl: 'https://www.machadomeyer.com.br/en/careers',
+    type: 'biglaw',
+  },
+
+  // ===================================================
+  // ADDITIONAL US BIG LAW & MID-SIZE FIRMS
+  // ===================================================
+  {
+    name: 'Katten Muchin Rosenman',
+    careerUrl: 'https://katten.com/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'Polsinelli',
+    careerUrl: 'https://www.polsinelli.com/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'Seyfarth Shaw',
+    careerUrl: 'https://www.seyfarth.com/careers.html',
+    type: 'biglaw',
+  },
+  {
+    name: 'Nixon Peabody',
+    careerUrl: 'https://www.nixonpeabody.com/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'Pillsbury Winthrop',
+    careerUrl: 'https://www.pillsburylaw.com/en/careers.html',
+    type: 'biglaw',
+  },
+  {
+    name: 'Husch Blackwell',
+    careerUrl: 'https://www.huschblackwell.com/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'Faegre Drinker',
+    careerUrl: 'https://www.faegredrinker.com/en/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'Troutman Pepper',
+    careerUrl: 'https://www.troutman.com/careers.html',
+    type: 'biglaw',
+  },
+  {
+    name: 'Venable',
+    careerUrl: 'https://www.venable.com/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'Crowell & Moring',
+    careerUrl: 'https://www.crowell.com/en/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'Sheppard Mullin',
+    careerUrl: 'https://www.sheppardmullin.com/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'Duane Morris',
+    careerUrl: 'https://www.duanemorris.com/site/careers.html',
+    type: 'biglaw',
+  },
+  {
+    name: 'Steptoe & Johnson',
+    careerUrl: 'https://www.steptoe.com/en/careers.html',
+    type: 'biglaw',
+  },
+  {
+    name: 'Blank Rome',
+    careerUrl: 'https://www.blankrome.com/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'Ballard Spahr',
+    careerUrl: 'https://www.ballardspahr.com/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'Cozen O\'Connor',
+    careerUrl: 'https://www.cozen.com/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'Ogletree Deakins',
+    careerUrl: 'https://ogletree.com/careers/',
+    type: 'biglaw',
+  },
+  {
+    name: 'Jackson Lewis',
+    careerUrl: 'https://www.jacksonlewis.com/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'Littler Mendelson',
+    careerUrl: 'https://www.littler.com/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'Fisher Phillips',
+    careerUrl: 'https://www.fisherphillips.com/en/careers.html',
+    type: 'biglaw',
+  },
 ];
