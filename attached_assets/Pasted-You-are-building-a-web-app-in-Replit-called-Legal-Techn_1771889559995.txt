@@ -1,0 +1,95 @@
+You are building a web app in Replit called “Legal Technology Careers for Lawyers (AI)”.
+
+Goal:
+Increase conversions by making “Upload Resume → AI Career Readiness Score in 90 seconds” the primary user flow, and add a viral sharing loop.
+
+Build / implement these changes:
+
+1) Homepage (Landing) — make Resume Upload the primary CTA
+- Replace current hero headline and subheadline with:
+  Headline: “Upload your resume. Get your AI Career Readiness Score in 90 seconds.”
+  Subheadline: “See your best-fit legal tech paths, match scores for live roles, and the exact gaps to close.”
+- Primary CTA button: “Upload Resume — Free”
+  - Clicking opens file picker (PDF/DOCX)
+  - After upload, immediately route to /score (or /dashboard) with loading state
+- Secondary CTA: “Browse roles” (routes to /jobs)
+- Add a short trust line under CTA:
+  “Free to browse. No account needed.” + “Your resume is private.”
+
+2) Minimal onboarding after upload (no account required)
+- After upload, show a 3-step progress indicator:
+  Step 1: Parse resume
+  Step 2: Identify skills + experience signals
+  Step 3: Match to legal tech roles
+- Then show “Your AI Career Readiness Score” screen.
+
+3) Score page (/score) — the “hook”
+Show these sections in this order:
+A) AI Career Readiness Score (0–100) as a ring/gauge
+- Label: “Ready”, “Almost ready”, “Needs work” based on score thresholds you choose
+B) Top 3 best-fit Career Paths (cards)
+- Each card: Path name, “Fit: Strong/Good/Emerging”, and 2–3 bullet reasons
+C) Top 5 matching jobs (cards)
+- Each job: title, company, location/remote tag, match %, and “Why this match” 1–2 lines
+D) Gaps to close (Top 5)
+- Each gap: skill/experience area, and “How to fix in 2 weeks” micro-suggestion
+
+4) Add a LinkedIn share loop (very important)
+- Add a “Share on LinkedIn” button on /score
+- Clicking should open a modal with:
+  - A copy-to-clipboard post text (generated from score + top path)
+  - A “Open LinkedIn” link/button that takes user to LinkedIn post composer URL (if possible) or just linkedin.com/feed
+- Share text template (fill variables):
+  “I just checked my Legal Tech Career Readiness — Score: {score}/100.
+   Best-fit paths: {path1}, {path2}, {path3}.
+   Biggest gap I’m fixing next: {gap1}.
+   Try it: {your_site_url}”
+
+5) Data collection (privacy-safe) for your future “market insights”
+Store these fields (anonymized; no raw resume text stored):
+- user_id (random uuid)
+- upload_timestamp
+- readiness_score
+- top_paths (array)
+- top_gaps (array)
+- top_job_matches (job_ids + match%)
+- optional: country/region (derived from job preferences, not from PII)
+IMPORTANT:
+- Do NOT store the full resume file permanently unless user explicitly saves it.
+- If you must store it temporarily, delete after analysis.
+
+6) Scoring & matching logic (simple first version)
+Implement a basic scoring model using these signals from parsed resume text:
+- Years of experience (approx)
+- Presence of legal keywords (contracts, compliance, litigation, regulatory, etc.)
+- Presence of product/ops keywords (product, roadmap, agile, stakeholder, process, metrics, etc.)
+- Presence of AI/data keywords (LLM, NLP, data analysis, python, SQL, analytics, prompt, etc.)
+Map the signals to:
+- readiness_score (0–100)
+- path_fit scores for 8–12 legal tech career paths (Legal Ops, Legal Product, Legal AI & Analytics, Legal Sales/Solutions, Compliance/GRC, Privacy, Implementation/CS, etc.)
+- job match %: compare resume keyword set to each job’s keyword set
+
+Use a transparent approach:
+- Show user “Strengths” and “Gaps” based on missing clusters
+- Keep it deterministic and explainable
+
+7) UX requirements
+- Keep the design premium/minimal (like your screenshots)
+- Fast loading, clear empty states
+- If user doesn’t upload a resume, they can still browse jobs and map
+- If parsing fails, show a friendly error and allow re-upload
+
+Deliverables
+- Update the landing page copy + CTA flow
+- Implement /score page UI
+- Implement resume upload + parsing (PDF/DOCX)
+- Implement the share modal + copy-to-clipboard
+- Implement database schema for anonymized insights
+- Keep code clean and production-ready
+
+Tech constraints (assume this in Replit)
+- Frontend: Next.js or React
+- Backend: Node/Express or Next API routes
+- Database: SQLite or Postgres (whatever Replit supports easily)
+- Resume parsing: use a reasonable library for PDF/DOCX extraction
+- No paid APIs required
