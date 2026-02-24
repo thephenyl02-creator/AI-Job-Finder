@@ -859,6 +859,22 @@ export const insertJobFitResultSchema = createInsertSchema(jobFitResults).omit({
 export type JobFitResult = typeof jobFitResults.$inferSelect;
 export type InsertJobFitResult = z.infer<typeof insertJobFitResultSchema>;
 
+export const anonymousEvents = pgTable("anonymous_events", {
+  id: serial("id").primaryKey(),
+  eventType: varchar("event_type", { length: 50 }).notNull(),
+  hashedIp: varchar("hashed_ip", { length: 64 }).notNull(),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const insertAnonymousEventSchema = createInsertSchema(anonymousEvents).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type AnonymousEvent = typeof anonymousEvents.$inferSelect;
+export type InsertAnonymousEvent = z.infer<typeof insertAnonymousEventSchema>;
+
 export interface SkillCluster {
   name: string;
   score: number;
