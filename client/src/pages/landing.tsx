@@ -107,7 +107,7 @@ export default function Landing() {
               </p>
 
               <h1
-                className="text-4xl sm:text-5xl font-serif font-medium text-foreground leading-[1.08] tracking-tight"
+                className="text-4xl sm:text-5xl font-serif font-medium text-foreground leading-[1.2]"
                 data-testid="text-hero-title"
               >
                 Where do you fit in legal tech?
