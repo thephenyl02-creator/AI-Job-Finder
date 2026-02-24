@@ -499,6 +499,7 @@ function AnonymousPreview() {
       try {
         localStorage.setItem("ltc_diagnostic_preview", JSON.stringify(data));
       } catch {}
+      fetch("/api/track", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ eventType: "anon_diagnostic_upload" }) }).catch(() => {});
     } catch (err: any) {
       setError(err.message || "Failed to analyze resume.");
     } finally {

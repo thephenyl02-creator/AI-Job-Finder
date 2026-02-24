@@ -141,7 +141,11 @@ export default function Landing() {
 
               <div className="mt-8 flex items-center gap-3 flex-wrap">
                 <Button size="lg" asChild data-testid="button-hero-diagnostic">
-                  <a href="/diagnostic">
+                  <a href="/diagnostic" onClick={() => {
+                    if (!hasDiagnostic) {
+                      try { navigator.sendBeacon("/api/track", new Blob([JSON.stringify({ eventType: "landing_cta_click" })], { type: "application/json" })); } catch {};
+                    }
+                  }}>
                     {hasDiagnostic ? "View your results" : "Check Your Fit"}
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </a>

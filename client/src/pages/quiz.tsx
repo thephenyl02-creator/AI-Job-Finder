@@ -142,6 +142,7 @@ export default function QuizPage() {
     },
     onSuccess: (data) => {
       setResult(data);
+      fetch("/api/track", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ eventType: "quiz_completion" }) }).catch(() => {});
     },
   });
 

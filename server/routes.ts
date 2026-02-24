@@ -273,6 +273,23 @@ export async function registerRoutes(
     }
   });
 
+  const VALID_ANON_EVENTS = ["landing_cta_click", "quiz_completion", "anon_diagnostic_upload"];
+  app.post("/api/track", async (req, res) => {
+    try {
+      const { eventType, metadata } = req.body;
+      if (!eventType || !VALID_ANON_EVENTS.includes(eventType)) {
+        return res.status(400).json({ error: "Invalid event type" });
+      }
+      const ip = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() || req.socket.remoteAddress || "unknown";
+      const hashedIp = crypto.createHash("sha256").update(ip + (process.env.SESSION_SECRET || "salt")).digest("hex").slice(0, 16);
+      await storage.trackAnonymousEvent(eventType, hashedIp, metadata || null);
+      res.json({ ok: true });
+    } catch (error) {
+      console.error("Track event error:", error);
+      res.status(500).json({ error: "Failed to track event" });
+    }
+  });
+
   app.get("/api/job-categories", async (req, res) => {
     try {
       const categories = await storage.getJobCategories();
@@ -5328,6 +5345,18 @@ Rules:
     } catch (error) {
       console.error("Analytics funnel error:", error);
       res.status(500).json({ error: "Failed to fetch funnel data" });
+    }
+  });
+
+  app.get("/api/admin/analytics/anonymous-funnel", isAuthenticated, async (req, res) => {
+    if (!(await isAdminCheck(req))) return res.status(403).json({ error: "Admin access required" });
+    try {
+      const days = parseInt(req.query.days as string) || 30;
+      const funnel = await storage.getAnonymousFunnel(days);
+      res.json(funnel);
+    } catch (error) {
+      console.error("Anonymous funnel error:", error);
+      res.status(500).json({ error: "Failed to fetch anonymous funnel" });
     }
   });
 

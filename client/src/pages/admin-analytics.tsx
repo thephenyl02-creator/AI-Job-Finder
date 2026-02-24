@@ -213,6 +213,17 @@ export default function AdminAnalyticsPage() {
     refetchInterval: 30000,
   });
 
+  const { data: anonFunnel, isLoading: loadingAnonFunnel } = useQuery<{
+    landingCtaClicks: number;
+    quizCompletions: number;
+    anonDiagnosticUploads: number;
+    uniqueVisitors: number;
+  }>({
+    queryKey: ["/api/admin/analytics/anonymous-funnel"],
+    enabled: isAdmin,
+    refetchInterval: 30000,
+  });
+
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -437,6 +448,35 @@ export default function AdminAnalyticsPage() {
                     ))}
                   </div>
                 ) : null}
+              </CardContent>
+            </Card>
+
+            <Card data-testid="section-anonymous-funnel">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Anonymous Funnel</CardTitle>
+                <CardDescription>Pre-signup activity (last 30 days, unique visitors)</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {loadingAnonFunnel ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                  </div>
+                ) : anonFunnel ? (
+                  <div className="space-y-2">
+                    {[
+                      { label: "Clicked 'Check Your Fit'", value: anonFunnel.landingCtaClicks },
+                      { label: "Completed Quiz", value: anonFunnel.quizCompletions },
+                      { label: "Uploaded Resume (Anonymous)", value: anonFunnel.anonDiagnosticUploads },
+                    ].map((step, i) => (
+                      <FunnelStep key={i} label={step.label} value={step.value} total={anonFunnel.landingCtaClicks || 1} index={i} />
+                    ))}
+                    <div className="pt-2 border-t mt-3">
+                      <p className="text-xs text-muted-foreground">Unique visitors tracked: <span className="font-medium text-foreground">{anonFunnel.uniqueVisitors}</span></p>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-4">No anonymous events tracked yet</p>
+                )}
               </CardContent>
             </Card>
           </div>
