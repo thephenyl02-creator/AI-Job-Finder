@@ -120,7 +120,7 @@ export default function Landing() {
                 Upload your resume. In 60 seconds, see your readiness score, matching career paths, and a plan to get there.
               </p>
 
-              <div className="mt-8 flex items-center gap-3 flex-wrap">
+              <div className="mt-8 flex items-center gap-4 flex-wrap">
                 <Button size="lg" asChild data-testid="button-hero-diagnostic">
                   <a href="/diagnostic" onClick={() => {
                     if (!hasDiagnostic) {
@@ -131,21 +131,22 @@ export default function Landing() {
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </a>
                 </Button>
-              </div>
-              <div className="mt-4">
-                <a href="/jobs" className="text-xs text-muted-foreground hover:text-foreground transition-colors" data-testid="link-hero-browse">
-                  Or browse {stats?.totalJobs ? `${stats.totalJobs}+` : ""} open roles →
+                <a href="/jobs" className="text-sm text-muted-foreground hover:text-foreground transition-colors" data-testid="link-hero-browse">
+                  or browse {stats?.totalJobs ? `${stats.totalJobs}+` : ""} roles →
                 </a>
               </div>
-              <div className="mt-3 flex items-center gap-3 text-xs text-muted-foreground flex-wrap" data-testid="text-hero-trust">
+
+              <div className="mt-5 flex items-center gap-3 text-xs text-muted-foreground flex-wrap" data-testid="text-hero-trust">
                 <span className="flex items-center gap-1"><Lock className="h-3 w-3" /> Private by default</span>
                 <span className="text-border">·</span>
                 <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> Results in ~90 seconds</span>
                 <span className="text-border">·</span>
                 <span>No account needed</span>
               </div>
-              <p className="mt-2">
-                <a href="/quiz" className="text-xs text-muted-foreground hover:text-foreground transition-colors" data-testid="link-hero-quiz">
+
+              <p className="mt-4">
+                <a href="/quiz" className="text-sm text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-1.5" data-testid="link-hero-quiz">
+                  <Search className="h-3.5 w-3.5" />
                   Not sure yet? Take a 30-second career quiz →
                 </a>
               </p>
