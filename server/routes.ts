@@ -7546,6 +7546,13 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
         return res.json({ report: null });
       }
 
+      const [resumeExists] = await db.select({ id: resumes.id }).from(resumes)
+        .where(eq(resumes.id, latest.resumeId))
+        .limit(1);
+      if (!resumeExists) {
+        return res.json({ report: null });
+      }
+
       res.json({
         report: latest.reportJson,
         reportId: latest.id,

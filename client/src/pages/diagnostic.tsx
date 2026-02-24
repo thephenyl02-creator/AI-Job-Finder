@@ -835,6 +835,14 @@ function AnonymousPreview() {
     return (
       <div className="min-h-[60vh] flex flex-col items-center px-4 py-10">
         <div className="max-w-lg w-full space-y-8">
+          <div className="mb-2">
+            <Link href="/">
+              <Button variant="ghost" size="sm" className="text-muted-foreground gap-1.5" data-testid="button-preview-back-home">
+                <ArrowLeft className="h-4 w-4" />
+                Back to home
+              </Button>
+            </Link>
+          </div>
           <div className="text-center">
             <p className="text-[11px] font-semibold text-muted-foreground tracking-[0.2em] uppercase mb-2">
               Your Preview Results
@@ -961,6 +969,14 @@ function AnonymousPreview() {
   return (
     <div className="min-h-[60vh] flex flex-col items-center justify-center px-4">
       <div className="max-w-lg w-full space-y-6">
+        <div className="mb-2">
+          <Link href="/">
+            <Button variant="ghost" size="sm" className="text-muted-foreground gap-1.5" data-testid="button-back-home">
+              <ArrowLeft className="h-4 w-4" />
+              Back to home
+            </Button>
+          </Link>
+        </div>
         <div className="text-center">
           <p className="text-[11px] font-semibold text-muted-foreground tracking-[0.2em] uppercase mb-3">
             Career Diagnostic

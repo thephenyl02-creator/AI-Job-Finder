@@ -209,7 +209,8 @@ export default function DashboardPage() {
   });
 
   const diagnosticReport = rawDiagnostic?.report || null;
-  const hasDiagnostic = !!diagnosticReport;
+  const hasResumes = (dashData?.readiness?.resumeCount ?? 0) > 0;
+  const hasDiagnostic = !!diagnosticReport && hasResumes;
   const readinessScore = diagnosticReport?.readinessScore ?? rawDiagnostic?.overallReadinessScore ?? 0;
   const diagnosticCreatedAt = rawDiagnostic?.createdAt;
   const currentWeek = diagnosticCreatedAt ? getCurrentWeek(diagnosticCreatedAt) : 1;
