@@ -458,6 +458,7 @@ function AnonymousPreview() {
   const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { data: statsData } = useQuery<{ totalJobs: number }>({ queryKey: ["/api/stats"] });
 
   const handleFile = useCallback(async (file: File) => {
     const validTypes = [
@@ -540,7 +541,7 @@ function AnonymousPreview() {
           <div>
             <h2 className="text-xl font-bold font-serif text-foreground" data-testid="text-analyzing">Analyzing your resume</h2>
             <p className="text-sm text-muted-foreground mt-2">
-              Evaluating your skills against {670}+ legal tech roles. This takes about 30–60 seconds.
+              Evaluating your skills against {statsData?.totalJobs ?? ""}+ legal tech roles. This takes about 30–60 seconds.
             </p>
           </div>
           <div className="space-y-2 max-w-xs mx-auto">
