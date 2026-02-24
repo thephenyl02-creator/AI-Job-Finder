@@ -16,6 +16,10 @@ import {
   Target,
   Search,
   Loader2,
+  Lock,
+  FileText,
+  CheckCircle2,
+  Upload,
 } from "lucide-react";
 
 interface QuizAnswers {
@@ -355,13 +359,89 @@ export default function QuizPage() {
                 ))}
               </div>
 
-              <div className="space-y-3 pt-2">
-                <Button className="w-full" asChild data-testid="button-quiz-diagnostic-cta">
-                  <Link href="/diagnostic">
-                    <Target className="mr-2 h-4 w-4" />
-                    Get your full readiness score
-                  </Link>
-                </Button>
+              <Card className="border-primary/30 bg-primary/[0.03]" data-testid="quiz-upgrade-bridge">
+                <CardContent className="p-5 space-y-4">
+                  <div className="text-center">
+                    <p className="text-xs font-semibold text-muted-foreground tracking-wide uppercase mb-1">
+                      Quiz estimate vs. resume analysis
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">
+                      Your quiz gives a directional estimate. A resume scan unlocks precision.
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-[1fr_auto_1fr] gap-0 text-xs">
+                    <div className="text-center pb-2 border-b border-border/50">
+                      <Badge variant="secondary" className="text-[10px]">Quiz Estimate</Badge>
+                      <p className="text-[10px] text-muted-foreground mt-1">~60% confidence</p>
+                    </div>
+                    <div className="pb-2 border-b border-border/50" />
+                    <div className="text-center pb-2 border-b border-border/50">
+                      <Badge className="text-[10px]">Resume-Verified</Badge>
+                      <p className="text-[10px] text-muted-foreground mt-1">95%+ confidence</p>
+                    </div>
+
+                    <div className="py-2.5 text-center border-b border-border/30">
+                      <p className="text-muted-foreground">Top 2 paths</p>
+                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 mx-auto mt-1" />
+                    </div>
+                    <div className="py-2.5 border-b border-border/30 flex items-center justify-center">
+                      <span className="text-muted-foreground/40 text-[10px]">vs</span>
+                    </div>
+                    <div className="py-2.5 text-center border-b border-border/30">
+                      <p className="text-foreground font-medium">All paths ranked</p>
+                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 mx-auto mt-1" />
+                    </div>
+
+                    <div className="py-2.5 text-center border-b border-border/30">
+                      <p className="text-muted-foreground">Difficulty level</p>
+                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 mx-auto mt-1" />
+                    </div>
+                    <div className="py-2.5 border-b border-border/30 flex items-center justify-center">
+                      <span className="text-muted-foreground/40 text-[10px]">vs</span>
+                    </div>
+                    <div className="py-2.5 text-center border-b border-border/30">
+                      <p className="text-foreground font-medium">Readiness score</p>
+                      <Lock className="h-3.5 w-3.5 text-muted-foreground/40 mx-auto mt-1" />
+                    </div>
+
+                    <div className="py-2.5 text-center border-b border-border/30">
+                      <p className="text-muted-foreground/50">—</p>
+                    </div>
+                    <div className="py-2.5 border-b border-border/30 flex items-center justify-center">
+                      <span className="text-muted-foreground/40 text-[10px]">vs</span>
+                    </div>
+                    <div className="py-2.5 text-center border-b border-border/30">
+                      <p className="text-foreground font-medium">Exact skill gaps</p>
+                      <Lock className="h-3.5 w-3.5 text-muted-foreground/40 mx-auto mt-1" />
+                    </div>
+
+                    <div className="py-2.5 text-center">
+                      <p className="text-muted-foreground/50">—</p>
+                    </div>
+                    <div className="py-2.5 flex items-center justify-center">
+                      <span className="text-muted-foreground/40 text-[10px]">vs</span>
+                    </div>
+                    <div className="py-2.5 text-center">
+                      <p className="text-foreground font-medium">Best job matches</p>
+                      <Lock className="h-3.5 w-3.5 text-muted-foreground/40 mx-auto mt-1" />
+                    </div>
+                  </div>
+
+                  <Button className="w-full" asChild data-testid="button-quiz-upload-cta">
+                    <Link href="/diagnostic">
+                      <Upload className="mr-2 h-4 w-4" />
+                      Upload resume for full results
+                    </Link>
+                  </Button>
+                  <p className="text-[11px] text-muted-foreground text-center flex items-center justify-center gap-1.5">
+                    <Lock className="h-3 w-3" />
+                    Private by default. Takes ~90 seconds. No account needed.
+                  </p>
+                </CardContent>
+              </Card>
+
+              <div className="space-y-3 pt-1">
                 <Button variant="outline" className="w-full" asChild data-testid="button-quiz-browse-all">
                   <Link href="/jobs">
                     Browse all roles

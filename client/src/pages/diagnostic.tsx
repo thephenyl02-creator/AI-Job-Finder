@@ -460,6 +460,11 @@ function AnonymousPreview() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { data: statsData } = useQuery<{ totalJobs: number }>({ queryKey: ["/api/stats"] });
 
+  const { data: percentileData } = useQuery<{ percentile: number | null; totalAssessments: number }>({
+    queryKey: [`/api/diagnostic/percentile?score=${preview?.score ?? 0}`],
+    enabled: preview !== null && preview.score > 0,
+  });
+
   const handleFile = useCallback(async (file: File) => {
     const validTypes = [
       "application/pdf",
@@ -491,6 +496,9 @@ function AnonymousPreview() {
       }
       const data: PreviewResult = await res.json();
       setPreview(data);
+      try {
+        localStorage.setItem("ltc_diagnostic_preview", JSON.stringify(data));
+      } catch {}
     } catch (err: any) {
       setError(err.message || "Failed to analyze resume.");
     } finally {
@@ -622,6 +630,12 @@ function AnonymousPreview() {
                   <p className="text-sm text-muted-foreground" data-testid="text-preview-matched">
                     <span className="font-semibold text-foreground">{preview.totalMatched}</span> roles matched to your profile
                   </p>
+
+                  {percentileData?.percentile !== null && percentileData?.percentile !== undefined && (
+                    <p className="text-xs text-muted-foreground" data-testid="text-preview-percentile">
+                      You scored higher than <span className="font-semibold text-foreground">{percentileData.percentile}%</span> of lawyers on this platform
+                    </p>
+                  )}
                 </div>
               </div>
             </CardContent>
@@ -769,6 +783,190 @@ function AnonymousPreview() {
   );
 }
 
+function LoggedInNoResume() {
+  const [isDragging, setIsDragging] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [, setLocation] = useLocation();
+  const { toast } = useToast();
+
+  const cachedPreview = (() => {
+    try {
+      const raw = localStorage.getItem("ltc_diagnostic_preview");
+      if (raw) return JSON.parse(raw) as PreviewResult;
+    } catch {}
+    return null;
+  })();
+
+  const handleUpload = useCallback(async (file: File) => {
+    const validTypes = [
+      "application/pdf",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "application/msword",
+    ];
+    if (!validTypes.includes(file.type)) {
+      setUploadError("Please upload a PDF or DOCX file.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setUploadError("File must be under 5MB.");
+      return;
+    }
+    setUploadError(null);
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("resume", file);
+      const res = await fetch("/api/resumes", {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Upload failed. Please try again.");
+      }
+      try { localStorage.removeItem("ltc_diagnostic_preview"); } catch {}
+      queryClient.invalidateQueries({ queryKey: ["/api/resumes"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/diagnostic/latest"] });
+      toast({ title: "Resume uploaded", description: "Generating your career diagnostic..." });
+    } catch (err: any) {
+      setUploadError(err.message || "Failed to upload resume.");
+    } finally {
+      setIsUploading(false);
+    }
+  }, [toast]);
+
+  const scoreColor = cachedPreview
+    ? cachedPreview.score >= 70 ? "#10b981" : cachedPreview.score >= 45 ? "#f59e0b" : "#ef4444"
+    : "#888";
+  const circumference = 2 * Math.PI * 42;
+  const dashOffset = cachedPreview ? circumference - (cachedPreview.score / 100) * circumference : circumference;
+
+  return (
+    <div className="min-h-[60vh] flex flex-col items-center px-4 py-10">
+      <div className="max-w-lg w-full space-y-6">
+        <div className="max-w-lg w-full mb-2">
+          <Link href="/dashboard">
+            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground" data-testid="button-back-dashboard">
+              <ArrowLeft className="h-4 w-4 mr-1.5" />
+              Back to Dashboard
+            </Button>
+          </Link>
+        </div>
+
+        {cachedPreview && (
+          <>
+            <div className="text-center">
+              <p className="text-[11px] font-semibold text-muted-foreground tracking-[0.2em] uppercase mb-2">
+                Welcome back
+              </p>
+              <h1 className="text-2xl sm:text-3xl font-serif font-medium text-foreground tracking-tight" data-testid="text-cached-preview-title">
+                Your preview results
+              </h1>
+              <p className="text-sm text-muted-foreground mt-2">
+                We saved your earlier analysis. Upload your resume to your account for the full report.
+              </p>
+            </div>
+
+            <Card className="overflow-hidden" data-testid="cached-preview-card">
+              <CardContent className="p-6">
+                <div className="flex flex-col sm:flex-row items-center gap-5">
+                  <div className="relative flex items-center justify-center shrink-0">
+                    <svg className="w-[100px] h-[100px] -rotate-90" viewBox="0 0 100 100">
+                      <circle cx="50" cy="50" r="42" fill="none" stroke="hsl(var(--muted))" strokeWidth="6" />
+                      <circle cx="50" cy="50" r="42" fill="none" stroke={scoreColor} strokeWidth="6" strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={dashOffset} className="transition-all duration-1000" />
+                    </svg>
+                    <div className="absolute flex flex-col items-center">
+                      <span className="text-xl font-bold text-foreground">{cachedPreview.score}</span>
+                      <span className="text-[10px] text-muted-foreground">Readiness</span>
+                    </div>
+                  </div>
+                  <div className="flex-1 min-w-0 space-y-2 text-center sm:text-left">
+                    {cachedPreview.topPath && (
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-0.5">Top path</p>
+                        <p className="text-sm font-semibold text-foreground">{cachedPreview.topPath.name}</p>
+                      </div>
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      <span className="font-semibold text-foreground">{cachedPreview.totalMatched}</span> roles matched
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </>
+        )}
+
+        {!cachedPreview && (
+          <div className="text-center">
+            <h1 className="text-2xl sm:text-3xl font-serif font-medium text-foreground tracking-tight">
+              Upload your resume
+            </h1>
+            <p className="text-sm text-muted-foreground mt-2">
+              Get your career readiness score, personalized skill gaps, and matching roles.
+            </p>
+          </div>
+        )}
+
+        <Card className={isUploading ? "pointer-events-none opacity-70" : ""} data-testid="inline-upload-card">
+          <CardContent className="p-6 text-center space-y-4">
+            {isUploading ? (
+              <div className="py-6 space-y-3">
+                <Loader2 className="h-8 w-8 text-primary animate-spin mx-auto" />
+                <p className="text-sm font-medium text-foreground">Uploading your resume...</p>
+                <p className="text-xs text-muted-foreground">This will just take a moment.</p>
+              </div>
+            ) : (
+              <div
+                className={`border-2 border-dashed rounded-lg p-8 transition-colors cursor-pointer ${
+                  isDragging ? "border-primary bg-primary/5" : "border-border/60 hover:border-primary/40"
+                }`}
+                onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                onDragLeave={() => setIsDragging(false)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setIsDragging(false);
+                  const file = e.dataTransfer.files?.[0];
+                  if (file) handleUpload(file);
+                }}
+                onClick={() => fileInputRef.current?.click()}
+                data-testid="inline-upload-zone"
+              >
+                <Upload className="h-8 w-8 text-muted-foreground/60 mx-auto mb-3" />
+                <p className="text-sm font-medium text-foreground">
+                  {cachedPreview ? "Upload resume for your full report" : "Drop your resume here or click to browse"}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">PDF or DOCX, up to 5MB</p>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf,.docx,.doc"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleUpload(file);
+                  }}
+                  data-testid="inline-upload-input"
+                />
+              </div>
+            )}
+            {uploadError && (
+              <p className="text-sm text-destructive" data-testid="text-upload-error">{uploadError}</p>
+            )}
+            <p className="text-[11px] text-muted-foreground flex items-center justify-center gap-1.5">
+              <Lock className="h-3 w-3" />
+              Your resume stays private. Never shared.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
 export default function DiagnosticPage() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [, setLocation] = useLocation();
@@ -804,6 +1002,11 @@ export default function DiagnosticPage() {
   });
 
   const report: DiagnosticReportData | null = latestDiag?.report || null;
+
+  const { data: percentileData } = useQuery<{ percentile: number | null; totalAssessments: number }>({
+    queryKey: [`/api/diagnostic/percentile?score=${report?.overallReadinessScore ?? 0}`],
+    enabled: !!report && report.overallReadinessScore > 0,
+  });
 
   useEffect(() => {
     if (!report) return;
@@ -841,28 +1044,7 @@ export default function DiagnosticPage() {
   }
 
   if (!hasResume && !diagLoading) {
-    return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center px-4">
-        <div className="max-w-md w-full mb-4">
-          <Link href="/dashboard">
-            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground" data-testid="button-back-dashboard">
-              <ArrowLeft className="h-4 w-4 mr-1.5" />
-              Back to Dashboard
-            </Button>
-          </Link>
-        </div>
-        <Card className="max-w-md w-full text-center p-8">
-          <FileText className="h-12 w-12 text-primary mx-auto mb-4" />
-          <h2 className="text-xl font-bold mb-2 font-serif">Upload your resume first</h2>
-          <p className="text-sm text-muted-foreground mb-6">
-            We need your resume to generate a career diagnostic. Upload one to get your readiness score, skill gaps, and a personalized 30-day plan.
-          </p>
-          <Link href="/resumes">
-            <Button className="w-full" data-testid="button-upload-resume">Upload Resume</Button>
-          </Link>
-        </Card>
-      </div>
-    );
+    return <LoggedInNoResume />;
   }
 
   return (
@@ -957,6 +1139,11 @@ export default function DiagnosticPage() {
                   ? `You're ${Math.ceil((70 - report.overallReadinessScore) / 10)} improvements away from Strong Fit`
                   : "Significant gaps to address"}
               </p>
+              {percentileData?.percentile !== null && percentileData?.percentile !== undefined && (
+                <p className="text-[11px] text-muted-foreground text-center" data-testid="text-diagnostic-percentile">
+                  Top <span className="font-semibold text-foreground">{100 - percentileData.percentile}%</span> of lawyers assessed
+                </p>
+              )}
             </div>
             <div className="space-y-3">
               <div>

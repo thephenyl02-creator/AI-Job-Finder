@@ -256,6 +256,7 @@ export async function registerRoutes(
       }
       const allEvents = await storage.getEvents();
       const upcomingEvents = allEvents.filter(e => new Date(e.startDate) >= new Date()).length;
+      const [{ total: totalUsersCount }] = await db.select({ total: count() }).from(users);
       res.json({
         totalJobs: jobs.length,
         totalCompanies: uniqueCompanies,
@@ -264,6 +265,7 @@ export async function registerRoutes(
         totalEvents: allEvents.length,
         upcomingEvents,
         categoryCounts,
+        totalUsers: Number(totalUsersCount),
       });
     } catch (error) {
       console.error("Error fetching stats:", error);
@@ -7567,6 +7569,34 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
         return res.status(400).json({ error: error.message });
       }
       res.status(500).json({ error: error.message || "Failed to generate diagnostic preview" });
+    }
+  });
+
+  app.get("/api/diagnostic/percentile", async (req, res) => {
+    try {
+      const score = parseInt(req.query.score as string);
+      if (isNaN(score) || score < 0 || score > 100) {
+        return res.status(400).json({ error: "Invalid score" });
+      }
+
+      const allScores = await db
+        .select({ score: diagnosticReports.overallReadinessScore })
+        .from(diagnosticReports)
+        .where(sql`${diagnosticReports.overallReadinessScore} IS NOT NULL`);
+
+      const totalDiagnostics = allScores.length;
+
+      if (totalDiagnostics < 5) {
+        return res.json({ percentile: null, totalAssessments: totalDiagnostics });
+      }
+
+      const belowCount = allScores.filter(r => (r.score || 0) < score).length;
+      const percentile = Math.round((belowCount / totalDiagnostics) * 100);
+
+      res.json({ percentile, totalAssessments: totalDiagnostics });
+    } catch (error: any) {
+      console.error("Error computing percentile:", error);
+      res.status(500).json({ error: "Failed to compute percentile" });
     }
   });
 

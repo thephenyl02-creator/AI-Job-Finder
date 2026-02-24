@@ -2,12 +2,13 @@ import { useQuery } from "@tanstack/react-query";
 import { usePageTitle } from "@/hooks/use-page-title";
 import { Link } from "wouter";
 import { cleanStructuredText } from "@/lib/structured-description";
+import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LogoMark } from "@/components/logo";
-import { ArrowRight, Building2, Search, Target, FileText, Sparkles, Bell, Globe, Wifi, Brain, CheckCircle2, Clock } from "lucide-react";
+import { ArrowRight, Building2, Search, Target, FileText, Sparkles, Bell, Globe, Wifi, Brain, CheckCircle2, Clock, Shield, BarChart3, Lock } from "lucide-react";
 import { Footer } from "@/components/footer";
 
 interface Stats {
@@ -15,6 +16,7 @@ interface Stats {
   totalCompanies: number;
   totalCategories: number;
   categoryCounts: Record<string, number>;
+  totalUsers?: number;
 }
 
 interface FeaturedJob {
@@ -45,10 +47,18 @@ const CAREER_PATH_LABELS: Record<string, string> = {
 
 export default function Landing() {
   usePageTitle();
+  const { isAuthenticated } = useAuth();
 
   const { data: stats } = useQuery<Stats>({
     queryKey: ["/api/stats"],
   });
+
+  const { data: latestDiag } = useQuery<any>({
+    queryKey: ["/api/diagnostic/latest"],
+    enabled: isAuthenticated,
+  });
+
+  const hasDiagnostic = !!latestDiag?.report;
 
   const { data: featuredJobs } = useQuery<FeaturedJob[]>({
     queryKey: ["/api/featured-jobs"],
@@ -132,7 +142,7 @@ export default function Landing() {
               <div className="mt-8 flex items-center gap-3 flex-wrap">
                 <Button size="lg" asChild data-testid="button-hero-diagnostic">
                   <a href="/diagnostic">
-                    See where you fit
+                    {hasDiagnostic ? "View your results" : "Check Your Fit"}
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </a>
                 </Button>
@@ -142,9 +152,13 @@ export default function Landing() {
                   </a>
                 </Button>
               </div>
-              <p className="text-xs text-muted-foreground mt-3" data-testid="text-hero-trust">
-                Free to start · No account needed
-              </p>
+              <div className="mt-3 flex items-center gap-3 text-xs text-muted-foreground flex-wrap" data-testid="text-hero-trust">
+                <span className="flex items-center gap-1"><Lock className="h-3 w-3" /> Private by default</span>
+                <span className="text-border">·</span>
+                <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> Results in ~90 seconds</span>
+                <span className="text-border">·</span>
+                <span>No account needed</span>
+              </div>
               <p className="mt-2">
                 <a href="/quiz" className="text-xs text-muted-foreground hover:text-foreground transition-colors" data-testid="link-hero-quiz">
                   Not sure yet? Take a 30-second career quiz →
@@ -199,6 +213,51 @@ export default function Landing() {
                 </CardContent>
               </Card>
             </div>
+          </div>
+        </section>
+
+        <section className="border-t border-border/30 bg-muted/20" data-testid="value-strip-section">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+            <div className="text-center mb-6">
+              <h2 className="text-lg sm:text-xl font-serif font-medium text-foreground tracking-tight" data-testid="text-value-strip-title">
+                What you get — free, in under 2 minutes
+              </h2>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6 max-w-3xl mx-auto">
+              <div className="text-center space-y-2" data-testid="value-item-score">
+                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mx-auto">
+                  <Target className="h-5 w-5 text-primary" />
+                </div>
+                <p className="text-sm font-medium text-foreground">Readiness Score</p>
+                <p className="text-xs text-muted-foreground">See how prepared you are for legal tech roles</p>
+              </div>
+              <div className="text-center space-y-2" data-testid="value-item-paths">
+                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mx-auto">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                </div>
+                <p className="text-sm font-medium text-foreground">Top Career Paths</p>
+                <p className="text-xs text-muted-foreground">Personalized path recommendations</p>
+              </div>
+              <div className="text-center space-y-2" data-testid="value-item-gaps">
+                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mx-auto">
+                  <BarChart3 className="h-5 w-5 text-primary" />
+                </div>
+                <p className="text-sm font-medium text-foreground">Gap Analysis</p>
+                <p className="text-xs text-muted-foreground">Exact skills to build and how to fix them</p>
+              </div>
+              <div className="text-center space-y-2" data-testid="value-item-matches">
+                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mx-auto">
+                  <Search className="h-5 w-5 text-primary" />
+                </div>
+                <p className="text-sm font-medium text-foreground">Job Matches</p>
+                <p className="text-xs text-muted-foreground">Roles matched to your specific background</p>
+              </div>
+            </div>
+            {(stats?.totalUsers || 0) > 10 && (
+              <p className="text-center text-xs text-muted-foreground mt-6" data-testid="text-social-proof">
+                {stats!.totalUsers} lawyers have used this tool · {stats?.totalJobs || 0}+ roles tracked
+              </p>
+            )}
           </div>
         </section>
 
