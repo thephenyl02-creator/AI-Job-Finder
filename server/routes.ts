@@ -7830,6 +7830,231 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
     }
   });
 
+  const quizRateLimit = new Map<string, { count: number; resetAt: number }>();
+
+  app.post("/api/quiz/result", async (req, res) => {
+    try {
+      const ip = req.ip || req.socket.remoteAddress || "unknown";
+      const now = Date.now();
+      const entry = quizRateLimit.get(ip);
+      if (entry && now < entry.resetAt) {
+        if (entry.count >= 10) {
+          return res.status(429).json({ error: "Rate limit exceeded. You can take up to 10 quizzes per hour." });
+        }
+        entry.count++;
+      } else {
+        quizRateLimit.set(ip, { count: 1, resetAt: now + 60 * 60 * 1000 });
+      }
+
+      const quizSchema = z.object({
+        currentRole: z.enum([
+          "practicing_attorney",
+          "in_house_counsel",
+          "legal_ops",
+          "non_legal",
+          "student",
+        ]),
+        interest: z.enum([
+          "improving_teams",
+          "building_products",
+          "data_analytics",
+          "compliance_risk",
+          "business_dev",
+        ]),
+        techLevel: z.enum([
+          "basic",
+          "legal_tech",
+          "light_scripting",
+          "technical",
+        ]),
+        careerStage: z.enum([
+          "early",
+          "mid",
+          "senior",
+          "executive",
+        ]),
+      });
+
+      const parsed = quizSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Invalid quiz answers", details: parsed.error.flatten() });
+      }
+
+      const { currentRole, interest, techLevel, careerStage } = parsed.data;
+
+      const weights: Record<string, number> = {};
+      const taxonomyKeys = Object.keys(JOB_TAXONOMY) as Array<keyof typeof JOB_TAXONOMY>;
+      for (const key of taxonomyKeys) {
+        weights[key] = 0;
+      }
+
+      const interestMap: Record<string, Record<string, number>> = {
+        improving_teams: {
+          "Legal Operations": 5,
+          "Legal Consulting & Advisory": 4,
+          "Knowledge Management": 3,
+          "Contract Management": 2,
+        },
+        building_products: {
+          "Legal Product Management": 5,
+          "Legal Engineering": 4,
+          "Legal AI & Analytics": 3,
+          "Knowledge Management": 2,
+        },
+        data_analytics: {
+          "Legal AI & Analytics": 5,
+          "Knowledge Management": 4,
+          "Legal Engineering": 3,
+          "Legal Operations": 2,
+        },
+        compliance_risk: {
+          "Compliance & Privacy": 5,
+          "Contract Management": 4,
+          "In-House Counsel": 3,
+          "Policy & Access to Justice": 2,
+        },
+        business_dev: {
+          "Legal Sales & Client Solutions": 5,
+          "Legal Consulting & Advisory": 4,
+          "Legal Product Management": 2,
+          "In-House Counsel": 1,
+        },
+      };
+
+      const roleMap: Record<string, Record<string, number>> = {
+        practicing_attorney: {
+          "In-House Counsel": 4,
+          "Compliance & Privacy": 3,
+          "Litigation & eDiscovery": 3,
+          "Legal Consulting & Advisory": 2,
+          "Contract Management": 2,
+        },
+        in_house_counsel: {
+          "In-House Counsel": 3,
+          "Legal Operations": 3,
+          "Compliance & Privacy": 3,
+          "Contract Management": 2,
+          "Legal Product Management": 2,
+        },
+        legal_ops: {
+          "Legal Operations": 4,
+          "Legal Engineering": 3,
+          "Contract Management": 3,
+          "Knowledge Management": 2,
+          "Legal AI & Analytics": 2,
+        },
+        non_legal: {
+          "Legal AI & Analytics": 3,
+          "Legal Engineering": 3,
+          "Legal Product Management": 3,
+          "Legal Sales & Client Solutions": 3,
+          "Legal Consulting & Advisory": 2,
+        },
+        student: {
+          "Legal Operations": 3,
+          "In-House Counsel": 2,
+          "Compliance & Privacy": 2,
+          "Contract Management": 2,
+          "Knowledge Management": 2,
+          "Policy & Access to Justice": 2,
+        },
+      };
+
+      const techMap: Record<string, Record<string, number>> = {
+        basic: {
+          "Legal Operations": 2,
+          "In-House Counsel": 2,
+          "Legal Consulting & Advisory": 2,
+          "Compliance & Privacy": 1,
+        },
+        legal_tech: {
+          "Legal Operations": 3,
+          "Contract Management": 2,
+          "Litigation & eDiscovery": 2,
+          "Knowledge Management": 2,
+        },
+        light_scripting: {
+          "Legal Engineering": 3,
+          "Legal AI & Analytics": 2,
+          "Legal Product Management": 2,
+          "Knowledge Management": 2,
+        },
+        technical: {
+          "Legal Engineering": 4,
+          "Legal AI & Analytics": 4,
+          "Legal Product Management": 3,
+          "Intellectual Property & Innovation": 1,
+        },
+      };
+
+      for (const [cat, w] of Object.entries(interestMap[interest] || {})) {
+        weights[cat] = (weights[cat] || 0) + w;
+      }
+      for (const [cat, w] of Object.entries(roleMap[currentRole] || {})) {
+        weights[cat] = (weights[cat] || 0) + w;
+      }
+      for (const [cat, w] of Object.entries(techMap[techLevel] || {})) {
+        weights[cat] = (weights[cat] || 0) + w;
+      }
+
+      const sorted = Object.entries(weights)
+        .filter(([, w]) => w > 0)
+        .sort((a, b) => b[1] - a[1]);
+
+      const maxWeight = sorted[0]?.[1] || 1;
+      const topPaths = sorted.slice(0, 2).map(([name, weight]) => ({
+        name,
+        description: (JOB_TAXONOMY as any)[name]?.description || "",
+        confidence: Math.round((weight / maxWeight) * 100),
+      }));
+
+      const allJobs = await storage.getPublishedJobs();
+      const categoryCounts: Record<string, number> = {};
+      for (const job of allJobs) {
+        if (job.roleCategory) {
+          categoryCounts[job.roleCategory] = (categoryCounts[job.roleCategory] || 0) + 1;
+        }
+      }
+
+      const pathsWithCounts = topPaths.map((p) => ({
+        ...p,
+        jobCount: categoryCounts[p.name] || 0,
+      }));
+
+      const totalMatchedRoles = pathsWithCounts.reduce((sum, p) => sum + p.jobCount, 0);
+
+      let transitionDifficulty: "Easy" | "Moderate" | "Challenging";
+      const techScore = { basic: 0, legal_tech: 1, light_scripting: 2, technical: 3 }[techLevel];
+      const interestTechGap: Record<string, number> = {
+        improving_teams: 1,
+        building_products: 2,
+        data_analytics: 2,
+        compliance_risk: 1,
+        business_dev: 1,
+      };
+      const gap = (interestTechGap[interest] || 1) - techScore;
+      const roleBonus = ["legal_ops", "in_house_counsel"].includes(currentRole) ? -1 : 0;
+      const diffScore = gap + roleBonus;
+
+      if (diffScore <= 0) {
+        transitionDifficulty = "Easy";
+      } else if (diffScore === 1) {
+        transitionDifficulty = "Moderate";
+      } else {
+        transitionDifficulty = "Challenging";
+      }
+
+      res.json({
+        paths: pathsWithCounts,
+        transitionDifficulty,
+        totalMatchedRoles,
+      });
+    } catch (error) {
+      console.error("Error processing quiz:", error);
+      res.status(500).json({ error: "Failed to process quiz" });
+    }
+  });
+
   runStartupCleanup();
   startScheduler();
 

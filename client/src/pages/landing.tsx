@@ -145,6 +145,11 @@ export default function Landing() {
               <p className="text-xs text-muted-foreground mt-3" data-testid="text-hero-trust">
                 Free to start · No account needed
               </p>
+              <p className="mt-2">
+                <a href="/quiz" className="text-xs text-muted-foreground hover:text-foreground transition-colors" data-testid="link-hero-quiz">
+                  Not sure yet? Take a 30-second career quiz →
+                </a>
+              </p>
             </div>
 
             <div className="w-full lg:w-[420px] shrink-0">

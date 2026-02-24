@@ -749,7 +749,13 @@ function AnonymousPreview() {
           </div>
         </div>
 
-        <div className="text-center pt-2">
+        <div className="text-center pt-2 space-y-1.5">
+          <p className="text-xs text-muted-foreground">
+            No resume handy?{" "}
+            <Link href="/quiz" className="text-primary hover:underline" data-testid="link-quiz-from-diagnostic">
+              Take a quick career quiz instead →
+            </Link>
+          </p>
           <p className="text-xs text-muted-foreground">
             Already have an account?{" "}
             <Link href="/auth?returnTo=/diagnostic" className="text-primary hover:underline" data-testid="link-sign-in">

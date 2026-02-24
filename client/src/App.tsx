@@ -37,6 +37,7 @@ import EventDetail from "@/pages/event-detail";
 import OpportunityMap from "@/pages/opportunity-map";
 import ResumeEditor from "@/pages/resume-editor";
 import Diagnostic from "@/pages/diagnostic";
+import Quiz from "@/pages/quiz";
 import { AssistantWidget } from "@/components/assistant-widget";
 import { OnboardingDialog } from "@/components/onboarding-dialog";
 
@@ -99,6 +100,7 @@ function AppRouter() {
       <Route path="/resume-editor/:resumeId" component={ResumeEditor} />
       <Route path="/saved-jobs">{isAuthenticated ? <SavedJobs /> : <Landing />}</Route>
       <Route path="/diagnostic" component={Diagnostic} />
+      <Route path="/quiz" component={Quiz} />
       <Route path="/dashboard">{isAuthenticated ? <Dashboard /> : <Landing />}</Route>
       <Route path="/events" component={Events} />
       <Route path="/events/:id" component={EventDetail} />
