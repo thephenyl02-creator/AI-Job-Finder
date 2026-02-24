@@ -1,4 +1,4 @@
-import { useState, useEffect, lazy, Suspense } from "react";
+import { useState, useEffect, useCallback, useRef, lazy, Suspense } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation, Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import { SiLinkedin } from "react-icons/si";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Target,
@@ -27,6 +28,9 @@ import {
   Briefcase,
   BarChart3,
   Shield,
+  Upload,
+  Loader2,
+  Sparkles,
 } from "lucide-react";
 import {
   RadarChart,
@@ -441,6 +445,323 @@ function DiagnosticSkeleton() {
   );
 }
 
+interface PreviewResult {
+  score: number;
+  topPath: { name: string; confidence: number } | null;
+  skills: string[];
+  totalMatched: number;
+}
+
+function AnonymousPreview() {
+  const [preview, setPreview] = useState<PreviewResult | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFile = useCallback(async (file: File) => {
+    const validTypes = [
+      "application/pdf",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "application/msword",
+    ];
+    if (!validTypes.includes(file.type)) {
+      setError("Please upload a PDF or DOCX file.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setError("File must be under 5MB.");
+      return;
+    }
+
+    setIsUploading(true);
+    setError(null);
+
+    try {
+      const formData = new FormData();
+      formData.append("resume", file);
+      const res = await fetch("/api/diagnostic/preview", {
+        method: "POST",
+        body: formData,
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Something went wrong. Please try again.");
+      }
+      const data: PreviewResult = await res.json();
+      setPreview(data);
+    } catch (err: any) {
+      setError(err.message || "Failed to analyze resume.");
+    } finally {
+      setIsUploading(false);
+    }
+  }, []);
+
+  const onDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      setIsDragging(false);
+      const file = e.dataTransfer.files?.[0];
+      if (file) handleFile(file);
+    },
+    [handleFile]
+  );
+
+  const onFileChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (file) handleFile(file);
+    },
+    [handleFile]
+  );
+
+  if (isUploading) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center px-4">
+        <div className="max-w-md w-full text-center space-y-6">
+          <div className="relative flex items-center justify-center">
+            <svg className="w-[120px] h-[120px] -rotate-90 animate-pulse" viewBox="0 0 100 100">
+              <circle cx="50" cy="50" r="42" fill="none" stroke="hsl(var(--muted))" strokeWidth="6" />
+              <circle
+                cx="50" cy="50" r="42" fill="none"
+                stroke="hsl(var(--primary))"
+                strokeWidth="6"
+                strokeLinecap="round"
+                strokeDasharray={`${2 * Math.PI * 42}`}
+                strokeDashoffset={`${2 * Math.PI * 42 * 0.7}`}
+                className="animate-spin origin-center"
+                style={{ animationDuration: "3s" }}
+              />
+            </svg>
+            <div className="absolute flex flex-col items-center">
+              <Loader2 className="h-6 w-6 text-primary animate-spin" />
+            </div>
+          </div>
+          <div>
+            <h2 className="text-xl font-bold font-serif text-foreground" data-testid="text-analyzing">Analyzing your resume</h2>
+            <p className="text-sm text-muted-foreground mt-2">
+              Evaluating your skills against {670}+ legal tech roles. This takes about 30–60 seconds.
+            </p>
+          </div>
+          <div className="space-y-2 max-w-xs mx-auto">
+            <Skeleton className="h-3 w-full rounded" />
+            <Skeleton className="h-3 w-4/5 rounded" />
+            <Skeleton className="h-3 w-3/5 rounded" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (preview) {
+    const scoreColor = preview.score >= 70 ? "#10b981" : preview.score >= 45 ? "#f59e0b" : "#ef4444";
+    const circumference = 2 * Math.PI * 42;
+    const dashOffset = circumference - (preview.score / 100) * circumference;
+
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center px-4 py-10">
+        <div className="max-w-lg w-full space-y-8">
+          <div className="text-center">
+            <p className="text-[11px] font-semibold text-muted-foreground tracking-[0.2em] uppercase mb-2">
+              Your Preview Results
+            </p>
+            <h1 className="text-2xl sm:text-3xl font-serif font-medium text-foreground tracking-tight" data-testid="text-preview-title">
+              Here's where you stand
+            </h1>
+          </div>
+
+          <Card className="overflow-hidden" data-testid="preview-results-card">
+            <CardContent className="p-6 sm:p-8">
+              <div className="flex flex-col sm:flex-row items-center gap-6">
+                <div className="relative flex items-center justify-center shrink-0" data-testid="preview-score-ring">
+                  <svg className="w-[120px] h-[120px] -rotate-90" viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="42" fill="none" stroke="hsl(var(--muted))" strokeWidth="6" />
+                    <circle
+                      cx="50" cy="50" r="42" fill="none"
+                      stroke={scoreColor}
+                      strokeWidth="6"
+                      strokeLinecap="round"
+                      strokeDasharray={circumference}
+                      strokeDashoffset={dashOffset}
+                      className="transition-all duration-1000"
+                    />
+                  </svg>
+                  <div className="absolute flex flex-col items-center">
+                    <span className="text-2xl font-bold text-foreground">{preview.score}</span>
+                    <span className="text-[10px] text-muted-foreground">Readiness</span>
+                  </div>
+                </div>
+
+                <div className="flex-1 min-w-0 space-y-3 text-center sm:text-left">
+                  {preview.topPath && (
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Top career path</p>
+                      <div className="flex items-center gap-2 justify-center sm:justify-start">
+                        <span className="text-base font-semibold text-foreground" data-testid="text-preview-path">{preview.topPath.name}</span>
+                        <Badge variant="secondary" className="text-[10px]" data-testid="badge-preview-confidence">
+                          {preview.topPath.confidence}% match
+                        </Badge>
+                      </div>
+                    </div>
+                  )}
+
+                  {preview.skills.length > 0 && (
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1.5">Key skills detected</p>
+                      <div className="flex flex-wrap gap-1.5 justify-center sm:justify-start" data-testid="preview-skills">
+                        {preview.skills.map((skill) => (
+                          <Badge key={skill} variant="outline" className="text-xs">
+                            {skill}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <p className="text-sm text-muted-foreground" data-testid="text-preview-matched">
+                    <span className="font-semibold text-foreground">{preview.totalMatched}</span> roles matched to your profile
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-dashed border-2 border-border/60 bg-muted/10" data-testid="preview-gate-card">
+            <CardContent className="p-6 sm:p-8 text-center space-y-4">
+              <div className="flex items-center justify-center gap-2">
+                <Lock className="h-4 w-4 text-muted-foreground" />
+                <h3 className="text-base font-semibold text-foreground">Your full report is ready</h3>
+              </div>
+              <p className="text-sm text-muted-foreground max-w-sm mx-auto">
+                Sign up free to unlock your complete career diagnostic — including all career paths, detailed skill gaps, a role readiness ladder, and a personalized 30-day transition plan.
+              </p>
+              <div className="grid grid-cols-2 gap-3 max-w-xs mx-auto text-left">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                  <span>All career paths</span>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                  <span>Skill gap analysis</span>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                  <span>Readiness ladder</span>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                  <span>30-day plan</span>
+                </div>
+              </div>
+              <Link href="/auth?returnTo=/diagnostic">
+                <Button size="lg" className="mt-2" data-testid="button-signup-unlock">
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  Create free account
+                </Button>
+              </Link>
+              <p className="text-[11px] text-muted-foreground">
+                No credit card required
+              </p>
+            </CardContent>
+          </Card>
+
+          <div className="text-center">
+            <Link href="/jobs">
+              <Button variant="ghost" size="sm" className="text-muted-foreground" data-testid="link-browse-jobs-preview">
+                Or browse roles without signing up
+                <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-[60vh] flex flex-col items-center justify-center px-4">
+      <div className="max-w-lg w-full space-y-6">
+        <div className="text-center">
+          <p className="text-[11px] font-semibold text-muted-foreground tracking-[0.2em] uppercase mb-3">
+            Career Diagnostic
+          </p>
+          <h1 className="text-2xl sm:text-3xl font-serif font-medium text-foreground tracking-tight" data-testid="text-anon-diagnostic-title">
+            See where you fit in legal tech
+          </h1>
+          <p className="text-sm text-muted-foreground mt-3 max-w-md mx-auto">
+            Upload your resume — no account needed. Get your career readiness score and top matching path in about 60 seconds.
+          </p>
+        </div>
+
+        <div
+          className={`border-2 border-dashed rounded-lg p-10 text-center cursor-pointer transition-colors ${
+            isDragging
+              ? "border-primary bg-primary/5"
+              : "border-border/60 hover:border-primary/50 hover:bg-muted/30"
+          }`}
+          onClick={() => fileInputRef.current?.click()}
+          onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+          onDragLeave={() => setIsDragging(false)}
+          onDrop={onDrop}
+          data-testid="upload-drop-zone"
+        >
+          <Upload className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+          <p className="text-sm font-medium text-foreground">
+            Drop your resume here or click to browse
+          </p>
+          <p className="text-xs text-muted-foreground mt-1.5">
+            PDF or DOCX · Max 5MB
+          </p>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            className="hidden"
+            onChange={onFileChange}
+            data-testid="input-resume-file"
+          />
+        </div>
+
+        {error && (
+          <div className="text-center">
+            <p className="text-sm text-destructive" data-testid="text-upload-error">{error}</p>
+          </div>
+        )}
+
+        <div className="space-y-3 max-w-sm mx-auto">
+          <div className="flex items-center gap-3 text-sm">
+            <div className="shrink-0 w-7 h-7 rounded-full bg-emerald-500/10 flex items-center justify-center">
+              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <span className="text-foreground">Instant readiness score across 7 skill areas</span>
+          </div>
+          <div className="flex items-center gap-3 text-sm">
+            <div className="shrink-0 w-7 h-7 rounded-full bg-blue-500/10 flex items-center justify-center">
+              <Target className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+            </div>
+            <span className="text-foreground">Your top matching career path</span>
+          </div>
+          <div className="flex items-center gap-3 text-sm">
+            <div className="shrink-0 w-7 h-7 rounded-full bg-amber-500/10 flex items-center justify-center">
+              <Shield className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+            </div>
+            <span className="text-foreground">Your resume is never stored or shared</span>
+          </div>
+        </div>
+
+        <div className="text-center pt-2">
+          <p className="text-xs text-muted-foreground">
+            Already have an account?{" "}
+            <Link href="/auth?returnTo=/diagnostic" className="text-primary hover:underline" data-testid="link-sign-in">
+              Sign in
+            </Link>
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function DiagnosticPage() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [, setLocation] = useLocation();
@@ -477,31 +798,39 @@ export default function DiagnosticPage() {
 
   const report: DiagnosticReportData | null = latestDiag?.report || null;
 
+  useEffect(() => {
+    if (!report) return;
+    const topPath = report.topPaths?.[0];
+    const ogDescription = `I scored ${report.overallReadinessScore}/100 on my Legal Tech Career Readiness assessment.${topPath ? ` Top path: ${topPath.name}.` : ""} Check yours at Legal Tech Careers.`;
+
+    const setMeta = (property: string, content: string) => {
+      let el = document.querySelector(`meta[property="${property}"]`) as HTMLMetaElement | null;
+      if (!el) {
+        el = document.createElement("meta");
+        el.setAttribute("property", property);
+        document.head.appendChild(el);
+      }
+      el.setAttribute("content", content);
+    };
+
+    setMeta("og:title", `Career Readiness: ${report.overallReadinessScore}/100 | Legal Tech Careers`);
+    setMeta("og:description", ogDescription);
+    setMeta("og:url", `${window.location.origin}/diagnostic`);
+
+    return () => {
+      const ogTitle = document.querySelector('meta[property="og:title"]');
+      const ogDesc = document.querySelector('meta[property="og:description"]');
+      const ogUrl = document.querySelector('meta[property="og:url"]');
+      if (ogTitle) ogTitle.setAttribute("content", "Legal Tech Careers - Jobs for Legal Professionals in Technology");
+      if (ogDesc) ogDesc.setAttribute("content", "The career platform for lawyers and legal professionals transitioning into legal technology. AI-powered job matching, resume analysis, and career guidance.");
+      if (ogUrl) ogUrl.remove();
+    };
+  }, [report]);
+
   if (authLoading) return <DiagnosticSkeleton />;
 
   if (!isAuthenticated) {
-    return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center px-4">
-        <div className="max-w-md w-full mb-4">
-          <Link href="/jobs">
-            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground" data-testid="button-back-jobs">
-              <ArrowLeft className="h-4 w-4 mr-1.5" />
-              Back to Jobs
-            </Button>
-          </Link>
-        </div>
-        <Card className="max-w-md w-full text-center p-8">
-          <Brain className="h-12 w-12 text-primary mx-auto mb-4" />
-          <h2 className="text-xl font-bold mb-2 font-serif">Career Diagnostic</h2>
-          <p className="text-sm text-muted-foreground mb-6">
-            Upload your resume and get a personalized career diagnostic — including readiness scores, skill gaps, and a 30-day transition plan.
-          </p>
-          <Link href="/auth">
-            <Button className="w-full" data-testid="button-sign-in">Sign in to get started</Button>
-          </Link>
-        </Card>
-      </div>
-    );
+    return <AnonymousPreview />;
   }
 
   if (!hasResume && !diagLoading) {
@@ -551,16 +880,38 @@ export default function DiagnosticPage() {
         </div>
         <div className="flex items-center gap-2">
           {report && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => runDiagnostic.mutate({})}
-              disabled={runDiagnostic.isPending}
-              data-testid="button-rerun-diagnostic"
-            >
-              <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${runDiagnostic.isPending ? "animate-spin" : ""}`} />
-              Recompute
-            </Button>
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const topPath = report.topPaths?.[0];
+                  const shareText = encodeURIComponent(
+                    `I scored ${report.overallReadinessScore}/100 on my Legal Tech Career Readiness assessment.${topPath ? ` Top path: ${topPath.name}.` : ""} Check yours at Legal Tech Careers.`
+                  );
+                  const shareUrl = encodeURIComponent(`${window.location.origin}/diagnostic`);
+                  window.open(
+                    `https://www.linkedin.com/sharing/share-offsite/?url=${shareUrl}`,
+                    "_blank",
+                    "noopener,noreferrer,width=600,height=600"
+                  );
+                }}
+                data-testid="button-share-linkedin"
+              >
+                <SiLinkedin className="h-3.5 w-3.5 mr-1.5" />
+                Share on LinkedIn
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => runDiagnostic.mutate({})}
+                disabled={runDiagnostic.isPending}
+                data-testid="button-rerun-diagnostic"
+              >
+                <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${runDiagnostic.isPending ? "animate-spin" : ""}`} />
+                Recompute
+              </Button>
+            </>
           )}
           {!report && (
             <Button

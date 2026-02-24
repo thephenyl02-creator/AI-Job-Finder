@@ -7503,6 +7503,73 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
     }
   });
 
+  const diagnosticPreviewRateLimit = new Map<string, { count: number; resetAt: number }>();
+
+  app.post("/api/diagnostic/preview", upload.single("resume"), async (req, res) => {
+    try {
+      const ip = req.ip || req.socket.remoteAddress || "unknown";
+      const now = Date.now();
+      const entry = diagnosticPreviewRateLimit.get(ip);
+      if (entry && now < entry.resetAt) {
+        if (entry.count >= 3) {
+          return res.status(429).json({ error: "Rate limit exceeded. You can run up to 3 preview diagnostics per hour." });
+        }
+        entry.count++;
+      } else {
+        diagnosticPreviewRateLimit.set(ip, { count: 1, resetAt: now + 60 * 60 * 1000 });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ error: "No file uploaded. Please upload a PDF or DOCX resume." });
+      }
+
+      const mime = req.file.mimetype;
+      let resumeText: string;
+      if (mime === "application/pdf") {
+        resumeText = await extractTextFromPDF(req.file.buffer);
+      } else if (
+        mime === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+        mime === "application/msword"
+      ) {
+        resumeText = await extractTextFromDOCX(req.file.buffer);
+      } else {
+        return res.status(400).json({ error: "Invalid file type. Please upload a PDF or DOCX file." });
+      }
+
+      if (!resumeText || resumeText.trim().length < 50) {
+        return res.status(400).json({ error: "Could not extract enough text from the file. Please ensure the resume contains readable text." });
+      }
+
+      const extractedData = await parseResumeWithAI(resumeText);
+      const allJobs = await storage.getPublishedJobs();
+      const report = await generateDiagnosticReport(extractedData, allJobs);
+
+      const topPath = report.topPaths?.[0]
+        ? { name: report.topPaths[0].name, confidence: report.topPaths[0].confidence }
+        : null;
+
+      const skills = (extractedData.skills || []).slice(0, 3);
+
+      const totalMatched =
+        (report.readinessLadder?.ready?.length || 0) +
+        (report.readinessLadder?.nearReady?.length || 0) +
+        (report.readinessLadder?.stretch?.length || 0);
+
+      res.json({
+        score: report.overallReadinessScore || 0,
+        topPath,
+        skills,
+        totalMatched,
+      });
+    } catch (error: any) {
+      console.error("Error in diagnostic preview:", error);
+      if (error instanceof InvalidPDFError) {
+        return res.status(400).json({ error: error.message });
+      }
+      res.status(500).json({ error: error.message || "Failed to generate diagnostic preview" });
+    }
+  });
+
   app.post("/api/jobs/fit/batch", isAuthenticated, async (req, res) => {
     try {
       const user = req.user as any;

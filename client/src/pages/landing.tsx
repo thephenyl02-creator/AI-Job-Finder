@@ -129,16 +129,21 @@ export default function Landing() {
                 Curated roles for legal professionals at every level. See where you fit, check your match, and apply with confidence.
               </p>
 
-              <div className="mt-8">
-                <Button size="lg" asChild data-testid="button-hero-browse">
-                  <a href="/jobs">
-                    Start exploring
+              <div className="mt-8 flex items-center gap-3 flex-wrap">
+                <Button size="lg" asChild data-testid="button-hero-diagnostic">
+                  <a href="/diagnostic">
+                    See where you fit
                     <ArrowRight className="ml-2 h-4 w-4" />
+                  </a>
+                </Button>
+                <Button size="lg" variant="outline" asChild data-testid="button-hero-browse">
+                  <a href="/jobs">
+                    Browse {stats?.totalJobs ? `${stats.totalJobs}+` : ""} roles
                   </a>
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground mt-3" data-testid="text-hero-trust">
-                Free to browse · No account needed
+                Free to start · No account needed
               </p>
             </div>
 
