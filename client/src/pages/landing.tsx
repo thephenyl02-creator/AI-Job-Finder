@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LogoMark } from "@/components/logo";
-import { ArrowRight, Search, Target, Globe, Wifi, Clock, BarChart3, Lock, Upload, Check, Quote } from "lucide-react";
+import { ArrowRight, Search, Target, Globe, Wifi, Clock, BarChart3, Lock, Upload, Check } from "lucide-react";
 import { Footer } from "@/components/footer";
 
 interface Stats {
@@ -316,50 +316,8 @@ export default function Landing() {
           </section>
         )}
 
-        <section className="border-t border-border/30 bg-muted/20" data-testid="testimonials-section">
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-12 sm:py-20">
-            <div className="text-center mb-8 sm:mb-10">
-              <h2 className="text-xl sm:text-3xl font-serif font-medium text-foreground" data-testid="text-testimonials-title">
-                Lawyers making the move
-              </h2>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-3xl mx-auto" data-testid="testimonials-grid">
-              <div className="rounded-lg border border-border/40 bg-background p-5 space-y-4" data-testid="testimonial-1">
-                <Quote className="h-4 w-4 text-muted-foreground/40" />
-                <p className="text-sm text-foreground leading-relaxed">
-                  I had no idea Legal Operations was even a career path. The diagnostic showed me I was already 70% ready.
-                </p>
-                <div>
-                  <p className="text-sm font-medium text-foreground">Sarah M.</p>
-                  <p className="text-xs text-muted-foreground">Former BigLaw Associate</p>
-                </div>
-              </div>
-              <div className="rounded-lg border border-border/40 bg-background p-5 space-y-4" data-testid="testimonial-2">
-                <Quote className="h-4 w-4 text-muted-foreground/40" />
-                <p className="text-sm text-foreground leading-relaxed">
-                  The fit scores saved me from applying to 50 random postings. I focused on 3 roles and got interviews for 2.
-                </p>
-                <div>
-                  <p className="text-sm font-medium text-foreground">James K.</p>
-                  <p className="text-xs text-muted-foreground">In-House Counsel</p>
-                </div>
-              </div>
-              <div className="rounded-lg border border-border/40 bg-background p-5 space-y-4" data-testid="testimonial-3">
-                <Quote className="h-4 w-4 text-muted-foreground/40" />
-                <p className="text-sm text-foreground leading-relaxed">
-                  I went from "I should probably learn about legal tech" to a concrete 30-day plan in under 2 minutes.
-                </p>
-                <div>
-                  <p className="text-sm font-medium text-foreground">Priya R.</p>
-                  <p className="text-xs text-muted-foreground">Contracts Manager</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
         {density && density.countriesCount > 0 && (
-          <section className="border-t border-border/30">
+          <section className="border-t border-border/30 bg-muted/20">
             <div className="max-w-5xl mx-auto px-4 sm:px-6 py-12 sm:py-20">
               <div className="flex flex-col sm:flex-row items-center gap-8 sm:gap-12">
                 <div className="flex-1 text-center sm:text-left">
@@ -434,7 +392,7 @@ export default function Landing() {
           </section>
         )}
 
-        <section className="border-t border-border/30 bg-muted/20">
+        <section className="border-t border-border/30">
           <div className="max-w-5xl mx-auto px-4 sm:px-6 py-12 sm:py-20">
             <div className="text-center mb-8 sm:mb-10">
               <h2 className="text-xl sm:text-3xl font-serif font-medium text-foreground" data-testid="text-pro-title">
@@ -504,7 +462,7 @@ export default function Landing() {
           </div>
         </section>
 
-        <section className="border-t border-border/30">
+        <section className="border-t border-border/30 bg-muted/20">
           <div className="max-w-5xl mx-auto px-4 sm:px-6 py-14 sm:py-20">
             <div className="text-center space-y-5" data-testid="final-cta-section">
               <h2 className="text-xl sm:text-3xl font-serif font-medium text-foreground">
