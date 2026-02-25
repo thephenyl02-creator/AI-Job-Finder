@@ -748,7 +748,7 @@ export default function Jobs() {
 
             <div data-testid="card-smart-search" className="max-w-3xl mx-auto">
               <div
-                className="rounded-xl border border-foreground/15 bg-muted/20 px-5 py-4 sm:px-6 sm:py-5 transition-colors focus-within:border-brand/40 focus-within:bg-muted/30 card-elev-static cursor-text"
+                className="rounded-xl border border-foreground/15 bg-muted/20 px-5 py-4 sm:px-6 sm:py-5 transition-colors focus-within:border-primary/40 focus-within:bg-muted/30 card-elev-static cursor-text"
                 onClick={(e) => {
                   if (!(e.target as HTMLElement).closest('button, a, [role="button"]')) {
                     searchInputRef.current?.focus();
@@ -760,14 +760,14 @@ export default function Jobs() {
                     <Popover open={gearOpen} onOpenChange={setGearOpen}>
                       <PopoverTrigger asChild>
                         <button
-                          className={`relative shrink-0 rounded-lg px-2.5 py-1.5 flex items-center gap-1.5 transition-colors hover:bg-muted/60 border ${intelligenceResult ? "text-brand border-brand/30 bg-brand/5" : "text-muted-foreground/60 border-transparent hover:border-foreground/10"}`}
+                          className={`relative shrink-0 rounded-lg px-2.5 py-1.5 flex items-center gap-1.5 transition-colors hover:bg-muted/60 border ${intelligenceResult ? "text-primary border-primary/30 bg-primary/5" : "text-muted-foreground/60 border-transparent hover:border-foreground/10"}`}
                           data-testid="button-career-gear"
                           title="Career intelligence"
                         >
                           <Compass className="h-4.5 w-4.5" />
                           <span className="text-xs font-medium hidden sm:inline">Career Paths</span>
                           {intelligenceResult && (
-                            <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-brand" />
+                            <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-primary" />
                           )}
                         </button>
                       </PopoverTrigger>
@@ -1285,7 +1285,7 @@ export default function Jobs() {
         </div>
 
         {isAuthenticated && hasResume && diagnosticData?.report && !searchResults && (
-          <div className="rounded-lg border border-brand/20 bg-brand/[0.03] p-3 sm:p-4 flex items-center gap-3 sm:gap-4 flex-wrap card-elev-static" data-testid="career-intelligence-header">
+          <div className="rounded-lg border bg-card p-3 sm:p-4 flex items-center gap-3 sm:gap-4 flex-wrap card-elev-static" data-testid="career-intelligence-header">
             <div className="flex items-center gap-2 shrink-0">
               <div className={`h-10 w-10 rounded-full flex items-center justify-center text-sm font-bold ${
                 diagnosticData.report.readinessScore >= 75 ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300" :
@@ -1788,7 +1788,7 @@ export default function Jobs() {
                             <Badge
                               variant="outline"
                               className={`text-[10px] font-semibold gap-0.5 ${
-                                fitScores[job.id].fitScore! >= 80 ? "text-brand border-brand/30" :
+                                fitScores[job.id].fitScore! >= 80 ? "text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800" :
                                 fitScores[job.id].fitScore! >= 60 ? "text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800" :
                                 fitScores[job.id].fitScore! >= 40 ? "text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800" :
                                 "text-red-600 dark:text-red-400 border-red-200 dark:border-red-800"
@@ -1906,7 +1906,7 @@ function CareerGearPopover({
   if (!isAuthenticated) {
     return (
       <div className="p-4 text-center" data-testid="gear-unauth">
-        <Compass className="h-5 w-5 text-brand mx-auto mb-2" />
+        <Compass className="h-5 w-5 text-primary mx-auto mb-2" />
         <p className="text-sm font-medium text-foreground mb-1">Career Intelligence</p>
         <p className="text-xs text-muted-foreground mb-3">Sign in and upload your resume to see personalized career paths</p>
         <Link href="/auth">
@@ -1919,7 +1919,7 @@ function CareerGearPopover({
   if (!hasResume) {
     return (
       <div className="p-4 text-center" data-testid="gear-no-resume">
-        <Compass className="h-5 w-5 text-brand mx-auto mb-2" />
+        <Compass className="h-5 w-5 text-primary mx-auto mb-2" />
         <p className="text-sm font-medium text-foreground mb-1">Career Intelligence</p>
         <p className="text-xs text-muted-foreground mb-3">Upload your resume to unlock personalized career paths</p>
         <Link href="/resumes">
@@ -1935,7 +1935,7 @@ function CareerGearPopover({
   if (!result) {
     return (
       <div className="p-4 text-center" data-testid="gear-generate">
-        <Compass className="h-5 w-5 text-brand mx-auto mb-2" />
+        <Compass className="h-5 w-5 text-primary mx-auto mb-2" />
         <p className="text-sm font-medium text-foreground mb-1">Career Intelligence</p>
         <p className="text-xs text-muted-foreground mb-3">Discover which legal tech paths match your background</p>
         <Button
@@ -1966,7 +1966,7 @@ function CareerGearPopover({
     <div className="p-4 max-h-[70vh] overflow-y-auto" data-testid="gear-intelligence-result">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <Compass className="h-4 w-4 text-brand" />
+          <Compass className="h-4 w-4 text-primary" />
           <span className="text-sm font-semibold text-foreground">Career Intelligence</span>
         </div>
         {resumeChanged && (

@@ -8,7 +8,7 @@ Legal Tech Careers is a career intelligence platform for legal professionals tra
 
 - Preferred communication style: Simple, everyday language
 - Design preferences: Clean, minimal, professional. No "AI-Powered" language - keep it approachable for non-technical lawyers
-- Color palette: Deep navy/slate base (authoritative, trustworthy) with teal/cyan brand accent (`--brand: 195 70% 42%` light, `195 65% 55%` dark)
+- Color palette: Deep navy/slate base (authoritative, trustworthy) — navy `--primary` is the brand color throughout, matching the logo identity. No separate brand accent color.
 - Typography: Playfair Display serif for headings (elegant, legal feel), DM Sans for body (clean, modern)
 
 ## System Architecture

@@ -95,8 +95,8 @@ function ReadinessRing({ score, size = "lg" }: { score: number; size?: "lg" | "s
   const strokeDashoffset = circumference - (score / 100) * circumference;
 
   const getColor = () => {
-    if (score >= 70) return "hsl(195, 70%, 42%)";
-    if (score >= 40) return "hsl(195, 55%, 52%)";
+    if (score >= 70) return "#22c55e";
+    if (score >= 40) return "#f59e0b";
     return "#94a3b8";
   };
 
@@ -348,7 +348,7 @@ export default function DashboardPage() {
               <Card className="card-elev-static" data-testid="card-this-week">
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between gap-2 flex-wrap">
-                    <CardTitle className="text-base text-brand">This Week</CardTitle>
+                    <CardTitle className="text-base">This Week</CardTitle>
                     {hasDiagnostic && !planComplete && (
                       <Badge variant="secondary" className="text-xs">Week {currentWeek} of 4</Badge>
                     )}
@@ -550,7 +550,7 @@ export default function DashboardPage() {
 
           <div className="mb-8">
             <h2 className="text-base font-semibold text-foreground mb-4 flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-brand" />
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
               Market Pulse
             </h2>
 
@@ -562,7 +562,7 @@ export default function DashboardPage() {
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1 min-w-0">
                           <p className="text-xs text-muted-foreground mb-1 font-medium">New This Week</p>
-                          <p className="text-2xl font-bold text-brand tabular-nums">{marketPulse.newJobsThisWeek}</p>
+                          <p className="text-2xl font-bold text-foreground tabular-nums">{marketPulse.newJobsThisWeek}</p>
                           <p className="text-xs text-muted-foreground mt-0.5">roles added</p>
                         </div>
                         <div className="p-2 rounded-md bg-muted/50 text-green-500">
@@ -617,7 +617,7 @@ export default function DashboardPage() {
                           <div className="flex items-start justify-between gap-2">
                             <div className="flex-1 min-w-0">
                               <p className="text-xs text-muted-foreground mb-1 font-medium">Remote</p>
-                              <p className="text-2xl font-bold text-brand tabular-nums">{remotePercent}%</p>
+                              <p className="text-2xl font-bold text-foreground tabular-nums">{remotePercent}%</p>
                               <p className="text-xs text-muted-foreground mt-0.5">of all roles</p>
                             </div>
                             <div className="p-2 rounded-md bg-muted/50 text-muted-foreground">
@@ -653,7 +653,7 @@ export default function DashboardPage() {
                           <div className="flex items-start justify-between gap-2">
                             <div className="flex-1 min-w-0">
                               <p className="text-xs text-muted-foreground mb-1 font-medium">Total Active</p>
-                              <p className="text-2xl font-bold text-brand tabular-nums">{marketPulse.totalJobs}</p>
+                              <p className="text-2xl font-bold text-foreground tabular-nums">{marketPulse.totalJobs}</p>
                               <p className="text-xs text-muted-foreground mt-0.5">open positions</p>
                             </div>
                             <div className="p-2 rounded-md bg-muted/50 text-muted-foreground">

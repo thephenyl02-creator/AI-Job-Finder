@@ -57,8 +57,6 @@
   --shadow-2xl: 0 24px 48px -8px hsl(222 30% 14% / 0.14);
   --tracking-normal: 0em;
   --spacing: 0.25rem;
-  --brand: 195 70% 42%;
-  --brand-foreground: 0 0% 100%;
 
 /* Fallback for older browsers */
   --sidebar-primary-border: hsl(var(--sidebar-primary));
@@ -137,8 +135,6 @@
   --shadow-lg: 0 4px 6px 0 hsl(0 0% 0% / 0.14), 0 10px 24px -4px hsl(0 0% 0% / 0.20);
   --shadow-xl: 0 8px 10px 0 hsl(0 0% 0% / 0.14), 0 20px 40px -6px hsl(0 0% 0% / 0.24);
   --shadow-2xl: 0 24px 48px -8px hsl(0 0% 0% / 0.30);
-  --brand: 195 65% 55%;
-  --brand-foreground: 0 0% 100%;
 
 /* Fallback for older browsers */
   --sidebar-primary-border: hsl(var(--sidebar-primary));
@@ -389,14 +385,12 @@
   --shadow-soft: 0 1px 3px hsl(222 30% 14% / 0.04), 0 2px 8px hsl(222 30% 14% / 0.06);
   --shadow-card: 0 2px 4px hsl(222 30% 14% / 0.04), 0 8px 24px hsl(222 30% 14% / 0.08);
   --shadow-float: 0 4px 8px hsl(222 30% 14% / 0.06), 0 16px 40px hsl(222 30% 14% / 0.12);
-  --shadow-brand-glow: 0 4px 16px hsl(195 70% 42% / 0.15), 0 8px 32px hsl(195 70% 42% / 0.08);
 }
 
 .dark {
   --shadow-soft: 0 1px 3px hsl(0 0% 0% / 0.16), 0 2px 8px hsl(0 0% 0% / 0.20);
   --shadow-card: 0 2px 4px hsl(0 0% 0% / 0.16), 0 8px 24px hsl(0 0% 0% / 0.24);
   --shadow-float: 0 4px 8px hsl(0 0% 0% / 0.20), 0 16px 40px hsl(0 0% 0% / 0.30);
-  --shadow-brand-glow: 0 4px 16px hsl(195 65% 55% / 0.20), 0 8px 32px hsl(195 65% 55% / 0.10);
 }
 
 .card-elev {
@@ -425,22 +419,3 @@
   box-shadow: 0 1px 3px hsl(0 0% 0% / 0.20), 0 1px 2px hsl(0 0% 0% / 0.12);
 }
 
-.brand-glow {
-  box-shadow: var(--shadow-brand-glow);
-}
-
-.btn-brand {
-  background-color: hsl(var(--brand));
-  color: hsl(var(--brand-foreground));
-  transition: background-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
-}
-
-.btn-brand:hover {
-  background-color: hsl(var(--brand) / 0.9);
-  box-shadow: 0 2px 8px hsl(var(--brand) / 0.25);
-  transform: translateY(-1px);
-}
-
-.btn-brand:active {
-  transform: translateY(0);
-}

@@ -46,7 +46,7 @@ function NavLink({ href, icon: Icon, label, isActive, testId }: {
       >
         <Icon className="h-3.5 w-3.5 mr-1.5" />
         {label}
-        {isActive && <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-brand rounded-full" />}
+        {isActive && <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-primary rounded-full" />}
       </Button>
     </Link>
   );

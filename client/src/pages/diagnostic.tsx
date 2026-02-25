@@ -264,7 +264,7 @@ function TransitionGauge({ difficulty }: { difficulty: DiagnosticReportData["tra
 function ReadinessScoreRing({ score }: { score: number }) {
   const circumference = 2 * Math.PI * 42;
   const dashOffset = circumference - (score / 100) * circumference;
-  const color = "hsl(var(--brand))";
+  const color = score >= 70 ? "#10b981" : score >= 45 ? "#f59e0b" : "#ef4444";
 
   return (
     <div className="relative flex items-center justify-center" data-testid="readiness-score-ring">
@@ -530,7 +530,7 @@ function CareerPathFlow({
           return (
             <div key={i} className="relative" data-testid={`career-flow-path-${i}`}>
               <div className="flex justify-center py-1">
-                <svg width="2" height="24" className="text-brand">
+                <svg width="2" height="24" className="text-muted-foreground/40">
                   <line x1="1" y1="0" x2="1" y2="24" stroke="currentColor" strokeWidth={connectorWidth(path.confidence)} strokeDasharray="4 3" opacity={connectorOpacity(path.confidence)} />
                 </svg>
               </div>
@@ -619,7 +619,7 @@ function CareerPathFlow({
                   <path
                     d={`M ${startX} ${startY} C ${cpX} ${startY}, ${cpX} ${endY}, ${endX} ${endY}`}
                     fill="none"
-                    stroke="hsl(var(--brand))"
+                    stroke="hsl(var(--muted-foreground))"
                     strokeWidth={connectorWidth(path.confidence)}
                     strokeDasharray={path.fitLevel === "low" ? "6 4" : "none"}
                     opacity={connectorOpacity(path.confidence)}
@@ -1428,7 +1428,7 @@ export default function DiagnosticPage() {
                   }}
                   data-testid={`nav-${section.id}`}
                 >
-                  <section.icon className="h-3.5 w-3.5 mr-1.5 text-brand" />
+                  <section.icon className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
                   {section.label}
                 </Button>
               ))}

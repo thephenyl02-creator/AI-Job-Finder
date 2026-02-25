@@ -94,11 +94,11 @@ export function JourneyStepper({ currentStep, onStepClick }: JourneyStepperProps
                 <div
                   className={`relative h-7 w-7 rounded-full flex items-center justify-center transition-all duration-300 ${
                     isCompleted
-                      ? "bg-brand text-brand-foreground scale-100"
+                      ? "bg-primary text-primary-foreground scale-100"
                       : isActive
-                        ? "bg-brand text-brand-foreground ring-2 ring-brand/20 scale-105"
+                        ? "bg-primary text-primary-foreground ring-2 ring-primary/20 scale-105"
                         : "bg-muted text-muted-foreground/50 border border-foreground/10"
-                  } ${isClickable && !isCompleted && !isActive ? "group-hover:border-brand/40 group-hover:text-brand/60 group-hover:scale-105" : ""}`}
+                  } ${isClickable && !isCompleted && !isActive ? "group-hover:border-primary/40 group-hover:text-primary/60 group-hover:scale-105" : ""}`}
                   data-testid={`step-dot-${step.key}`}
                 >
                   {isCompleted ? (
@@ -109,8 +109,8 @@ export function JourneyStepper({ currentStep, onStepClick }: JourneyStepperProps
                 </div>
                 <span
                   className={`text-[10px] leading-tight transition-colors ${
-                    isActive ? "text-foreground font-semibold" : isCompleted ? "text-brand font-medium" : "text-muted-foreground/60"
-                  } ${isClickable && !isCompleted && !isActive ? "group-hover:text-brand/60" : ""}`}
+                    isActive ? "text-foreground font-semibold" : isCompleted ? "text-primary font-medium" : "text-muted-foreground/60"
+                  } ${isClickable && !isCompleted && !isActive ? "group-hover:text-primary/60" : ""}`}
                 >
                   {step.label}
                 </span>
@@ -118,7 +118,7 @@ export function JourneyStepper({ currentStep, onStepClick }: JourneyStepperProps
               {i < STEPS.length - 1 && (
                 <div
                   className={`flex-1 h-0.5 mx-1.5 mt-[-12px] rounded-full transition-colors duration-500 ${
-                    isCompleted || isPast ? "bg-brand" : "bg-foreground/8"
+                    isCompleted || isPast ? "bg-primary" : "bg-foreground/8"
                   }`}
                 />
               )}
@@ -133,7 +133,7 @@ export function JourneyStepper({ currentStep, onStepClick }: JourneyStepperProps
             {hint.text}
             {hint.link && (
               <Link href={hint.link}>
-                <span className="inline-flex items-center gap-0.5 ml-1.5 text-brand font-medium hover:underline cursor-pointer" data-testid="journey-hint-link">
+                <span className="inline-flex items-center gap-0.5 ml-1.5 text-primary font-medium hover:underline cursor-pointer" data-testid="journey-hint-link">
                   {hint.action}
                   <ChevronRight className="h-3 w-3" />
                 </span>
@@ -143,7 +143,7 @@ export function JourneyStepper({ currentStep, onStepClick }: JourneyStepperProps
               <button
                 type="button"
                 onClick={() => onStepClick?.(hintStep)}
-                className="inline-flex items-center gap-0.5 ml-1.5 text-brand font-medium hover:underline"
+                className="inline-flex items-center gap-0.5 ml-1.5 text-primary font-medium hover:underline"
                 data-testid="journey-hint-action"
               >
                 {hint.action}
