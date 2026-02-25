@@ -58,6 +58,7 @@ import { parseDescription as parseDescriptionDeterministic } from "./lib/descrip
 import { runQAChecks, checkDuplicate } from "./lib/job-qa";
 import { enforceJobDefaults } from "./lib/job-defaults";
 import { generateJobHash } from "./lib/job-hash";
+import { generateMarketIntelligencePDF } from "./lib/market-intelligence-pdf";
 import { db } from "./db";
 import { jobs, users, resumes, resumeEditorVersions } from "@shared/schema";
 import { eq, and, sql, desc, count, or } from "drizzle-orm";
@@ -7898,6 +7899,38 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
     }
   });
 
+  const STUDENT_INCLUDE_KEYWORDS = /\b(intern|summer|fellow|fellowship|graduate|new grad|campus|student|trainee|apprentice|residency|early career|rotation|rotational|analyst)\b/i;
+  const STUDENT_EXCLUDE_KEYWORDS = /\b(manager|director|senior|lead|principal|head of|vp|staff engineer|generalist|representative)\b/i;
+
+  function isStudentRole(job: { seniorityLevel?: string | null; title: string }): boolean {
+    const seniority = job.seniorityLevel || "";
+    if (seniority === "Intern" || seniority === "Fellowship") return true;
+    if (seniority === "Entry" || seniority === "Junior") {
+      if (STUDENT_EXCLUDE_KEYWORDS.test(job.title)) return false;
+      return STUDENT_INCLUDE_KEYWORDS.test(job.title);
+    }
+    return false;
+  }
+
+  const SKILLS_SYNONYM_MAP: Record<string, string> = {
+    "legal tech": "legal technology",
+    "customer engagement": "client engagement",
+    "collaboration": "cross-functional collaboration",
+    "ai integration": "ai solutions",
+    "customer success": "client relationship management",
+  };
+
+  const UPPERCASE_WORDS = new Set(["ai", "ml", "api", "it", "crm", "erp", "saas", "nlp", "llm", "sql", "ui", "ux"]);
+
+  function toTitleCase(str: string): string {
+    return str.replace(/\b\w+/g, (word, offset) => {
+      const lower = word.toLowerCase();
+      if (UPPERCASE_WORDS.has(lower)) return lower.toUpperCase();
+      if (["of", "and", "in", "for", "the", "a", "an", "to", "with"].includes(lower) && offset > 0) return lower;
+      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+    });
+  }
+
   let marketIntelligenceCache: { data: any; timestamp: number } | null = null;
   const MI_CACHE_TTL = 3600000;
 
@@ -7942,8 +7975,10 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
 
       for (const job of allJobs) {
         for (const skill of (job.keySkills || [])) {
-          const s = skill.toLowerCase().trim();
-          if (s) skillMap[s] = (skillMap[s] || 0) + 1;
+          let s = skill.toLowerCase().trim();
+          if (!s) continue;
+          s = SKILLS_SYNONYM_MAP[s] || s;
+          skillMap[s] = (skillMap[s] || 0) + 1;
         }
         if (job.roleCategory) {
           categoryMap[job.roleCategory] = (categoryMap[job.roleCategory] || 0) + 1;
@@ -7973,7 +8008,7 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
       const skillsDemand = Object.entries(skillMap)
         .sort((a, b) => b[1] - a[1])
         .slice(0, 15)
-        .map(([skill, count]) => ({ skill, count }));
+        .map(([skill, count]) => ({ skill: toTitleCase(skill), count }));
 
       const careerPaths = Object.entries(categoryMap)
         .map(([name, jobCount]) => ({
@@ -8012,8 +8047,7 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
         .slice(0, 15)
         .map(([code, { name, count }]) => ({ countryCode: code, countryName: name, jobCount: count }));
 
-      const studentLevels = ["Intern", "Fellowship", "Entry", "Junior"];
-      const studentJobs = allJobs.filter(j => studentLevels.includes(j.seniorityLevel || ""));
+      const studentJobs = allJobs.filter(j => isStudentRole(j));
       const studentCompanyMap: Record<string, number> = {};
       const studentPathMap: Record<string, number> = {};
       for (const j of studentJobs) {
@@ -8024,7 +8058,7 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
       const studentOpportunities = {
         internCount: allJobs.filter(j => j.seniorityLevel === "Intern").length,
         fellowshipCount: allJobs.filter(j => j.seniorityLevel === "Fellowship").length,
-        entryLevelCount: allJobs.filter(j => ["Entry", "Junior"].includes(j.seniorityLevel || "")).length,
+        entryLevelCount: studentJobs.filter(j => ["Entry", "Junior"].includes(j.seniorityLevel || "")).length,
         totalStudentJobs: studentJobs.length,
         topCompanies: Object.entries(studentCompanyMap).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([company, count]) => ({ company, count })),
         topPaths: Object.entries(studentPathMap).sort((a, b) => b[1] - a[1]).map(([name, count]) => ({ name, count })),
@@ -8118,11 +8152,65 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
     }
   });
 
+  app.get("/api/market-intelligence/report", async (req, res) => {
+    try {
+      const period = (req.query.period as string) || "weekly";
+      if (!["weekly", "monthly", "annual"].includes(period)) {
+        return res.status(400).json({ error: "Invalid period. Use weekly, monthly, or annual." });
+      }
+
+      let miData: any;
+      if (marketIntelligenceCache && Date.now() - marketIntelligenceCache.timestamp < MI_CACHE_TTL) {
+        miData = marketIntelligenceCache.data;
+      } else {
+        const response = await fetch(`http://localhost:${process.env.PORT || 5000}/api/market-intelligence`);
+        if (response.ok) {
+          miData = await response.json();
+        } else if (marketIntelligenceCache) {
+          miData = marketIntelligenceCache.data;
+        } else {
+          return res.status(500).json({ error: "Could not load market data" });
+        }
+      }
+
+      const pdfData = {
+        overview: {
+          ...miData.overview,
+          totalCountries: miData.overview.countriesCount || miData.overview.totalCountries || 0,
+        },
+        skillsDemand: miData.skillsDemand || [],
+        careerPaths: miData.careerPaths || [],
+        salaryByPath: miData.salaryByPath || [],
+        workMode: miData.workMode || { remote: 0, hybrid: 0, onsite: 0 },
+        aiIntensity: {
+          low: miData.aiIntensity?.low?.count ?? miData.aiIntensity?.low ?? 0,
+          medium: miData.aiIntensity?.medium?.count ?? miData.aiIntensity?.medium ?? 0,
+          high: miData.aiIntensity?.high?.count ?? miData.aiIntensity?.high ?? 0,
+        },
+        seniorityDistribution: miData.seniorityDistribution || [],
+        topCompanies: miData.topCompanies || [],
+        geography: miData.geography || [],
+        studentOpportunities: miData.studentOpportunities || { totalStudentJobs: 0, internCount: 0, fellowshipCount: 0, entryLevelCount: 0 },
+      };
+
+      const periodLabels: Record<string, string> = { weekly: "Weekly_Briefing", monthly: "Monthly_Report", annual: "Annual_Report" };
+      const filename = `LegalTechCareers_${periodLabels[period]}_${new Date().toISOString().split("T")[0]}.pdf`;
+
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+
+      const pdfDoc = generateMarketIntelligencePDF(pdfData, period);
+      pdfDoc.pipe(res);
+    } catch (error: any) {
+      console.error("Error generating PDF report:", error);
+      res.status(500).json({ error: "Failed to generate PDF report" });
+    }
+  });
+
   app.get("/api/student-opportunities", async (_req, res) => {
     try {
       const allJobs = await storage.getPublishedJobs();
-      const studentLevels = ["Intern", "Fellowship", "Entry", "Junior"];
-      const studentJobs = allJobs.filter(j => studentLevels.includes(j.seniorityLevel || ""));
+      const studentJobs = allJobs.filter(j => isStudentRole(j));
 
       const sortedJobs = [...studentJobs]
         .sort((a, b) => {
