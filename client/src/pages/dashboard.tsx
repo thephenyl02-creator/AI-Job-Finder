@@ -531,7 +531,7 @@ export default function DashboardPage() {
                     {[
                       { label: "Browse Jobs", href: "/jobs", icon: Search },
                       { label: "Run Diagnostic", href: "/diagnostic", icon: Brain },
-                      { label: "Resume Editor", href: "/resume-editor", icon: FileText },
+                      { label: "My Resumes", href: "/resumes", icon: FileText },
                       { label: "Opportunity Map", href: "/opportunity-map", icon: Map },
                     ].map((link) => (
                       <Link href={link.href} key={link.label}>
