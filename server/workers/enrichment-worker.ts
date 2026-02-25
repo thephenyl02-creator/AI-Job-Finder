@@ -6,7 +6,7 @@ import { cleanJobDescription } from '../lib/description-cleaner';
 import { generateJobHash, generateFuzzyJobHash } from '../lib/job-hash';
 import { LAW_FIRMS_AND_COMPANIES } from '../lib/law-firms-list';
 import { normalizeLocation } from '../lib/location-normalizer';
-import { clearMarketIntelligenceCache } from '../routes';
+import { clearMarketIntelligenceCache } from '../lib/mi-cache';
 import type { Job } from '@shared/schema';
 import { jobs } from '@shared/schema';
 import { db } from '../db';

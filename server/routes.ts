@@ -138,12 +138,8 @@ async function requirePro(req: any, res: any, next: any) {
   });
 }
 
-let marketIntelligenceCache: { data: any; timestamp: number } | null = null;
-const MI_CACHE_TTL = 3600000;
-
-export function clearMarketIntelligenceCache() {
-  marketIntelligenceCache = null;
-}
+import { clearMarketIntelligenceCache, getMarketIntelligenceCache, setMarketIntelligenceCache } from "./lib/mi-cache";
+export { clearMarketIntelligenceCache } from "./lib/mi-cache";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -3307,7 +3303,7 @@ Rules:
           published++;
         }
       }
-      marketIntelligenceCache = null;
+      clearMarketIntelligenceCache();
       res.json({ published, skipped, total: approvedJobs.length });
     } catch (error) {
       console.error("Error bulk publishing:", error);
@@ -3484,7 +3480,7 @@ Rules:
       }
 
       const updated = await storage.publishJob(id);
-      marketIntelligenceCache = null;
+      clearMarketIntelligenceCache();
       res.json({ job: updated });
     } catch (error) {
       console.error("Error publishing job:", error);
@@ -3500,7 +3496,7 @@ Rules:
       const id = parseInt(req.params.id as string);
       const updated = await storage.unpublishJob(id);
       if (!updated) return res.status(404).json({ error: "Job not found" });
-      marketIntelligenceCache = null;
+      clearMarketIntelligenceCache();
       res.json({ job: updated });
     } catch (error) {
       console.error("Error unpublishing job:", error);
@@ -3829,7 +3825,7 @@ Rules:
         qaCheckedAt: new Date(),
       } as any);
 
-      marketIntelligenceCache = null;
+      clearMarketIntelligenceCache();
       res.json({
         success: true,
         job: updated,
@@ -4106,7 +4102,7 @@ Rules:
       }
 
       console.log(`[Admin] Publish All Eligible: ${published} published, ${skipped} skipped out of ${candidates.length} candidates`);
-      if (published > 0) marketIntelligenceCache = null;
+      if (published > 0) clearMarketIntelligenceCache();
       res.json({ published, skipped, total: candidates.length, publishedJobs: publishedJobs.slice(0, 50) });
     } catch (error: any) {
       console.error("[Admin] Publish All Eligible error:", error);
@@ -4159,7 +4155,7 @@ Rules:
       }
 
       const published = results.filter(r => r.status === 'published').length;
-      if (published > 0) marketIntelligenceCache = null;
+      if (published > 0) clearMarketIntelligenceCache();
       res.json({ success: true, published, total: results.length, results });
     } catch (error: any) {
       console.error("[Bulk QA Publish] Error:", error);
@@ -7930,8 +7926,9 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
 
   app.get("/api/market-intelligence", async (_req, res) => {
     try {
-      if (marketIntelligenceCache && Date.now() - marketIntelligenceCache.timestamp < MI_CACHE_TTL) {
-        return res.json(marketIntelligenceCache.data);
+      const cachedData = getMarketIntelligenceCache();
+      if (cachedData) {
+        return res.json(cachedData);
       }
 
       const allJobs = await storage.getPublishedJobs();
@@ -8120,7 +8117,7 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
         generatedAt: new Date().toISOString(),
       };
 
-      marketIntelligenceCache = { data: result, timestamp: Date.now() };
+      setMarketIntelligenceCache(result);
       res.json(result);
     } catch (error: any) {
       console.error("Error computing market intelligence:", error);
@@ -8154,17 +8151,16 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
         return res.status(400).json({ error: "Invalid period. Use weekly, monthly, or annual." });
       }
 
-      let miData: any;
-      if (marketIntelligenceCache && Date.now() - marketIntelligenceCache.timestamp < MI_CACHE_TTL) {
-        miData = marketIntelligenceCache.data;
-      } else {
+      let miData: any = getMarketIntelligenceCache();
+      if (!miData) {
         const response = await fetch(`http://localhost:${process.env.PORT || 5000}/api/market-intelligence`);
         if (response.ok) {
           miData = await response.json();
-        } else if (marketIntelligenceCache) {
-          miData = marketIntelligenceCache.data;
         } else {
-          return res.status(500).json({ error: "Could not load market data" });
+          miData = getMarketIntelligenceCache();
+          if (!miData) {
+            return res.status(500).json({ error: "Could not load market data" });
+          }
         }
       }
 

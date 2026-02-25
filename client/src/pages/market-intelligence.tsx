@@ -201,6 +201,8 @@ export default function MarketIntelligence() {
   const { isPro } = useSubscription();
   const canDownload = isPro || isAdmin;
 
+  const [downloading, setDownloading] = useState(false);
+
   const { data, isLoading, isError, refetch } = useQuery<MarketIntelligenceData>({
     queryKey: ["/api/market-intelligence"],
   });
@@ -263,7 +265,6 @@ export default function MarketIntelligence() {
   const salaryBlurred = !isPro && salaryByPath.length > 3;
   const salaryMax = Math.max(...(salaryByPath.length > 0 ? salaryByPath.map((s) => s.medianMax || 0) : [0]), 1);
 
-  const [downloading, setDownloading] = useState(false);
   const handleDownload = async (period: string) => {
     setDownloading(true);
     try {

@@ -1,5 +1,5 @@
 import { storage } from '../storage';
-import { clearMarketIntelligenceCache } from '../routes';
+import { clearMarketIntelligenceCache } from '../lib/mi-cache';
 import https from 'https';
 import http from 'http';
 import { URL } from 'url';
