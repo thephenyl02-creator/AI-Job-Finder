@@ -8150,7 +8150,11 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
         skillsDemand: miData.skillsDemand || [],
         careerPaths: miData.careerPaths || [],
         salaryByPath: miData.salaryByPath || [],
-        workMode: miData.workMode || { remote: 0, hybrid: 0, onsite: 0 },
+        workMode: {
+          remote: miData.workMode?.remote?.count ?? miData.workMode?.remote ?? 0,
+          hybrid: miData.workMode?.hybrid?.count ?? miData.workMode?.hybrid ?? 0,
+          onsite: miData.workMode?.onsite?.count ?? miData.workMode?.onsite ?? 0,
+        },
         aiIntensity: {
           low: miData.aiIntensity?.low?.count ?? miData.aiIntensity?.low ?? 0,
           medium: miData.aiIntensity?.medium?.count ?? miData.aiIntensity?.medium ?? 0,
