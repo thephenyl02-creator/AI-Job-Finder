@@ -58,7 +58,7 @@ function ChartCard({ title, subtitle, info, children, className = "" }: {
   className?: string;
 }) {
   return (
-    <Card className={`border border-border/50 shadow-sm ${className}`} data-testid="chart-card">
+    <Card className={`border border-border/50 card-elev-static ${className}`} data-testid="chart-card">
       <CardHeader className="pb-2 space-y-0.5">
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm font-semibold text-foreground">{title}</CardTitle>
@@ -264,7 +264,7 @@ function TransitionGauge({ difficulty }: { difficulty: DiagnosticReportData["tra
 function ReadinessScoreRing({ score }: { score: number }) {
   const circumference = 2 * Math.PI * 42;
   const dashOffset = circumference - (score / 100) * circumference;
-  const color = score >= 70 ? "#10b981" : score >= 45 ? "#f59e0b" : "#ef4444";
+  const color = "hsl(var(--brand))";
 
   return (
     <div className="relative flex items-center justify-center" data-testid="readiness-score-ring">
@@ -393,7 +393,7 @@ function TransitionPlan({ plan, isPro }: { plan: TransitionWeek[]; isPro: boolea
                 </div>
               </div>
             )}
-            <Card className="border border-border/40">
+            <Card className="border border-border/40 card-elev-static">
               <CardHeader className="pb-1.5 pt-3 px-4">
                 <div className="flex items-center gap-2">
                   <Badge variant="outline" className="text-[10px] px-1.5">Week {week.week}</Badge>
@@ -530,7 +530,7 @@ function CareerPathFlow({
           return (
             <div key={i} className="relative" data-testid={`career-flow-path-${i}`}>
               <div className="flex justify-center py-1">
-                <svg width="2" height="24" className="text-muted-foreground/40">
+                <svg width="2" height="24" className="text-brand">
                   <line x1="1" y1="0" x2="1" y2="24" stroke="currentColor" strokeWidth={connectorWidth(path.confidence)} strokeDasharray="4 3" opacity={connectorOpacity(path.confidence)} />
                 </svg>
               </div>
@@ -619,7 +619,7 @@ function CareerPathFlow({
                   <path
                     d={`M ${startX} ${startY} C ${cpX} ${startY}, ${cpX} ${endY}, ${endX} ${endY}`}
                     fill="none"
-                    stroke="hsl(var(--muted-foreground))"
+                    stroke="hsl(var(--brand))"
                     strokeWidth={connectorWidth(path.confidence)}
                     strokeDasharray={path.fitLevel === "low" ? "6 4" : "none"}
                     opacity={connectorOpacity(path.confidence)}
@@ -1329,7 +1329,7 @@ export default function DiagnosticPage() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-6 space-y-6">
+    <div className="max-w-5xl mx-auto px-4 py-6 space-y-8">
       {/* Header */}
       <div className="mb-1">
         <Link href="/dashboard">
@@ -1409,7 +1409,34 @@ export default function DiagnosticPage() {
 
       {report && !runDiagnostic.isPending && (
         <>
+          {/* Sticky Section Navigation */}
+          <nav className="sticky top-0 z-50 -mx-4 px-4 py-2.5 bg-background/80 backdrop-blur-md border-b border-border/40" data-testid="section-nav">
+            <div className="flex items-center gap-1 overflow-x-auto scrollbar-none">
+              {[
+                { id: "overview", label: "Overview", icon: BarChart3 },
+                { id: "skills", label: "Skills", icon: Brain },
+                { id: "career-paths", label: "Career Paths", icon: TrendingUp },
+                { id: "action-plan", label: "Action Plan", icon: FileText },
+              ].map((section) => (
+                <Button
+                  key={section.id}
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    const el = document.getElementById(`section-${section.id}`);
+                    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }}
+                  data-testid={`nav-${section.id}`}
+                >
+                  <section.icon className="h-3.5 w-3.5 mr-1.5 text-brand" />
+                  {section.label}
+                </Button>
+              ))}
+            </div>
+          </nav>
+
           {/* Top Summary Row */}
+          <div id="section-overview" />
           <div className="grid grid-cols-1 md:grid-cols-[auto_1fr] gap-6 items-start">
             <div className="flex flex-col items-center gap-2">
               <ReadinessScoreRing score={report.overallReadinessScore} />
@@ -1438,6 +1465,7 @@ export default function DiagnosticPage() {
           </div>
 
           {/* Career Path Flow */}
+          <div id="section-career-paths" />
           <CareerPathFlow
             topPaths={report.topPaths}
             readinessLadder={report.readinessLadder}
@@ -1447,6 +1475,7 @@ export default function DiagnosticPage() {
           />
 
           {/* Charts Row */}
+          <div id="section-skills" />
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <SkillRadarChart clusters={report.skillClusters} />
             <div className="space-y-4">
@@ -1459,10 +1488,12 @@ export default function DiagnosticPage() {
           <MarketDemandChart demand={report.marketDemand} />
 
           {/* Brutal Honesty */}
-          <Card className="border-rose-500/20 bg-rose-500/5" data-testid="brutal-honesty-section">
+          <Card className="border-2 border-rose-500/30 bg-rose-500/5 card-elev-static" data-testid="brutal-honesty-section">
             <CardHeader className="pb-2">
               <div className="flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4 text-rose-500" />
+                <div className="w-7 h-7 rounded-full bg-rose-500/10 flex items-center justify-center shrink-0">
+                  <AlertTriangle className="h-4 w-4 text-rose-500" />
+                </div>
                 <CardTitle className="text-sm font-semibold text-rose-700 dark:text-rose-400">Brutal Honesty</CardTitle>
               </div>
             </CardHeader>
@@ -1477,6 +1508,7 @@ export default function DiagnosticPage() {
           </Card>
 
           {/* Readiness Ladder */}
+          <div id="section-action-plan" />
           <div>
             <h3 className="text-lg font-bold font-serif text-foreground mb-3" data-testid="readiness-ladder-title">Role Readiness Ladder</h3>
             <ReadinessLadder ladder={report.readinessLadder} isPro={isPro} />
@@ -1490,7 +1522,7 @@ export default function DiagnosticPage() {
           </div>
 
           {/* Bottom CTA */}
-          <Card className="bg-primary/5 border-primary/20 p-6 text-center" data-testid="diagnostic-bottom-cta">
+          <Card className="bg-primary/5 border-primary/20 p-6 text-center card-elev-static" data-testid="diagnostic-bottom-cta">
             <h3 className="text-lg font-bold font-serif text-foreground mb-2">Ready to take the next step?</h3>
             <p className="text-sm text-muted-foreground mb-4">
               {report.readinessLadder.ready.length > 0

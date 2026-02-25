@@ -95,8 +95,8 @@ function ReadinessRing({ score, size = "lg" }: { score: number; size?: "lg" | "s
   const strokeDashoffset = circumference - (score / 100) * circumference;
 
   const getColor = () => {
-    if (score >= 70) return "#22c55e";
-    if (score >= 40) return "#f59e0b";
+    if (score >= 70) return "hsl(195, 70%, 42%)";
+    if (score >= 40) return "hsl(195, 55%, 52%)";
     return "#94a3b8";
   };
 
@@ -252,9 +252,9 @@ export default function DashboardPage() {
   return (
     <div className="overflow-x-hidden">
       <Header />
-      <main className="container mx-auto px-4 py-6 pb-20">
+      <main className="container mx-auto px-4 py-6 sm:py-8 pb-20">
         <div className="max-w-6xl mx-auto">
-          <div className="mb-6">
+          <div className="mb-8">
             <h1 className="text-2xl font-serif font-bold tracking-tight text-foreground" data-testid="text-dashboard-title">
               {user?.firstName ? `Welcome back, ${user.firstName}` : "Welcome back"}
             </h1>
@@ -264,9 +264,9 @@ export default function DashboardPage() {
           </div>
 
           {hasDiagnostic ? (
-            <Card className="mb-6" data-testid="card-career-snapshot">
-              <CardContent className="p-6">
-                <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
+            <Card className="mb-8 card-elev-prominent" data-testid="card-career-snapshot">
+              <CardContent className="p-6 sm:p-8">
+                <div className="flex flex-col md:flex-row items-center md:items-start gap-6 sm:gap-8">
                   <div className="shrink-0">
                     <ReadinessRing score={readinessScore} size="lg" />
                     <p className="text-xs text-muted-foreground text-center mt-1">
@@ -320,8 +320,8 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
           ) : (
-            <Card className="mb-6 border-dashed" data-testid="card-diagnostic-cta">
-              <CardContent className="p-6">
+            <Card className="mb-8 border-dashed card-elev-static" data-testid="card-diagnostic-cta">
+              <CardContent className="p-6 sm:p-8">
                 <div className="flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left">
                   <div className="p-3 rounded-md bg-primary/10 text-primary shrink-0">
                     <Sparkles className="h-6 w-6" />
@@ -343,12 +343,12 @@ export default function DashboardPage() {
             </Card>
           )}
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8 mb-8">
             <div className="lg:col-span-2">
-              <Card data-testid="card-this-week">
+              <Card className="card-elev-static" data-testid="card-this-week">
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between gap-2 flex-wrap">
-                    <CardTitle className="text-base">This Week</CardTitle>
+                    <CardTitle className="text-base text-brand">This Week</CardTitle>
                     {hasDiagnostic && !planComplete && (
                       <Badge variant="secondary" className="text-xs">Week {currentWeek} of 4</Badge>
                     )}
@@ -480,9 +480,9 @@ export default function DashboardPage() {
               </Card>
             </div>
 
-            <div className="space-y-4">
-              <Card data-testid="card-saved-jobs-sidebar">
-                <CardContent className="p-4">
+            <div className="space-y-5">
+              <Card className="card-elev-static" data-testid="card-saved-jobs-sidebar">
+                <CardContent className="p-5">
                   <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
                     <div className="flex items-center gap-2">
                       <Bookmark className="h-4 w-4 text-muted-foreground" />
@@ -506,8 +506,8 @@ export default function DashboardPage() {
                 </CardContent>
               </Card>
 
-              <Card data-testid="card-alerts-sidebar">
-                <CardContent className="p-4">
+              <Card className="card-elev-static" data-testid="card-alerts-sidebar">
+                <CardContent className="p-5">
                   <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
                     <div className="flex items-center gap-2">
                       <Bell className="h-4 w-4 text-muted-foreground" />
@@ -524,8 +524,8 @@ export default function DashboardPage() {
                 </CardContent>
               </Card>
 
-              <Card data-testid="card-quick-links">
-                <CardContent className="p-4">
+              <Card className="card-elev-static" data-testid="card-quick-links">
+                <CardContent className="p-5">
                   <p className="text-sm font-medium text-foreground mb-3">Quick Links</p>
                   <div className="space-y-1.5">
                     {[
@@ -548,21 +548,21 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div className="mb-6">
+          <div className="mb-8">
             <h2 className="text-base font-semibold text-foreground mb-4 flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              <TrendingUp className="h-4 w-4 text-brand" />
               Market Pulse
             </h2>
 
             {marketPulse ? (
               <>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <Card data-testid="card-pulse-new-roles">
+                  <Card className="card-elev-static" data-testid="card-pulse-new-roles">
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1 min-w-0">
                           <p className="text-xs text-muted-foreground mb-1 font-medium">New This Week</p>
-                          <p className="text-2xl font-bold text-foreground tabular-nums">{marketPulse.newJobsThisWeek}</p>
+                          <p className="text-2xl font-bold text-brand tabular-nums">{marketPulse.newJobsThisWeek}</p>
                           <p className="text-xs text-muted-foreground mt-0.5">roles added</p>
                         </div>
                         <div className="p-2 rounded-md bg-muted/50 text-green-500">
@@ -572,7 +572,7 @@ export default function DashboardPage() {
                     </CardContent>
                   </Card>
 
-                  <Card data-testid="card-pulse-top-hiring">
+                  <Card className="card-elev-static" data-testid="card-pulse-top-hiring">
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1 min-w-0">
@@ -591,7 +591,7 @@ export default function DashboardPage() {
                     </CardContent>
                   </Card>
 
-                  <Card data-testid="card-pulse-trending-skill">
+                  <Card className="card-elev-static" data-testid="card-pulse-trending-skill">
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1 min-w-0">
@@ -612,12 +612,12 @@ export default function DashboardPage() {
 
                   {isPro ? (
                     <>
-                      <Card data-testid="card-pulse-remote">
+                      <Card className="card-elev-static" data-testid="card-pulse-remote">
                         <CardContent className="p-4">
                           <div className="flex items-start justify-between gap-2">
                             <div className="flex-1 min-w-0">
                               <p className="text-xs text-muted-foreground mb-1 font-medium">Remote</p>
-                              <p className="text-2xl font-bold text-foreground tabular-nums">{remotePercent}%</p>
+                              <p className="text-2xl font-bold text-brand tabular-nums">{remotePercent}%</p>
                               <p className="text-xs text-muted-foreground mt-0.5">of all roles</p>
                             </div>
                             <div className="p-2 rounded-md bg-muted/50 text-muted-foreground">
@@ -628,7 +628,7 @@ export default function DashboardPage() {
                       </Card>
 
                       {marketPulse.salaryInsight && (
-                        <Card data-testid="card-pulse-salary">
+                        <Card className="card-elev-static" data-testid="card-pulse-salary">
                           <CardContent className="p-4">
                             <div className="flex items-start justify-between gap-2">
                               <div className="flex-1 min-w-0">
@@ -648,12 +648,12 @@ export default function DashboardPage() {
                         </Card>
                       )}
 
-                      <Card data-testid="card-pulse-total">
+                      <Card className="card-elev-static" data-testid="card-pulse-total">
                         <CardContent className="p-4">
                           <div className="flex items-start justify-between gap-2">
                             <div className="flex-1 min-w-0">
                               <p className="text-xs text-muted-foreground mb-1 font-medium">Total Active</p>
-                              <p className="text-2xl font-bold text-foreground tabular-nums">{marketPulse.totalJobs}</p>
+                              <p className="text-2xl font-bold text-brand tabular-nums">{marketPulse.totalJobs}</p>
                               <p className="text-xs text-muted-foreground mt-0.5">open positions</p>
                             </div>
                             <div className="p-2 rounded-md bg-muted/50 text-muted-foreground">

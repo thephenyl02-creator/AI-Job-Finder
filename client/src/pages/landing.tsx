@@ -99,7 +99,8 @@ export default function Landing() {
 
       <main className="pt-14 flex-1">
 
-        <section className="max-w-5xl mx-auto px-4 sm:px-6 pt-10 sm:pt-20 pb-10 sm:pb-20">
+        <section className="relative max-w-5xl mx-auto px-4 sm:px-6 pt-10 sm:pt-20 pb-10 sm:pb-20">
+          <div className="absolute inset-0 -z-10 bg-gradient-to-b from-brand/[0.03] via-transparent to-transparent dark:from-brand/[0.05] rounded-b-3xl" />
           <div className="flex flex-col lg:flex-row items-start gap-8 lg:gap-16">
             <div className="flex-1 max-w-md lg:max-w-lg lg:pt-4">
               <p className="text-[11px] font-semibold text-muted-foreground tracking-[0.2em] uppercase mb-8" data-testid="text-hero-label">
@@ -121,7 +122,7 @@ export default function Landing() {
               </p>
 
               <div className="mt-8 flex items-center gap-4 flex-wrap">
-                <Button size="lg" asChild data-testid="button-hero-diagnostic">
+                <Button size="lg" asChild className="btn-brand border-0" data-testid="button-hero-diagnostic">
                   <a href="/diagnostic" onClick={() => {
                     if (!hasDiagnostic) {
                       try { navigator.sendBeacon("/api/track", new Blob([JSON.stringify({ eventType: "landing_cta_click" })], { type: "application/json" })); } catch {};
@@ -153,14 +154,14 @@ export default function Landing() {
             </div>
 
             <div className="w-full lg:w-[420px] shrink-0">
-              <Card className="overflow-visible" data-testid="diagnostic-preview-card">
+              <Card className="overflow-visible card-elev-prominent" data-testid="diagnostic-preview-card">
                 <CardContent className="p-5">
                   <p className="text-[10px] font-semibold text-muted-foreground tracking-wide uppercase mb-4">Sample Readiness Report</p>
                   <div className="flex items-center gap-4 mb-4">
                     <div className="relative flex items-center justify-center shrink-0">
                       <svg className="w-[72px] h-[72px] -rotate-90" viewBox="0 0 100 100">
                         <circle cx="50" cy="50" r="42" fill="none" stroke="hsl(var(--muted))" strokeWidth="6" />
-                        <circle cx="50" cy="50" r="42" fill="none" stroke="#f59e0b" strokeWidth="6" strokeLinecap="round"
+                        <circle cx="50" cy="50" r="42" fill="none" stroke="hsl(var(--brand))" strokeWidth="6" strokeLinecap="round"
                           strokeDasharray={`${2 * Math.PI * 42}`}
                           strokeDashoffset={`${2 * Math.PI * 42 - (58 / 100) * 2 * Math.PI * 42}`}
                         />
@@ -219,20 +220,20 @@ export default function Landing() {
             <div className="max-w-5xl mx-auto px-4 sm:px-6 py-5 sm:py-6">
               <div className="flex items-center justify-center gap-6 sm:gap-10 text-sm text-muted-foreground flex-wrap" data-testid="stats-strip">
                 {stats.totalJobs > 0 && (
-                  <span data-testid="stat-jobs"><span className="font-semibold text-foreground">{stats.totalJobs}+</span> curated roles</span>
+                  <span data-testid="stat-jobs"><span className="font-semibold text-brand">{stats.totalJobs}+</span> curated roles</span>
                 )}
                 <span className="text-border hidden sm:inline">·</span>
                 {stats.totalCompanies > 0 && (
-                  <span data-testid="stat-companies"><span className="font-semibold text-foreground">{stats.totalCompanies}+</span> companies</span>
+                  <span data-testid="stat-companies"><span className="font-semibold text-brand">{stats.totalCompanies}+</span> companies</span>
                 )}
                 <span className="text-border hidden sm:inline">·</span>
                 {stats.totalCategories > 0 && (
-                  <span data-testid="stat-categories"><span className="font-semibold text-foreground">{stats.totalCategories}</span> career paths</span>
+                  <span data-testid="stat-categories"><span className="font-semibold text-brand">{stats.totalCategories}</span> career paths</span>
                 )}
                 {(stats.totalUsers || 0) > 10 && (
                   <>
                     <span className="text-border hidden sm:inline">·</span>
-                    <span data-testid="stat-users"><span className="font-semibold text-foreground">{stats.totalUsers}+</span> lawyers assessed</span>
+                    <span data-testid="stat-users"><span className="font-semibold text-brand">{stats.totalUsers}+</span> lawyers assessed</span>
                   </>
                 )}
               </div>
@@ -241,7 +242,7 @@ export default function Landing() {
         )}
 
         <section className="border-t border-border/30 bg-muted/20">
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-12 sm:py-20">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-14 sm:py-24">
             <div className="text-center mb-8 sm:mb-12">
               <h2 className="text-xl sm:text-3xl font-serif font-medium text-foreground" data-testid="text-how-it-works-title">
                 How it works
@@ -249,8 +250,8 @@ export default function Landing() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 sm:gap-12 max-w-3xl mx-auto" data-testid="how-it-works-steps">
               <div className="text-center space-y-3">
-                <div className="w-12 h-12 rounded-full bg-background border border-border/50 flex items-center justify-center mx-auto">
-                  <Upload className="h-5 w-5 text-foreground" />
+                <div className="w-12 h-12 rounded-full bg-brand/10 dark:bg-brand/15 flex items-center justify-center mx-auto">
+                  <Upload className="h-5 w-5 text-brand" />
                 </div>
                 <h3 className="text-sm font-semibold text-foreground">Upload your resume</h3>
                 <p className="text-sm text-muted-foreground leading-relaxed">
@@ -258,8 +259,8 @@ export default function Landing() {
                 </p>
               </div>
               <div className="text-center space-y-3">
-                <div className="w-12 h-12 rounded-full bg-background border border-border/50 flex items-center justify-center mx-auto">
-                  <BarChart3 className="h-5 w-5 text-foreground" />
+                <div className="w-12 h-12 rounded-full bg-brand/10 dark:bg-brand/15 flex items-center justify-center mx-auto">
+                  <BarChart3 className="h-5 w-5 text-brand" />
                 </div>
                 <h3 className="text-sm font-semibold text-foreground">See where you stand</h3>
                 <p className="text-sm text-muted-foreground leading-relaxed">
@@ -267,8 +268,8 @@ export default function Landing() {
                 </p>
               </div>
               <div className="text-center space-y-3">
-                <div className="w-12 h-12 rounded-full bg-background border border-border/50 flex items-center justify-center mx-auto">
-                  <Target className="h-5 w-5 text-foreground" />
+                <div className="w-12 h-12 rounded-full bg-brand/10 dark:bg-brand/15 flex items-center justify-center mx-auto">
+                  <Target className="h-5 w-5 text-brand" />
                 </div>
                 <h3 className="text-sm font-semibold text-foreground">Apply with confidence</h3>
                 <p className="text-sm text-muted-foreground leading-relaxed">
@@ -277,7 +278,7 @@ export default function Landing() {
               </div>
             </div>
             <div className="text-center mt-10">
-              <Button size="lg" asChild data-testid="button-how-it-works-cta">
+              <Button size="lg" asChild className="btn-brand border-0" data-testid="button-how-it-works-cta">
                 <a href="/diagnostic">
                   Check Your Fit
                   <ArrowRight className="ml-2 h-4 w-4" />
@@ -289,7 +290,7 @@ export default function Landing() {
 
         {careerPaths.length > 0 && (
           <section className="border-t border-border/30">
-            <div className="max-w-5xl mx-auto px-4 sm:px-6 py-12 sm:py-20">
+            <div className="max-w-5xl mx-auto px-4 sm:px-6 py-14 sm:py-24">
               <div className="text-center mb-8 sm:mb-10">
                 <h2 className="text-xl sm:text-3xl font-serif font-medium text-foreground" data-testid="text-career-paths-title">
                   Career paths we map you to
@@ -318,7 +319,7 @@ export default function Landing() {
 
         {density && density.countriesCount > 0 && (
           <section className="border-t border-border/30 bg-muted/20">
-            <div className="max-w-5xl mx-auto px-4 sm:px-6 py-12 sm:py-20">
+            <div className="max-w-5xl mx-auto px-4 sm:px-6 py-14 sm:py-24">
               <div className="flex flex-col sm:flex-row items-center gap-8 sm:gap-12">
                 <div className="flex-1 text-center sm:text-left">
                   <p className="text-[11px] font-semibold text-muted-foreground tracking-[0.2em] uppercase mb-3">
@@ -393,7 +394,7 @@ export default function Landing() {
         )}
 
         <section className="border-t border-border/30">
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-12 sm:py-20">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-14 sm:py-24">
             <div className="text-center mb-8 sm:mb-10">
               <h2 className="text-xl sm:text-3xl font-serif font-medium text-foreground" data-testid="text-pro-title">
                 Free vs Pro
@@ -424,28 +425,28 @@ export default function Landing() {
                   </li>
                 </ul>
               </div>
-              <div className="rounded-lg border-2 border-primary/30 bg-background p-6 space-y-4 relative">
+              <div className="rounded-lg border-2 border-brand/30 bg-background p-6 space-y-4 relative brand-glow">
                 <Badge variant="secondary" className="absolute -top-2.5 right-4 text-[10px] no-default-active-elevate">From $2.50/mo</Badge>
                 <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide">Pro</h3>
                 <ul className="space-y-3">
                   <li className="flex items-start gap-2.5 text-sm text-foreground">
-                    <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                    <Check className="h-4 w-4 text-brand shrink-0 mt-0.5" />
                     Full diagnostic report with all career paths
                   </li>
                   <li className="flex items-start gap-2.5 text-sm text-foreground">
-                    <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                    <Check className="h-4 w-4 text-brand shrink-0 mt-0.5" />
                     30-day transition plan
                   </li>
                   <li className="flex items-start gap-2.5 text-sm text-foreground">
-                    <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                    <Check className="h-4 w-4 text-brand shrink-0 mt-0.5" />
                     Per-job fit scores and gap analysis
                   </li>
                   <li className="flex items-start gap-2.5 text-sm text-foreground">
-                    <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                    <Check className="h-4 w-4 text-brand shrink-0 mt-0.5" />
                     Resume tailoring for each role
                   </li>
                   <li className="flex items-start gap-2.5 text-sm text-foreground">
-                    <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                    <Check className="h-4 w-4 text-brand shrink-0 mt-0.5" />
                     Smart search and job alerts
                   </li>
                 </ul>
@@ -463,7 +464,7 @@ export default function Landing() {
         </section>
 
         <section className="border-t border-border/30 bg-muted/20">
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-14 sm:py-20">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-14 sm:py-24">
             <div className="text-center space-y-5" data-testid="final-cta-section">
               <h2 className="text-xl sm:text-3xl font-serif font-medium text-foreground">
                 Ready to find out where you fit?
@@ -471,7 +472,7 @@ export default function Landing() {
               <p className="text-sm text-muted-foreground max-w-md mx-auto">
                 It takes 60 seconds. No account needed.
               </p>
-              <Button size="lg" asChild data-testid="button-final-cta">
+              <Button size="lg" asChild className="btn-brand border-0" data-testid="button-final-cta">
                 <a href="/diagnostic">
                   Check Your Fit
                   <ArrowRight className="ml-2 h-4 w-4" />
