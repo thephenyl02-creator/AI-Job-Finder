@@ -8069,7 +8069,7 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
           communityBenchmarks = {
             totalAssessments: allScores.length,
             avgReadiness,
-            readinessDistribution: buckets,
+            readinessDistribution: Object.entries(buckets).map(([bucket, count]) => ({ bucket, count })),
             topSkillGaps: Object.entries(gapMap).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([skill, count]) => ({ skill, count })),
             topCareerPaths: Object.entries(pathPopularity).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([name, count]) => ({ path: name, count })),
           };

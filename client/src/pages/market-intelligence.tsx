@@ -226,18 +226,27 @@ export default function MarketIntelligence() {
     );
   }
 
-  const { overview, skillsDemand, careerPaths, salaryByPath, workMode, topCompanies, geography, seniorityDistribution, aiIntensity, communityBenchmarks } = data;
+  const { overview, skillsDemand = [], careerPaths = [], salaryByPath = [], workMode, topCompanies = [], geography = [], seniorityDistribution = [], aiIntensity, communityBenchmarks } = data;
+
+  const safeRemote = workMode?.remote || { count: 0, percentage: 0 };
+  const safeHybrid = workMode?.hybrid || { count: 0, percentage: 0 };
+  const safeOnsite = workMode?.onsite || { count: 0, percentage: 0 };
+  const safeAI = {
+    low: aiIntensity?.low || { count: 0, percentage: 0 },
+    medium: aiIntensity?.medium || { count: 0, percentage: 0 },
+    high: aiIntensity?.high || { count: 0, percentage: 0 },
+  };
 
   const skillsChartData = skillsDemand.slice(0, 10).map((s) => ({
     name: s.skill.length > 22 ? s.skill.slice(0, 20) + "\u2026" : s.skill,
     count: s.count,
   }));
 
-  const workModeTotal = workMode.remote.count + workMode.hybrid.count + workMode.onsite.count;
+  const workModeTotal = safeRemote.count + safeHybrid.count + safeOnsite.count;
   const workModeData = [
-    { name: "Remote", value: workMode.remote.count, pct: workMode.remote.percentage },
-    { name: "Hybrid", value: workMode.hybrid.count, pct: workMode.hybrid.percentage },
-    { name: "On-site", value: workMode.onsite.count, pct: workMode.onsite.percentage },
+    { name: "Remote", value: safeRemote.count, pct: safeRemote.percentage },
+    { name: "Hybrid", value: safeHybrid.count, pct: safeHybrid.percentage },
+    { name: "On-site", value: safeOnsite.count, pct: safeOnsite.percentage },
   ];
 
   const seniorityChartData = seniorityDistribution.map((s) => ({
@@ -245,11 +254,11 @@ export default function MarketIntelligence() {
     count: s.count,
   }));
 
-  const aiMax = Math.max(aiIntensity.low.count, aiIntensity.medium.count, aiIntensity.high.count, 1);
+  const aiMax = Math.max(safeAI.low.count, safeAI.medium.count, safeAI.high.count, 1);
 
   const salaryVisible = isPro ? salaryByPath : salaryByPath.slice(0, 3);
   const salaryBlurred = !isPro && salaryByPath.length > 3;
-  const salaryMax = Math.max(...salaryByPath.map((s) => s.medianMax || 0), 1);
+  const salaryMax = Math.max(...(salaryByPath.length > 0 ? salaryByPath.map((s) => s.medianMax || 0) : [0]), 1);
 
   const handleDownload = (period: string) => {
     window.open(`/api/market-intelligence/report?period=${period}`, "_blank");
@@ -542,9 +551,9 @@ export default function MarketIntelligence() {
                 </h2>
                 <div className="space-y-6">
                   {[
-                    { label: "Low", data: aiIntensity.low, color: "bg-emerald-500 dark:bg-emerald-400" },
-                    { label: "Medium", data: aiIntensity.medium, color: "bg-amber-500 dark:bg-amber-400" },
-                    { label: "High", data: aiIntensity.high, color: "bg-rose-500 dark:bg-rose-400" },
+                    { label: "Low", data: safeAI.low, color: "bg-emerald-500 dark:bg-emerald-400" },
+                    { label: "Medium", data: safeAI.medium, color: "bg-amber-500 dark:bg-amber-400" },
+                    { label: "High", data: safeAI.high, color: "bg-rose-500 dark:bg-rose-400" },
                   ].map(({ label, data: d, color }) => (
                     <div key={label} data-testid={`ai-intensity-${label.toLowerCase()}`}>
                       <div className="flex items-center justify-between gap-2 mb-1.5">
