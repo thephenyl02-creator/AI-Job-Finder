@@ -1271,7 +1271,7 @@ Only include jobs scoring above 40. Sort by score descending. Max 15 results.`;
   });
 
   // Guided search - analyze query and generate clarifying questions
-  // Free users get 7 guided searches total (server-side enforced), Pro users get unlimited
+  // Free users get 3 guided searches total (server-side enforced), Pro users get unlimited
   app.post("/api/search/analyze", isAuthenticated, async (req, res) => {
     try {
       const { query } = req.body;
@@ -1282,7 +1282,7 @@ Only include jobs scoring above 40. Sort by score descending. Max 15 results.`;
 
       const user = req.user as any;
       const userId = user?.id;
-      const FREE_GUIDED_LIMIT = 7;
+      const FREE_GUIDED_LIMIT = 3;
 
       if (userId) {
         const userIsAdmin = await storage.isUserAdmin(userId);
@@ -5280,9 +5280,9 @@ Rules:
       const guidedSearchCount = await storage.getGuidedSearchCount(userId);
       res.json({
         isPro,
-        chat: { used: dailyChatCount, limit: isPro ? null : 3, resetsAt: new Date(new Date().setHours(24, 0, 0, 0)).toISOString() },
+        chat: { used: dailyChatCount, limit: isPro ? null : 2, resetsAt: new Date(new Date().setHours(24, 0, 0, 0)).toISOString() },
         savedJobs: { used: savedJobCount, limit: isPro ? null : 5 },
-        guidedSearch: { used: guidedSearchCount, limit: isPro ? null : 7 },
+        guidedSearch: { used: guidedSearchCount, limit: isPro ? null : 3 },
       });
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch usage limits" });
@@ -5994,7 +5994,7 @@ After your analysis, list 2-4 key data points you referenced as "Sources" - each
       const chatAdminCheck = await storage.isUserAdmin(userId);
       const subData = await storage.getUserSubscription(userId);
       const isPro = chatAdminCheck || (subData?.subscriptionTier === "pro" && subData?.subscriptionStatus === "active");
-      const FREE_DAILY_CHAT_LIMIT = 3;
+      const FREE_DAILY_CHAT_LIMIT = 2;
       if (!isPro) {
         const dailyCount = await storage.getDailyAssistantChatCount(userId);
         if (dailyCount >= FREE_DAILY_CHAT_LIMIT) {

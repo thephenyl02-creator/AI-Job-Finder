@@ -531,7 +531,7 @@ function CareerPathFlow({
         </div>
 
         {paths.map((path, i) => {
-          const isLocked = !isPro && i >= 1;
+          const isLocked = !isPro && i >= 2;
           const roles = getRolesForPath(path.name);
           return (
             <div key={i} className="relative" data-testid={`career-flow-path-${i}`}>
@@ -652,7 +652,7 @@ function CareerPathFlow({
         <div className="flex-1 flex flex-col justify-center" style={{ minHeight: `${svgH}px` }}>
           <div className="space-y-3" style={{ paddingTop: `${destYs[0] - 30}px` }}>
             {paths.map((path, i) => {
-              const isLocked = !isPro && i >= 1;
+              const isLocked = !isPro && i >= 2;
               const roles = getRolesForPath(path.name);
               return (
                 <div key={i} className={`relative rounded-lg border p-3 ${fitBorder(path.fitLevel)} ${isLocked ? "select-none" : ""}`} data-testid={`career-flow-path-${i}`}>

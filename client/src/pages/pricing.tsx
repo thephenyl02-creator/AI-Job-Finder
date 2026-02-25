@@ -54,14 +54,16 @@ const FREE_FEATURES = [
   { text: "View job details & apply links", included: true },
   { text: "Submit job postings", included: true },
   { text: "Upload 1 resume", included: true },
-  { text: "Career Diagnostic (preview)", included: true },
+  { text: "Career Diagnostic (top 2 paths)", included: true },
+  { text: "3 smart searches", included: true },
+  { text: "2 career advisor chats per day", included: true },
   { text: "Full Career Diagnostic & 30-day plan", included: false },
   { text: "Per-job fit scores & match analysis", included: false },
   { text: "Resume tailoring & ATS review", included: false },
   { text: "Market insights & analytics", included: false },
   { text: "Job alerts & notifications", included: false },
-  { text: "Multi-resume management", included: false },
-  { text: "Smart search with follow-up questions", included: false },
+  { text: "Multi-resume management (up to 5)", included: false },
+  { text: "Unlimited smart search & advisor chats", included: false },
 ];
 
 const PRO_FEATURES = [
@@ -73,7 +75,8 @@ const PRO_FEATURES = [
   { text: "Market insights & analytics", included: true, detail: "Salary data, hiring trends, and demand by category" },
   { text: "Job alerts & notifications", included: true, detail: "Get notified when roles matching your profile are posted" },
   { text: "Up to 5 resumes", included: true, detail: "Tailor different resumes for different role types" },
-  { text: "Smart search with follow-up questions", included: true, detail: "Describe what you want and we find your best matches" },
+  { text: "Unlimited smart search", included: true, detail: "Describe what you want and we find your best matches, with follow-up questions" },
+  { text: "Unlimited career advisor chats", included: true, detail: "Ask anything about your transition, as many times as you need" },
   { text: "Priority support", included: true },
 ];
 
@@ -84,7 +87,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "What does Pro add that's worth paying for?",
-    a: "Pro unlocks the full Career Diagnostic (all career paths, detailed skill gaps, and a 30-day transition plan), per-job fit scores for every listing, resume tailoring and ATS review, job alerts, and market insights. These tools save hours of manual research and give you a clear action plan.",
+    a: "Pro unlocks the full Career Diagnostic (all career paths, detailed skill gaps, and a 30-day transition plan), per-job fit scores for every listing, resume tailoring and ATS review, job alerts, market insights, unlimited smart searches, and unlimited career advisor chats. These tools save hours of manual research and give you a clear action plan.",
   },
   {
     q: "Can I cancel anytime?",
