@@ -110,7 +110,7 @@ const DEFAULT_SEARCH_SUGGESTIONS = [
 
 const SENIORITY_LEVELS = [
   { value: "all", label: "All Levels" },
-  { value: "student", label: "Student / Intern", match: ["Intern", "Fellowship"] },
+  { value: "student", label: "Intern", match: ["Intern", "Fellowship"] },
   { value: "entry", label: "Entry Level", match: ["Entry", "Junior", "Associate"] },
   { value: "mid", label: "Mid Level", match: ["Mid"] },
   { value: "senior", label: "Senior+", match: ["Senior", "Lead", "Director", "VP", "Principal", "Staff"] },

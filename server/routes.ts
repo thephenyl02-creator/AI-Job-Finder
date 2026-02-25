@@ -5913,7 +5913,7 @@ Return a JSON response with this exact structure:
 OVERVIEW:
 - ${totalJobs} active positions across ${companies.size} companies
 - ${remoteJobs} remote positions (${Math.round((remoteJobs / totalJobs) * 100)}% of all jobs)
-- ${entryLevelCount} entry-level/student positions (includes ${internFellowshipCount} internships & fellowships)
+- ${entryLevelCount} entry-level positions (includes ${internFellowshipCount} internships & fellowships)
 ${avgSalaryMin && avgSalaryMax ? `- Average salary range: $${avgSalaryMin.toLocaleString()} - $${avgSalaryMax.toLocaleString()} (from ${salaryJobs.length} jobs with salary data)` : "- Limited salary data available"}
 
 CATEGORIES (by number of listings):
@@ -7899,19 +7899,6 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
     }
   });
 
-  const STUDENT_INCLUDE_KEYWORDS = /\b(intern|summer|fellow|fellowship|graduate|new grad|campus|student|trainee|apprentice|residency|early career|rotation|rotational|analyst)\b/i;
-  const STUDENT_EXCLUDE_KEYWORDS = /\b(manager|director|senior|lead|principal|head of|vp|staff engineer|generalist|representative)\b/i;
-
-  function isStudentRole(job: { seniorityLevel?: string | null; title: string }): boolean {
-    const seniority = job.seniorityLevel || "";
-    if (seniority === "Intern" || seniority === "Fellowship") return true;
-    if (seniority === "Entry" || seniority === "Junior") {
-      if (STUDENT_EXCLUDE_KEYWORDS.test(job.title)) return false;
-      return STUDENT_INCLUDE_KEYWORDS.test(job.title);
-    }
-    return false;
-  }
-
   const SKILLS_SYNONYM_MAP: Record<string, string> = {
     "legal tech": "legal technology",
     "customer engagement": "client engagement",
@@ -8047,23 +8034,6 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
         .slice(0, 15)
         .map(([code, { name, count }]) => ({ countryCode: code, countryName: name, jobCount: count }));
 
-      const studentJobs = allJobs.filter(j => isStudentRole(j));
-      const studentCompanyMap: Record<string, number> = {};
-      const studentPathMap: Record<string, number> = {};
-      for (const j of studentJobs) {
-        studentCompanyMap[j.company] = (studentCompanyMap[j.company] || 0) + 1;
-        if (j.roleCategory) studentPathMap[j.roleCategory] = (studentPathMap[j.roleCategory] || 0) + 1;
-      }
-
-      const studentOpportunities = {
-        internCount: allJobs.filter(j => j.seniorityLevel === "Intern").length,
-        fellowshipCount: allJobs.filter(j => j.seniorityLevel === "Fellowship").length,
-        entryLevelCount: studentJobs.filter(j => ["Entry", "Junior"].includes(j.seniorityLevel || "")).length,
-        totalStudentJobs: studentJobs.length,
-        topCompanies: Object.entries(studentCompanyMap).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([company, count]) => ({ company, count })),
-        topPaths: Object.entries(studentPathMap).sort((a, b) => b[1] - a[1]).map(([name, count]) => ({ name, count })),
-      };
-
       let communityBenchmarks: any = null;
       try {
         const allScores = await db.select({
@@ -8139,7 +8109,6 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
         seniorityDistribution,
         topCompanies,
         geography,
-        studentOpportunities,
         communityBenchmarks,
         generatedAt: new Date().toISOString(),
       };
@@ -8190,7 +8159,6 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
         seniorityDistribution: miData.seniorityDistribution || [],
         topCompanies: miData.topCompanies || [],
         geography: miData.geography || [],
-        studentOpportunities: miData.studentOpportunities || { totalStudentJobs: 0, internCount: 0, fellowshipCount: 0, entryLevelCount: 0 },
       };
 
       const periodLabels: Record<string, string> = { weekly: "Weekly_Briefing", monthly: "Monthly_Report", annual: "Annual_Report" };
@@ -8207,57 +8175,6 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
     }
   });
 
-  app.get("/api/student-opportunities", async (_req, res) => {
-    try {
-      const allJobs = await storage.getPublishedJobs();
-      const studentJobs = allJobs.filter(j => isStudentRole(j));
-
-      const sortedJobs = [...studentJobs]
-        .sort((a, b) => {
-          const dateA = a.firstSeenAt ? new Date(a.firstSeenAt).getTime() : 0;
-          const dateB = b.firstSeenAt ? new Date(b.firstSeenAt).getTime() : 0;
-          return dateB - dateA;
-        })
-        .slice(0, 20)
-        .map(j => ({
-          id: j.id,
-          title: j.title,
-          company: j.company,
-          location: j.location,
-          locationType: j.locationType,
-          seniorityLevel: j.seniorityLevel,
-          roleCategory: j.roleCategory,
-          firstSeenAt: j.firstSeenAt,
-          isRemote: j.isRemote || j.locationType === 'remote',
-          applicationUrl: j.applicationUrl,
-        }));
-
-      const pathMap: Record<string, number> = {};
-      const companyMap: Record<string, number> = {};
-      let remoteCount = 0;
-      for (const j of studentJobs) {
-        if (j.roleCategory) pathMap[j.roleCategory] = (pathMap[j.roleCategory] || 0) + 1;
-        companyMap[j.company] = (companyMap[j.company] || 0) + 1;
-        if (j.isRemote || j.locationType === 'remote') remoteCount++;
-      }
-
-      res.json({
-        totalStudentJobs: studentJobs.length,
-        jobs: sortedJobs,
-        pathBreakdown: Object.entries(pathMap)
-          .sort((a, b) => b[1] - a[1])
-          .map(([name, count]) => ({ name, count })),
-        topCompanies: Object.entries(companyMap)
-          .sort((a, b) => b[1] - a[1])
-          .slice(0, 10)
-          .map(([company, count]) => ({ company, count })),
-        remoteCount,
-      });
-    } catch (error: any) {
-      console.error("Error fetching student opportunities:", error);
-      res.status(500).json({ error: "Failed to fetch student opportunities" });
-    }
-  });
 
   app.get("/api/health/db", async (_req, res) => {
     try {

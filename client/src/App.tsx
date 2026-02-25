@@ -39,7 +39,7 @@ import ResumeEditor from "@/pages/resume-editor";
 import Diagnostic from "@/pages/diagnostic";
 import Quiz from "@/pages/quiz";
 import MarketIntelligence from "@/pages/market-intelligence";
-import Students from "@/pages/students";
+
 import { AssistantWidget } from "@/components/assistant-widget";
 import { OnboardingDialog } from "@/components/onboarding-dialog";
 
@@ -114,7 +114,6 @@ function AppRouter() {
       <Route path="/post-job" component={PostJob} />
       <Route path="/opportunity-map" component={OpportunityMap} />
       <Route path="/market-intelligence" component={MarketIntelligence} />
-      <Route path="/students" component={Students} />
       <Route component={NotFound} />
     </Switch>
   );

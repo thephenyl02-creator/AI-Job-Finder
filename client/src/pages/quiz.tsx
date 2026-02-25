@@ -52,7 +52,7 @@ const QUESTIONS = [
       { value: "in_house_counsel", label: "In-house counsel" },
       { value: "legal_ops", label: "Legal operations / paralegal" },
       { value: "non_legal", label: "Non-legal professional interested in legal tech" },
-      { value: "student", label: "Law student / recent graduate" },
+      { value: "student", label: "Early-career professional / recent graduate" },
     ],
   },
   {

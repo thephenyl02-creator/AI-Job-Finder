@@ -98,7 +98,7 @@ const SUGGESTED_QUESTIONS = [
   "What are the top-paying areas in legal tech?",
   "What skills are most in demand for compliance roles?",
   "How many remote positions are available?",
-  "What does the entry-level market look like for law students?",
+  "What does the entry-level market look like?",
   "Which companies are hiring the most?",
 ];
 

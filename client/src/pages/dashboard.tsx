@@ -110,9 +110,21 @@ function ReadinessRing({ score, size = "lg" }: { score: number; size?: "lg" | "s
         />
       </svg>
       <div className="absolute flex flex-col items-center">
-        <span className={`font-bold text-foreground ${isLg ? "text-2xl" : "text-lg"}`}>{score}</span>
+        <span className={`font-bold text-foreground ${isLg ? "text-3xl" : "text-xl"}`}>{score}</span>
         <span className={`text-muted-foreground ${isLg ? "text-xs" : "text-[10px]"}`}>Ready</span>
       </div>
+    </div>
+  );
+}
+
+function ProgressBar({ value, max, className }: { value: number; max: number; className?: string }) {
+  const percent = max > 0 ? Math.min(100, Math.round((value / max) * 100)) : 0;
+  return (
+    <div className={`h-1.5 w-full rounded-full bg-muted/40 overflow-hidden ${className || ""}`}>
+      <div
+        className="h-full rounded-full bg-gradient-to-r from-primary/80 to-primary transition-all duration-700"
+        style={{ width: `${percent}%` }}
+      />
     </div>
   );
 }
@@ -144,35 +156,58 @@ function getStreakLabel(streak: number): string {
 
 function getEngagementColor(level: string | null | undefined): string {
   switch (level) {
-    case "Power User": return "text-green-500";
-    case "Active": return "text-blue-500";
-    case "Casual": return "text-amber-500";
+    case "Power User": return "text-green-600 dark:text-green-400";
+    case "Active": return "text-blue-600 dark:text-blue-400";
+    case "Casual": return "text-amber-600 dark:text-amber-400";
     default: return "text-muted-foreground";
   }
 }
+
+function getEngagementBg(level: string | null | undefined): string {
+  switch (level) {
+    case "Power User": return "bg-green-500/10 text-green-700 dark:text-green-300";
+    case "Active": return "bg-blue-500/10 text-blue-700 dark:text-blue-300";
+    case "Casual": return "bg-amber-500/10 text-amber-700 dark:text-amber-300";
+    default: return "bg-muted/40 text-muted-foreground";
+  }
+}
+
+const heroCardConfigs = [
+  { bg: "bg-primary/[0.08] dark:bg-primary/[0.15]", accent: "bg-primary", iconBg: "bg-primary/15 text-primary" },
+  { bg: "bg-chart-2/[0.08] dark:bg-chart-2/[0.15]", accent: "bg-chart-2", iconBg: "bg-chart-2/15 text-chart-2" },
+  { bg: "bg-chart-3/[0.08] dark:bg-chart-3/[0.15]", accent: "bg-chart-3", iconBg: "bg-chart-3/15 text-chart-3" },
+  { bg: "bg-chart-4/[0.08] dark:bg-chart-4/[0.15]", accent: "bg-chart-4", iconBg: "bg-chart-4/15 text-chart-4" },
+];
+
+const stepColors = [
+  "bg-primary text-primary-foreground",
+  "bg-chart-2 text-white dark:text-black",
+  "bg-chart-3 text-white dark:text-black",
+  "bg-chart-4 text-white dark:text-black",
+];
 
 function DashboardSkeleton() {
   return (
     <>
       <Header />
-      <main className="container mx-auto px-4 py-6 pb-20">
+      <main className="container mx-auto px-4 py-8 pb-20">
         <div className="max-w-6xl mx-auto">
-          <div className="mb-6">
-            <Skeleton className="h-7 w-48 mb-2" />
-            <Skeleton className="h-4 w-72" />
+          <div className="mb-8">
+            <Skeleton className="h-8 w-56 mb-2" />
+            <Skeleton className="h-5 w-80" />
           </div>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-5 mb-10">
             {[...Array(4)].map((_, i) => (
-              <Card key={i} className="card-elev-static"><CardContent className="p-5"><Skeleton className="h-24 w-full" /></CardContent></Card>
+              <Card key={i} className="card-elev-static"><CardContent className="p-6"><Skeleton className="h-28 w-full" /></CardContent></Card>
             ))}
           </div>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2">
-              <Card className="card-elev-static"><CardContent className="p-6"><Skeleton className="h-48 w-full" /></CardContent></Card>
+              <Card className="card-elev-static"><CardContent className="p-6"><Skeleton className="h-56 w-full" /></CardContent></Card>
             </div>
-            <div className="space-y-4">
-              <Card className="card-elev-static"><CardContent className="p-5"><Skeleton className="h-24 w-full" /></CardContent></Card>
-              <Card className="card-elev-static"><CardContent className="p-5"><Skeleton className="h-24 w-full" /></CardContent></Card>
+            <div className="space-y-5">
+              <Card className="card-elev-static"><CardContent className="p-5"><Skeleton className="h-28 w-full" /></CardContent></Card>
+              <Card className="card-elev-static"><CardContent className="p-5"><Skeleton className="h-28 w-full" /></CardContent></Card>
             </div>
           </div>
         </div>
@@ -247,38 +282,45 @@ export default function DashboardPage() {
   const topAlignedCategory = dashData.marketAlignment?.[0];
   const streak = activityMetrics?.currentStreak ?? 0;
 
+  const weekProgress = currentWeek / 4;
+
   return (
     <div className="overflow-x-hidden">
       <Header />
-      <main className="container mx-auto px-4 py-6 sm:py-8 pb-20">
+      <main className="container mx-auto px-4 py-8 sm:py-10 pb-20">
         <div className="max-w-6xl mx-auto">
-          <div className="mb-6">
-            <h1 className="text-2xl font-serif font-bold tracking-tight text-foreground" data-testid="text-dashboard-title">
+          <div className="mb-8">
+            <h1 className="text-2xl sm:text-3xl font-serif font-bold tracking-tight text-foreground" data-testid="text-dashboard-title">
               {user?.firstName ? `Welcome back, ${user.firstName}` : "Welcome back"}
             </h1>
-            <p className="text-sm text-muted-foreground mt-1" data-testid="text-dashboard-subtitle">
+            <p className="text-sm sm:text-base text-muted-foreground mt-1.5" data-testid="text-dashboard-subtitle">
               {getWelcomeSubtitle(dashData, marketPulse, hasDiagnostic)}
             </p>
           </div>
 
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            <Card className="card-elev-prominent bg-primary/[0.06] dark:bg-primary/[0.12]" data-testid="card-hero-readiness">
-              <CardContent className="p-5">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-5 mb-10">
+            <Card className={`card-elev-prominent ${heroCardConfigs[0].bg} overflow-visible`} data-testid="card-hero-readiness">
+              <CardContent className="p-6">
+                <div className="flex items-center gap-2 mb-3 flex-wrap">
+                  <div className={`p-1.5 rounded-md ${heroCardConfigs[0].iconBg}`}>
+                    <Sparkles className="h-3.5 w-3.5" />
+                  </div>
+                  <span className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Readiness</span>
+                </div>
                 <div className="flex flex-col items-center gap-2">
                   {hasDiagnostic ? (
                     <>
                       <ReadinessRing score={readinessScore} size="sm" />
-                      <p className="text-xs font-medium text-foreground">Readiness Score</p>
-                      <p className="text-[10px] text-muted-foreground">
+                      <p className="text-[11px] text-muted-foreground mt-1">
                         {readinessScore >= 70 ? "Strong" : readinessScore >= 40 ? "Growing" : "Getting Started"}
                       </p>
                     </>
                   ) : (
                     <>
                       <div className="p-3 rounded-md bg-primary/10">
-                        <Sparkles className="h-6 w-6 text-primary" />
+                        <Sparkles className="h-7 w-7 text-primary" />
                       </div>
-                      <p className="text-xs font-medium text-foreground text-center">Get Your Score</p>
+                      <p className="text-xs font-medium text-foreground text-center mt-1">Get Your Score</p>
                       <Link href={readiness.hasResume ? "/diagnostic" : "/resumes"}>
                         <Button size="sm" className="gap-1" data-testid="button-start-diagnostic">
                           <Upload className="h-3 w-3" />
@@ -291,103 +333,110 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
 
-            <Card className="card-elev-prominent bg-chart-2/[0.06] dark:bg-chart-2/[0.12]" data-testid="card-hero-active-jobs">
-              <CardContent className="p-5">
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center gap-2 mb-1 flex-wrap">
-                    <Briefcase className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-xs text-muted-foreground font-medium">Active Jobs</span>
+            <Card className={`card-elev-prominent ${heroCardConfigs[1].bg} overflow-visible`} data-testid="card-hero-active-jobs">
+              <CardContent className="p-6">
+                <div className="flex items-center gap-2 mb-3 flex-wrap">
+                  <div className={`p-1.5 rounded-md ${heroCardConfigs[1].iconBg}`}>
+                    <Briefcase className="h-3.5 w-3.5" />
                   </div>
-                  <p className="text-3xl font-bold text-foreground tabular-nums" data-testid="text-active-jobs-count">
-                    {marketPulse?.totalJobs ?? dashData.totalActiveJobs}
-                  </p>
-                  {marketPulse && marketPulse.newJobsThisWeek > 0 && (
-                    <Badge variant="secondary" className="text-[10px] w-fit">
-                      +{marketPulse.newJobsThisWeek} this week
-                    </Badge>
-                  )}
+                  <span className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Active Jobs</span>
                 </div>
+                <p className="text-4xl font-bold text-foreground tabular-nums" data-testid="text-active-jobs-count">
+                  {marketPulse?.totalJobs ?? dashData.totalActiveJobs}
+                </p>
+                {marketPulse && marketPulse.newJobsThisWeek > 0 && (
+                  <Badge variant="secondary" className="text-[10px] mt-2 w-fit">
+                    +{marketPulse.newJobsThisWeek} this week
+                  </Badge>
+                )}
               </CardContent>
             </Card>
 
-            <Card className="card-elev-prominent bg-chart-3/[0.06] dark:bg-chart-3/[0.12]" data-testid="card-hero-top-path">
-              <CardContent className="p-5">
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center gap-2 mb-1 flex-wrap">
-                    <Target className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-xs text-muted-foreground font-medium">Your Top Path</span>
+            <Card className={`card-elev-prominent ${heroCardConfigs[2].bg} overflow-visible`} data-testid="card-hero-top-path">
+              <CardContent className="p-6">
+                <div className="flex items-center gap-2 mb-3 flex-wrap">
+                  <div className={`p-1.5 rounded-md ${heroCardConfigs[2].iconBg}`}>
+                    <Target className="h-3.5 w-3.5" />
                   </div>
-                  {topPathName ? (
-                    <>
-                      <p className="text-sm font-semibold text-foreground leading-tight" data-testid="text-top-path-name">
-                        {topPathName}
-                      </p>
-                      {topPathConfidence && (
-                        <p className="text-xs text-muted-foreground">{topPathConfidence}% match</p>
-                      )}
-                      {topAlignedCategory && (
-                        <p className="text-[10px] text-muted-foreground mt-0.5">
-                          {topAlignedCategory.availableJobs} roles available
-                        </p>
-                      )}
-                    </>
-                  ) : (
-                    <>
-                      <p className="text-sm text-muted-foreground">Run diagnostic</p>
-                      <p className="text-[10px] text-muted-foreground">to discover your path</p>
-                    </>
-                  )}
+                  <span className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Top Path</span>
                 </div>
-              </CardContent>
-            </Card>
-
-            <Card className="card-elev-prominent bg-chart-4/[0.06] dark:bg-chart-4/[0.12]" data-testid="card-hero-streak">
-              <CardContent className="p-5">
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center gap-2 mb-1 flex-wrap">
-                    <Flame className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-xs text-muted-foreground font-medium">Activity</span>
-                  </div>
-                  <div className="flex items-baseline gap-1.5">
-                    <p className="text-3xl font-bold text-foreground tabular-nums" data-testid="text-streak-count">
-                      {streak}
+                {topPathName ? (
+                  <>
+                    <p className="text-sm font-semibold text-foreground leading-tight" data-testid="text-top-path-name">
+                      {topPathName}
                     </p>
-                    <span className="text-xs text-muted-foreground">day streak</span>
+                    {topPathConfidence && (
+                      <p className="text-xs text-muted-foreground mt-1.5">{topPathConfidence}% match</p>
+                    )}
+                    {topAlignedCategory && (
+                      <p className="text-[10px] text-muted-foreground mt-1">
+                        {topAlignedCategory.availableJobs} roles available
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <p className="text-sm text-muted-foreground">Run diagnostic</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">to discover your path</p>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className={`card-elev-prominent ${heroCardConfigs[3].bg} overflow-visible`} data-testid="card-hero-streak">
+              <CardContent className="p-6">
+                <div className="flex items-center gap-2 mb-3 flex-wrap">
+                  <div className={`p-1.5 rounded-md ${heroCardConfigs[3].iconBg}`}>
+                    <Flame className="h-3.5 w-3.5" />
                   </div>
-                  <p className={`text-xs font-medium ${streak >= 3 ? "text-green-600 dark:text-green-400" : "text-muted-foreground"}`}>
-                    {getStreakLabel(streak)}
-                  </p>
+                  <span className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Activity</span>
                 </div>
+                <div className="flex items-baseline gap-1.5">
+                  <p className="text-4xl font-bold text-foreground tabular-nums" data-testid="text-streak-count">
+                    {streak}
+                  </p>
+                  <span className="text-xs text-muted-foreground">day streak</span>
+                </div>
+                <p className={`text-xs font-semibold mt-1.5 ${streak >= 3 ? "text-green-600 dark:text-green-400" : "text-muted-foreground"}`}>
+                  {getStreakLabel(streak)}
+                </p>
               </CardContent>
             </Card>
           </div>
 
           {hasDiagnostic && (
-            <Card className="mb-8 card-elev-prominent" data-testid="card-career-snapshot">
-              <CardContent className="p-5 sm:p-6">
-                <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
+            <Card className="mb-10 card-elev-prominent" data-testid="card-career-snapshot">
+              <CardContent className="p-6 sm:p-7">
+                <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5">
+                  <div className="w-1 self-stretch rounded-full bg-gradient-to-b from-primary to-chart-3 hidden sm:block shrink-0" />
                   <div className="flex-1 min-w-0 text-center sm:text-left">
-                    <div className="flex items-center justify-center sm:justify-start gap-2 mb-2">
-                      <Brain className="h-4 w-4 text-muted-foreground" />
-                      <h2 className="text-base font-semibold text-foreground">Career Snapshot</h2>
+                    <div className="flex items-center justify-center sm:justify-start gap-2 mb-3">
+                      <div className="p-1.5 rounded-md bg-primary/10 text-primary">
+                        <Brain className="h-4 w-4" />
+                      </div>
+                      <h2 className="text-lg font-semibold text-foreground">Career Snapshot</h2>
                     </div>
                     {topPathName && (
-                      <p className="text-sm text-muted-foreground mb-3">
+                      <p className="text-sm text-muted-foreground mb-4">
                         Top path: <span className="font-medium text-foreground">{topPathName}</span>
                         {topPathConfidence && <span> · {topPathConfidence}% confidence</span>}
                       </p>
                     )}
                     {diagnosticReport?.skillClusters && diagnosticReport.skillClusters.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 justify-center sm:justify-start">
-                        {diagnosticReport.skillClusters.slice(0, 5).map((skill) => (
-                          <Badge key={skill.name} variant="secondary" className="text-[10px]">
-                            {skill.name}: {skill.score}
-                          </Badge>
-                        ))}
+                      <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
+                        {diagnosticReport.skillClusters.slice(0, 5).map((skill, idx) => {
+                          const dotColors = ["bg-primary", "bg-chart-2", "bg-chart-3", "bg-chart-4", "bg-chart-5"];
+                          return (
+                            <Badge key={skill.name} variant="secondary" className="text-xs gap-1.5 py-1">
+                              <span className={`inline-block h-2 w-2 rounded-full ${dotColors[idx % dotColors.length]}`} />
+                              {skill.name}: {skill.score}
+                            </Badge>
+                          );
+                        })}
                       </div>
                     )}
                   </div>
-                  <div className="flex flex-row sm:flex-col gap-4 shrink-0">
+                  <div className="flex flex-row sm:flex-col gap-5 shrink-0">
                     <div className="text-center">
                       <p className="text-2xl font-bold text-foreground tabular-nums" data-testid="text-saved-jobs-count">{readiness.savedJobsCount}</p>
                       <p className="text-xs text-muted-foreground">Saved</p>
@@ -413,14 +462,14 @@ export default function DashboardPage() {
           )}
 
           {!hasDiagnostic && (
-            <Card className="mb-8 border-dashed card-elev-static" data-testid="card-diagnostic-cta">
-              <CardContent className="p-6 sm:p-8">
-                <div className="flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left">
-                  <div className="p-3 rounded-md bg-primary/10 text-primary shrink-0">
-                    <Sparkles className="h-6 w-6" />
+            <Card className="mb-10 border-dashed card-elev-static" data-testid="card-diagnostic-cta">
+              <CardContent className="p-7 sm:p-9">
+                <div className="flex flex-col sm:flex-row items-center gap-5 text-center sm:text-left">
+                  <div className="p-4 rounded-md bg-primary/10 text-primary shrink-0">
+                    <Sparkles className="h-7 w-7" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h2 className="text-base font-semibold text-foreground mb-1">Get your career roadmap</h2>
+                    <h2 className="text-lg font-semibold text-foreground mb-1.5">Get your career roadmap</h2>
                     <p className="text-sm text-muted-foreground">
                       Upload your resume and see where you fit in 60 seconds. Get your readiness score, matching career paths, and a personalized transition plan.
                     </p>
@@ -436,33 +485,39 @@ export default function DashboardPage() {
             </Card>
           )}
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-            <div className="lg:col-span-2 space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10">
+            <div className="lg:col-span-2 space-y-8">
               <Card className="card-elev-static" data-testid="card-this-week">
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between gap-2 flex-wrap">
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <Zap className="h-4 w-4 text-muted-foreground" />
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <div className="p-1.5 rounded-md bg-chart-4/10 text-chart-4">
+                        <Zap className="h-4 w-4" />
+                      </div>
                       This Week
                     </CardTitle>
                     {hasDiagnostic && !planComplete && transitionPlan.length > 0 && (
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <div className="flex gap-1">
-                          {[1, 2, 3, 4].map((w) => (
-                            <div
-                              key={w}
-                              className={`h-1.5 w-6 rounded-full transition-colors ${
-                                w < currentWeek
-                                  ? "bg-primary"
-                                  : w === currentWeek
-                                  ? "bg-primary/60"
-                                  : "bg-muted"
-                              }`}
-                              data-testid={`progress-week-${w}`}
-                            />
-                          ))}
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <div className="flex items-center gap-2">
+                          <div className="flex gap-1">
+                            {[1, 2, 3, 4].map((w) => (
+                              <div
+                                key={w}
+                                className={`h-2 w-7 rounded-full transition-colors ${
+                                  w < currentWeek
+                                    ? "bg-gradient-to-r from-primary to-chart-2"
+                                    : w === currentWeek
+                                    ? "bg-primary/50"
+                                    : "bg-muted"
+                                }`}
+                                data-testid={`progress-week-${w}`}
+                              />
+                            ))}
+                          </div>
+                          <Badge variant="secondary" className="text-xs font-semibold">
+                            Week {currentWeek}/4 · {Math.round(weekProgress * 100)}%
+                          </Badge>
                         </div>
-                        <Badge variant="secondary" className="text-xs">Week {currentWeek}/4</Badge>
                       </div>
                     )}
                   </div>
@@ -470,11 +525,13 @@ export default function DashboardPage() {
                 <CardContent>
                   {hasDiagnostic && transitionPlan.length > 0 ? (
                     planComplete ? (
-                      <div className="flex flex-col items-center gap-3 py-4 text-center">
-                        <CheckCircle className="h-8 w-8 text-green-500" />
+                      <div className="flex flex-col items-center gap-3 py-5 text-center">
+                        <div className="p-3 rounded-full bg-green-500/10">
+                          <CheckCircle className="h-8 w-8 text-green-500" />
+                        </div>
                         <div>
-                          <p className="text-sm font-medium text-foreground">Plan complete</p>
-                          <p className="text-xs text-muted-foreground mt-1">Run a fresh diagnostic to get updated recommendations</p>
+                          <p className="text-base font-medium text-foreground">Plan complete</p>
+                          <p className="text-sm text-muted-foreground mt-1">Run a fresh diagnostic to get updated recommendations</p>
                         </div>
                         <Link href="/diagnostic">
                           <Button size="sm" className="gap-1" data-testid="button-fresh-diagnostic">
@@ -487,20 +544,20 @@ export default function DashboardPage() {
                       <div className="space-y-4">
                         {currentWeekPlan && (
                           <div>
-                            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
+                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
                               {currentWeekPlan.theme}
                             </p>
-                            <div className="space-y-2.5">
+                            <div className="space-y-3">
                               {(isPro || currentWeek === 1 ? currentWeekPlan.actions : currentWeekPlan.actions.slice(0, 1)).map((action, i) => (
-                                <div key={i} className="flex items-start gap-3 p-3 rounded-md bg-muted/30" data-testid={`task-week-${currentWeek}-${i}`}>
+                                <div key={i} className="flex items-start gap-3 p-3.5 rounded-md bg-muted/30" data-testid={`task-week-${currentWeek}-${i}`}>
                                   <div className="mt-0.5 shrink-0">
-                                    <div className="h-5 w-5 rounded-full border-2 border-muted-foreground/30 flex items-center justify-center">
-                                      <span className="text-[9px] font-bold text-muted-foreground">{i + 1}</span>
+                                    <div className={`h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-bold ${stepColors[i % stepColors.length]}`}>
+                                      {i + 1}
                                     </div>
                                   </div>
                                   <div className="flex-1 min-w-0">
-                                    <p className="text-sm text-foreground">{action.task}</p>
-                                    <div className="flex flex-wrap gap-2 mt-1">
+                                    <p className="text-sm font-medium text-foreground">{action.task}</p>
+                                    <div className="flex flex-wrap gap-2 mt-1.5">
                                       <span className="text-xs text-muted-foreground flex items-center gap-1">
                                         <Clock className="h-3 w-3" />
                                         {action.timeEstimate}
@@ -529,8 +586,10 @@ export default function DashboardPage() {
 
                         {marketPulse && marketPulse.newJobsThisWeek > 0 && (
                           <Link href="/jobs">
-                            <div className="flex items-center gap-3 p-3 rounded-md bg-muted/30 hover-elevate cursor-pointer" data-testid="link-new-matching-roles">
-                              <TrendingUp className="h-4 w-4 text-green-500 shrink-0" />
+                            <div className="flex items-center gap-3 p-3.5 rounded-md bg-muted/30 hover-elevate cursor-pointer" data-testid="link-new-matching-roles">
+                              <div className="p-1.5 rounded-md bg-green-500/10">
+                                <TrendingUp className="h-4 w-4 text-green-500" />
+                              </div>
                               <p className="text-sm text-foreground flex-1">
                                 <span className="font-medium">{marketPulse.newJobsThisWeek} new roles</span> match your profile this week
                               </p>
@@ -541,8 +600,10 @@ export default function DashboardPage() {
 
                         {topReadyJob && (
                           <Link href={`/jobs/${topReadyJob.jobId}`}>
-                            <div className="flex items-center gap-3 p-3 rounded-md bg-muted/30 hover-elevate cursor-pointer" data-testid="link-top-ready-role">
-                              <Briefcase className="h-4 w-4 text-primary shrink-0" />
+                            <div className="flex items-center gap-3 p-3.5 rounded-md bg-muted/30 hover-elevate cursor-pointer" data-testid="link-top-ready-role">
+                              <div className="p-1.5 rounded-md bg-primary/10">
+                                <Briefcase className="h-4 w-4 text-primary" />
+                              </div>
                               <div className="flex-1 min-w-0">
                                 <p className="text-sm font-medium text-foreground truncate">{topReadyJob.title}</p>
                                 <p className="text-xs text-muted-foreground">{topReadyJob.company} · {topReadyJob.fitScore}% fit</p>
@@ -554,7 +615,7 @@ export default function DashboardPage() {
                       </div>
                     )
                   ) : hasDiagnostic ? (
-                    <div className="flex flex-col items-center gap-3 py-4 text-center">
+                    <div className="flex flex-col items-center gap-3 py-5 text-center">
                       <p className="text-sm text-muted-foreground">No transition plan available. Run a new diagnostic for an updated plan.</p>
                       <Link href="/diagnostic">
                         <Button size="sm" variant="outline" data-testid="button-rerun-diagnostic">Run Diagnostic</Button>
@@ -562,8 +623,10 @@ export default function DashboardPage() {
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      <div className="flex flex-col items-center gap-3 py-2 text-center">
-                        <Brain className="h-6 w-6 text-muted-foreground/60" />
+                      <div className="flex flex-col items-center gap-3 py-3 text-center">
+                        <div className="p-3 rounded-md bg-muted/40">
+                          <Brain className="h-6 w-6 text-muted-foreground/60" />
+                        </div>
                         <p className="text-sm text-muted-foreground">Upload your resume to get a personalized weekly action plan</p>
                         <Link href={readiness.hasResume ? "/diagnostic" : "/resumes"}>
                           <Button size="sm" data-testid="button-get-action-plan">
@@ -572,18 +635,22 @@ export default function DashboardPage() {
                         </Link>
                       </div>
                       {marketPulse && (
-                        <div className="space-y-2 pt-2 border-t">
+                        <div className="space-y-2 pt-3 border-t">
                           {marketPulse.newJobsThisWeek > 0 && (
-                            <div className="flex items-center gap-3 p-2">
-                              <TrendingUp className="h-4 w-4 text-green-500 shrink-0" />
+                            <div className="flex items-center gap-3 p-2.5">
+                              <div className="p-1.5 rounded-md bg-green-500/10">
+                                <TrendingUp className="h-4 w-4 text-green-500" />
+                              </div>
                               <p className="text-sm text-muted-foreground">
                                 <span className="font-medium text-foreground">{marketPulse.newJobsThisWeek}</span> new roles added this week
                               </p>
                             </div>
                           )}
                           {marketPulse.topHiringCompanies?.[0] && (
-                            <div className="flex items-center gap-3 p-2">
-                              <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
+                            <div className="flex items-center gap-3 p-2.5">
+                              <div className="p-1.5 rounded-md bg-chart-1/10">
+                                <Building2 className="h-4 w-4 text-chart-1" />
+                              </div>
                               <p className="text-sm text-muted-foreground">
                                 <span className="font-medium text-foreground">{marketPulse.topHiringCompanies[0].name}</span> is hiring the most
                               </p>
@@ -597,84 +664,104 @@ export default function DashboardPage() {
               </Card>
 
               <div>
-                <h2 className="text-base font-semibold text-foreground mb-4 flex items-center gap-2">
-                  <BarChart3 className="h-4 w-4 text-muted-foreground" />
+                <h2 className="text-lg font-semibold text-foreground mb-5 flex items-center gap-2">
+                  <div className="p-1.5 rounded-md bg-chart-1/10 text-chart-1">
+                    <BarChart3 className="h-4 w-4" />
+                  </div>
                   Market Pulse
                 </h2>
 
                 {marketPulse ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <Card className="card-elev-static" data-testid="card-pulse-new-roles">
-                      <CardContent className="p-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    <Card className="card-elev-static hover-elevate" data-testid="card-pulse-new-roles">
+                      <CardContent className="p-5">
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex-1 min-w-0">
-                            <p className="text-xs text-muted-foreground mb-1 font-medium">New This Week</p>
-                            <p className="text-2xl font-bold text-foreground tabular-nums">{marketPulse.newJobsThisWeek}</p>
-                            <p className="text-xs text-muted-foreground mt-0.5">roles added</p>
+                            <p className="text-xs text-muted-foreground mb-1.5 font-medium uppercase tracking-wide">New This Week</p>
+                            <p className="text-3xl font-bold text-foreground tabular-nums">{marketPulse.newJobsThisWeek}</p>
+                            <p className="text-xs text-muted-foreground mt-1">roles added</p>
                           </div>
                           <div className="p-2.5 rounded-md bg-green-500/10 dark:bg-green-500/20 text-green-600 dark:text-green-400">
-                            <TrendingUp className="h-4 w-4" />
+                            <TrendingUp className="h-5 w-5" />
                           </div>
                         </div>
+                        {marketPulse.totalJobs > 0 && (
+                          <div className="mt-3">
+                            <ProgressBar value={marketPulse.newJobsThisWeek} max={marketPulse.totalJobs} />
+                          </div>
+                        )}
                       </CardContent>
                     </Card>
 
-                    <Card className="card-elev-static" data-testid="card-pulse-top-hiring">
-                      <CardContent className="p-4">
+                    <Card className="card-elev-static hover-elevate" data-testid="card-pulse-top-hiring">
+                      <CardContent className="p-5">
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex-1 min-w-0">
-                            <p className="text-xs text-muted-foreground mb-1 font-medium">Top Hiring</p>
-                            <p className="text-lg font-bold text-foreground truncate">
+                            <p className="text-xs text-muted-foreground mb-1.5 font-medium uppercase tracking-wide">Top Hiring</p>
+                            <p className="text-xl font-bold text-foreground truncate">
                               {marketPulse.topHiringCompanies?.[0]?.name || "N/A"}
                             </p>
-                            <p className="text-xs text-muted-foreground mt-0.5">
+                            <p className="text-xs text-muted-foreground mt-1">
                               {marketPulse.topHiringCompanies?.[0]?.count || 0} open roles
                             </p>
                           </div>
                           <div className="p-2.5 rounded-md bg-chart-1/10 dark:bg-chart-1/20 text-chart-1">
-                            <Building2 className="h-4 w-4" />
+                            <Building2 className="h-5 w-5" />
                           </div>
                         </div>
+                        {marketPulse.topHiringCompanies?.[0] && marketPulse.totalJobs > 0 && (
+                          <div className="mt-3">
+                            <ProgressBar value={marketPulse.topHiringCompanies[0].count} max={marketPulse.totalJobs} />
+                          </div>
+                        )}
                       </CardContent>
                     </Card>
 
-                    <Card className="card-elev-static" data-testid="card-pulse-trending-skill">
-                      <CardContent className="p-4">
+                    <Card className="card-elev-static hover-elevate" data-testid="card-pulse-trending-skill">
+                      <CardContent className="p-5">
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex-1 min-w-0">
-                            <p className="text-xs text-muted-foreground mb-1 font-medium">Most In-Demand</p>
-                            <p className="text-lg font-bold text-foreground truncate">
+                            <p className="text-xs text-muted-foreground mb-1.5 font-medium uppercase tracking-wide">Most In-Demand</p>
+                            <p className="text-xl font-bold text-foreground truncate">
                               {marketPulse.trendingSkill?.name || "N/A"}
                             </p>
-                            <p className="text-xs text-muted-foreground mt-0.5">
+                            <p className="text-xs text-muted-foreground mt-1">
                               {marketPulse.trendingSkill?.count || 0} mentions
                             </p>
                           </div>
                           <div className="p-2.5 rounded-md bg-chart-3/10 dark:bg-chart-3/20 text-chart-3">
-                            <Target className="h-4 w-4" />
+                            <Target className="h-5 w-5" />
                           </div>
                         </div>
+                        {marketPulse.trendingSkill && marketPulse.totalJobs > 0 && (
+                          <div className="mt-3">
+                            <ProgressBar value={marketPulse.trendingSkill.count} max={marketPulse.totalJobs} />
+                          </div>
+                        )}
                       </CardContent>
                     </Card>
 
-                    <Card className="card-elev-static" data-testid="card-pulse-remote">
+                    <Card className="card-elev-static hover-elevate" data-testid="card-pulse-remote">
                       {isPro ? (
-                        <CardContent className="p-4">
+                        <CardContent className="p-5">
                           <div className="flex items-start justify-between gap-2">
                             <div className="flex-1 min-w-0">
-                              <p className="text-xs text-muted-foreground mb-1 font-medium">Remote</p>
-                              <p className="text-2xl font-bold text-foreground tabular-nums">{remotePercent}%</p>
-                              <p className="text-xs text-muted-foreground mt-0.5">of all roles</p>
+                              <p className="text-xs text-muted-foreground mb-1.5 font-medium uppercase tracking-wide">Remote</p>
+                              <p className="text-3xl font-bold text-foreground tabular-nums">{remotePercent}%</p>
+                              <p className="text-xs text-muted-foreground mt-1">of all roles</p>
                             </div>
                             <div className="p-2.5 rounded-md bg-chart-2/10 dark:bg-chart-2/20 text-chart-2">
-                              <Wifi className="h-4 w-4" />
+                              <Wifi className="h-5 w-5" />
                             </div>
+                          </div>
+                          <div className="mt-3">
+                            <ProgressBar value={remotePercent} max={100} />
                           </div>
                         </CardContent>
                       ) : (
-                        <CardContent className="p-4">
+                        <CardContent className="p-5">
                           <ProLockedOverlay label="Remote %">
-                            <div className="h-16" />
+                            <div className="h-20" />
                           </ProLockedOverlay>
                         </CardContent>
                       )}
@@ -683,36 +770,36 @@ export default function DashboardPage() {
                     {isPro ? (
                       <>
                         {marketPulse.salaryInsight && (
-                          <Card className="card-elev-static" data-testid="card-pulse-salary">
-                            <CardContent className="p-4">
+                          <Card className="card-elev-static hover-elevate" data-testid="card-pulse-salary">
+                            <CardContent className="p-5">
                               <div className="flex items-start justify-between gap-2">
                                 <div className="flex-1 min-w-0">
-                                  <p className="text-xs text-muted-foreground mb-1 font-medium">Avg Salary</p>
-                                  <p className="text-lg font-bold text-foreground truncate">
+                                  <p className="text-xs text-muted-foreground mb-1.5 font-medium uppercase tracking-wide">Avg Salary</p>
+                                  <p className="text-xl font-bold text-foreground truncate">
                                     {formatSalary(marketPulse.salaryInsight.avgMin, marketPulse.salaryInsight.avgMax)}
                                   </p>
-                                  <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                                  <p className="text-xs text-muted-foreground mt-1 truncate">
                                     {marketPulse.salaryInsight.category}
                                   </p>
                                 </div>
                                 <div className="p-2.5 rounded-md bg-chart-4/10 dark:bg-chart-4/20 text-chart-4">
-                                  <DollarSign className="h-4 w-4" />
+                                  <DollarSign className="h-5 w-5" />
                                 </div>
                               </div>
                             </CardContent>
                           </Card>
                         )}
 
-                        <Card className="card-elev-static" data-testid="card-pulse-total">
-                          <CardContent className="p-4">
+                        <Card className="card-elev-static hover-elevate" data-testid="card-pulse-total">
+                          <CardContent className="p-5">
                             <div className="flex items-start justify-between gap-2">
                               <div className="flex-1 min-w-0">
-                                <p className="text-xs text-muted-foreground mb-1 font-medium">Total Active</p>
-                                <p className="text-2xl font-bold text-foreground tabular-nums">{marketPulse.totalJobs}</p>
-                                <p className="text-xs text-muted-foreground mt-0.5">open positions</p>
+                                <p className="text-xs text-muted-foreground mb-1.5 font-medium uppercase tracking-wide">Total Active</p>
+                                <p className="text-3xl font-bold text-foreground tabular-nums">{marketPulse.totalJobs}</p>
+                                <p className="text-xs text-muted-foreground mt-1">open positions</p>
                               </div>
                               <div className="p-2.5 rounded-md bg-chart-5/10 dark:bg-chart-5/20 text-chart-5">
-                                <Globe className="h-4 w-4" />
+                                <Globe className="h-5 w-5" />
                               </div>
                             </div>
                           </CardContent>
@@ -720,31 +807,33 @@ export default function DashboardPage() {
                       </>
                     ) : (
                       <Card className="card-elev-static">
-                        <CardContent className="p-4">
+                        <CardContent className="p-5">
                           <ProLockedOverlay label="Salary & Total">
-                            <div className="h-16" />
+                            <div className="h-20" />
                           </ProLockedOverlay>
                         </CardContent>
                       </Card>
                     )}
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                     {[...Array(4)].map((_, i) => (
-                      <Card key={i} className="card-elev-static"><CardContent className="p-4"><Skeleton className="h-20 w-full" /></CardContent></Card>
+                      <Card key={i} className="card-elev-static"><CardContent className="p-5"><Skeleton className="h-24 w-full" /></CardContent></Card>
                     ))}
                   </div>
                 )}
               </div>
             </div>
 
-            <div className="space-y-5">
+            <div className="space-y-6">
               <Card className="card-elev-static" data-testid="card-saved-jobs-sidebar">
                 <CardContent className="p-5">
                   <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
                     <div className="flex items-center gap-2">
-                      <Bookmark className="h-4 w-4 text-muted-foreground" />
-                      <p className="text-sm font-medium text-foreground">Saved Jobs</p>
+                      <div className="p-1.5 rounded-md bg-chart-4/10 text-chart-4">
+                        <Bookmark className="h-3.5 w-3.5" />
+                      </div>
+                      <p className="text-sm font-semibold text-foreground">Saved Jobs</p>
                     </div>
                     <div className="flex items-center gap-2">
                       <Badge variant="secondary">{readiness.savedJobsCount}</Badge>
@@ -756,7 +845,7 @@ export default function DashboardPage() {
                     </div>
                   </div>
                   {readiness.savedJobsCount > 0 && readiness.expiringSoonCount > 0 && (
-                    <div className="mb-3 p-2 rounded-md bg-destructive/10 dark:bg-destructive/20">
+                    <div className="mb-3 p-2.5 rounded-md bg-destructive/10 dark:bg-destructive/20">
                       <p className="text-xs text-destructive-foreground dark:text-red-300 flex items-center gap-1.5">
                         <Clock className="h-3 w-3" />
                         {readiness.expiringSoonCount} job{readiness.expiringSoonCount > 1 ? "s" : ""} expiring soon
@@ -776,8 +865,10 @@ export default function DashboardPage() {
                 <CardContent className="p-5">
                   <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
                     <div className="flex items-center gap-2">
-                      <Bell className="h-4 w-4 text-muted-foreground" />
-                      <p className="text-sm font-medium text-foreground">Active Alerts</p>
+                      <div className="p-1.5 rounded-md bg-chart-2/10 text-chart-2">
+                        <Bell className="h-3.5 w-3.5" />
+                      </div>
+                      <p className="text-sm font-semibold text-foreground">Active Alerts</p>
                     </div>
                     <Badge variant={readiness.activeAlertsCount > 0 ? "secondary" : "outline"}>
                       {readiness.activeAlertsCount}
@@ -797,28 +888,38 @@ export default function DashboardPage() {
 
               <Card className="card-elev-static" data-testid="card-engagement-sidebar">
                 <CardContent className="p-5">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Sparkles className="h-4 w-4 text-muted-foreground" />
-                    <p className="text-sm font-medium text-foreground">Engagement</p>
+                  <div className="flex items-center justify-between gap-2 mb-4">
+                    <div className="flex items-center gap-2">
+                      <div className="p-1.5 rounded-md bg-chart-3/10 text-chart-3">
+                        <Sparkles className="h-3.5 w-3.5" />
+                      </div>
+                      <p className="text-sm font-semibold text-foreground">Engagement</p>
+                    </div>
+                    <Badge className={`text-[10px] font-semibold no-default-hover-elevate no-default-active-elevate ${getEngagementBg(dashData.persona?.engagementLevel)}`}>
+                      {dashData.persona?.engagementLevel || "New"}
+                    </Badge>
                   </div>
-                  <div className="space-y-2.5">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-xs text-muted-foreground">Level</span>
-                      <span className={`text-xs font-medium ${getEngagementColor(dashData.persona?.engagementLevel)}`}>
-                        {dashData.persona?.engagementLevel || "New"}
-                      </span>
+                  <div className="space-y-3">
+                    <div>
+                      <div className="flex items-center justify-between gap-2 mb-1">
+                        <span className="text-xs text-muted-foreground">Jobs viewed</span>
+                        <span className="text-xs font-semibold text-foreground tabular-nums">{activityMetrics.period.jobViews}</span>
+                      </div>
+                      <ProgressBar value={activityMetrics.period.jobViews} max={Math.max(activityMetrics.period.jobViews, 20)} />
                     </div>
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-xs text-muted-foreground">Jobs viewed</span>
-                      <span className="text-xs font-medium text-foreground tabular-nums">{activityMetrics.period.jobViews}</span>
+                    <div>
+                      <div className="flex items-center justify-between gap-2 mb-1">
+                        <span className="text-xs text-muted-foreground">Searches</span>
+                        <span className="text-xs font-semibold text-foreground tabular-nums">{activityMetrics.period.searches}</span>
+                      </div>
+                      <ProgressBar value={activityMetrics.period.searches} max={Math.max(activityMetrics.period.searches, 10)} />
                     </div>
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-xs text-muted-foreground">Searches</span>
-                      <span className="text-xs font-medium text-foreground tabular-nums">{activityMetrics.period.searches}</span>
-                    </div>
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-xs text-muted-foreground">Apply clicks</span>
-                      <span className="text-xs font-medium text-foreground tabular-nums">{activityMetrics.period.applyClicks}</span>
+                    <div>
+                      <div className="flex items-center justify-between gap-2 mb-1">
+                        <span className="text-xs text-muted-foreground">Apply clicks</span>
+                        <span className="text-xs font-semibold text-foreground tabular-nums">{activityMetrics.period.applyClicks}</span>
+                      </div>
+                      <ProgressBar value={activityMetrics.period.applyClicks} max={Math.max(activityMetrics.period.applyClicks, 5)} />
                     </div>
                   </div>
                 </CardContent>
@@ -826,17 +927,19 @@ export default function DashboardPage() {
 
               <Card className="card-elev-static" data-testid="card-quick-links">
                 <CardContent className="p-5">
-                  <p className="text-sm font-medium text-foreground mb-3">Quick Links</p>
+                  <p className="text-sm font-semibold text-foreground mb-3">Quick Links</p>
                   <div className="space-y-1.5">
                     {[
-                      { label: "Browse Jobs", href: "/jobs", icon: Search },
-                      { label: "Run Diagnostic", href: "/diagnostic", icon: Brain },
-                      { label: "My Resumes", href: "/resumes", icon: FileText },
-                      { label: "Opportunity Map", href: "/opportunity-map", icon: Map },
+                      { label: "Browse Jobs", href: "/jobs", icon: Search, color: "bg-primary/10 text-primary" },
+                      { label: "Run Diagnostic", href: "/diagnostic", icon: Brain, color: "bg-chart-3/10 text-chart-3" },
+                      { label: "My Resumes", href: "/resumes", icon: FileText, color: "bg-chart-2/10 text-chart-2" },
+                      { label: "Opportunity Map", href: "/opportunity-map", icon: Map, color: "bg-chart-4/10 text-chart-4" },
                     ].map((link) => (
                       <Link href={link.href} key={link.label}>
-                        <div className="flex items-center gap-2.5 p-2 rounded-md hover-elevate cursor-pointer" data-testid={`link-quick-${link.label.toLowerCase().replace(/\s+/g, '-')}`}>
-                          <link.icon className="h-4 w-4 text-muted-foreground" />
+                        <div className="flex items-center gap-2.5 p-2.5 rounded-md hover-elevate cursor-pointer" data-testid={`link-quick-${link.label.toLowerCase().replace(/\s+/g, '-')}`}>
+                          <div className={`p-1.5 rounded-md ${link.color}`}>
+                            <link.icon className="h-3.5 w-3.5" />
+                          </div>
                           <span className="text-sm text-foreground">{link.label}</span>
                           <ChevronRight className="h-3 w-3 text-muted-foreground ml-auto" />
                         </div>

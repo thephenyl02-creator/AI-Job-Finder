@@ -343,14 +343,14 @@ function inferSeniority(title: string, description?: string): string {
   const titleLower = title.toLowerCase();
   const descLower = (description || "").toLowerCase();
 
-  if (titleLower.includes("intern") || titleLower.includes("internship") || titleLower.includes("co-op") || titleLower.includes("summer program")) return "Intern";
+  if ((titleLower.includes("intern") && !titleLower.includes("internal") && !titleLower.includes("international")) || titleLower.includes("internship") || titleLower.includes("co-op") || titleLower.includes("summer program")) return "Intern";
   if (titleLower.includes("fellow") || titleLower.includes("fellowship")) return "Fellowship";
   if (descLower.includes("current student") || descLower.includes("enrolled in") || descLower.includes("pursuing a degree")) return "Intern";
   if (descLower.includes("fellowship program") || descLower.includes("rotational program")) return "Fellowship";
 
   if (titleLower.includes("vp") || titleLower.includes("vice president")) return "VP";
   if (titleLower.includes("director")) return "Director";
-  if (titleLower.includes("lead") || titleLower.includes("principal")) return "Lead";
+  if ((/\blead\b/.test(titleLower) && !titleLower.includes("leader") && !titleLower.includes("leading")) || titleLower.includes("principal")) return "Lead";
   if (titleLower.includes("senior") || titleLower.includes("sr.") || titleLower.includes("sr ") || titleLower.includes("staff")) return "Senior";
 
   if (titleLower.includes("junior") || titleLower.includes("jr.") || titleLower.includes("jr ")) return "Entry";

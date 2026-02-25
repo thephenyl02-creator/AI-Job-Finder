@@ -36,7 +36,6 @@ import {
   ArrowRight,
   Crown,
   Lock,
-  GraduationCap,
   Users,
   Sparkles,
   AlertCircle,
@@ -68,7 +67,6 @@ interface MarketIntelligenceData {
   geography: { countryName: string; countryCode: string; jobCount: number }[];
   seniorityDistribution: { level: string; count: number }[];
   aiIntensity: { low: { count: number; percentage: number }; medium: { count: number; percentage: number }; high: { count: number; percentage: number } };
-  studentOpportunities: { internCount: number; fellowshipCount: number; entryLevelCount: number; totalStudentJobs: number; topCompanies: { company: string; count: number }[]; topPaths: { path: string; count: number }[] };
   communityBenchmarks?: {
     avgReadiness: number;
     readinessDistribution: { bucket: string; count: number }[];
@@ -228,7 +226,7 @@ export default function MarketIntelligence() {
     );
   }
 
-  const { overview, skillsDemand, careerPaths, salaryByPath, workMode, topCompanies, geography, seniorityDistribution, aiIntensity, studentOpportunities, communityBenchmarks } = data;
+  const { overview, skillsDemand, careerPaths, salaryByPath, workMode, topCompanies, geography, seniorityDistribution, aiIntensity, communityBenchmarks } = data;
 
   const skillsChartData = skillsDemand.slice(0, 10).map((s) => ({
     name: s.skill.length > 22 ? s.skill.slice(0, 20) + "\u2026" : s.skill,
@@ -661,52 +659,6 @@ export default function MarketIntelligence() {
           </div>
         </section>
 
-        <section className="border-t border-border/30" data-testid="section-student-spotlight">
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-14 sm:pt-24 pb-14 sm:pb-24">
-            <SectionLabel>Student Spotlight</SectionLabel>
-            <h2 className="text-xl sm:text-2xl font-serif font-medium text-foreground mb-4" data-testid="text-student-title">
-              Early-career opportunities
-            </h2>
-            <p className="text-sm text-muted-foreground mb-8 max-w-lg">
-              {studentOpportunities.totalStudentJobs} internships, fellowships, and entry-level roles across {studentOpportunities.topCompanies.length}+ companies.
-            </p>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
-              <Card data-testid="student-stat-intern">
-                <CardContent className="p-4 text-center">
-                  <p className="text-2xl font-semibold text-foreground tabular-nums">{studentOpportunities.internCount}</p>
-                  <p className="text-xs text-muted-foreground">Internships</p>
-                </CardContent>
-              </Card>
-              <Card data-testid="student-stat-fellowship">
-                <CardContent className="p-4 text-center">
-                  <p className="text-2xl font-semibold text-foreground tabular-nums">{studentOpportunities.fellowshipCount}</p>
-                  <p className="text-xs text-muted-foreground">Fellowships</p>
-                </CardContent>
-              </Card>
-              <Card data-testid="student-stat-entry">
-                <CardContent className="p-4 text-center">
-                  <p className="text-2xl font-semibold text-foreground tabular-nums">{studentOpportunities.entryLevelCount}</p>
-                  <p className="text-xs text-muted-foreground">Entry-level</p>
-                </CardContent>
-              </Card>
-              <Card data-testid="student-stat-total">
-                <CardContent className="p-4 text-center">
-                  <p className="text-2xl font-semibold text-foreground tabular-nums">{studentOpportunities.totalStudentJobs}</p>
-                  <p className="text-xs text-muted-foreground">Total student roles</p>
-                </CardContent>
-              </Card>
-            </div>
-            <div className="text-center">
-              <Link href="/students">
-                <Button data-testid="button-view-students">
-                  <GraduationCap className="h-4 w-4 mr-2" />
-                  Explore student opportunities
-                  <ArrowRight className="h-4 w-4 ml-2" />
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </section>
 
         {communityBenchmarks && (
           <section className="border-t border-border/30 bg-muted/20" data-testid="section-community">
