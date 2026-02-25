@@ -99,15 +99,15 @@ export default function Landing() {
 
       <main className="pt-14 flex-1">
 
-        <section className="max-w-5xl mx-auto px-4 sm:px-6 pt-14 sm:pt-24 pb-14 sm:pb-24">
-          <div className="flex flex-col lg:flex-row items-start gap-10 lg:gap-20">
-            <div className="flex-1 max-w-md lg:max-w-lg lg:pt-4">
-              <p className="text-[10px] font-semibold text-muted-foreground tracking-[0.2em] uppercase mb-10" data-testid="text-hero-label">
+        <section className="max-w-6xl mx-auto px-4 sm:px-6 pt-14 sm:pt-24 pb-14 sm:pb-24">
+          <div className="flex flex-col lg:flex-row items-start gap-10 lg:gap-14">
+            <div className="flex-1 max-w-md lg:max-w-xl lg:pt-4">
+              <p className="text-[10px] font-semibold text-muted-foreground tracking-[0.2em] uppercase mb-6" data-testid="text-hero-label">
                 Career intelligence for legal professionals
               </p>
 
               <h1
-                className="text-4xl sm:text-5xl font-serif font-medium text-foreground leading-[1.5]"
+                className="text-4xl sm:text-[3.25rem] font-serif font-medium text-foreground leading-[1.5]"
                 data-testid="text-hero-title"
               >
                 Where do you fit in legal tech?
@@ -152,7 +152,7 @@ export default function Landing() {
               </p>
             </div>
 
-            <div className="w-full lg:w-[420px] shrink-0">
+            <div className="w-full lg:w-[380px] shrink-0">
               <Card className="overflow-visible card-elev-prominent" data-testid="diagnostic-preview-card">
                 <CardContent className="p-5">
                   <p className="text-[10px] font-semibold text-muted-foreground tracking-wide uppercase mb-4">Sample Readiness Report</p>
