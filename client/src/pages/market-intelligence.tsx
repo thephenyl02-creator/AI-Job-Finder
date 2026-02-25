@@ -346,8 +346,8 @@ export default function MarketIntelligence() {
               </p>
               <div className="space-y-4">
                 {salaryVisible.map((sp) => (
-                  <div key={sp.path} className="flex items-center justify-between gap-4 py-2 border-b border-border/30 last:border-0" data-testid={`salary-path-${sp.path.toLowerCase().replace(/\s+/g, "-")}`}>
-                    <span className="text-sm text-foreground">{sp.path}</span>
+                  <div key={sp.name} className="flex items-center justify-between gap-4 py-2 border-b border-border/30 last:border-0" data-testid={`salary-path-${sp.name.toLowerCase().replace(/\s+/g, "-")}`}>
+                    <span className="text-sm text-foreground">{sp.name}</span>
                     <span className="text-sm font-semibold text-foreground tabular-nums shrink-0">
                       {formatSalary(sp.medianMin)} – {formatSalary(sp.medianMax)}
                     </span>
@@ -358,8 +358,8 @@ export default function MarketIntelligence() {
                 <div className="relative mt-4">
                   <div className="space-y-4 blur-sm select-none pointer-events-none opacity-50">
                     {salaryByPath.slice(3, 6).map((sp) => (
-                      <div key={sp.path} className="flex items-center justify-between gap-4 py-2 border-b border-border/30 last:border-0">
-                        <span className="text-sm text-foreground">{sp.path}</span>
+                      <div key={sp.name} className="flex items-center justify-between gap-4 py-2 border-b border-border/30 last:border-0">
+                        <span className="text-sm text-foreground">{sp.name}</span>
                         <span className="text-sm font-semibold text-foreground tabular-nums shrink-0">
                           {formatSalary(sp.medianMin)} – {formatSalary(sp.medianMax)}
                         </span>
