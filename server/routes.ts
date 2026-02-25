@@ -778,12 +778,8 @@ export async function registerRoutes(
     try {
       const user = req.user as any;
       if (!(await storage.isUserAdmin(user?.id))) return res.status(403).json({ error: "Admin access required" });
-      const result = await runEventDiscovery();
-      const allEvents = await storage.getEvents();
-      const upcoming = allEvents.filter(e => new Date(e.startDate) >= new Date()).length;
-      res.json({ ...result, totalEvents: allEvents.length, upcomingEvents: upcoming });
+      res.status(400).json({ error: "AI event discovery is disabled. Events are manually curated only." });
     } catch (error) {
-      console.error("Error refreshing events:", error);
       res.status(500).json({ error: "Failed to refresh events" });
     }
   });
