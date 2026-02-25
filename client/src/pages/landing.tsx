@@ -99,28 +99,28 @@ export default function Landing() {
 
       <main className="pt-14 flex-1">
 
-        <section className="max-w-5xl mx-auto px-4 sm:px-6 pt-10 sm:pt-20 pb-10 sm:pb-20">
-          <div className="flex flex-col lg:flex-row items-start gap-8 lg:gap-16">
+        <section className="max-w-5xl mx-auto px-4 sm:px-6 pt-14 sm:pt-24 pb-14 sm:pb-24">
+          <div className="flex flex-col lg:flex-row items-start gap-10 lg:gap-20">
             <div className="flex-1 max-w-md lg:max-w-lg lg:pt-4">
-              <p className="text-[10px] font-semibold text-muted-foreground tracking-[0.2em] uppercase mb-8" data-testid="text-hero-label">
+              <p className="text-[10px] font-semibold text-muted-foreground tracking-[0.2em] uppercase mb-10" data-testid="text-hero-label">
                 Career intelligence for legal professionals
               </p>
 
               <h1
-                className="text-4xl sm:text-5xl font-serif font-medium text-foreground leading-[1.45]"
+                className="text-4xl sm:text-5xl font-serif font-medium text-foreground leading-[1.5]"
                 data-testid="text-hero-title"
               >
                 Where do you fit in legal tech?
               </h1>
 
               <p
-                className="text-base text-muted-foreground mt-8 leading-relaxed"
+                className="text-base text-muted-foreground mt-10 leading-relaxed"
                 data-testid="text-hero-subtitle"
               >
                 Upload your resume. In 60 seconds, see your readiness score, matching career paths, and a plan to get there.
               </p>
 
-              <div className="mt-8 flex items-center gap-4 flex-wrap">
+              <div className="mt-10 flex items-center gap-4 flex-wrap">
                 <Button size="lg" asChild data-testid="button-hero-diagnostic">
                   <a href="/diagnostic" onClick={() => {
                     if (!hasDiagnostic) {
