@@ -355,9 +355,9 @@ export default function MarketIntelligence() {
             {skillsChartData.length > 0 ? (
               <div className="h-[360px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={skillsChartData} layout="vertical" margin={{ top: 0, right: 30, left: 0, bottom: 0 }}>
+                  <BarChart data={skillsChartData} layout="vertical" margin={{ top: 0, right: 30, left: 10, bottom: 0 }}>
                     <XAxis type="number" tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
-                    <YAxis type="category" dataKey="name" tick={{ fontSize: 12, fill: "hsl(var(--foreground))" }} axisLine={false} tickLine={false} width={150} />
+                    <YAxis type="category" dataKey="name" tick={{ fontSize: 12, fill: "hsl(var(--foreground))" }} axisLine={false} tickLine={false} width={200} tickFormatter={(value: string) => value.length > 28 ? value.slice(0, 26) + '…' : value} />
                     <Tooltip
                       contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "6px", fontSize: 13 }}
                       labelStyle={{ color: "hsl(var(--foreground))" }}

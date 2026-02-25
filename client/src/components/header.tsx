@@ -41,10 +41,10 @@ function NavLink({ href, icon: Icon, label, isActive, testId }: {
       <Button
         variant="ghost"
         size="sm"
-        className={`relative ${isActive ? "text-foreground" : "text-muted-foreground"}`}
+        className={`relative text-xs px-2.5 h-8 ${isActive ? "text-foreground" : "text-muted-foreground"}`}
         data-testid={testId}
       >
-        <Icon className="h-3.5 w-3.5 mr-1.5" />
+        <Icon className="h-3.5 w-3.5 mr-1" />
         {label}
         {isActive && <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-primary rounded-full" />}
       </Button>
