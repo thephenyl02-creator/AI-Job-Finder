@@ -102,7 +102,7 @@ export default function Landing() {
         <section className="max-w-6xl mx-auto px-4 sm:px-6 pt-14 sm:pt-24 pb-14 sm:pb-24">
           <div className="flex flex-col lg:flex-row items-start gap-10 lg:gap-14">
             <div className="flex-1 max-w-md lg:max-w-xl lg:pt-4">
-              <p className="text-sm font-semibold text-primary tracking-[0.2em] uppercase mb-6 border-l-2 border-primary pl-3" data-testid="text-hero-label">
+              <p className="text-sm font-semibold text-primary tracking-[0.2em] uppercase mb-6 border-l-2 border-primary pl-3 -ml-3" data-testid="text-hero-label">
                 Career intelligence for legal professionals
               </p>
 
@@ -321,7 +321,7 @@ export default function Landing() {
             <div className="max-w-5xl mx-auto px-4 sm:px-6 py-14 sm:py-24">
               <div className="flex flex-col sm:flex-row items-center gap-8 sm:gap-12">
                 <div className="flex-1 text-center sm:text-left">
-                  <p className="text-[10px] font-semibold text-muted-foreground tracking-[0.2em] uppercase mb-3">
+                  <p className="text-sm font-semibold text-primary tracking-[0.2em] uppercase mb-3 border-l-2 border-primary pl-3 -ml-3">
                     Global coverage
                   </p>
                   <h2
