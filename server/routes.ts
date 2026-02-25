@@ -8195,6 +8195,7 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
 
       const pdfDoc = generateMarketIntelligencePDF(pdfData, period);
       pdfDoc.pipe(res);
+      pdfDoc.end();
     } catch (error: any) {
       console.error("Error generating PDF report:", error);
       res.status(500).json({ error: "Failed to generate PDF report" });

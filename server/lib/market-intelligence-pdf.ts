@@ -532,6 +532,5 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string):
     .text("legaltechcareers.com", MARGIN, PAGE_HEIGHT - 58, { width: CONTENT_WIDTH });
   doc.restore();
 
-  doc.end();
   return doc;
 }
