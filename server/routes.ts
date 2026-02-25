@@ -8130,13 +8130,22 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
 
   app.get("/api/market-intelligence/report", async (req, res) => {
     try {
+      console.log(`[Report] req.user present: ${!!req.user}, id: ${req.user?.id}, session: ${!!req.session}`);
+      const wantsPdf = req.headers.accept?.includes("application/pdf") || req.query.format === "pdf" || (req.headers['sec-fetch-dest'] === 'document');
       if (!req.user) {
+        if (wantsPdf || req.headers['x-requested-with']) {
+          return res.status(401).json({ error: "Authentication required to download reports." });
+        }
         return res.redirect("/pricing");
       }
       const userIsAdmin = await storage.isUserAdmin(req.user.id);
       const subData = await storage.getUserSubscription(req.user.id);
       const isPro = userIsAdmin || (subData?.subscriptionTier === "pro" && subData?.subscriptionStatus === "active");
+      console.log(`[Report] userId: ${req.user.id}, isAdmin: ${userIsAdmin}, subTier: ${subData?.subscriptionTier}, isPro: ${isPro}`);
       if (!isPro) {
+        if (wantsPdf || req.headers['x-requested-with']) {
+          return res.status(403).json({ error: "Pro subscription required to download reports." });
+        }
         return res.redirect("/pricing");
       }
 

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { usePageTitle } from "@/hooks/use-page-title";
 import { useAuth } from "@/hooks/use-auth";
@@ -44,6 +45,7 @@ import {
   DollarSign,
   ChevronDown,
   MapPin,
+  Loader2,
 } from "lucide-react";
 
 interface MarketIntelligenceData {
@@ -261,8 +263,34 @@ export default function MarketIntelligence() {
   const salaryBlurred = !isPro && salaryByPath.length > 3;
   const salaryMax = Math.max(...(salaryByPath.length > 0 ? salaryByPath.map((s) => s.medianMax || 0) : [0]), 1);
 
-  const handleDownload = (period: string) => {
-    window.open(`/api/market-intelligence/report?period=${period}`, "_blank");
+  const [downloading, setDownloading] = useState(false);
+  const handleDownload = async (period: string) => {
+    setDownloading(true);
+    try {
+      const response = await fetch(`/api/market-intelligence/report?period=${period}`, {
+        credentials: "include",
+      });
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          window.location.href = "/pricing";
+          return;
+        }
+        throw new Error("Failed to download report");
+      }
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `legal-tech-careers-${period}-report.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Download failed:", err);
+    } finally {
+      setDownloading(false);
+    }
   };
 
   return (
@@ -284,10 +312,10 @@ export default function MarketIntelligence() {
             {canDownload ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="gap-2 shrink-0" data-testid="button-download-report">
-                    <Download className="h-4 w-4" />
-                    Download Report
-                    <ChevronDown className="h-3.5 w-3.5" />
+                  <Button variant="outline" className="gap-2 shrink-0" disabled={downloading} data-testid="button-download-report">
+                    {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                    {downloading ? "Downloading..." : "Download Report"}
+                    {!downloading && <ChevronDown className="h-3.5 w-3.5" />}
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
