@@ -824,9 +824,10 @@ async function enrichJob(job: Job): Promise<void> {
     const relevanceScore = enrichedData.legalRelevanceScore || 0;
 
     const isLegalTech = isLegalTechCompany(job.company);
-    const qualityThreshold = relevanceScore >= 7 ? 40 : (isLegalTech ? 40 : 50);
-    const minRelevance = isLegalTech ? 4 : 5;
-    const minConfidence = isLegalTech ? 40 : 50;
+    const isTracked = ALL_TRACKED_COMPANIES.has(normalizeCompanyName(job.company));
+    const qualityThreshold = relevanceScore >= 7 ? 30 : (isLegalTech ? 35 : (isTracked ? 40 : 50));
+    const minRelevance = isLegalTech ? 3 : (isTracked ? 4 : 5);
+    const minConfidence = isLegalTech ? 30 : (isTracked ? 35 : 50);
 
     if (catResult?.reviewStatus === 'rejected' || relevanceConfidence < 30) {
       enrichedData.pipelineStatus = 'rejected';
@@ -882,7 +883,17 @@ async function runEnrichmentBatch(): Promise<EnrichmentResult> {
     await recoverStuckJobs();
 
     const rawJobs = await storage.getJobsForEnrichment(BATCH_SIZE);
-    if (rawJobs.length === 0) return result;
+    if (rawJobs.length === 0) {
+      try {
+        const recovery = await recoverStuckReadyJobs();
+        if (recovery.promoted > 0) {
+          console.log(`[Enrichment] No raw jobs, but recovered ${recovery.promoted} stuck ready jobs`);
+        }
+      } catch (err: any) {
+        console.error('[Enrichment] Recovery check failed:', err.message);
+      }
+      return result;
+    }
 
     console.log(`[Enrichment] Processing ${rawJobs.length} raw jobs...`);
 

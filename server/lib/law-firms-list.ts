@@ -85,6 +85,7 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
     name: 'Neota Logic',
     careerUrl: 'https://www.neotalogic.com/careers/',
     workableId: 'neota',
+    leverPostingsUrl: 'https://jobs.lever.co/neotalogic',
     type: 'startup',
   },
   {
@@ -394,12 +395,14 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
     name: 'Brightflag',
     careerUrl: 'https://www.brightflag.com/careers/',
     greenhouseId: 'brightflag',
+    leverPostingsUrl: 'https://jobs.lever.co/brightflag',
     type: 'tech-legal',
   },
   {
     name: 'Mitratech',
     careerUrl: 'https://mitratech.com/careers',
     greenhouseId: 'milosmitratechinc',
+    leverPostingsUrl: 'https://jobs.lever.co/mitratech',
     type: 'company',
   },
   {
@@ -420,6 +423,7 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
     name: 'NetDocuments',
     careerUrl: 'https://www.netdocuments.com/careers',
     greenhouseId: 'netdocuments',
+    leverPostingsUrl: 'https://jobs.lever.co/netdocuments',
     type: 'company',
   },
   {
@@ -446,6 +450,7 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
     name: 'Everlaw',
     careerUrl: 'https://www.everlaw.com/careers/',
     greenhouseId: 'everlaw',
+    leverPostingsUrl: 'https://jobs.lever.co/everlaw',
     type: 'tech-legal',
   },
   {
@@ -835,6 +840,7 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   {
     name: 'Simpson Thacher & Bartlett',
     careerUrl: 'https://www.simpsonthacher.com/careers',
+    icims: 'simpsonthacher',
     type: 'biglaw',
   },
   {
@@ -860,6 +866,7 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   {
     name: 'Reed Smith',
     careerUrl: 'https://www.reedsmith.com/en/careers',
+    icims: 'reedsmith',
     type: 'biglaw',
   },
   {
@@ -876,16 +883,19 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   {
     name: 'Sidley Austin',
     careerUrl: 'https://www.sidley.com/en/careers',
+    workday: { company: 'sidley', instance: 'wd5', site: 'External_Careers' },
     type: 'biglaw',
   },
   {
     name: 'Mayer Brown',
     careerUrl: 'https://www.mayerbrown.com/en/careers',
+    workday: { company: 'mayerbrown', instance: 'wd5', site: 'Mayer_Brown_Careers' },
     type: 'biglaw',
   },
   {
     name: 'Milbank',
     careerUrl: 'https://www.milbank.com/en/careers',
+    icims: 'milbank',
     type: 'biglaw',
   },
   {
@@ -906,16 +916,19 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   {
     name: 'Orrick',
     careerUrl: 'https://www.orrick.com/en/Careers',
+    greenhouseId: 'oraborrick',
     type: 'biglaw',
   },
   {
     name: 'Ropes & Gray',
     careerUrl: 'https://www.ropesgray.com/en/careers',
+    workday: { company: 'ropesgray', instance: 'wd5', site: 'RopesGray_Careers' },
     type: 'biglaw',
   },
   {
     name: 'Morrison & Foerster',
     careerUrl: 'https://www.mofo.com/careers',
+    workday: { company: 'mofo', instance: 'wd5', site: 'MoFo_External' },
     type: 'biglaw',
   },
   {
@@ -926,6 +939,7 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   {
     name: 'Proskauer Rose',
     careerUrl: 'https://www.proskauer.com/careers',
+    workday: { company: 'proskauer', instance: 'wd5', site: 'Proskauer_Careers' },
     type: 'biglaw',
   },
   {
@@ -1010,6 +1024,7 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   {
     name: 'Simmons & Simmons',
     careerUrl: 'https://www.simmons-simmons.com/en/careers',
+    workday: { company: 'simmonssimmons', instance: 'wd3', site: 'SimmonsCareers' },
     type: 'biglaw',
   },
   {
@@ -1030,6 +1045,7 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   {
     name: 'Pinsent Masons',
     careerUrl: 'https://www.pinsentmasons.com/careers',
+    workday: { company: 'pinsentmasons', instance: 'wd3', site: 'PinsentMasons' },
     type: 'biglaw',
   },
   {
@@ -1072,6 +1088,7 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   {
     name: 'MinterEllison',
     careerUrl: 'https://www.minterellison.com/careers',
+    workday: { company: 'maborinterellison', instance: 'wd3', site: 'MinterEllison' },
     type: 'biglaw',
   },
   {
@@ -1101,6 +1118,7 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   {
     name: 'McCarthy Tetrault',
     careerUrl: 'https://www.mccarthy.ca/en/careers',
+    workday: { company: 'mccarthytetrault', instance: 'wd3', site: 'McCarthy_Careers' },
     type: 'biglaw',
   },
 
@@ -1258,6 +1276,7 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
     name: 'Axiom',
     careerUrl: 'https://www.axiomlaw.com/careers',
     greenhouseId: 'axiomtalentplatform',
+    leverPostingsUrl: 'https://jobs.lever.co/axiomlaw',
     type: 'alsp',
   },
   {
@@ -1270,6 +1289,7 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
     name: 'QuisLex',
     careerUrl: 'https://www.quislex.com/careers/',
     icims: 'quislex',
+    leverPostingsUrl: 'https://jobs.lever.co/quislex',
     type: 'alsp',
   },
   {
@@ -1836,6 +1856,7 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   {
     name: 'Katten Muchin Rosenman',
     careerUrl: 'https://katten.com/careers',
+    workday: { company: 'katten', instance: 'wd5', site: 'Katten_External' },
     type: 'biglaw',
   },
   {
@@ -1846,6 +1867,7 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   {
     name: 'Seyfarth Shaw',
     careerUrl: 'https://www.seyfarth.com/careers.html',
+    workday: { company: 'seyfarth', instance: 'wd5', site: 'Seyfarth_External' },
     type: 'biglaw',
   },
   {
@@ -1856,6 +1878,7 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   {
     name: 'Pillsbury Winthrop',
     careerUrl: 'https://www.pillsburylaw.com/en/careers.html',
+    workday: { company: 'pillsburylaw', instance: 'wd5', site: 'Pillsbury_External' },
     type: 'biglaw',
   },
   {
@@ -1926,11 +1949,702 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   {
     name: 'Littler Mendelson',
     careerUrl: 'https://www.littler.com/careers',
+    workday: { company: 'littler', instance: 'wd5', site: 'Littler_External' },
     type: 'biglaw',
   },
   {
     name: 'Fisher Phillips',
     careerUrl: 'https://www.fisherphillips.com/en/careers.html',
     type: 'biglaw',
+  },
+
+  // ===================================================
+  // MISSING AM LAW 100 LAW FIRMS (with ATS)
+  // ===================================================
+  {
+    name: 'Paul Hastings',
+    careerUrl: 'https://www.paulhastings.com/careers',
+    workday: { company: 'paulhastings', instance: 'wd5', site: 'PaulHastings_Careers' },
+    type: 'biglaw',
+  },
+  {
+    name: 'Winston & Strawn',
+    careerUrl: 'https://www.winston.com/en/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'K&L Gates',
+    careerUrl: 'https://www.klgates.com/careers',
+    workday: { company: 'klgates', instance: 'wd5', site: 'KLGates_External' },
+    type: 'biglaw',
+  },
+  {
+    name: 'Sullivan & Cromwell',
+    careerUrl: 'https://www.sullcrom.com/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'Wachtell Lipton',
+    careerUrl: 'https://www.wlrk.com/careers/',
+    type: 'biglaw',
+  },
+  {
+    name: 'Covington & Burling',
+    careerUrl: 'https://www.cov.com/en/careers',
+    workday: { company: 'covington', instance: 'wd5', site: 'Covington_External' },
+    type: 'biglaw',
+  },
+  {
+    name: 'Baker Botts',
+    careerUrl: 'https://www.bakerbotts.com/careers',
+    workday: { company: 'bakerbotts', instance: 'wd5', site: 'BakerBotts_Careers' },
+    type: 'biglaw',
+  },
+  {
+    name: 'Vinson & Elkins',
+    careerUrl: 'https://www.velaw.com/careers/',
+    workday: { company: 'vinsonelkins', instance: 'wd5', site: 'VE_Careers' },
+    type: 'biglaw',
+  },
+  {
+    name: 'Haynes and Boone',
+    careerUrl: 'https://www.haynesboone.com/careers',
+    workday: { company: 'haynesboone', instance: 'wd5', site: 'HaynesBoone_External' },
+    type: 'biglaw',
+  },
+  {
+    name: 'Norton Rose Fulbright US',
+    careerUrl: 'https://www.nortonrosefulbright.com/en-us/careers',
+    workday: { company: 'nortonrosefulbright', instance: 'wd3', site: 'NRF_Careers' },
+    type: 'biglaw',
+  },
+  {
+    name: 'Hunton Andrews Kurth',
+    careerUrl: 'https://www.huntonak.com/careers',
+    workday: { company: 'hunton', instance: 'wd5', site: 'Hunton_External' },
+    type: 'biglaw',
+  },
+  {
+    name: 'Squire Patton Boggs',
+    careerUrl: 'https://www.squirepattonboggs.com/en/careers',
+    workday: { company: 'squirepb', instance: 'wd5', site: 'SPB_External' },
+    type: 'biglaw',
+  },
+  {
+    name: 'Thompson Hine',
+    careerUrl: 'https://www.thompsonhine.com/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'Cadwalader Wickersham & Taft',
+    careerUrl: 'https://www.cadwalader.com/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'Schulte Roth & Zabel',
+    careerUrl: 'https://www.srz.com/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'Fried Frank',
+    careerUrl: 'https://www.friedfrank.com/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'Cahill Gordon & Reindel',
+    careerUrl: 'https://www.cahill.com/careers',
+    type: 'biglaw',
+  },
+
+  // ===================================================
+  // MISSING GLOBAL/UK/EU LAW FIRMS
+  // ===================================================
+  {
+    name: 'Stikeman Elliott',
+    careerUrl: 'https://www.stikeman.com/en-ca/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'Bennett Jones',
+    careerUrl: 'https://www.bennettjones.com/Careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'Osler Hoskin (Greenhouse)',
+    careerUrl: 'https://www.osler.com/en/careers',
+    greenhouseId: 'osler',
+    type: 'biglaw',
+  },
+  {
+    name: 'Dentons Europe',
+    careerUrl: 'https://www.dentons.com/en/careers',
+    workday: { company: 'dentons', instance: 'wd3', site: 'Dentons_Careers' },
+    type: 'biglaw',
+  },
+  {
+    name: 'DWF Group',
+    careerUrl: 'https://www.dwf.law/en/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'Lewis Silkin',
+    careerUrl: 'https://www.lewissilkin.com/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'Weightmans',
+    careerUrl: 'https://www.weightmans.com/careers/',
+    type: 'biglaw',
+  },
+  {
+    name: 'Irwin Mitchell',
+    careerUrl: 'https://www.irwinmitchell.com/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'Charles Russell Speechlys',
+    careerUrl: 'https://www.charlesrussellspeechlys.com/en/careers/',
+    type: 'biglaw',
+  },
+  {
+    name: 'RPC',
+    careerUrl: 'https://www.rpclegal.com/careers/',
+    type: 'biglaw',
+  },
+  {
+    name: 'Houthoff',
+    careerUrl: 'https://www.houthoff.com/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'NautaDutilh',
+    careerUrl: 'https://www.nautadutilh.com/en/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'Loyens & Loeff',
+    careerUrl: 'https://www.loyensloeff.com/careers/',
+    type: 'biglaw',
+  },
+  {
+    name: 'De Brauw Blackstone Westbroek',
+    careerUrl: 'https://www.debrauw.com/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'Schoenherr',
+    careerUrl: 'https://www.schoenherr.eu/careers/',
+    type: 'biglaw',
+  },
+  {
+    name: 'Bär & Karrer',
+    careerUrl: 'https://www.baerkarrer.ch/en/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'Walder Wyss',
+    careerUrl: 'https://www.walderwyss.com/en/careers',
+    type: 'biglaw',
+  },
+
+  // ===================================================
+  // MISSING APAC/MIDDLE EAST/AFRICA LAW FIRMS
+  // ===================================================
+  {
+    name: 'Gilbert + Tobin',
+    careerUrl: 'https://www.gtlaw.com.au/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'Lee & Lee',
+    careerUrl: 'https://www.leenlee.com.sg/careers.html',
+    type: 'biglaw',
+  },
+  {
+    name: 'Kim & Chang',
+    careerUrl: 'https://www.kimchang.com/en/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'Yoon & Yang',
+    careerUrl: 'https://www.yoonyang.com/eng/careers/',
+    type: 'biglaw',
+  },
+  {
+    name: 'Mori Hamada & Matsumoto',
+    careerUrl: 'https://www.mhmjapan.com/en/careers.html',
+    type: 'biglaw',
+  },
+  {
+    name: 'Bae Kim & Lee',
+    careerUrl: 'https://www.bkl.co.kr/en/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'Shin & Kim',
+    careerUrl: 'https://www.shinkim.com/eng/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'Fangda Partners',
+    careerUrl: 'https://www.fangdalaw.com/en/careers/',
+    type: 'biglaw',
+  },
+  {
+    name: 'Zhong Lun',
+    careerUrl: 'https://www.zhonglun.com/en/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'JunHe',
+    careerUrl: 'https://www.junhe.com/en/careers',
+    type: 'biglaw',
+  },
+
+  // ===================================================
+  // LEGAL AI & CONTRACT TECH (Missing Startups)
+  // ===================================================
+  {
+    name: 'Klarity',
+    careerUrl: 'https://www.klarity.com/careers',
+    leverPostingsUrl: 'https://jobs.lever.co/klarity',
+    type: 'startup',
+  },
+  {
+    name: 'Summize',
+    careerUrl: 'https://www.summize.com/careers',
+    ashbyUrl: 'https://api.ashbyhq.com/posting-api/job-board/summize',
+    type: 'startup',
+  },
+  {
+    name: 'Rally Legal',
+    careerUrl: 'https://www.rallylegal.com/careers',
+    ashbyUrl: 'https://api.ashbyhq.com/posting-api/job-board/rally',
+    type: 'startup',
+  },
+  {
+    name: 'Ligl',
+    careerUrl: 'https://www.ligl.io/careers',
+    leverPostingsUrl: 'https://jobs.lever.co/ligl',
+    type: 'startup',
+  },
+  {
+    name: 'Loio',
+    careerUrl: 'https://loio.com/careers',
+    type: 'startup',
+  },
+  {
+    name: 'Fastcase',
+    careerUrl: 'https://www.fastcase.com/careers/',
+    type: 'tech-legal',
+  },
+  {
+    name: 'CaseMine',
+    careerUrl: 'https://www.casemine.com/careers',
+    type: 'startup',
+  },
+  {
+    name: 'Eigen Technologies',
+    careerUrl: 'https://www.eigen.co/careers',
+    ashbyUrl: 'https://api.ashbyhq.com/posting-api/job-board/eigen',
+    type: 'startup',
+  },
+  {
+    name: 'Henchman AI',
+    careerUrl: 'https://www.henchman.com/careers',
+    leverPostingsUrl: 'https://jobs.lever.co/henchman',
+    type: 'startup',
+  },
+  {
+    name: 'Della AI',
+    careerUrl: 'https://www.della.ai/careers',
+    type: 'startup',
+  },
+  {
+    name: 'Tabled',
+    careerUrl: 'https://www.tabled.io/careers',
+    type: 'startup',
+  },
+  {
+    name: 'Detangle AI',
+    careerUrl: 'https://www.detangle.ai/careers',
+    type: 'startup',
+  },
+  {
+    name: 'CaseFleet',
+    careerUrl: 'https://www.casefleet.com/careers',
+    type: 'startup',
+  },
+  {
+    name: 'Smith.ai',
+    careerUrl: 'https://smith.ai/careers',
+    greenhouseId: 'smithai',
+    type: 'startup',
+  },
+  {
+    name: 'Legalfly',
+    careerUrl: 'https://www.legalfly.com/careers',
+    type: 'startup',
+  },
+
+  // ===================================================
+  // CLM/CONTRACT LIFECYCLE MANAGEMENT (Missing)
+  // ===================================================
+  {
+    name: 'ContractWorks',
+    careerUrl: 'https://www.contractworks.com/careers',
+    type: 'tech-legal',
+  },
+  {
+    name: 'Outlaw',
+    careerUrl: 'https://www.outlaw.com/careers',
+    type: 'tech-legal',
+  },
+  {
+    name: 'Precisely CLM',
+    careerUrl: 'https://www.precisely.com/careers',
+    greenhouseId: 'precisely',
+    type: 'tech-legal',
+  },
+  {
+    name: 'Pactum AI',
+    careerUrl: 'https://pactum.com/careers/',
+    type: 'startup',
+  },
+  {
+    name: 'Parley Pro',
+    careerUrl: 'https://www.parleypro.com/careers',
+    type: 'tech-legal',
+  },
+  {
+    name: 'Zeal',
+    careerUrl: 'https://www.zeal.com/careers',
+    type: 'startup',
+  },
+  {
+    name: 'Symbiont',
+    careerUrl: 'https://symbiont.io/careers',
+    type: 'startup',
+  },
+  {
+    name: 'Trackado',
+    careerUrl: 'https://www.trackado.com/careers',
+    type: 'tech-legal',
+  },
+
+  // ===================================================
+  // GRC/COMPLIANCE/REGTECH (Missing)
+  // ===================================================
+  {
+    name: 'ComplyAdvantage',
+    careerUrl: 'https://complyadvantage.com/careers/',
+    greenhouseId: 'complyadvantage',
+    type: 'tech-legal',
+  },
+  {
+    name: 'Chainalysis',
+    careerUrl: 'https://www.chainalysis.com/careers/',
+    greenhouseId: 'chainalysis',
+    type: 'tech-legal',
+  },
+  {
+    name: 'Hummingbird',
+    careerUrl: 'https://hummingbird.co/careers',
+    greenhouseId: 'hummingbird',
+    type: 'tech-legal',
+  },
+  {
+    name: 'Unit21',
+    careerUrl: 'https://www.unit21.ai/careers',
+    ashbyUrl: 'https://api.ashbyhq.com/posting-api/job-board/unit21',
+    type: 'tech-legal',
+  },
+  {
+    name: 'Alloy',
+    careerUrl: 'https://www.alloy.com/careers',
+    greenhouseId: 'allaboroy',
+    type: 'tech-legal',
+  },
+  {
+    name: 'Behavox',
+    careerUrl: 'https://www.behavox.com/careers/',
+    greenhouseId: 'behavox',
+    type: 'tech-legal',
+  },
+  {
+    name: 'MetricStream',
+    careerUrl: 'https://www.metricstream.com/careers/',
+    workday: { company: 'metricstream', instance: 'wd5', site: 'MetricStream_External' },
+    type: 'tech-legal',
+  },
+  {
+    name: 'LogicManager',
+    careerUrl: 'https://www.logicmanager.com/careers/',
+    type: 'tech-legal',
+  },
+  {
+    name: 'ProcessUnity',
+    careerUrl: 'https://www.processunity.com/company/careers/',
+    type: 'tech-legal',
+  },
+  {
+    name: 'Prevalent',
+    careerUrl: 'https://www.prevalent.net/careers/',
+    greenhouseId: 'prevalent',
+    type: 'tech-legal',
+  },
+  {
+    name: 'ZenGRC (Reciprocity)',
+    careerUrl: 'https://reciprocity.com/careers/',
+    type: 'tech-legal',
+  },
+  {
+    name: 'Smarsh',
+    careerUrl: 'https://www.smarsh.com/careers',
+    greenhouseId: 'smarsh',
+    type: 'tech-legal',
+  },
+  {
+    name: 'Global Relay',
+    careerUrl: 'https://www.globalrelay.com/careers/',
+    greenhouseId: 'globalrelay',
+    type: 'tech-legal',
+  },
+  {
+    name: 'Ivalua',
+    careerUrl: 'https://www.ivalua.com/careers/',
+    greenhouseId: 'ivalua',
+    type: 'tech-legal',
+  },
+  {
+    name: 'Persona',
+    careerUrl: 'https://withpersona.com/careers',
+    ashbyUrl: 'https://api.ashbyhq.com/posting-api/job-board/persona',
+    type: 'tech-legal',
+  },
+  {
+    name: 'Sardine',
+    careerUrl: 'https://www.sardine.ai/careers',
+    ashbyUrl: 'https://api.ashbyhq.com/posting-api/job-board/sardine',
+    type: 'tech-legal',
+  },
+
+  // ===================================================
+  // E-DISCOVERY & LITIGATION (Missing)
+  // ===================================================
+  {
+    name: 'Consilio',
+    careerUrl: 'https://www.consilio.com/careers/',
+    workday: { company: 'consilio', instance: 'wd5', site: 'Consilio_Careers' },
+    type: 'tech-legal',
+  },
+  {
+    name: 'KLDiscovery',
+    careerUrl: 'https://www.kldiscovery.com/careers',
+    greenhouseId: 'kldiscovery',
+    type: 'tech-legal',
+  },
+  {
+    name: 'Nextpoint',
+    careerUrl: 'https://www.nextpoint.com/careers/',
+    type: 'tech-legal',
+  },
+  {
+    name: 'CasePoint',
+    careerUrl: 'https://www.casepoint.com/careers/',
+    type: 'tech-legal',
+  },
+  {
+    name: 'Cimplifi',
+    careerUrl: 'https://www.cimplifi.com/careers',
+    type: 'tech-legal',
+  },
+  {
+    name: 'TransPerfect Legal',
+    careerUrl: 'https://www.transperfect.com/careers',
+    type: 'tech-legal',
+  },
+  {
+    name: 'Recommind (OpenText)',
+    careerUrl: 'https://www.opentext.com/about/careers',
+    type: 'tech-legal',
+  },
+
+  // ===================================================
+  // PRACTICE MANAGEMENT & BILLING (Missing)
+  // ===================================================
+  {
+    name: 'CenterBase',
+    careerUrl: 'https://www.centerbase.com/careers',
+    type: 'tech-legal',
+  },
+  {
+    name: 'Leap Legal Software',
+    careerUrl: 'https://www.leap.us/careers/',
+    type: 'tech-legal',
+  },
+  {
+    name: 'Zola Suite',
+    careerUrl: 'https://www.zolasuite.com/careers/',
+    type: 'tech-legal',
+  },
+  {
+    name: 'Rocket Matter',
+    careerUrl: 'https://www.rocketmatter.com/careers/',
+    type: 'tech-legal',
+  },
+  {
+    name: 'Bill4Time',
+    careerUrl: 'https://www.bill4time.com/careers',
+    type: 'tech-legal',
+  },
+  {
+    name: 'Themis Solutions',
+    careerUrl: 'https://www.clio.com/about/careers/',
+    type: 'tech-legal',
+  },
+  {
+    name: 'Docketwise',
+    careerUrl: 'https://www.docketwise.com/careers',
+    type: 'startup',
+  },
+  {
+    name: 'INSZoom',
+    careerUrl: 'https://www.inszoom.com/careers/',
+    type: 'tech-legal',
+  },
+
+  // ===================================================
+  // LEGAL MARKETPLACE & ACCESS TO JUSTICE
+  // ===================================================
+  {
+    name: 'Justia',
+    careerUrl: 'https://www.justia.com/careers/',
+    type: 'tech-legal',
+  },
+  {
+    name: 'LawDepot',
+    careerUrl: 'https://www.lawdepot.com/careers/',
+    type: 'tech-legal',
+  },
+  {
+    name: 'LegalShield',
+    careerUrl: 'https://www.legalshield.com/careers',
+    type: 'tech-legal',
+  },
+  {
+    name: 'LawTrades',
+    careerUrl: 'https://www.lawtrades.com/careers',
+    type: 'startup',
+  },
+  {
+    name: 'Atrium',
+    careerUrl: 'https://www.atrium.co/careers',
+    type: 'startup',
+  },
+
+  // ===================================================
+  // ADDITIONAL LEGAL TECH & AI COMPANIES
+  // ===================================================
+  {
+    name: 'Lex Mundi',
+    careerUrl: 'https://www.lexmundi.com/careers',
+    type: 'tech-legal',
+  },
+  {
+    name: 'Loom Analytics',
+    careerUrl: 'https://www.loomanalytics.com/careers',
+    type: 'startup',
+  },
+  {
+    name: 'Blue J Legal',
+    careerUrl: 'https://www.bluej.com/careers',
+    type: 'startup',
+  },
+  {
+    name: 'Gavelytics',
+    careerUrl: 'https://www.gavelytics.com/careers',
+    type: 'startup',
+  },
+  {
+    name: 'Lex Predict',
+    careerUrl: 'https://lexpredict.com/careers/',
+    type: 'startup',
+  },
+  {
+    name: 'Lawtab',
+    careerUrl: 'https://www.lawtab.com/careers',
+    type: 'startup',
+  },
+  {
+    name: 'Casepoint AI',
+    careerUrl: 'https://www.casepoint.com/careers/',
+    type: 'tech-legal',
+  },
+  {
+    name: 'Diligen',
+    careerUrl: 'https://www.diligen.com/careers',
+    type: 'startup',
+  },
+  {
+    name: 'Kortext',
+    careerUrl: 'https://www.kortext.com/careers',
+    type: 'startup',
+  },
+
+  // ===================================================
+  // CORPORATE LEGAL OPERATIONS TECH
+  // ===================================================
+  {
+    name: 'Xact Data Discovery',
+    careerUrl: 'https://www.xactdatadiscovery.com/careers',
+    type: 'tech-legal',
+  },
+  {
+    name: 'Brightleaf Solutions',
+    careerUrl: 'https://www.brightleaf.com/careers',
+    type: 'tech-legal',
+  },
+  {
+    name: 'Lawtoolbox',
+    careerUrl: 'https://www.lawtoolbox.com/careers',
+    type: 'tech-legal',
+  },
+  {
+    name: 'Keesal Propulsion Labs',
+    careerUrl: 'https://www.keesalpropulsionlabs.com/careers',
+    type: 'startup',
+  },
+  {
+    name: 'LawVu',
+    careerUrl: 'https://www.lawvu.com/careers',
+    leverPostingsUrl: 'https://jobs.lever.co/lawvu',
+    type: 'tech-legal',
+  },
+  {
+    name: 'Bodhala',
+    careerUrl: 'https://www.bodhala.com/careers',
+    type: 'tech-legal',
+  },
+  {
+    name: 'Knowable',
+    careerUrl: 'https://www.knowable.com/careers',
+    type: 'startup',
+  },
+  {
+    name: 'ContractSafe',
+    careerUrl: 'https://www.contractsafe.com/careers',
+    type: 'tech-legal',
+  },
+  {
+    name: 'Agiloft CLM',
+    careerUrl: 'https://www.agiloft.com/company/careers/',
+    leverPostingsUrl: 'https://jobs.lever.co/agiloft',
+    type: 'tech-legal',
+  },
+  {
+    name: 'SurePoint Technologies',
+    careerUrl: 'https://www.surepoint.com/careers',
+    type: 'tech-legal',
   },
 ];

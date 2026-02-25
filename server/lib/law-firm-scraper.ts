@@ -4,6 +4,7 @@ import { LAW_FIRMS_AND_COMPANIES, type LawFirmConfig } from './law-firms-list';
 import type { InsertJob } from '@shared/schema';
 import { categorizeJob, parseSalaryFromText, type JobCategorizationResult } from './job-categorizer';
 import { normalizeLocation } from './location-normalizer';
+import { logInfo, logWarn, logError } from './logger';
 
 interface ScrapedJob {
   title: string;
@@ -291,7 +292,7 @@ export async function scrapeGreenhouse(companyId: string, companyName: string): 
     
     return jobs;
   } catch (error: any) {
-    console.error(`Greenhouse error for ${companyName}:`, error.message);
+    logError('GREENHOUSE', `Error scraping ${companyName}`, { error: error.message });
     return [];
   }
 }
@@ -326,7 +327,7 @@ export async function scrapeLever(leverUrl: string, companyName: string): Promis
     
     return jobs;
   } catch (error: any) {
-    console.error(`Lever error for ${companyName}:`, error.message);
+    logError('LEVER', `Error scraping ${companyName}`, { error: error.message });
     return [];
   }
 }
@@ -377,7 +378,7 @@ export async function scrapeAshby(ashbyUrl: string, companyName: string): Promis
     
     return jobs;
   } catch (error: any) {
-    console.error(`Ashby error for ${companyName}:`, error.message);
+    logError('ASHBY', `Error scraping ${companyName}`, { error: error.message });
     return [];
   }
 }
@@ -462,7 +463,7 @@ export async function scrapeWorkday(
     } while (offset < total && offset < 200);
 
     const relevant = listings.filter(l => isLegalTechRole(l.title, companyType));
-    console.log(`[Workday] ${companyName}: ${total} total, ${listings.length} listed, ${relevant.length} relevant titles`);
+    logInfo('WORKDAY', `${companyName}: ${total} total, ${listings.length} listed, ${relevant.length} relevant titles`);
 
     if (relevant.length === 0) return [];
 
@@ -520,7 +521,7 @@ export async function scrapeWorkday(
     return allJobs;
   } catch (error: any) {
     const statusCode = error.response?.status || 'unknown';
-    console.error(`Workday error for ${companyName} (status: ${statusCode}):`, error.message);
+    logError('WORKDAY', `Error scraping ${companyName} (status: ${statusCode})`, { error: error.message });
     return [];
   }
 }
@@ -545,7 +546,7 @@ export async function scrapeGenericCareerPage(url: string, companyName: string, 
 
     const embeddedATS = detectEmbeddedATS(html, url);
     if (embeddedATS) {
-      console.log(`[Generic] Detected embedded ${embeddedATS.platform} for ${companyName} at ${embeddedATS.url}`);
+      logInfo('GENERIC', `Detected embedded ${embeddedATS.platform} for ${companyName} at ${embeddedATS.url}`);
       try {
         if (embeddedATS.platform === 'greenhouse') {
           const boardId = embeddedATS.url.match(/(?:boards|job-boards)\.greenhouse\.io\/(\w+)/)?.[1]
@@ -571,7 +572,7 @@ export async function scrapeGenericCareerPage(url: string, companyName: string, 
           if (rpId) return await scrapeRippling(rpId, companyName);
         }
       } catch (e) {
-        console.log(`[Generic] Embedded ATS scrape failed for ${companyName}, continuing with HTML parse`);
+        logWarn('GENERIC', `Embedded ATS scrape failed for ${companyName}, continuing with HTML parse`);
       }
     }
     
@@ -682,7 +683,7 @@ export async function scrapeGenericCareerPage(url: string, companyName: string, 
     
     return jobs;
   } catch (error: any) {
-    console.error(`Generic scrape error for ${companyName}:`, error.message);
+    logError('GENERIC', `Scrape error for ${companyName}`, { error: error.message });
     return [];
   }
 }
@@ -779,7 +780,7 @@ export async function scrapeRippling(ripplingSlug: string, companyName: string):
 
     return jobs;
   } catch (error: any) {
-    console.error(`Rippling error for ${companyName}:`, error.message);
+    logError('RIPPLING', `Error scraping ${companyName}`, { error: error.message });
     return [];
   }
 }
@@ -875,7 +876,7 @@ export async function scrapeICIMS(icimsSlug: string, companyName: string): Promi
 
     return [];
   } catch (error: any) {
-    console.error(`iCIMS error for ${companyName}:`, error.message);
+    logError('ICIMS', `Error scraping ${companyName}`, { error: error.message });
     return [];
   }
 }
@@ -953,7 +954,7 @@ export async function scrapeWorkable(workableId: string, companyName: string): P
 
       return jobs;
     } catch (htmlError: any) {
-      console.error(`Workable error for ${companyName}:`, error.message);
+      logError('WORKABLE', `Error scraping ${companyName}`, { error: htmlError.message });
       return [];
     }
   }
@@ -1033,7 +1034,7 @@ export async function scrapeBambooHR(bamboohrId: string, companyName: string): P
 
       return jobs;
     } catch (htmlError: any) {
-      console.error(`BambooHR error for ${companyName}:`, htmlError.message);
+      logError('BAMBOOHR', `Error scraping ${companyName}`, { error: htmlError.message });
       return [];
     }
   }
@@ -1077,7 +1078,7 @@ export async function scrapeSmartRecruiters(srId: string, companyName: string): 
 
     return jobs;
   } catch (error: any) {
-    console.error(`SmartRecruiters error for ${companyName}:`, error.message);
+    logError('SMARTRECRUITERS', `Error scraping ${companyName}`, { error: error.message });
     return [];
   }
 }
@@ -1118,6 +1119,8 @@ export function isLegalTechRole(title: string, companyType?: string): boolean {
   ];
   if (rejectPatterns.some(p => p.test(t))) return false;
 
+  const isBiglawOrAlsp = companyType === 'biglaw' || companyType === 'alsp';
+
   const traditionalPracticeReject = [
     /\bfamily law\b/i,
     /\bimmigration (attorney|lawyer|counsel|coordinator)\b/i,
@@ -1150,14 +1153,21 @@ export function isLegalTechRole(title: string, companyType?: string): boolean {
     /\bexperienced lawyers?\b/i,
     /\bjunior associate\b.*\b(real estate|litigation|corporate|tax|regulatory)\b/i,
     /\bsenior associate\b.*\b(real estate|litigation|corporate|tax)\b/i,
-    /\bstaff attorney\b/i,
-    /\bsupervising attorney\b/i,
     /\blaw graduate\b/i,
     /\blegal externship\b/i,
-    /\bdeputy director\b/i,
-    /\btrademark attorney\b/i,
   ];
+
+  if (!isBiglawOrAlsp) {
+    traditionalPracticeReject.push(
+      /\bstaff attorney\b/i,
+      /\bsupervising attorney\b/i,
+      /\bdeputy director\b/i,
+      /\btrademark attorney\b/i,
+    );
+  }
   if (traditionalPracticeReject.some(p => p.test(t))) return false;
+
+  if (isBiglawOrAlsp && t.includes('legal')) return true;
 
   const SCRAPER_LEGAL_WHITELIST = [
     /\blegal engineer\b/i, /\blegal architect\b/i,
@@ -1283,6 +1293,10 @@ export function isLegalTechRole(title: string, companyType?: string): boolean {
     'legal writer', 'legal content',
     'privacy', 'data protection', 'gdpr', 'ccpa',
     'chief legal',
+    'paralegal', 'legal assistant', 'legal secretary',
+    'innovation', 'knowledge manager',
+    'practice support', 'legal project manager', 'legal process',
+    'in-house', 'general counsel', 'deputy general counsel',
   ];
   if (legalTechInclude.some(k => t.includes(k))) return true;
 
@@ -1579,84 +1593,101 @@ export async function scrapeAllLawFirms(): Promise<{
   let companiesWithJobs = 0;
   
   let skippedCircuitOpen = 0;
-  for (const firm of LAW_FIRMS_AND_COMPANIES) {
-    const atsKey = firm.greenhouseId ? `greenhouse` : firm.leverPostingsUrl ? `lever` : firm.ashbyUrl ? `ashby` : firm.workday ? `workday` : firm.rippling ? `rippling` : firm.icims ? `icims` : firm.workableId ? `workable` : firm.smartrecruitersId ? `smartrecruiters` : firm.bamboohrId ? `bamboohr` : `generic:${firm.careerUrl}`;
-    
-    if (isCircuitOpen(atsKey)) {
-      skippedCircuitOpen++;
-      stats.push({ company: firm.name, found: 0, filtered: 0 });
-      continue;
+  const GLOBAL_TIMEOUT_MS = 20 * 60 * 1000;
+  const globalStart = Date.now();
+  const BATCH_SIZE = 10;
+
+  for (let batchStart = 0; batchStart < LAW_FIRMS_AND_COMPANIES.length; batchStart += BATCH_SIZE) {
+    if (Date.now() - globalStart > GLOBAL_TIMEOUT_MS) {
+      logWarn('SCRAPE', `Global timeout reached (20min) after processing ${batchStart} companies`);
+      break;
     }
-    
-    try {
-      const PER_COMPANY_TIMEOUT = firm.workday ? 180000 : 60000;
-      let scrapedJobs: ScrapedJob[] = [];
-      
-      const scrapePromise = (async () => {
-        if (firm.greenhouseId) {
-          return await scrapeGreenhouse(firm.greenhouseId, firm.name);
-        } else if (firm.leverPostingsUrl) {
-          return await scrapeLever(firm.leverPostingsUrl, firm.name);
-        } else if (firm.ashbyUrl) {
-          return await scrapeAshby(firm.ashbyUrl, firm.name);
-        } else if (firm.workday) {
-          return await scrapeWorkday(firm.workday, firm.name, firm.type);
-        } else if (firm.rippling) {
-          return await scrapeRippling(firm.rippling, firm.name);
-        } else if (firm.icims) {
-          return await scrapeICIMS(firm.icims, firm.name);
-        } else if (firm.workableId) {
-          return await scrapeWorkable(firm.workableId, firm.name);
-        } else if (firm.smartrecruitersId) {
-          return await scrapeSmartRecruiters(firm.smartrecruitersId, firm.name);
-        } else if (firm.bamboohrId) {
-          return await scrapeBambooHR(firm.bamboohrId, firm.name);
-        } else {
-          return await scrapeGenericCareerPage(firm.careerUrl, firm.name, firm.selectors);
+
+    const batch = LAW_FIRMS_AND_COMPANIES.slice(batchStart, batchStart + BATCH_SIZE);
+    const batchResults = await Promise.allSettled(
+      batch.map(async (firm) => {
+        const atsType = firm.greenhouseId ? `greenhouse` : firm.leverPostingsUrl ? `lever` : firm.ashbyUrl ? `ashby` : firm.workday ? `workday` : firm.rippling ? `rippling` : firm.icims ? `icims` : firm.workableId ? `workable` : firm.smartrecruitersId ? `smartrecruiters` : firm.bamboohrId ? `bamboohr` : `generic`;
+        const circuitKey = `${atsType}:${firm.name}`;
+
+        if (isCircuitOpen(circuitKey)) {
+          skippedCircuitOpen++;
+          return { firm, found: 0, filtered: 0, jobs: [] as InsertJob[], skipped: true };
         }
-      })();
 
-      const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error(`Scrape timed out after ${PER_COMPANY_TIMEOUT / 1000}s`)), PER_COMPANY_TIMEOUT)
-      );
+        try {
+          const PER_COMPANY_TIMEOUT = firm.workday ? 90000 : 30000;
 
-      scrapedJobs = await Promise.race([scrapePromise, timeoutPromise]);
-      
-      recordSuccess(atsKey);
-      
-      const legalTechJobs = scrapedJobs
-        .filter(job => isLegalTechRole(job.title, firm.type))
-        .filter(job => isValidJobUrl(job.applyUrl));
-      
-      totalScraped += scrapedJobs.length;
-      totalFiltered += legalTechJobs.length;
-      if (legalTechJobs.length > 0) companiesWithJobs++;
-      
-      const transformedJobs = legalTechJobs.map(job => transformToJobSchema(job));
-      allJobs.push(...transformedJobs);
-      
-      stats.push({
-        company: firm.name,
-        found: scrapedJobs.length,
-        filtered: legalTechJobs.length,
-      });
-      
-      console.log(`Found ${scrapedJobs.length} jobs, ${legalTechJobs.length} legal tech roles at ${firm.name} (${firm.type})`);
-      
-      await delay(2000);
-      
-    } catch (error: any) {
-      recordFailure(atsKey);
-      console.error(`Error scraping ${firm.name}:`, error.message);
-      stats.push({
-        company: firm.name,
-        found: 0,
-        filtered: 0,
-      });
+          const scrapePromise = (async () => {
+            if (firm.greenhouseId) {
+              return await scrapeGreenhouse(firm.greenhouseId, firm.name);
+            } else if (firm.leverPostingsUrl) {
+              return await scrapeLever(firm.leverPostingsUrl, firm.name);
+            } else if (firm.ashbyUrl) {
+              return await scrapeAshby(firm.ashbyUrl, firm.name);
+            } else if (firm.workday) {
+              return await scrapeWorkday(firm.workday, firm.name, firm.type);
+            } else if (firm.rippling) {
+              return await scrapeRippling(firm.rippling, firm.name);
+            } else if (firm.icims) {
+              return await scrapeICIMS(firm.icims, firm.name);
+            } else if (firm.workableId) {
+              return await scrapeWorkable(firm.workableId, firm.name);
+            } else if (firm.smartrecruitersId) {
+              return await scrapeSmartRecruiters(firm.smartrecruitersId, firm.name);
+            } else if (firm.bamboohrId) {
+              return await scrapeBambooHR(firm.bamboohrId, firm.name);
+            } else {
+              return await scrapeGenericCareerPage(firm.careerUrl, firm.name, firm.selectors);
+            }
+          })();
+
+          const timeoutPromise = new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error(`Scrape timed out after ${PER_COMPANY_TIMEOUT / 1000}s`)), PER_COMPANY_TIMEOUT)
+          );
+
+          const scrapedJobs = await Promise.race([scrapePromise, timeoutPromise]);
+
+          recordSuccess(circuitKey);
+
+          const legalTechJobs = scrapedJobs
+            .filter(job => isLegalTechRole(job.title, firm.type))
+            .filter(job => isValidJobUrl(job.applyUrl));
+
+          const transformedJobs = legalTechJobs.map(job => transformToJobSchema(job));
+
+          logInfo('SCRAPE', `Found ${scrapedJobs.length} jobs, ${legalTechJobs.length} legal tech roles at ${firm.name} (${firm.type})`);
+
+          return { firm, found: scrapedJobs.length, filtered: legalTechJobs.length, jobs: transformedJobs, skipped: false };
+        } catch (error: any) {
+          recordFailure(circuitKey);
+          logError('SCRAPE', `Error scraping ${firm.name}`, { error: error.message });
+          return { firm, found: 0, filtered: 0, jobs: [] as InsertJob[], skipped: false };
+        }
+      })
+    );
+
+    for (const result of batchResults) {
+      if (result.status === 'fulfilled') {
+        const { firm, found, filtered, jobs, skipped } = result.value;
+        if (!skipped) {
+          totalScraped += found;
+          totalFiltered += filtered;
+          if (filtered > 0) companiesWithJobs++;
+          allJobs.push(...jobs);
+        }
+        stats.push({ company: firm.name, found, filtered });
+      } else {
+        logError('SCRAPE', `Batch item rejected`, { error: result.reason?.message || 'unknown' });
+      }
+    }
+
+    if (batchStart + BATCH_SIZE < LAW_FIRMS_AND_COMPANIES.length) {
+      await delay(3000);
     }
   }
+
   if (skippedCircuitOpen > 0) {
-    console.log(`[Circuit Breaker] Skipped ${skippedCircuitOpen} companies due to open circuits`);
+    logWarn('CIRCUIT', `Skipped ${skippedCircuitOpen} companies due to open circuits`);
   }
   
   const funnel = {
@@ -1665,7 +1696,7 @@ export async function scrapeAllLawFirms(): Promise<{
     companiesAttempted: LAW_FIRMS_AND_COMPANIES.length,
     companiesWithJobs,
   };
-  console.log(`[Pipeline Funnel] ${funnel.companiesAttempted} companies attempted → ${funnel.totalScraped} total jobs scraped → ${funnel.titleFiltered} passed title filter → ${funnel.companiesWithJobs} companies with relevant jobs`);
+  logInfo('FUNNEL', `${funnel.companiesAttempted} companies attempted → ${funnel.totalScraped} total jobs scraped → ${funnel.titleFiltered} passed title filter → ${funnel.companiesWithJobs} companies with relevant jobs`);
   
   return { jobs: allJobs, stats, funnel };
 }
@@ -1726,7 +1757,7 @@ export async function scrapeAllLawFirmsWithAI(
       if (onProgress) {
         onProgress(i + 1, total, firm.name);
       }
-      console.log(`[${i + 1}/${total}] Scraping ${firm.name}...`);
+      logInfo('SCRAPE', `[${i + 1}/${total}] Scraping ${firm.name}...`);
       
       let scrapedJobs: ScrapedJob[] = [];
       
@@ -1766,7 +1797,7 @@ export async function scrapeAllLawFirmsWithAI(
           
           await delay(500);
         } catch (catError) {
-          console.error(`Categorization failed for ${job.title}:`, catError);
+          logError('SCRAPE', `Categorization failed for ${job.title}`, { error: (catError as any)?.message || 'unknown' });
           const transformedJob = transformToJobSchema(job);
           allJobs.push(transformedJob);
         }
@@ -1779,12 +1810,12 @@ export async function scrapeAllLawFirmsWithAI(
         categorized: categorizedCount,
       });
       
-      console.log(`Found ${scrapedJobs.length} jobs, ${legalTechJobs.length} legal tech roles, ${categorizedCount} categorized at ${firm.name}`);
+      logInfo('SCRAPE', `Found ${scrapedJobs.length} jobs, ${legalTechJobs.length} legal tech roles, ${categorizedCount} categorized at ${firm.name}`);
       
       await delay(1500);
       
     } catch (error: any) {
-      console.error(`Error scraping ${firm.name}:`, error.message);
+      logError('SCRAPE', `Error scraping ${firm.name}`, { error: error.message });
       stats.push({
         company: firm.name,
         found: 0,
@@ -2222,7 +2253,7 @@ async function scrapeWithAIFallback(url: string, rawHtml: string, basicResult: P
     };
   }
 
-  console.log(`[Smart Scraper] Basic extraction insufficient for ${url}, using AI fallback...`);
+  logInfo('SMART_SCRAPER', `Basic extraction insufficient for ${url}, using AI fallback...`);
 
   let cleanedText = cleanDescriptionText(rawHtml);
   if (cleanedText.length < 50) {
@@ -2232,14 +2263,14 @@ async function scrapeWithAIFallback(url: string, rawHtml: string, basicResult: P
   }
 
   if (cleanedText.length < 30) {
-    console.log(`[Smart Scraper] Not enough text content from ${url}`);
+    logWarn('SMART_SCRAPER', `Not enough text content from ${url}`);
     return null;
   }
 
   if (isJSRenderedPage(rawHtml) && cleanedText.length < 150) {
     const scriptATS = detectATSFromScripts(rawHtml);
     if (!scriptATS) {
-      console.log(`[Smart Scraper] JS-rendered page with minimal content from ${url} — skipping AI to prevent hallucination`);
+      logWarn('SMART_SCRAPER', `JS-rendered page with minimal content from ${url} — skipping AI to prevent hallucination`);
       return null;
     }
   }
@@ -2297,7 +2328,7 @@ Additional rules:
 
     const validation = validateAIExtraction(parsed, cleanedText, url);
     if (!validation.valid) {
-      console.log(`[Smart Scraper] AI extraction rejected for ${url}: ${validation.reason}`);
+      logWarn('SMART_SCRAPER', `AI extraction rejected for ${url}: ${validation.reason}`);
       return null;
     }
 
@@ -2319,7 +2350,7 @@ Additional rules:
       locationType: aiLocationType,
     };
   } catch (error: any) {
-    console.error(`[Smart Scraper] AI fallback failed for ${url}:`, error.message);
+    logError('SMART_SCRAPER', `AI fallback failed for ${url}`, { error: error.message });
     if (basicResult.title && basicResult.description && basicResult.description.length > 50) {
       return {
         title: basicResult.title,
@@ -2513,7 +2544,7 @@ async function tryWorkdayExtract(url: string): Promise<ScrapedJob | null> {
       externalId: `wd_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
     };
   } catch (error: any) {
-    console.error(`[Workday] Extraction failed for ${url}:`, error.message);
+    logError('WORKDAY', `Extraction failed for ${url}`, { error: error.message });
     return null;
   }
 }
@@ -2586,7 +2617,7 @@ async function tryBambooHRExtract(url: string): Promise<ScrapedJob | null> {
       externalId: `bhr_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
     };
   } catch (error: any) {
-    console.error(`[BambooHR] Extraction failed for ${url}:`, error.message);
+    logError('BAMBOOHR', `Extraction failed for ${url}`, { error: error.message });
     return null;
   }
 }
@@ -2665,7 +2696,7 @@ export async function scrapeSingleJobUrl(url: string, withTrace?: boolean): Prom
     let effectiveUrl = url;
     trace.platform = platform;
     trace.platformLabel = platformLabels[platform] || platform;
-    console.log(`[Smart Scraper] Detected platform: ${platform} for ${url}`);
+    logInfo('SMART_SCRAPER', `Detected platform: ${platform} for ${url}`);
     trace.steps.push({ method: 'Platform Detection', status: 'success', detail: `Identified as ${trace.platformLabel}` });
 
     let scrapedJob: ScrapedJob | null = null;
@@ -2713,7 +2744,7 @@ export async function scrapeSingleJobUrl(url: string, withTrace?: boolean): Prom
         const atsDiscovery = embedded || scriptATS;
         if (atsDiscovery) {
           const discoveryMethod = embedded ? 'Embedded ATS Detection' : 'Script ATS Detection';
-          console.log(`[Smart Scraper] Found ${embedded ? 'embedded' : 'script-referenced'} ${atsDiscovery.platform} ATS in page: ${atsDiscovery.url}`);
+          logInfo('SMART_SCRAPER', `Found ${embedded ? 'embedded' : 'script-referenced'} ${atsDiscovery.platform} ATS in page: ${atsDiscovery.url}`);
           trace.steps.push({ method: discoveryMethod, status: 'success', detail: `Found ${platformLabels[atsDiscovery.platform] || atsDiscovery.platform} → ${atsDiscovery.url}` });
           platform = atsDiscovery.platform;
           trace.platform = platform;
@@ -2762,7 +2793,7 @@ export async function scrapeSingleJobUrl(url: string, withTrace?: boolean): Prom
         if (isListing) {
           const discoveredLinks = discoverJobLinksFromPage($, effectiveUrl);
           if (discoveredLinks.length > 0) {
-            console.log(`[Smart Scraper] Detected listing page with ${discoveredLinks.length} job links`);
+            logInfo('SMART_SCRAPER', `Detected listing page with ${discoveredLinks.length} job links`);
             trace.steps.push({ method: 'Job Link Discovery', status: 'success', detail: `Found ${discoveredLinks.length} job links on listing page. Will try first link.` });
 
             const firstLink = discoveredLinks[0];
@@ -2816,7 +2847,7 @@ export async function scrapeSingleJobUrl(url: string, withTrace?: boolean): Prom
         });
 
         if (ldJob) {
-          console.log(`[Smart Scraper] Found JSON-LD JobPosting data`);
+          logInfo('SMART_SCRAPER', `Found JSON-LD JobPosting data`);
           const ldTitle = ldJob.title || ldJob.name || '';
           const ldCompany = ldJob.hiringOrganization?.name || '';
           let ldLocation = '';
@@ -2884,7 +2915,7 @@ export async function scrapeSingleJobUrl(url: string, withTrace?: boolean): Prom
     }
 
     if (!scrapedJob) {
-      console.log(`[Smart Scraper] Could not extract job data from ${url}`);
+      logWarn('SMART_SCRAPER', `Could not extract job data from ${url}`);
       trace.confidence = 'low';
       trace.processingTimeMs = Date.now() - startTime;
       if (withTrace) {
@@ -2901,7 +2932,7 @@ export async function scrapeSingleJobUrl(url: string, withTrace?: boolean): Prom
     }
 
     if (isGarbageScrapedJob(scrapedJob)) {
-      console.log(`[Smart Scraper] Rejected garbage scrape result from ${url}: title="${scrapedJob.title}", desc=${scrapedJob.description?.length || 0} chars`);
+      logWarn('SMART_SCRAPER', `Rejected garbage scrape result from ${url}: title="${scrapedJob.title}", desc=${scrapedJob.description?.length || 0} chars`);
       trace.steps.push({ method: 'Quality Gate', status: 'failed', detail: 'Scraped content appears to be navigation/menu HTML, not a job posting' });
       trace.confidence = 'low';
       trace.processingTimeMs = Date.now() - startTime;
@@ -2919,7 +2950,7 @@ export async function scrapeSingleJobUrl(url: string, withTrace?: boolean): Prom
       categorization = await categorizeJob(scrapedJob.title, scrapedJob.description, scrapedJob.company);
       trace.steps.push({ method: 'AI Categorization', status: 'success', detail: `Category: ${categorization?.category || 'N/A'}, Seniority: ${categorization?.seniorityLevel || 'N/A'}` });
     } catch (error) {
-      console.error('[Smart Scraper] Categorization failed:', error);
+      logError('SMART_SCRAPER', 'Categorization failed', { error: (error as any)?.message || 'unknown' });
       trace.steps.push({ method: 'AI Categorization', status: 'failed', detail: 'Categorization error - using defaults' });
     }
 
@@ -2951,7 +2982,7 @@ export async function scrapeSingleJobUrl(url: string, withTrace?: boolean): Prom
     }
     return result;
   } catch (error: any) {
-    console.error(`[Smart Scraper] Error scraping ${url}:`, error.message);
+    logError('SMART_SCRAPER', `Error scraping ${url}`, { error: error.message });
     trace.steps.push({ method: 'Fatal Error', status: 'failed', detail: error.message });
     trace.processingTimeMs = Date.now() - startTime;
     return null;
