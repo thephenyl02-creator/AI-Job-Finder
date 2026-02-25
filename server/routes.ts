@@ -8133,8 +8133,8 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
       if (!req.user) {
         return res.redirect("/pricing");
       }
+      const userIsAdmin = await storage.isUserAdmin(req.user.id);
       const subData = await storage.getUserSubscription(req.user.id);
-      const userIsAdmin = (req.user as any).isAdmin === true;
       const isPro = userIsAdmin || (subData?.subscriptionTier === "pro" && subData?.subscriptionStatus === "active");
       if (!isPro) {
         return res.redirect("/pricing");

@@ -195,8 +195,9 @@ function WorkModeCenterLabel({ viewBox, total }: { viewBox?: { cx: number; cy: n
 
 export default function MarketIntelligence() {
   usePageTitle("Market Intelligence");
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isAdmin } = useAuth();
   const { isPro } = useSubscription();
+  const canDownload = isPro || isAdmin;
 
   const { data, isLoading, isError, refetch } = useQuery<MarketIntelligenceData>({
     queryKey: ["/api/market-intelligence"],
@@ -280,7 +281,7 @@ export default function MarketIntelligence() {
                 Live data from {overview.totalJobs} roles across {overview.totalCompanies} companies, updated daily.
               </p>
             </div>
-            {isPro ? (
+            {canDownload ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" className="gap-2 shrink-0" data-testid="button-download-report">
