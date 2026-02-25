@@ -397,7 +397,29 @@ const GENERAL_COMPANY_REJECT_PATTERNS = [
   /\bnotary public\b/i,
 ];
 
+const ABSOLUTE_REJECT_PATTERNS = [
+  /\bradiologist\b/i,
+  /\bphysician\b/i,
+  /\bclinical (operations|validation|workflow)\b/i,
+  /\bmedical (ai|foundation)/i,
+  /\bmultimodal medical\b/i,
+  /\bmultimodal & (medical|agentic medical)\b/i,
+  /\bmortgage industry\b/i,
+  /\bnotary public\b/i,
+  /\bgeneral interest\b/i,
+  /\btalent community\b/i,
+  /\btalent pool\b/i,
+  /\bdigital reporter\b/i,
+  /\btalent network\b/i,
+  /\barchitectural engineer/i,
+  /\b(join our )?future open(ing)?s?\b/i,
+];
+
 function shouldHardReject(title: string, company?: string): boolean {
+  if (ABSOLUTE_REJECT_PATTERNS.some(pattern => pattern.test(title))) {
+    return true;
+  }
+
   if (ALWAYS_REJECT_TITLE_PATTERNS.some(pattern => pattern.test(title))) {
     if (company && isLegalTechCompany(company)) {
       return false;

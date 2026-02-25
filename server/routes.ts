@@ -8075,7 +8075,7 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
             avgReadiness,
             readinessDistribution: buckets,
             topSkillGaps: Object.entries(gapMap).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([skill, count]) => ({ skill, count })),
-            topCareerPaths: Object.entries(pathPopularity).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([name, count]) => ({ name, count })),
+            topCareerPaths: Object.entries(pathPopularity).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([name, count]) => ({ path: name, count })),
           };
         }
       } catch (e) {}
