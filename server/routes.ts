@@ -138,12 +138,17 @@ async function requirePro(req: any, res: any, next: any) {
   });
 }
 
+let marketIntelligenceCache: { data: any; timestamp: number } | null = null;
+const MI_CACHE_TTL = 3600000;
+
+export function clearMarketIntelligenceCache() {
+  marketIntelligenceCache = null;
+}
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
-  let marketIntelligenceCache: { data: any; timestamp: number } | null = null;
-  const MI_CACHE_TTL = 3600000;
 
   await setupAuth(app);
   registerAuthRoutes(app);

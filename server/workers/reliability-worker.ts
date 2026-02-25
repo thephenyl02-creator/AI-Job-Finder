@@ -1,4 +1,5 @@
 import { storage } from '../storage';
+import { clearMarketIntelligenceCache } from '../routes';
 import https from 'https';
 import http from 'http';
 import { URL } from 'url';
@@ -181,6 +182,10 @@ async function runReliabilityChecks() {
   const stale = await runStaleJobCleanup();
   const links = await runApplyLinkValidation();
   console.log(`[Reliability] Complete. Non-job removed: ${nonJob}. Stale closed: ${stale}. Links checked: ${links.checked}, broken: ${links.broken}`);
+  if (nonJob > 0 || stale > 0 || links.broken > 0) {
+    clearMarketIntelligenceCache();
+    console.log(`[Reliability] Market intelligence cache cleared`);
+  }
 }
 
 export function startReliabilityWorker() {

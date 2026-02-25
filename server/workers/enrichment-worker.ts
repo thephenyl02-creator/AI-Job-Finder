@@ -6,6 +6,7 @@ import { cleanJobDescription } from '../lib/description-cleaner';
 import { generateJobHash, generateFuzzyJobHash } from '../lib/job-hash';
 import { LAW_FIRMS_AND_COMPANIES } from '../lib/law-firms-list';
 import { normalizeLocation } from '../lib/location-normalizer';
+import { clearMarketIntelligenceCache } from '../routes';
 import type { Job } from '@shared/schema';
 import { jobs } from '@shared/schema';
 import { db } from '../db';
@@ -972,6 +973,10 @@ async function runEnrichmentBatch(): Promise<EnrichmentResult> {
     }
 
     console.log(`[Enrichment] Done: ${result.processed} processed, ${result.published} published, ${result.needsReview} need review, ${result.rejected} rejected, ${result.errors} errors`);
+    if (result.published > 0 || result.rejected > 0) {
+      clearMarketIntelligenceCache();
+      console.log(`[Enrichment] Market intelligence cache cleared`);
+    }
   } catch (err: any) {
     console.error('[Enrichment] Batch failed:', err.message);
   } finally {
@@ -1083,6 +1088,10 @@ async function runLiveJobAudit(): Promise<{ audited: number; flagged: number; pr
 
     console.log(`[Audit] Phase 2 done: ${candidates.length} candidates checked, ${promoted} newly published`);
     console.log(`[Audit] Complete: ${flagged} unpublished, ${promoted} promoted`);
+    if (flagged > 0 || promoted > 0) {
+      clearMarketIntelligenceCache();
+      console.log(`[Audit] Market intelligence cache cleared`);
+    }
   } catch (err: any) {
     console.error('[Audit] Failed:', err.message);
   }
@@ -1176,6 +1185,10 @@ export async function recoverStuckReadyJobs(): Promise<{ promoted: number; total
   }
 
   console.log(`[Recovery] Complete: ${promoted}/${candidates.length} stuck jobs published`);
+  if (promoted > 0) {
+    clearMarketIntelligenceCache();
+    console.log(`[Recovery] Market intelligence cache cleared`);
+  }
   return { promoted, total: candidates.length };
 }
 
