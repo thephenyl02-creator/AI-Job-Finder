@@ -7898,6 +7898,279 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
     }
   });
 
+  let marketIntelligenceCache: { data: any; timestamp: number } | null = null;
+  const MI_CACHE_TTL = 3600000;
+
+  app.get("/api/market-intelligence", async (_req, res) => {
+    try {
+      if (marketIntelligenceCache && Date.now() - marketIntelligenceCache.timestamp < MI_CACHE_TTL) {
+        return res.json(marketIntelligenceCache.data);
+      }
+
+      const allJobs = await storage.getPublishedJobs();
+      const totalJobs = allJobs.length;
+      const companies = new Set(allJobs.map(j => j.company));
+      const countries = new Set(allJobs.map(j => j.countryCode).filter(Boolean));
+      const now = new Date();
+      const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const newThisWeek = allJobs.filter(j => j.firstSeenAt && new Date(j.firstSeenAt) > oneWeekAgo);
+
+      const remoteJobs = allJobs.filter(j => j.locationType === 'remote' || (!j.locationType && j.isRemote));
+      const hybridJobs = allJobs.filter(j => j.locationType === 'hybrid');
+      const onsiteJobs = allJobs.filter(j => j.locationType === 'onsite' || (!j.locationType && !j.isRemote));
+
+      const MAX_SALARY = 400000;
+      const jobsWithSalMin = allJobs.filter(j => j.salaryMin && j.salaryMin > 0 && j.salaryMin <= MAX_SALARY);
+      const jobsWithSalMax = allJobs.filter(j => j.salaryMax && j.salaryMax > 0 && j.salaryMax <= MAX_SALARY);
+      const median = (arr: number[]) => {
+        if (!arr.length) return null;
+        const s = [...arr].sort((a, b) => a - b);
+        const m = Math.floor(s.length / 2);
+        return s.length % 2 ? s[m] : Math.round((s[m - 1] + s[m]) / 2);
+      };
+
+      const skillMap: Record<string, number> = {};
+      const categoryMap: Record<string, number> = {};
+      const categoryNewMap: Record<string, number> = {};
+      const seniorityMap: Record<string, number> = {};
+      const companyMap: Record<string, number> = {};
+      const countryMap: Record<string, { name: string; count: number }> = {};
+      const salarySamples: Record<string, { mins: number[]; maxes: number[] }> = {};
+      let aiLow = 0, aiMed = 0, aiHigh = 0;
+
+      const newThisWeekIds = new Set(newThisWeek.map(j => j.id));
+
+      for (const job of allJobs) {
+        for (const skill of (job.keySkills || [])) {
+          const s = skill.toLowerCase().trim();
+          if (s) skillMap[s] = (skillMap[s] || 0) + 1;
+        }
+        if (job.roleCategory) {
+          categoryMap[job.roleCategory] = (categoryMap[job.roleCategory] || 0) + 1;
+          if (newThisWeekIds.has(job.id)) {
+            categoryNewMap[job.roleCategory] = (categoryNewMap[job.roleCategory] || 0) + 1;
+          }
+        }
+        if (job.seniorityLevel) {
+          seniorityMap[job.seniorityLevel] = (seniorityMap[job.seniorityLevel] || 0) + 1;
+        }
+        companyMap[job.company] = (companyMap[job.company] || 0) + 1;
+        if (job.countryCode && job.countryCode !== 'UN') {
+          if (!countryMap[job.countryCode]) countryMap[job.countryCode] = { name: job.countryName || job.countryCode, count: 0 };
+          countryMap[job.countryCode].count++;
+        }
+        if (job.roleCategory) {
+          if (!salarySamples[job.roleCategory]) salarySamples[job.roleCategory] = { mins: [], maxes: [] };
+          if (job.salaryMin && job.salaryMin > 0 && job.salaryMin <= MAX_SALARY) salarySamples[job.roleCategory].mins.push(job.salaryMin);
+          if (job.salaryMax && job.salaryMax > 0 && job.salaryMax <= MAX_SALARY) salarySamples[job.roleCategory].maxes.push(job.salaryMax);
+        }
+        const ai = computeAIIntensity(job);
+        if (ai === 'Low') aiLow++;
+        else if (ai === 'Med') aiMed++;
+        else aiHigh++;
+      }
+
+      const skillsDemand = Object.entries(skillMap)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 15)
+        .map(([skill, count]) => ({ skill, count }));
+
+      const careerPaths = Object.entries(categoryMap)
+        .map(([name, jobCount]) => ({
+          name,
+          jobCount,
+          percentage: Math.round((jobCount / totalJobs) * 100),
+          newThisWeek: categoryNewMap[name] || 0,
+        }))
+        .sort((a, b) => b.jobCount - a.jobCount);
+
+      const salaryByPath = Object.entries(salarySamples)
+        .filter(([, s]) => s.mins.length >= 3)
+        .map(([name, s]) => ({
+          name,
+          medianMin: median(s.mins),
+          medianMax: median(s.maxes),
+          sampleSize: s.mins.length,
+        }))
+        .sort((a, b) => (b.medianMax || 0) - (a.medianMax || 0));
+
+      const SENIORITY_ORDER = ["Intern", "Fellowship", "Entry", "Junior", "Associate", "Mid", "Senior", "Lead", "Director", "VP", "C-Level"];
+      const seniorityDistribution = SENIORITY_ORDER
+        .filter(level => seniorityMap[level])
+        .map(level => ({ level, count: seniorityMap[level] || 0 }));
+      for (const [level, count] of Object.entries(seniorityMap)) {
+        if (!SENIORITY_ORDER.includes(level)) seniorityDistribution.push({ level, count });
+      }
+
+      const topCompanies = Object.entries(companyMap)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10)
+        .map(([company, jobCount]) => ({ company, jobCount }));
+
+      const geography = Object.entries(countryMap)
+        .sort((a, b) => b[1].count - a[1].count)
+        .slice(0, 15)
+        .map(([code, { name, count }]) => ({ countryCode: code, countryName: name, jobCount: count }));
+
+      const studentLevels = ["Intern", "Fellowship", "Entry", "Junior"];
+      const studentJobs = allJobs.filter(j => studentLevels.includes(j.seniorityLevel || ""));
+      const studentCompanyMap: Record<string, number> = {};
+      const studentPathMap: Record<string, number> = {};
+      for (const j of studentJobs) {
+        studentCompanyMap[j.company] = (studentCompanyMap[j.company] || 0) + 1;
+        if (j.roleCategory) studentPathMap[j.roleCategory] = (studentPathMap[j.roleCategory] || 0) + 1;
+      }
+
+      const studentOpportunities = {
+        internCount: allJobs.filter(j => j.seniorityLevel === "Intern").length,
+        fellowshipCount: allJobs.filter(j => j.seniorityLevel === "Fellowship").length,
+        entryLevelCount: allJobs.filter(j => ["Entry", "Junior"].includes(j.seniorityLevel || "")).length,
+        totalStudentJobs: studentJobs.length,
+        topCompanies: Object.entries(studentCompanyMap).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([company, count]) => ({ company, count })),
+        topPaths: Object.entries(studentPathMap).sort((a, b) => b[1] - a[1]).map(([name, count]) => ({ name, count })),
+      };
+
+      let communityBenchmarks: any = null;
+      try {
+        const allScores = await db.select({
+          score: diagnosticReports.overallReadinessScore,
+          topPaths: diagnosticReports.topPaths,
+          skillClusters: diagnosticReports.skillClusters,
+        }).from(diagnosticReports);
+
+        if (allScores.length >= 5) {
+          const scores = allScores.map(s => s.score || 0).filter(s => s > 0);
+          const avgReadiness = scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
+          const buckets = { '0-25': 0, '26-50': 0, '51-75': 0, '76-100': 0 };
+          for (const s of scores) {
+            if (s <= 25) buckets['0-25']++;
+            else if (s <= 50) buckets['26-50']++;
+            else if (s <= 75) buckets['51-75']++;
+            else buckets['76-100']++;
+          }
+
+          const gapMap: Record<string, number> = {};
+          const pathPopularity: Record<string, number> = {};
+          for (const row of allScores) {
+            const clusters = row.skillClusters as any[];
+            if (clusters) {
+              for (const c of clusters) {
+                if (c.score !== undefined && c.score < 40 && c.name) {
+                  gapMap[c.name] = (gapMap[c.name] || 0) + 1;
+                }
+              }
+            }
+            const paths = row.topPaths as any[];
+            if (paths && paths[0]?.name) {
+              pathPopularity[paths[0].name] = (pathPopularity[paths[0].name] || 0) + 1;
+            }
+          }
+
+          communityBenchmarks = {
+            totalAssessments: allScores.length,
+            avgReadiness,
+            readinessDistribution: buckets,
+            topSkillGaps: Object.entries(gapMap).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([skill, count]) => ({ skill, count })),
+            topCareerPaths: Object.entries(pathPopularity).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([name, count]) => ({ name, count })),
+          };
+        }
+      } catch (e) {}
+
+      const result = {
+        overview: {
+          totalJobs,
+          totalCompanies: companies.size,
+          countriesCount: countries.size,
+          remotePercentage: totalJobs ? Math.round((remoteJobs.length / totalJobs) * 100) : 0,
+          newJobsThisWeek: newThisWeek.length,
+          avgSalaryMin: jobsWithSalMin.length ? Math.round(jobsWithSalMin.reduce((s, j) => s + j.salaryMin!, 0) / jobsWithSalMin.length) : null,
+          avgSalaryMax: jobsWithSalMax.length ? Math.round(jobsWithSalMax.reduce((s, j) => s + j.salaryMax!, 0) / jobsWithSalMax.length) : null,
+          medianSalaryMin: median(jobsWithSalMin.map(j => j.salaryMin!)),
+          medianSalaryMax: median(jobsWithSalMax.map(j => j.salaryMax!)),
+          jobsWithSalary: jobsWithSalMin.length,
+        },
+        skillsDemand,
+        careerPaths,
+        salaryByPath,
+        workMode: {
+          remote: { count: remoteJobs.length, percentage: totalJobs ? Math.round((remoteJobs.length / totalJobs) * 100) : 0 },
+          hybrid: { count: hybridJobs.length, percentage: totalJobs ? Math.round((hybridJobs.length / totalJobs) * 100) : 0 },
+          onsite: { count: onsiteJobs.length, percentage: totalJobs ? Math.round((onsiteJobs.length / totalJobs) * 100) : 0 },
+        },
+        aiIntensity: {
+          low: { count: aiLow, percentage: totalJobs ? Math.round((aiLow / totalJobs) * 100) : 0 },
+          medium: { count: aiMed, percentage: totalJobs ? Math.round((aiMed / totalJobs) * 100) : 0 },
+          high: { count: aiHigh, percentage: totalJobs ? Math.round((aiHigh / totalJobs) * 100) : 0 },
+        },
+        seniorityDistribution,
+        topCompanies,
+        geography,
+        studentOpportunities,
+        communityBenchmarks,
+        generatedAt: new Date().toISOString(),
+      };
+
+      marketIntelligenceCache = { data: result, timestamp: Date.now() };
+      res.json(result);
+    } catch (error: any) {
+      console.error("Error computing market intelligence:", error);
+      res.status(500).json({ error: "Failed to compute market intelligence" });
+    }
+  });
+
+  app.get("/api/student-opportunities", async (_req, res) => {
+    try {
+      const allJobs = await storage.getPublishedJobs();
+      const studentLevels = ["Intern", "Fellowship", "Entry", "Junior"];
+      const studentJobs = allJobs.filter(j => studentLevels.includes(j.seniorityLevel || ""));
+
+      const sortedJobs = [...studentJobs]
+        .sort((a, b) => {
+          const dateA = a.firstSeenAt ? new Date(a.firstSeenAt).getTime() : 0;
+          const dateB = b.firstSeenAt ? new Date(b.firstSeenAt).getTime() : 0;
+          return dateB - dateA;
+        })
+        .slice(0, 20)
+        .map(j => ({
+          id: j.id,
+          title: j.title,
+          company: j.company,
+          location: j.location,
+          locationType: j.locationType,
+          seniorityLevel: j.seniorityLevel,
+          roleCategory: j.roleCategory,
+          firstSeenAt: j.firstSeenAt,
+          isRemote: j.isRemote || j.locationType === 'remote',
+          applicationUrl: j.applicationUrl,
+        }));
+
+      const pathMap: Record<string, number> = {};
+      const companyMap: Record<string, number> = {};
+      let remoteCount = 0;
+      for (const j of studentJobs) {
+        if (j.roleCategory) pathMap[j.roleCategory] = (pathMap[j.roleCategory] || 0) + 1;
+        companyMap[j.company] = (companyMap[j.company] || 0) + 1;
+        if (j.isRemote || j.locationType === 'remote') remoteCount++;
+      }
+
+      res.json({
+        totalStudentJobs: studentJobs.length,
+        jobs: sortedJobs,
+        pathBreakdown: Object.entries(pathMap)
+          .sort((a, b) => b[1] - a[1])
+          .map(([name, count]) => ({ name, count })),
+        topCompanies: Object.entries(companyMap)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 10)
+          .map(([company, count]) => ({ company, count })),
+        remoteCount,
+      });
+    } catch (error: any) {
+      console.error("Error fetching student opportunities:", error);
+      res.status(500).json({ error: "Failed to fetch student opportunities" });
+    }
+  });
+
   app.get("/api/health/db", async (_req, res) => {
     try {
       const dbUrl = process.env.DATABASE_URL || '';

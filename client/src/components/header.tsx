@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   LogOut, BarChart3, Bell, FileText, Globe,
-  Bookmark, LayoutDashboard, Menu, Calendar, Settings, Activity, Search, CreditCard, Brain,
+  Bookmark, LayoutDashboard, Menu, Calendar, Settings, Activity, Search, CreditCard, Brain, TrendingUp,
 } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { Link, useLocation } from "wouter";
@@ -90,12 +90,14 @@ export function Header() {
               <NavLink href="/resumes" icon={FileText} label="Resumes" isActive={isResumesActive} testId="link-resumes" />
               <NavLink href="/diagnostic" icon={Brain} label="Diagnostic" isActive={isDiagnosticActive} testId="link-diagnostic" />
               <NavLink href="/opportunity-map" icon={Globe} label="Map" isActive={isActive("/opportunity-map")} testId="link-map" />
+              <NavLink href="/market-intelligence" icon={TrendingUp} label="Trends" isActive={isActive("/market-intelligence")} testId="link-trends" />
               <NavLink href="/events" icon={Calendar} label="Events" isActive={isActive("/events") || location.startsWith("/events/")} testId="link-events" />
             </div>
           ) : (
             <div className="hidden md:flex items-center gap-0.5">
               <NavLink href="/jobs" icon={Search} label="Jobs" isActive={isJobsActive} testId="link-jobs-public" />
               <NavLink href="/opportunity-map" icon={Globe} label="Map" isActive={isActive("/opportunity-map")} testId="link-map-public" />
+              <NavLink href="/market-intelligence" icon={TrendingUp} label="Trends" isActive={isActive("/market-intelligence")} testId="link-trends-public" />
               <NavLink href="/events" icon={Calendar} label="Events" isActive={isActive("/events") || location.startsWith("/events/")} testId="link-events-public" />
             </div>
           )}
@@ -146,6 +148,7 @@ export function Header() {
                       <MobileNavItem href="/saved-jobs" icon={Bookmark} label="Saved Jobs" active={isActive("/saved-jobs")} testId="link-saved-jobs-mobile" />
                       <MobileNavItem href="/alerts" icon={Bell} label="Alerts" active={isActive("/alerts")} testId="link-alerts-mobile" />
                       <MobileNavItem href="/events" icon={Calendar} label="Events" active={isActive("/events")} testId="link-events-mobile" />
+                      <MobileNavItem href="/market-intelligence" icon={TrendingUp} label="Trends" active={isActive("/market-intelligence")} testId="link-trends-mobile" />
                       <MobileNavItem href="/insights" icon={BarChart3} label="Market Insights" active={isActive("/insights")} testId="link-insights-mobile" />
                       <MobileNavItem href="/pricing" icon={CreditCard} label="Pricing" active={isActive("/pricing")} testId="link-pricing-mobile" />
                       {isAdmin && (

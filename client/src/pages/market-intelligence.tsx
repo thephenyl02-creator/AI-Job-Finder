@@ -1,0 +1,733 @@
+import { useQuery } from "@tanstack/react-query";
+import { usePageTitle } from "@/hooks/use-page-title";
+import { useAuth } from "@/hooks/use-auth";
+import { useSubscription } from "@/hooks/use-subscription";
+import { Header } from "@/components/header";
+import { Footer } from "@/components/footer";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Link } from "wouter";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
+} from "recharts";
+import {
+  Briefcase,
+  Building2,
+  Globe,
+  Wifi,
+  TrendingUp,
+  ArrowRight,
+  Crown,
+  Lock,
+  GraduationCap,
+  Cpu,
+  Users,
+  Sparkles,
+  AlertCircle,
+  RefreshCw,
+} from "lucide-react";
+
+interface MarketIntelligenceData {
+  overview: {
+    totalJobs: number;
+    totalCompanies: number;
+    countriesCount: number;
+    remotePercentage: number;
+    newJobsThisWeek: number;
+    avgSalaryMin: number | null;
+    avgSalaryMax: number | null;
+    medianSalaryMin: number | null;
+    medianSalaryMax: number | null;
+    jobsWithSalary: number;
+  };
+  skillsDemand: { skill: string; count: number }[];
+  careerPaths: { name: string; jobCount: number; percentage: number; newThisWeek: number }[];
+  salaryByPath: { path: string; medianMin: number; medianMax: number }[];
+  workMode: { remote: { count: number; percentage: number }; hybrid: { count: number; percentage: number }; onsite: { count: number; percentage: number } };
+  topCompanies: { company: string; jobCount: number }[];
+  geography: { country: string; countryCode: string; jobCount: number }[];
+  seniorityDistribution: { level: string; count: number }[];
+  aiIntensity: { low: { count: number; percentage: number }; medium: { count: number; percentage: number }; high: { count: number; percentage: number } };
+  studentOpportunities: { internCount: number; fellowshipCount: number; entryLevelCount: number; totalStudentJobs: number; topCompanies: { company: string; count: number }[]; topPaths: { path: string; count: number }[] };
+  communityBenchmarks?: {
+    avgReadiness: number;
+    readinessDistribution: { bucket: string; count: number }[];
+    topSkillGaps: { skill: string; count: number }[];
+    topCareerPaths: { path: string; count: number }[];
+  };
+}
+
+const CHART_COLORS = [
+  "hsl(var(--chart-1))",
+  "hsl(var(--chart-2))",
+  "hsl(var(--chart-3))",
+  "hsl(var(--chart-4))",
+  "hsl(var(--chart-5))",
+];
+
+const WORK_MODE_COLORS = [
+  "hsl(var(--chart-1))",
+  "hsl(var(--chart-3))",
+  "hsl(var(--chart-4))",
+];
+
+function formatSalary(val: number | null): string {
+  if (!val) return "N/A";
+  return `$${Math.round(val / 1000)}K`;
+}
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="text-sm font-semibold text-primary tracking-[0.2em] uppercase border-l-2 border-primary pl-3 -ml-3 mb-4">
+      {children}
+    </p>
+  );
+}
+
+function SkeletonPage() {
+  return (
+    <div className="min-h-screen bg-background flex flex-col overflow-x-hidden">
+      <Header />
+      <main className="flex-1">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-14 sm:pt-24 pb-14 sm:pb-24">
+          <Skeleton className="h-4 w-48 mb-4" />
+          <Skeleton className="h-12 w-full max-w-md mb-4" />
+          <Skeleton className="h-5 w-full max-w-lg" />
+        </div>
+        <div className="border-t border-border/30">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-5">
+            <div className="flex items-center justify-center gap-8 flex-wrap">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <Skeleton className="h-4 w-4" />
+                  <div>
+                    <Skeleton className="h-6 w-12 mb-1" />
+                    <Skeleton className="h-3 w-16" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-14">
+          <Skeleton className="h-4 w-40 mb-4" />
+          <Skeleton className="h-7 w-56 mb-8" />
+          <Skeleton className="h-[300px] w-full rounded-md" />
+        </div>
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-14">
+          <Skeleton className="h-4 w-40 mb-4" />
+          <Skeleton className="h-7 w-48 mb-8" />
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <Card key={i}>
+                <CardContent className="p-4">
+                  <Skeleton className="h-5 w-full mb-2" />
+                  <Skeleton className="h-8 w-16 mb-1" />
+                  <Skeleton className="h-3 w-12" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-14">
+          <div className="grid md:grid-cols-2 gap-6">
+            <Card>
+              <CardContent className="p-6">
+                <Skeleton className="h-[250px] w-full" />
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-6">
+                <Skeleton className="h-[250px] w-full" />
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </main>
+      <Footer />
+    </div>
+  );
+}
+
+export default function MarketIntelligence() {
+  usePageTitle("Market Intelligence");
+  const { isAuthenticated } = useAuth();
+  const { isPro } = useSubscription();
+
+  const { data, isLoading, isError, refetch } = useQuery<MarketIntelligenceData>({
+    queryKey: ["/api/market-intelligence"],
+  });
+
+  if (isLoading) {
+    return <SkeletonPage />;
+  }
+
+  if (isError || !data) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col overflow-x-hidden">
+        <Header />
+        <main className="flex-1 flex items-center justify-center">
+          <div className="text-center py-20">
+            <AlertCircle className="h-10 w-10 text-muted-foreground mx-auto mb-4" />
+            <h2 className="text-lg font-medium text-foreground mb-2" data-testid="text-error-title">Unable to load market data</h2>
+            <p className="text-sm text-muted-foreground mb-4">Something went wrong. Please try again.</p>
+            <Button onClick={() => refetch()} data-testid="button-retry">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Retry
+            </Button>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  const { overview, skillsDemand, careerPaths, salaryByPath, workMode, topCompanies, geography, seniorityDistribution, aiIntensity, studentOpportunities, communityBenchmarks } = data;
+
+  const skillsChartData = skillsDemand.slice(0, 10).map((s) => ({
+    name: s.skill.length > 20 ? s.skill.slice(0, 18) + "..." : s.skill,
+    count: s.count,
+  }));
+
+  const workModeData = [
+    { name: "Remote", value: workMode.remote.count, pct: workMode.remote.percentage },
+    { name: "Hybrid", value: workMode.hybrid.count, pct: workMode.hybrid.percentage },
+    { name: "On-site", value: workMode.onsite.count, pct: workMode.onsite.percentage },
+  ];
+
+  const seniorityChartData = seniorityDistribution.map((s) => ({
+    name: s.level,
+    count: s.count,
+  }));
+
+  const aiMax = Math.max(aiIntensity.low.count, aiIntensity.medium.count, aiIntensity.high.count, 1);
+
+  const salaryVisible = isPro ? salaryByPath : salaryByPath.slice(0, 3);
+  const salaryBlurred = !isPro && salaryByPath.length > 3;
+
+  return (
+    <div className="min-h-screen bg-background flex flex-col overflow-x-hidden">
+      <Header />
+
+      <main className="flex-1">
+        <section className="max-w-5xl mx-auto px-4 sm:px-6 pt-14 sm:pt-24 pb-10 sm:pb-14" data-testid="section-hero">
+          <SectionLabel>Market Intelligence</SectionLabel>
+          <h1 className="text-3xl sm:text-[2.75rem] font-serif font-medium text-foreground leading-[1.3] mb-4" data-testid="text-mi-title">
+            State of Legal Tech Careers
+          </h1>
+          <p className="text-base text-muted-foreground max-w-2xl leading-relaxed" data-testid="text-mi-subtitle">
+            Live data from {overview.totalJobs} roles across {overview.totalCompanies} companies, updated daily.
+          </p>
+        </section>
+
+        <section className="border-t border-border/30" data-testid="section-key-stats">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-5 sm:py-6">
+            <div className="flex items-center justify-center gap-6 sm:gap-10 text-sm flex-wrap">
+              <div className="flex items-center gap-2.5" data-testid="stat-total-jobs">
+                <Briefcase className="h-4 w-4 text-muted-foreground shrink-0" />
+                <div>
+                  <p className="text-lg font-semibold text-foreground tabular-nums">{overview.totalJobs}</p>
+                  <p className="text-xs text-muted-foreground">Total jobs</p>
+                </div>
+              </div>
+              <div className="w-px h-8 bg-border/40 hidden sm:block" />
+              <div className="flex items-center gap-2.5" data-testid="stat-companies">
+                <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
+                <div>
+                  <p className="text-lg font-semibold text-foreground tabular-nums">{overview.totalCompanies}</p>
+                  <p className="text-xs text-muted-foreground">Companies</p>
+                </div>
+              </div>
+              <div className="w-px h-8 bg-border/40 hidden sm:block" />
+              <div className="flex items-center gap-2.5" data-testid="stat-countries">
+                <Globe className="h-4 w-4 text-muted-foreground shrink-0" />
+                <div>
+                  <p className="text-lg font-semibold text-foreground tabular-nums">{overview.countriesCount}</p>
+                  <p className="text-xs text-muted-foreground">Countries</p>
+                </div>
+              </div>
+              <div className="w-px h-8 bg-border/40 hidden sm:block" />
+              <div className="flex items-center gap-2.5" data-testid="stat-remote">
+                <Wifi className="h-4 w-4 text-muted-foreground shrink-0" />
+                <div>
+                  <p className="text-lg font-semibold text-foreground tabular-nums">{overview.remotePercentage}%</p>
+                  <p className="text-xs text-muted-foreground">Remote</p>
+                </div>
+              </div>
+              <div className="w-px h-8 bg-border/40 hidden sm:block" />
+              <div className="flex items-center gap-2.5" data-testid="stat-new-this-week">
+                <TrendingUp className="h-4 w-4 text-muted-foreground shrink-0" />
+                <div>
+                  <p className="text-lg font-semibold text-foreground tabular-nums">{overview.newJobsThisWeek}</p>
+                  <p className="text-xs text-muted-foreground">New this week</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="border-t border-border/30" data-testid="section-skills">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-14 sm:pt-24 pb-14 sm:pb-24">
+            <SectionLabel>Skills in Demand</SectionLabel>
+            <h2 className="text-xl sm:text-2xl font-serif font-medium text-foreground mb-8 sm:mb-10" data-testid="text-skills-title">
+              Most requested skills
+            </h2>
+            {skillsChartData.length > 0 ? (
+              <div className="h-[360px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={skillsChartData} layout="vertical" margin={{ top: 0, right: 30, left: 0, bottom: 0 }}>
+                    <XAxis type="number" tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+                    <YAxis type="category" dataKey="name" tick={{ fontSize: 12, fill: "hsl(var(--foreground))" }} axisLine={false} tickLine={false} width={140} />
+                    <Tooltip
+                      contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "6px", fontSize: 13 }}
+                      labelStyle={{ color: "hsl(var(--foreground))" }}
+                      itemStyle={{ color: "hsl(var(--foreground))" }}
+                      cursor={{ fill: "hsl(var(--muted) / 0.3)" }}
+                    />
+                    <Bar dataKey="count" fill="hsl(var(--chart-1))" radius={[0, 4, 4, 0]} barSize={20} name="Job count" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">No skills data available.</p>
+            )}
+          </div>
+        </section>
+
+        {careerPaths.length > 0 && (
+          <section className="border-t border-border/30 bg-muted/20" data-testid="section-career-paths">
+            <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-14 sm:pt-24 pb-14 sm:pb-24">
+              <SectionLabel>Career Paths</SectionLabel>
+              <h2 className="text-xl sm:text-2xl font-serif font-medium text-foreground mb-8 sm:mb-10" data-testid="text-career-paths-title">
+                Where the roles are
+              </h2>
+              <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                {careerPaths.map((cp) => (
+                  <Card key={cp.name} className="hover-elevate overflow-visible" data-testid={`card-path-${cp.name.toLowerCase().replace(/\s+/g, "-")}`}>
+                    <CardContent className="p-4 sm:p-5">
+                      <h3 className="text-sm font-semibold text-foreground mb-2 leading-snug">{cp.name}</h3>
+                      <p className="text-2xl font-semibold text-foreground tabular-nums" data-testid={`text-path-count-${cp.name.toLowerCase().replace(/\s+/g, "-")}`}>
+                        {cp.jobCount}
+                      </p>
+                      <p className="text-xs text-muted-foreground">{cp.percentage}% of all roles</p>
+                      {cp.newThisWeek > 0 && (
+                        <Badge variant="secondary" className="mt-2 text-[10px] no-default-active-elevate bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20">
+                          +{cp.newThisWeek} new this week
+                        </Badge>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {salaryByPath.length > 0 && (
+          <section className="border-t border-border/30" data-testid="section-salary">
+            <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-14 sm:pt-24 pb-14 sm:pb-24">
+              <SectionLabel>Salary Insights</SectionLabel>
+              <h2 className="text-xl sm:text-2xl font-serif font-medium text-foreground mb-2" data-testid="text-salary-title">
+                Compensation by career path
+              </h2>
+              <p className="text-sm text-muted-foreground mb-8 sm:mb-10">
+                Median salary ranges based on {overview.jobsWithSalary} listings with disclosed compensation.
+              </p>
+              <div className="space-y-4">
+                {salaryVisible.map((sp) => (
+                  <div key={sp.path} className="flex items-center justify-between gap-4 py-2 border-b border-border/30 last:border-0" data-testid={`salary-path-${sp.path.toLowerCase().replace(/\s+/g, "-")}`}>
+                    <span className="text-sm text-foreground">{sp.path}</span>
+                    <span className="text-sm font-semibold text-foreground tabular-nums shrink-0">
+                      {formatSalary(sp.medianMin)} – {formatSalary(sp.medianMax)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              {salaryBlurred && (
+                <div className="relative mt-4">
+                  <div className="space-y-4 blur-sm select-none pointer-events-none opacity-50">
+                    {salaryByPath.slice(3, 6).map((sp) => (
+                      <div key={sp.path} className="flex items-center justify-between gap-4 py-2 border-b border-border/30 last:border-0">
+                        <span className="text-sm text-foreground">{sp.path}</span>
+                        <span className="text-sm font-semibold text-foreground tabular-nums shrink-0">
+                          {formatSalary(sp.medianMin)} – {formatSalary(sp.medianMax)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="absolute inset-0 flex items-center justify-center bg-background/60 backdrop-blur-[2px] rounded-md">
+                    <div className="text-center">
+                      <Lock className="h-5 w-5 text-muted-foreground mx-auto mb-2" />
+                      <p className="text-sm font-medium text-foreground mb-1">Full salary data</p>
+                      <p className="text-xs text-muted-foreground mb-3 max-w-xs">
+                        Upgrade to Pro to see salary ranges for all career paths.
+                      </p>
+                      <Link href="/pricing">
+                        <Button size="sm" className="gap-1.5" data-testid="button-salary-upgrade">
+                          <Crown className="h-3.5 w-3.5" />
+                          Upgrade to Pro
+                        </Button>
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </section>
+        )}
+
+        <section className="border-t border-border/30 bg-muted/20" data-testid="section-work-mode-ai">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-14 sm:pt-24 pb-14 sm:pb-24">
+            <div className="grid md:grid-cols-2 gap-8 sm:gap-12">
+              <div>
+                <SectionLabel>Work Mode</SectionLabel>
+                <h2 className="text-xl sm:text-2xl font-serif font-medium text-foreground mb-8 sm:mb-10" data-testid="text-work-mode-title">
+                  How teams work
+                </h2>
+                <div className="h-[240px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={workModeData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={55}
+                        outerRadius={90}
+                        dataKey="value"
+                        paddingAngle={2}
+                        stroke="none"
+                      >
+                        {workModeData.map((_, index) => (
+                          <Cell key={`cell-${index}`} fill={WORK_MODE_COLORS[index]} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "6px", fontSize: 13 }}
+                        formatter={(value: number, name: string) => [`${value} jobs`, name]}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="flex items-center justify-center gap-6 mt-2 flex-wrap">
+                  {workModeData.map((wm, i) => (
+                    <div key={wm.name} className="flex items-center gap-2" data-testid={`work-mode-${wm.name.toLowerCase().replace(/\s+/g, "-")}`}>
+                      <span className="w-3 h-3 rounded-sm shrink-0" style={{ backgroundColor: WORK_MODE_COLORS[i] }} />
+                      <span className="text-sm text-foreground">{wm.name}</span>
+                      <span className="text-xs text-muted-foreground tabular-nums">{wm.value} ({wm.pct}%)</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <SectionLabel>AI Intensity</SectionLabel>
+                <h2 className="text-xl sm:text-2xl font-serif font-medium text-foreground mb-8 sm:mb-10" data-testid="text-ai-title">
+                  AI in job requirements
+                </h2>
+                <div className="space-y-6">
+                  {[
+                    { label: "Low", data: aiIntensity.low, color: "bg-emerald-500 dark:bg-emerald-400" },
+                    { label: "Medium", data: aiIntensity.medium, color: "bg-amber-500 dark:bg-amber-400" },
+                    { label: "High", data: aiIntensity.high, color: "bg-rose-500 dark:bg-rose-400" },
+                  ].map(({ label, data: d, color }) => (
+                    <div key={label} data-testid={`ai-intensity-${label.toLowerCase()}`}>
+                      <div className="flex items-center justify-between gap-2 mb-1.5">
+                        <span className="text-sm text-foreground font-medium">{label}</span>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="text-sm font-semibold text-foreground tabular-nums">{d.count}</span>
+                          <span className="text-xs text-muted-foreground tabular-nums w-10 text-right">{d.percentage}%</span>
+                        </div>
+                      </div>
+                      <div className="h-2.5 rounded-full bg-muted/60 overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-700 ease-out ${color}`}
+                          style={{ width: `${Math.max(4, (d.count / aiMax) * 100)}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground mt-4">
+                  Based on AI-related keywords in job descriptions.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {seniorityDistribution.length > 0 && (
+          <section className="border-t border-border/30" data-testid="section-seniority">
+            <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-14 sm:pt-24 pb-14 sm:pb-24">
+              <SectionLabel>Seniority Landscape</SectionLabel>
+              <h2 className="text-xl sm:text-2xl font-serif font-medium text-foreground mb-8 sm:mb-10" data-testid="text-seniority-title">
+                Experience levels in demand
+              </h2>
+              <div className="h-[300px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={seniorityChartData} margin={{ top: 0, right: 20, left: 0, bottom: 0 }}>
+                    <XAxis dataKey="name" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+                    <Tooltip
+                      contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "6px", fontSize: 13 }}
+                      labelStyle={{ color: "hsl(var(--foreground))" }}
+                      itemStyle={{ color: "hsl(var(--foreground))" }}
+                      cursor={{ fill: "hsl(var(--muted) / 0.3)" }}
+                    />
+                    <Bar dataKey="count" radius={[4, 4, 0, 0]} barSize={36} name="Jobs">
+                      {seniorityChartData.map((entry, index) => {
+                        const isEntry = ["Intern", "Fellowship", "Entry", "Junior"].includes(entry.name);
+                        return <Cell key={`cell-${index}`} fill={isEntry ? "hsl(var(--chart-2))" : "hsl(var(--chart-1))"} />;
+                      })}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+              <p className="text-xs text-muted-foreground mt-3 text-center">
+                Entry-level bands highlighted.
+              </p>
+            </div>
+          </section>
+        )}
+
+        <section className="border-t border-border/30 bg-muted/20" data-testid="section-companies-geography">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-14 sm:pt-24 pb-14 sm:pb-24">
+            <div className="grid md:grid-cols-2 gap-8 sm:gap-12">
+              <div>
+                <SectionLabel>Top Hiring Companies</SectionLabel>
+                <h2 className="text-xl sm:text-2xl font-serif font-medium text-foreground mb-8 sm:mb-10" data-testid="text-companies-title">
+                  Who's hiring the most
+                </h2>
+                <div className="space-y-2.5">
+                  {topCompanies.slice(0, 10).map((c, i) => (
+                    <div key={c.company} className="flex items-center justify-between gap-3 py-1.5" data-testid={`company-row-${i}`}>
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span className="text-xs text-muted-foreground w-5 text-right tabular-nums shrink-0">{i + 1}</span>
+                        <span className="text-sm text-foreground truncate">{c.company}</span>
+                      </div>
+                      <Badge variant="secondary" className="text-xs tabular-nums shrink-0 no-default-active-elevate">{c.jobCount}</Badge>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <SectionLabel>Where They're Hiring</SectionLabel>
+                <h2 className="text-xl sm:text-2xl font-serif font-medium text-foreground mb-8 sm:mb-10" data-testid="text-geography-title">
+                  Top hiring countries
+                </h2>
+                <div className="space-y-2.5">
+                  {geography.slice(0, 10).map((g, i) => (
+                    <div key={g.countryCode} className="flex items-center justify-between gap-3 py-1.5" data-testid={`geography-row-${i}`}>
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        {g.countryCode === "WW" ? (
+                          <Wifi className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                        ) : (
+                          <Globe className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                        )}
+                        <span className="text-sm text-foreground truncate">{g.country}</span>
+                      </div>
+                      <span className="text-sm font-semibold text-foreground tabular-nums shrink-0">{g.jobCount}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="border-t border-border/30" data-testid="section-student-spotlight">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-14 sm:pt-24 pb-14 sm:pb-24">
+            <SectionLabel>Student Spotlight</SectionLabel>
+            <h2 className="text-xl sm:text-2xl font-serif font-medium text-foreground mb-4" data-testid="text-student-title">
+              Early-career opportunities
+            </h2>
+            <p className="text-sm text-muted-foreground mb-8 max-w-lg">
+              {studentOpportunities.totalStudentJobs} internships, fellowships, and entry-level roles across {studentOpportunities.topCompanies.length}+ companies.
+            </p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+              <Card className="card-elev-static" data-testid="student-stat-intern">
+                <CardContent className="p-4 text-center">
+                  <p className="text-2xl font-semibold text-foreground tabular-nums">{studentOpportunities.internCount}</p>
+                  <p className="text-xs text-muted-foreground">Internships</p>
+                </CardContent>
+              </Card>
+              <Card className="card-elev-static" data-testid="student-stat-fellowship">
+                <CardContent className="p-4 text-center">
+                  <p className="text-2xl font-semibold text-foreground tabular-nums">{studentOpportunities.fellowshipCount}</p>
+                  <p className="text-xs text-muted-foreground">Fellowships</p>
+                </CardContent>
+              </Card>
+              <Card className="card-elev-static" data-testid="student-stat-entry">
+                <CardContent className="p-4 text-center">
+                  <p className="text-2xl font-semibold text-foreground tabular-nums">{studentOpportunities.entryLevelCount}</p>
+                  <p className="text-xs text-muted-foreground">Entry-level</p>
+                </CardContent>
+              </Card>
+              <Card className="card-elev-static" data-testid="student-stat-total">
+                <CardContent className="p-4 text-center">
+                  <p className="text-2xl font-semibold text-foreground tabular-nums">{studentOpportunities.totalStudentJobs}</p>
+                  <p className="text-xs text-muted-foreground">Total student roles</p>
+                </CardContent>
+              </Card>
+            </div>
+            <div className="text-center">
+              <Link href="/students">
+                <Button data-testid="button-view-students">
+                  <GraduationCap className="h-4 w-4 mr-2" />
+                  Explore student opportunities
+                  <ArrowRight className="h-4 w-4 ml-2" />
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        {communityBenchmarks && (
+          <section className="border-t border-border/30 bg-muted/20" data-testid="section-community">
+            <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-14 sm:pt-24 pb-14 sm:pb-24">
+              <SectionLabel>Community Pulse</SectionLabel>
+              <h2 className="text-xl sm:text-2xl font-serif font-medium text-foreground mb-2" data-testid="text-community-title">
+                How the community stacks up
+              </h2>
+              <p className="text-sm text-muted-foreground mb-8 sm:mb-10">
+                Aggregated insights from career diagnostic assessments.
+              </p>
+
+              {isPro ? (
+                <div className="grid sm:grid-cols-2 gap-6">
+                  <Card className="card-elev-static">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm font-medium flex items-center gap-2">
+                        <Users className="h-4 w-4 text-muted-foreground" />
+                        Average Readiness
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex items-center gap-6">
+                        <div className="relative flex items-center justify-center shrink-0">
+                          <svg className="w-[80px] h-[80px] -rotate-90" viewBox="0 0 100 100">
+                            <circle cx="50" cy="50" r="42" fill="none" stroke="hsl(var(--muted))" strokeWidth="6" />
+                            <circle
+                              cx="50" cy="50" r="42" fill="none"
+                              stroke={communityBenchmarks.avgReadiness >= 60 ? "hsl(var(--status-success))" : communityBenchmarks.avgReadiness >= 40 ? "hsl(var(--status-warning))" : "hsl(var(--status-danger))"}
+                              strokeWidth="6" strokeLinecap="round"
+                              strokeDasharray={`${2 * Math.PI * 42}`}
+                              strokeDashoffset={`${2 * Math.PI * 42 - (communityBenchmarks.avgReadiness / 100) * 2 * Math.PI * 42}`}
+                            />
+                          </svg>
+                          <div className="absolute flex flex-col items-center">
+                            <span className="text-xl font-bold text-foreground" data-testid="text-avg-readiness">{Math.round(communityBenchmarks.avgReadiness)}</span>
+                            <span className="text-[8px] text-muted-foreground">/ 100</span>
+                          </div>
+                        </div>
+                        <div className="space-y-1.5">
+                          {communityBenchmarks.readinessDistribution.map((b) => (
+                            <div key={b.bucket} className="flex items-center justify-between gap-3 text-xs" data-testid={`readiness-bucket-${b.bucket}`}>
+                              <span className="text-muted-foreground">{b.bucket}</span>
+                              <span className="text-foreground font-medium tabular-nums">{b.count}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="card-elev-static">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm font-medium flex items-center gap-2">
+                        <Sparkles className="h-4 w-4 text-muted-foreground" />
+                        Top Skill Gaps
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        {communityBenchmarks.topSkillGaps.slice(0, 6).map((sg) => (
+                          <div key={sg.skill} className="flex items-center justify-between gap-3 text-sm" data-testid={`skill-gap-${sg.skill.toLowerCase().replace(/\s+/g, "-")}`}>
+                            <span className="text-foreground truncate">{sg.skill}</span>
+                            <span className="text-xs text-muted-foreground tabular-nums shrink-0">{sg.count} users</span>
+                          </div>
+                        ))}
+                      </div>
+                      {communityBenchmarks.topCareerPaths.length > 0 && (
+                        <div className="mt-4 pt-4 border-t border-border/30">
+                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Most popular paths</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {communityBenchmarks.topCareerPaths.slice(0, 4).map((cp) => (
+                              <Badge key={cp.path} variant="outline" className="text-xs no-default-active-elevate" data-testid={`popular-path-${cp.path.toLowerCase().replace(/\s+/g, "-")}`}>
+                                {cp.path}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+              ) : (
+                <div className="relative">
+                  <div className="grid sm:grid-cols-2 gap-6 blur-sm select-none pointer-events-none opacity-50">
+                    <Card className="card-elev-static">
+                      <CardContent className="p-6">
+                        <Skeleton className="h-[120px] w-full" />
+                      </CardContent>
+                    </Card>
+                    <Card className="card-elev-static">
+                      <CardContent className="p-6">
+                        <Skeleton className="h-[120px] w-full" />
+                      </CardContent>
+                    </Card>
+                  </div>
+                  <div className="absolute inset-0 flex items-center justify-center bg-background/60 backdrop-blur-[2px] rounded-md">
+                    <div className="text-center">
+                      <Lock className="h-5 w-5 text-muted-foreground mx-auto mb-2" />
+                      <p className="text-sm font-medium text-foreground mb-1">Community benchmarks</p>
+                      <p className="text-xs text-muted-foreground mb-3 max-w-xs">
+                        See how your readiness compares to the community, top skill gaps, and popular career paths.
+                      </p>
+                      <Link href="/pricing">
+                        <Button size="sm" className="gap-1.5" data-testid="button-community-upgrade">
+                          <Crown className="h-3.5 w-3.5" />
+                          Upgrade to Pro
+                        </Button>
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </section>
+        )}
+
+        <section className="border-t border-border/30" data-testid="section-cta">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-14 sm:pt-24 pb-14 sm:pb-24 text-center">
+            <h2 className="text-xl sm:text-3xl font-serif font-medium text-foreground mb-4" data-testid="text-cta-title">
+              Ready to find out where you fit?
+            </h2>
+            <p className="text-sm text-muted-foreground mb-8 max-w-md mx-auto">
+              Upload your resume and get a personalized career readiness report in under 90 seconds.
+            </p>
+            <Button size="lg" asChild data-testid="button-cta-diagnostic">
+              <Link href="/diagnostic">
+                Check Your Fit
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
+        </section>
+      </main>
+
+      <Footer />
+    </div>
+  );
+}
