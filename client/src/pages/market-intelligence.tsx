@@ -280,29 +280,41 @@ export default function MarketIntelligence() {
                 Live data from {overview.totalJobs} roles across {overview.totalCompanies} companies, updated daily.
               </p>
             </div>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="gap-2 shrink-0" data-testid="button-download-report">
-                  <Download className="h-4 w-4" />
+            {isPro ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="gap-2 shrink-0" data-testid="button-download-report">
+                    <Download className="h-4 w-4" />
+                    Download Report
+                    <ChevronDown className="h-3.5 w-3.5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => handleDownload("weekly")} data-testid="menu-download-weekly">
+                    <Download className="h-4 w-4 mr-2" />
+                    Weekly Briefing (PDF)
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleDownload("monthly")} data-testid="menu-download-monthly">
+                    <Download className="h-4 w-4 mr-2" />
+                    Monthly Report (PDF)
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleDownload("annual")} data-testid="menu-download-annual">
+                    <Download className="h-4 w-4 mr-2" />
+                    Annual Report (PDF)
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Link href="/pricing">
+                <Button variant="outline" className="gap-2 shrink-0 border-primary/20 hover:border-primary/40" data-testid="button-download-report-upgrade">
+                  <Lock className="h-4 w-4 text-primary" />
                   Download Report
-                  <ChevronDown className="h-3.5 w-3.5" />
+                  <Badge variant="secondary" className="ml-1 text-[10px] px-1.5 py-0 bg-primary/10 text-primary border-0">
+                    Pro
+                  </Badge>
                 </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handleDownload("weekly")} data-testid="menu-download-weekly">
-                  <Download className="h-4 w-4 mr-2" />
-                  Weekly Briefing (PDF)
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleDownload("monthly")} data-testid="menu-download-monthly">
-                  <Download className="h-4 w-4 mr-2" />
-                  Monthly Report (PDF)
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleDownload("annual")} data-testid="menu-download-annual">
-                  <Download className="h-4 w-4 mr-2" />
-                  Annual Report (PDF)
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+              </Link>
+            )}
           </div>
         </section>
 
