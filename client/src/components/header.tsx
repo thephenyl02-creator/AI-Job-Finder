@@ -87,18 +87,15 @@ export function Header() {
             <div className="hidden md:flex items-center gap-0.5">
               <NavLink href="/dashboard" icon={LayoutDashboard} label="Dashboard" isActive={isDashboardActive} testId="link-dashboard" />
               <NavLink href="/jobs" icon={Search} label="Jobs" isActive={isJobsActive} testId="link-jobs" />
-              <NavLink href="/resumes" icon={FileText} label="Resumes" isActive={isResumesActive} testId="link-resumes" />
               <NavLink href="/diagnostic" icon={Brain} label="Diagnostic" isActive={isDiagnosticActive} testId="link-diagnostic" />
-              <NavLink href="/opportunity-map" icon={Globe} label="Map" isActive={isActive("/opportunity-map")} testId="link-map" />
+              <NavLink href="/resumes" icon={FileText} label="Resumes" isActive={isResumesActive} testId="link-resumes" />
               <NavLink href="/market-intelligence" icon={TrendingUp} label="Trends" isActive={isActive("/market-intelligence")} testId="link-trends" />
-              <NavLink href="/events" icon={Calendar} label="Events" isActive={isActive("/events") || location.startsWith("/events/")} testId="link-events" />
             </div>
           ) : (
             <div className="hidden md:flex items-center gap-0.5">
               <NavLink href="/jobs" icon={Search} label="Jobs" isActive={isJobsActive} testId="link-jobs-public" />
-              <NavLink href="/opportunity-map" icon={Globe} label="Map" isActive={isActive("/opportunity-map")} testId="link-map-public" />
               <NavLink href="/market-intelligence" icon={TrendingUp} label="Trends" isActive={isActive("/market-intelligence")} testId="link-trends-public" />
-              <NavLink href="/events" icon={Calendar} label="Events" isActive={isActive("/events") || location.startsWith("/events/")} testId="link-events-public" />
+              <NavLink href="/pricing" icon={CreditCard} label="Pricing" isActive={isActive("/pricing")} testId="link-pricing-public" />
             </div>
           )}
         </div>
@@ -141,15 +138,16 @@ export function Header() {
                     <div className="flex-1 overflow-y-auto py-2 px-3 space-y-0.5">
                       <MobileNavItem href="/dashboard" icon={LayoutDashboard} label="Dashboard" active={isDashboardActive} testId="link-dashboard-mobile" />
                       <MobileNavItem href="/jobs" icon={Search} label="Jobs" active={isJobsActive} testId="link-jobs-mobile" />
-                      <MobileNavItem href="/resumes" icon={FileText} label="Resumes" active={isResumesActive} testId="link-resumes-mobile" />
                       <MobileNavItem href="/diagnostic" icon={Brain} label="Diagnostic" active={isDiagnosticActive} testId="link-diagnostic-mobile" />
+                      <MobileNavItem href="/resumes" icon={FileText} label="Resumes" active={isResumesActive} testId="link-resumes-mobile" />
+                      <MobileNavItem href="/market-intelligence" icon={TrendingUp} label="Trends" active={isActive("/market-intelligence")} testId="link-trends-mobile" />
+                      <div className="h-px bg-border/40 my-2" />
                       <MobileNavItem href="/opportunity-map" icon={Globe} label="Opportunity Map" active={isActive("/opportunity-map")} testId="link-map-mobile" />
+                      <MobileNavItem href="/events" icon={Calendar} label="Events" active={isActive("/events")} testId="link-events-mobile" />
                       <div className="h-px bg-border/40 my-2" />
                       <MobileNavItem href="/saved-jobs" icon={Bookmark} label="Saved Jobs" active={isActive("/saved-jobs")} testId="link-saved-jobs-mobile" />
                       <MobileNavItem href="/alerts" icon={Bell} label="Alerts" active={isActive("/alerts")} testId="link-alerts-mobile" />
-                      <MobileNavItem href="/events" icon={Calendar} label="Events" active={isActive("/events")} testId="link-events-mobile" />
-                      <MobileNavItem href="/market-intelligence" icon={TrendingUp} label="Trends" active={isActive("/market-intelligence")} testId="link-trends-mobile" />
-                      <MobileNavItem href="/insights" icon={BarChart3} label="Market Insights" active={isActive("/insights")} testId="link-insights-mobile" />
+                      <div className="h-px bg-border/40 my-2" />
                       <MobileNavItem href="/pricing" icon={CreditCard} label="Pricing" active={isActive("/pricing")} testId="link-pricing-mobile" />
                       {isAdmin && (
                         <MobileNavItem href="/admin" icon={Settings} label="Admin" active={isActive("/admin")} testId="link-admin-mobile" />

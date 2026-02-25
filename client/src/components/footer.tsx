@@ -56,6 +56,16 @@ export function Footer() {
                 Trends
               </Button>
             </Link>
+            <Link href="/opportunity-map">
+              <Button variant="ghost" size="sm" className="text-muted-foreground h-auto py-1 text-xs font-normal" data-testid="footer-link-map">
+                Map
+              </Button>
+            </Link>
+            <Link href="/events">
+              <Button variant="ghost" size="sm" className="text-muted-foreground h-auto py-1 text-xs font-normal" data-testid="footer-link-events">
+                Events
+              </Button>
+            </Link>
             <Link href="/terms">
               <Button variant="ghost" size="sm" className="text-muted-foreground h-auto py-1 text-xs font-normal" data-testid="footer-link-terms">
                 Terms

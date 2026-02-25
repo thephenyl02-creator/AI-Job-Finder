@@ -72,14 +72,14 @@ export default function Landing() {
             </div>
           </Link>
           <div className="flex items-center gap-1 sm:gap-2">
-            <Link href="/opportunity-map">
-              <Button variant="ghost" size="sm" className="text-muted-foreground hidden sm:inline-flex" data-testid="link-header-map">
-                Map
+            <Link href="/jobs">
+              <Button variant="ghost" size="sm" className="text-muted-foreground hidden sm:inline-flex" data-testid="link-header-jobs">
+                Jobs
               </Button>
             </Link>
-            <Link href="/events">
-              <Button variant="ghost" size="sm" className="text-muted-foreground hidden sm:inline-flex" data-testid="link-header-events">
-                Events
+            <Link href="/market-intelligence">
+              <Button variant="ghost" size="sm" className="text-muted-foreground hidden sm:inline-flex" data-testid="link-header-trends">
+                Trends
               </Button>
             </Link>
             <Link href="/pricing">
