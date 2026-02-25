@@ -30,6 +30,12 @@ export async function backfillCountryCodes(): Promise<{ updated: number; errors:
         title: job.title,
       });
 
+      if (result.countryCode === 'UN' && job.countryCode && job.countryCode !== 'UN') {
+        summary[job.countryCode] = (summary[job.countryCode] || 0) + 1;
+        updated++;
+        continue;
+      }
+
       let workMode = result.workMode;
       if (job.locationType === 'remote' || job.locationType === 'hybrid') {
         workMode = job.locationType as 'remote' | 'hybrid';
