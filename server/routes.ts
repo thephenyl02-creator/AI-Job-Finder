@@ -142,6 +142,9 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+  let marketIntelligenceCache: { data: any; timestamp: number } | null = null;
+  const MI_CACHE_TTL = 3600000;
+
   await setupAuth(app);
   registerAuthRoutes(app);
 
@@ -3299,6 +3302,7 @@ Rules:
           published++;
         }
       }
+      marketIntelligenceCache = null;
       res.json({ published, skipped, total: approvedJobs.length });
     } catch (error) {
       console.error("Error bulk publishing:", error);
@@ -3475,6 +3479,7 @@ Rules:
       }
 
       const updated = await storage.publishJob(id);
+      marketIntelligenceCache = null;
       res.json({ job: updated });
     } catch (error) {
       console.error("Error publishing job:", error);
@@ -3490,6 +3495,7 @@ Rules:
       const id = parseInt(req.params.id as string);
       const updated = await storage.unpublishJob(id);
       if (!updated) return res.status(404).json({ error: "Job not found" });
+      marketIntelligenceCache = null;
       res.json({ job: updated });
     } catch (error) {
       console.error("Error unpublishing job:", error);
@@ -3818,6 +3824,7 @@ Rules:
         qaCheckedAt: new Date(),
       } as any);
 
+      marketIntelligenceCache = null;
       res.json({
         success: true,
         job: updated,
@@ -4094,6 +4101,7 @@ Rules:
       }
 
       console.log(`[Admin] Publish All Eligible: ${published} published, ${skipped} skipped out of ${candidates.length} candidates`);
+      if (published > 0) marketIntelligenceCache = null;
       res.json({ published, skipped, total: candidates.length, publishedJobs: publishedJobs.slice(0, 50) });
     } catch (error: any) {
       console.error("[Admin] Publish All Eligible error:", error);
@@ -4146,6 +4154,7 @@ Rules:
       }
 
       const published = results.filter(r => r.status === 'published').length;
+      if (published > 0) marketIntelligenceCache = null;
       res.json({ success: true, published, total: results.length, results });
     } catch (error: any) {
       console.error("[Bulk QA Publish] Error:", error);
@@ -7913,9 +7922,6 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
       return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
     });
   }
-
-  let marketIntelligenceCache: { data: any; timestamp: number } | null = null;
-  const MI_CACHE_TTL = 3600000;
 
   app.get("/api/market-intelligence", async (_req, res) => {
     try {
