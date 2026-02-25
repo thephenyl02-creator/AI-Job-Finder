@@ -8131,13 +8131,13 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
   app.get("/api/market-intelligence/report", async (req, res) => {
     try {
       if (!req.user) {
-        return res.status(401).json({ error: "Authentication required to download reports." });
+        return res.redirect("/pricing");
       }
       const subData = await storage.getUserSubscription(req.user.id);
       const userIsAdmin = (req.user as any).isAdmin === true;
       const isPro = userIsAdmin || (subData?.subscriptionTier === "pro" && subData?.subscriptionStatus === "active");
       if (!isPro) {
-        return res.status(403).json({ error: "Pro subscription required to download reports." });
+        return res.redirect("/pricing");
       }
 
       const period = (req.query.period as string) || "weekly";
