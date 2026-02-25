@@ -366,7 +366,7 @@ export default function QuizPage() {
                     <p className="text-xs font-semibold text-muted-foreground tracking-wide uppercase mb-1">
                       Quiz estimate vs. resume analysis
                     </p>
-                    <p className="text-[11px] text-muted-foreground">
+                    <p className="text-[10px] text-muted-foreground">
                       Your quiz gives a directional estimate. A resume scan unlocks precision.
                     </p>
                   </div>
@@ -435,7 +435,7 @@ export default function QuizPage() {
                       Upload resume for full results
                     </Link>
                   </Button>
-                  <p className="text-[11px] text-muted-foreground text-center flex items-center justify-center gap-1.5">
+                  <p className="text-[10px] text-muted-foreground text-center flex items-center justify-center gap-1.5">
                     <Lock className="h-3 w-3" />
                     Private by default. Takes ~90 seconds. No account needed.
                   </p>

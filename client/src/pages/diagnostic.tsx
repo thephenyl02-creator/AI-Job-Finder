@@ -3,6 +3,12 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation, Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+
+function getScoreColor(score: number): string {
+  if (score >= 70) return "hsl(var(--status-success))";
+  if (score >= 45) return "hsl(var(--status-warning))";
+  return "hsl(var(--status-danger))";
+}
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -149,7 +155,7 @@ function FitBreakdownChart({ breakdown }: { breakdown: DiagnosticReportData["fit
     { name: "Seniority", value: breakdown.seniorityMatch, weight: "15%" },
   ];
 
-  const colors = ["#10b981", "#3b82f6", "#8b5cf6", "#f59e0b"];
+  const colors = ["hsl(var(--chart-5))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))"];
 
   return (
     <ChartCard
@@ -208,7 +214,7 @@ function MarketDemandChart({ demand }: { demand: DiagnosticReportData["marketDem
             />
             <Bar dataKey="count" radius={[4, 4, 0, 0]} barSize={24}>
               {data.map((d, i) => (
-                <Cell key={i} fill={d.hasIt ? "#10b981" : "#94a3b8"} fillOpacity={d.hasIt ? 0.8 : 0.4} />
+                <Cell key={i} fill={d.hasIt ? "hsl(var(--status-success))" : "hsl(var(--status-neutral))"} fillOpacity={d.hasIt ? 0.8 : 0.4} />
               ))}
             </Bar>
           </BarChart>
@@ -223,7 +229,7 @@ function TransitionGauge({ difficulty }: { difficulty: DiagnosticReportData["tra
   const circumference = 2 * Math.PI * 45;
   const halfCircumference = circumference / 2;
   const dashOffset = halfCircumference - (pct / 100) * halfCircumference;
-  const color = difficulty.label === "Easy" ? "#10b981" : difficulty.label === "Moderate" ? "#f59e0b" : "#ef4444";
+  const color = difficulty.label === "Easy" ? "hsl(var(--status-success))" : difficulty.label === "Moderate" ? "hsl(var(--status-warning))" : "hsl(var(--status-danger))";
 
   return (
     <ChartCard
@@ -264,7 +270,7 @@ function TransitionGauge({ difficulty }: { difficulty: DiagnosticReportData["tra
 function ReadinessScoreRing({ score }: { score: number }) {
   const circumference = 2 * Math.PI * 42;
   const dashOffset = circumference - (score / 100) * circumference;
-  const color = score >= 70 ? "#10b981" : score >= 45 ? "#f59e0b" : "#ef4444";
+  const color = getScoreColor(score);
 
   return (
     <div className="relative flex items-center justify-center" data-testid="readiness-score-ring">
@@ -460,7 +466,7 @@ function CareerPathFlow({
   }, []);
 
   const paths = topPaths.slice(0, 3);
-  const scoreColor = readinessScore >= 70 ? "#10b981" : readinessScore >= 45 ? "#f59e0b" : "#ef4444";
+  const scoreColor = getScoreColor(readinessScore);
 
   const allRoles = [
     ...readinessLadder.ready.map((r) => ({ ...r, tierColor: "emerald" as const })),
@@ -511,7 +517,7 @@ function CareerPathFlow({
               <User className="h-5 w-5 text-primary" />
             </div>
             <div
-              className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white"
+              className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
               style={{ backgroundColor: scoreColor }}
               data-testid="career-flow-score"
             >
@@ -520,7 +526,7 @@ function CareerPathFlow({
           </div>
           <div className="min-w-0">
             <p className="text-sm font-semibold text-foreground truncate">{currentRole}</p>
-            <p className="text-[11px] text-muted-foreground">Your starting point</p>
+            <p className="text-[10px] text-muted-foreground">Your starting point</p>
           </div>
         </div>
 
@@ -536,7 +542,7 @@ function CareerPathFlow({
               </div>
               {path.topGaps[0] && (
                 <div className="flex justify-center -mt-1 -mb-1 relative z-10">
-                  <span className="text-[9px] text-muted-foreground bg-background px-1.5 py-0.5 rounded border border-border/30" data-testid={`career-flow-gap-${i}`}>
+                  <span className="text-[10px] text-muted-foreground bg-background px-1.5 py-0.5 rounded border border-border/30" data-testid={`career-flow-gap-${i}`}>
                     {path.topGaps[0]}
                   </span>
                 </div>
@@ -561,7 +567,7 @@ function CareerPathFlow({
                   <div className="mt-2 space-y-1">
                     {roles.slice(0, 2).map((role) => (
                       <Link key={role.jobId} href={`/jobs/${role.jobId}`}>
-                        <div className="flex items-center gap-1.5 text-[11px] cursor-pointer hover:text-foreground transition-colors" data-testid={`career-flow-role-${role.jobId}`}>
+                        <div className="flex items-center gap-1.5 text-[10px] cursor-pointer hover:text-foreground transition-colors" data-testid={`career-flow-role-${role.jobId}`}>
                           <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${role.tierColor === "emerald" ? "bg-emerald-500" : "bg-amber-500"}`} />
                           <span className="text-foreground/80 truncate">{role.title}</span>
                           <span className="text-muted-foreground shrink-0">@ {role.company}</span>
@@ -669,7 +675,7 @@ function CareerPathFlow({
                     <div className="mt-2 space-y-1">
                       {roles.slice(0, 2).map((role) => (
                         <Link key={role.jobId} href={`/jobs/${role.jobId}`}>
-                          <div className="flex items-center gap-1.5 text-[11px] cursor-pointer hover:text-foreground transition-colors" data-testid={`career-flow-role-${role.jobId}`}>
+                          <div className="flex items-center gap-1.5 text-[10px] cursor-pointer hover:text-foreground transition-colors" data-testid={`career-flow-role-${role.jobId}`}>
                             <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${role.tierColor === "emerald" ? "bg-emerald-500" : "bg-amber-500"}`} />
                             <span className="text-foreground/80 truncate">{role.title}</span>
                             <span className="text-muted-foreground shrink-0">@ {role.company}</span>
@@ -828,7 +834,7 @@ function AnonymousPreview() {
   }
 
   if (preview) {
-    const scoreColor = preview.score >= 70 ? "#10b981" : preview.score >= 45 ? "#f59e0b" : "#ef4444";
+    const scoreColor = getScoreColor(preview.score);
     const circumference = 2 * Math.PI * 42;
     const dashOffset = circumference - (preview.score / 100) * circumference;
 
@@ -844,7 +850,7 @@ function AnonymousPreview() {
             </Link>
           </div>
           <div className="text-center">
-            <p className="text-[11px] font-semibold text-muted-foreground tracking-[0.2em] uppercase mb-2">
+            <p className="text-[10px] font-semibold text-muted-foreground tracking-[0.2em] uppercase mb-2">
               Your Preview Results
             </p>
             <h1 className="text-2xl sm:text-3xl font-serif font-medium text-foreground tracking-tight" data-testid="text-preview-title">
@@ -947,7 +953,7 @@ function AnonymousPreview() {
                   Create free account
                 </Button>
               </Link>
-              <p className="text-[11px] text-muted-foreground">
+              <p className="text-[10px] text-muted-foreground">
                 No credit card required
               </p>
             </CardContent>
@@ -978,7 +984,7 @@ function AnonymousPreview() {
           </Link>
         </div>
         <div className="text-center">
-          <p className="text-[11px] font-semibold text-muted-foreground tracking-[0.2em] uppercase mb-3">
+          <p className="text-[10px] font-semibold text-muted-foreground tracking-[0.2em] uppercase mb-3">
             Career Diagnostic
           </p>
           <h1 className="text-2xl sm:text-3xl font-serif font-medium text-foreground tracking-tight" data-testid="text-anon-diagnostic-title">
@@ -1120,8 +1126,8 @@ function LoggedInNoResume() {
   }, [toast]);
 
   const scoreColor = cachedPreview
-    ? cachedPreview.score >= 70 ? "#10b981" : cachedPreview.score >= 45 ? "#f59e0b" : "#ef4444"
-    : "#888";
+    ? getScoreColor(cachedPreview.score)
+    : "hsl(var(--status-neutral))";
   const circumference = 2 * Math.PI * 42;
   const dashOffset = cachedPreview ? circumference - (cachedPreview.score / 100) * circumference : circumference;
 
@@ -1140,7 +1146,7 @@ function LoggedInNoResume() {
         {cachedPreview && (
           <>
             <div className="text-center">
-              <p className="text-[11px] font-semibold text-muted-foreground tracking-[0.2em] uppercase mb-2">
+              <p className="text-[10px] font-semibold text-muted-foreground tracking-[0.2em] uppercase mb-2">
                 Welcome back
               </p>
               <h1 className="text-2xl sm:text-3xl font-serif font-medium text-foreground tracking-tight" data-testid="text-cached-preview-title">
@@ -1237,7 +1243,7 @@ function LoggedInNoResume() {
             {uploadError && (
               <p className="text-sm text-destructive" data-testid="text-upload-error">{uploadError}</p>
             )}
-            <p className="text-[11px] text-muted-foreground flex items-center justify-center gap-1.5">
+            <p className="text-[10px] text-muted-foreground flex items-center justify-center gap-1.5">
               <Lock className="h-3 w-3" />
               Your resume stays private. Never shared.
             </p>
@@ -1448,7 +1454,7 @@ export default function DiagnosticPage() {
                   : "Significant gaps to address"}
               </p>
               {percentileData?.percentile !== null && percentileData?.percentile !== undefined && (
-                <p className="text-[11px] text-muted-foreground text-center" data-testid="text-diagnostic-percentile">
+                <p className="text-[10px] text-muted-foreground text-center" data-testid="text-diagnostic-percentile">
                   Top <span className="font-semibold text-foreground">{100 - percentileData.percentile}%</span> of lawyers assessed
                 </p>
               )}

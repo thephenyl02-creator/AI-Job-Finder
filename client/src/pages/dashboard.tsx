@@ -95,9 +95,9 @@ function ReadinessRing({ score, size = "lg" }: { score: number; size?: "lg" | "s
   const strokeDashoffset = circumference - (score / 100) * circumference;
 
   const getColor = () => {
-    if (score >= 70) return "#22c55e";
-    if (score >= 40) return "#f59e0b";
-    return "#94a3b8";
+    if (score >= 70) return "hsl(var(--status-success))";
+    if (score >= 40) return "hsl(var(--status-warning))";
+    return "hsl(var(--status-neutral))";
   };
 
   return (
@@ -145,7 +145,7 @@ function DashboardSkeleton() {
             <Skeleton className="h-7 w-48 mb-2" />
             <Skeleton className="h-4 w-72" />
           </div>
-          <Card className="mb-6">
+          <Card className="mb-6 card-elev-static">
             <CardContent className="p-6">
               <div className="flex flex-col md:flex-row gap-6">
                 <Skeleton className="h-28 w-28 rounded-full mx-auto md:mx-0" />
@@ -166,7 +166,7 @@ function DashboardSkeleton() {
               </div>
             </CardContent>
           </Card>
-          <Card className="mb-6">
+          <Card className="mb-6 card-elev-static">
             <CardContent className="p-6">
               <Skeleton className="h-5 w-32 mb-4" />
               <div className="space-y-3">
@@ -177,7 +177,7 @@ function DashboardSkeleton() {
           </Card>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {[...Array(6)].map((_, i) => (
-              <Card key={i}><CardContent className="p-4"><Skeleton className="h-20 w-full" /></CardContent></Card>
+              <Card key={i} className="card-elev-static"><CardContent className="p-4"><Skeleton className="h-20 w-full" /></CardContent></Card>
             ))}
           </div>
         </div>
@@ -288,7 +288,7 @@ export default function DashboardPage() {
                     {diagnosticReport?.skillClusters && diagnosticReport.skillClusters.length > 0 && (
                       <div className="flex flex-wrap gap-1.5 justify-center md:justify-start">
                         {diagnosticReport.skillClusters.slice(0, 5).map((skill) => (
-                          <Badge key={skill.name} variant="secondary" className="text-[11px]">
+                          <Badge key={skill.name} variant="secondary" className="text-[10px]">
                             {skill.name}: {skill.score}
                           </Badge>
                         ))}
@@ -667,9 +667,9 @@ export default function DashboardPage() {
                     <div className="sm:col-span-2 lg:col-span-3">
                       <ProLockedOverlay label="Unlock Market Intelligence">
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                          <Card><CardContent className="p-4"><div className="h-16" /></CardContent></Card>
-                          <Card><CardContent className="p-4"><div className="h-16" /></CardContent></Card>
-                          <Card><CardContent className="p-4"><div className="h-16" /></CardContent></Card>
+                          <Card className="card-elev-static"><CardContent className="p-4"><div className="h-16" /></CardContent></Card>
+                          <Card className="card-elev-static"><CardContent className="p-4"><div className="h-16" /></CardContent></Card>
+                          <Card className="card-elev-static"><CardContent className="p-4"><div className="h-16" /></CardContent></Card>
                         </div>
                       </ProLockedOverlay>
                     </div>
@@ -679,7 +679,7 @@ export default function DashboardPage() {
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {[...Array(3)].map((_, i) => (
-                  <Card key={i}><CardContent className="p-4"><Skeleton className="h-20 w-full" /></CardContent></Card>
+                  <Card key={i} className="card-elev-static"><CardContent className="p-4"><Skeleton className="h-20 w-full" /></CardContent></Card>
                 ))}
               </div>
             )}

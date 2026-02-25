@@ -102,7 +102,7 @@ export default function Landing() {
         <section className="max-w-5xl mx-auto px-4 sm:px-6 pt-10 sm:pt-20 pb-10 sm:pb-20">
           <div className="flex flex-col lg:flex-row items-start gap-8 lg:gap-16">
             <div className="flex-1 max-w-md lg:max-w-lg lg:pt-4">
-              <p className="text-[11px] font-semibold text-muted-foreground tracking-[0.2em] uppercase mb-8" data-testid="text-hero-label">
+              <p className="text-[10px] font-semibold text-muted-foreground tracking-[0.2em] uppercase mb-8" data-testid="text-hero-label">
                 Career intelligence for legal professionals
               </p>
 
@@ -160,7 +160,7 @@ export default function Landing() {
                     <div className="relative flex items-center justify-center shrink-0">
                       <svg className="w-[72px] h-[72px] -rotate-90" viewBox="0 0 100 100">
                         <circle cx="50" cy="50" r="42" fill="none" stroke="hsl(var(--muted))" strokeWidth="6" />
-                        <circle cx="50" cy="50" r="42" fill="none" stroke="#f59e0b" strokeWidth="6" strokeLinecap="round"
+                        <circle cx="50" cy="50" r="42" fill="none" stroke="hsl(var(--status-warning))" strokeWidth="6" strokeLinecap="round"
                           strokeDasharray={`${2 * Math.PI * 42}`}
                           strokeDashoffset={`${2 * Math.PI * 42 - (58 / 100) * 2 * Math.PI * 42}`}
                         />
@@ -321,7 +321,7 @@ export default function Landing() {
             <div className="max-w-5xl mx-auto px-4 sm:px-6 py-14 sm:py-24">
               <div className="flex flex-col sm:flex-row items-center gap-8 sm:gap-12">
                 <div className="flex-1 text-center sm:text-left">
-                  <p className="text-[11px] font-semibold text-muted-foreground tracking-[0.2em] uppercase mb-3">
+                  <p className="text-[10px] font-semibold text-muted-foreground tracking-[0.2em] uppercase mb-3">
                     Global coverage
                   </p>
                   <h2

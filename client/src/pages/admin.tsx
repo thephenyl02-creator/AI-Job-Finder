@@ -30,8 +30,8 @@ const ADMIN_HL_PATTERNS: { pattern: RegExp; cls: string }[] = [
   { pattern: /\b(?:Bachelor'?s?|Master'?s?|MBA|Ph\.?D\.?|Doctorate|B\.?S\.?|B\.?A\.?|M\.?S\.?|M\.?A\.?)\b(?:\s+(?:degree|in))?\b/gi, cls: 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300' },
   { pattern: /\b(?:Python|JavaScript|TypeScript|SQL|React|Node\.?js|AWS|Azure|Salesforce|Relativity|Everlaw|DISCO|NetDocuments|iManage|Clio|Luminance|Kira|LexisNexis|Westlaw|Docker|Jira|Tableau|Power BI|Excel|Agile)\b/gi, cls: 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300' },
   { pattern: /\b(?:e-?discovery|ediscovery|litigation|compliance|regulatory|GDPR|CCPA|privacy|intellectual property|patent|trademark|copyright|M&A|due diligence|corporate governance|contract (?:management|review|drafting)|CLM|antitrust|securities|SOX|HIPAA|AML|KYC|data protection|information governance|legal hold|privilege review|document review)\b/gi, cls: 'bg-rose-100 dark:bg-rose-900/30 text-rose-800 dark:text-rose-300' },
-  { pattern: /\$\s*\d[\d,]*(?:\.\d{2})?(?:\s*[-–]\s*\$?\s*\d[\d,]*(?:\.\d{2})?)?\s*(?:per\s+(?:hour|year|annum|month)|\/(?:hr|yr|mo)|annually|(?:K|k)\b)?/g, cls: 'bg-teal-100 dark:bg-teal-900/30 text-teal-800 dark:text-teal-300' },
-  { pattern: /\b(?:equity|stock options?|RSU|bonus|401\(?k\)?|health (?:insurance|benefits)|PTO|paid time off|parental leave|remote work|work[- ]from[- ]home|flexible (?:hours|schedule|work))\b/gi, cls: 'bg-teal-100 dark:bg-teal-900/30 text-teal-800 dark:text-teal-300' },
+  { pattern: /\$\s*\d[\d,]*(?:\.\d{2})?(?:\s*[-–]\s*\$?\s*\d[\d,]*(?:\.\d{2})?)?\s*(?:per\s+(?:hour|year|annum|month)|\/(?:hr|yr|mo)|annually|(?:K|k)\b)?/g, cls: 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300' },
+  { pattern: /\b(?:equity|stock options?|RSU|bonus|401\(?k\)?|health (?:insurance|benefits)|PTO|paid time off|parental leave|remote work|work[- ]from[- ]home|flexible (?:hours|schedule|work))\b/gi, cls: 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300' },
   { pattern: /\b(?:leadership|communication|collaboration|teamwork|problem[- ]solving|critical thinking|analytical|strategic (?:thinking|planning)|stakeholder management|cross[- ]functional|mentoring|negotiation|presentation|interpersonal|relationship[- ]building|project management|decision[- ]making)\b/gi, cls: 'bg-sky-100 dark:bg-sky-900/30 text-sky-800 dark:text-sky-300' },
 ];
 
@@ -247,7 +247,7 @@ function PipelineStatsCard() {
     { label: "Raw", count: stats.raw, color: "bg-amber-500", desc: "Awaiting enrichment" },
     { label: "Enriching", count: stats.enriching, color: "bg-blue-500", desc: "Being processed" },
     { label: "Live", count: stats.published, color: "bg-emerald-500", desc: "Published + all flags set" },
-    { label: "Ready", count: stats.ready, color: "bg-teal-500", desc: "Passed gate, awaiting publish" },
+    { label: "Ready", count: stats.ready, color: "bg-emerald-500", desc: "Passed gate, awaiting publish" },
     { label: "Rejected", count: stats.rejected, color: "bg-red-500", desc: "Failed quality gate" },
   ];
 
@@ -2068,7 +2068,7 @@ export default function AdminPage() {
                                     <>
                                       <div className="flex items-center gap-2 mb-2 text-[10px] text-muted-foreground">
                                         <span className="font-medium uppercase tracking-wider">User View Preview</span>
-                                        <Badge variant="outline" className="text-[9px] gap-0.5">
+                                        <Badge variant="outline" className="text-[10px] gap-0.5">
                                           <Sparkles className="h-2.5 w-2.5" />
                                           Structured
                                         </Badge>
@@ -2097,7 +2097,7 @@ export default function AdminPage() {
                                     <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-sm bg-blue-200 dark:bg-blue-800" />Edu</span>
                                     <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-sm bg-emerald-200 dark:bg-emerald-800" />Tools</span>
                                     <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-sm bg-rose-200 dark:bg-rose-800" />Legal</span>
-                                    <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-sm bg-teal-200 dark:bg-teal-800" />Comp</span>
+                                    <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-sm bg-emerald-200 dark:bg-emerald-800" />Comp</span>
                                     <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-sm bg-sky-200 dark:bg-sky-800" />Skills</span>
                                   </div>
                                   {job.aiSummary && (

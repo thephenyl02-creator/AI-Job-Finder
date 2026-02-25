@@ -36,7 +36,7 @@ const EVENT_TYPE_STYLES: Record<string, string> = {
   webinar: "bg-violet-500/10 text-violet-700 dark:bg-violet-500/20 dark:text-violet-400",
   workshop: "bg-amber-500/10 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400",
   cle: "bg-rose-500/10 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400",
-  networking: "bg-cyan-500/10 text-cyan-700 dark:bg-cyan-500/20 dark:text-cyan-400",
+  networking: "bg-blue-500/10 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400",
   hackathon: "bg-pink-500/10 text-pink-700 dark:bg-pink-500/20 dark:text-pink-400",
   panel: "bg-indigo-500/10 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-400",
 };

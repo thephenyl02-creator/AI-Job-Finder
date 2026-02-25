@@ -1571,7 +1571,7 @@ export default function Jobs() {
                           <div className="flex gap-3 opacity-[0.08] select-none pointer-events-none blur-[2px]" aria-hidden="true">
                             <div className="flex flex-col items-center justify-center rounded-md border px-2 py-1.5 shrink-0 bg-muted/50 border-border/60">
                               <span className="text-lg font-bold leading-none text-muted-foreground">--</span>
-                              <span className="text-[9px] text-muted-foreground mt-0.5">match</span>
+                              <span className="text-[10px] text-muted-foreground mt-0.5">match</span>
                             </div>
                             <div className="min-w-0 flex-1">
                               <div className="h-4 w-40 bg-muted rounded mb-1.5" />
@@ -1643,7 +1643,7 @@ export default function Jobs() {
                           </p>
                           <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
                             {match.location && (
-                              <span className="text-[11px] text-muted-foreground flex items-center gap-0.5">
+                              <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
                                 <MapPin className="h-3 w-3" />
                                 {match.location}
                               </span>
@@ -1657,7 +1657,7 @@ export default function Jobs() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-auto py-0.5 px-1.5 text-[11px] text-muted-foreground"
+                              className="h-auto py-0.5 px-1.5 text-[10px] text-muted-foreground"
                               data-testid={`link-improve-resume-${match.jobId}`}
                               onClick={(e: any) => {
                                 e.stopPropagation();
@@ -1987,7 +1987,7 @@ function CareerGearPopover({
       {resumeChanged && (
         <div className="flex items-center gap-2 mb-3 p-2 rounded-md bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/50" data-testid="resume-changed-banner">
           <AlertCircle className="h-3 w-3 text-amber-600 shrink-0" />
-          <p className="text-[11px] text-amber-700 dark:text-amber-400">Resume changed — refresh for updated insights</p>
+          <p className="text-[10px] text-amber-700 dark:text-amber-400">Resume changed — refresh for updated insights</p>
         </div>
       )}
 
@@ -1995,7 +1995,7 @@ function CareerGearPopover({
         <div className="mb-4" data-testid="section-strengths-gaps">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <p className="text-[11px] text-muted-foreground mb-2 font-medium uppercase tracking-wider flex items-center gap-1">
+              <p className="text-[10px] text-muted-foreground mb-2 font-medium uppercase tracking-wider flex items-center gap-1">
                 <TrendingUp className="h-3 w-3 text-emerald-500" />
                 Strengths
               </p>
@@ -2016,7 +2016,7 @@ function CareerGearPopover({
               </div>
             </div>
             <div>
-              <p className="text-[11px] text-muted-foreground mb-2 font-medium uppercase tracking-wider flex items-center gap-1">
+              <p className="text-[10px] text-muted-foreground mb-2 font-medium uppercase tracking-wider flex items-center gap-1">
                 <AlertCircle className="h-3 w-3 text-slate-400" />
                 Gaps
               </p>
@@ -2041,7 +2041,7 @@ function CareerGearPopover({
       )}
 
       <div className="border-t border-foreground/10 pt-3 mt-1">
-        <p className="text-[11px] text-muted-foreground mb-2 font-medium uppercase tracking-wider">Career paths — click to filter jobs</p>
+        <p className="text-[10px] text-muted-foreground mb-2 font-medium uppercase tracking-wider">Career paths — click to filter jobs</p>
         <div className="space-y-2">
           {result.recommendedPaths.map((path, i) => {
             const isLocked = i > 0 && !isPro;

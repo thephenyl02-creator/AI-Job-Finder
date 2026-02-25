@@ -358,7 +358,7 @@ function ProfileCard({ strengths, gaps }: { strengths: StrengthItem[]; gaps: Gap
       <div className="space-y-3">
         {strengths.length > 0 && (
           <div>
-            <p className="text-[11px] text-muted-foreground mb-1.5 flex items-center gap-1">
+            <p className="text-[10px] text-muted-foreground mb-1.5 flex items-center gap-1">
               <TrendingUp className="h-3 w-3 text-emerald-500" />
               Strengths
             </p>
@@ -381,7 +381,7 @@ function ProfileCard({ strengths, gaps }: { strengths: StrengthItem[]; gaps: Gap
         )}
         {gaps.length > 0 && (
           <div>
-            <p className="text-[11px] text-muted-foreground mb-1.5 flex items-center gap-1">
+            <p className="text-[10px] text-muted-foreground mb-1.5 flex items-center gap-1">
               <AlertCircle className="h-3 w-3 text-slate-400" />
               Gaps to close
             </p>

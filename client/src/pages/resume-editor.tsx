@@ -280,14 +280,14 @@ function RequirementsPanel({ requirements, isOpen, onToggle }: { requirements: R
 
       <div className="flex-1 overflow-y-auto p-4 space-y-5">
         <div className="p-2.5 rounded-md bg-muted/50 border border-border/50" data-testid="requirements-info">
-          <p className="text-[11px] text-muted-foreground leading-relaxed">
+          <p className="text-[10px] text-muted-foreground leading-relaxed">
             <Info className="w-3 h-3 inline mr-1 text-primary/60" />
             These are the job's key requirements. Green means your resume covers it, amber means partial coverage, and grey means a gap you could address.
           </p>
         </div>
         {mustHaves.length > 0 && (
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-red-500/80 mb-2 flex items-center gap-1.5">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-red-500/80 mb-2 flex items-center gap-1.5">
               <Shield className="w-3 h-3" /> Must Have
             </p>
             <div className="space-y-2">
@@ -305,7 +305,7 @@ function RequirementsPanel({ requirements, isOpen, onToggle }: { requirements: R
 
         {niceToHaves.length > 0 && (
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5">
               <Star className="w-3 h-3" /> Nice to Have
             </p>
             <div className="space-y-2">
@@ -323,7 +323,7 @@ function RequirementsPanel({ requirements, isOpen, onToggle }: { requirements: R
 
         {tools.length > 0 && (
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-blue-500/80 mb-2 flex items-center gap-1.5">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-blue-500/80 mb-2 flex items-center gap-1.5">
               <Wrench className="w-3 h-3" /> Tools & Skills
             </p>
             <div className="space-y-2">
@@ -1387,7 +1387,7 @@ function ExperienceBlock({
       {exp.bullets.length === 0 && (
         <div className="ml-4 py-2" data-testid={`text-no-bullets-${exp.id}`}>
           <p className="text-xs text-muted-foreground">No bullet points yet</p>
-          <p className="text-[11px] text-muted-foreground/60 mt-0.5">Add accomplishments with measurable results to showcase your impact</p>
+          <p className="text-[10px] text-muted-foreground/60 mt-0.5">Add accomplishments with measurable results to showcase your impact</p>
         </div>
       )}
       <Button variant="ghost" size="sm" className="mt-2 text-xs h-6" onClick={() => onAddBullet(exp.id)} data-testid={`button-add-bullet-${exp.id}`}>

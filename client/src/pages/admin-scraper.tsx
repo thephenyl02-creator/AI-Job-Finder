@@ -323,7 +323,7 @@ export default function AdminScraper() {
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <div className="flex items-center justify-center w-6 h-6 rounded-full bg-teal-100 dark:bg-teal-900/30 text-teal-600 text-xs font-bold">6</div>
+                <div className="flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 text-xs font-bold">6</div>
                 <div>
                   <p className="text-sm font-medium">Link Validation</p>
                   <p className="text-xs text-muted-foreground">Check apply links still work</p>

@@ -137,7 +137,7 @@ const HIGHLIGHT_CATEGORIES: Record<HighlightCategory, { label: string; color: st
   education: { label: 'Education', color: 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300', icon: GraduationCap },
   tool: { label: 'Tools & Tech', color: 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300', icon: Hash },
   legal: { label: 'Legal Domains', color: 'bg-rose-100 dark:bg-rose-900/30 text-rose-800 dark:text-rose-300', icon: Scale },
-  compensation: { label: 'Compensation', color: 'bg-teal-100 dark:bg-teal-900/30 text-teal-800 dark:text-teal-300', icon: DollarSign },
+  compensation: { label: 'Compensation', color: 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300', icon: DollarSign },
   softskill: { label: 'Soft Skills', color: 'bg-sky-100 dark:bg-sky-900/30 text-sky-800 dark:text-sky-300', icon: Handshake },
 };
 
@@ -957,7 +957,7 @@ export default function JobDetail() {
               <Compass className="h-3 w-3 mr-1" />
               On your recommended path
             </Badge>
-            <span className="text-[11px] text-muted-foreground">{careerMatch.why}</span>
+            <span className="text-[10px] text-muted-foreground">{careerMatch.why}</span>
           </div>
         )}
 
@@ -976,7 +976,7 @@ export default function JobDetail() {
                 />
                 {careerIntel?.cached && careerIntel.data && careerIntel.data.gaps.length > 0 && (
                   <div className="mt-4 pt-3 border-t border-foreground/5" data-testid="career-gap-suggestions">
-                    <p className="text-[11px] text-muted-foreground font-medium mb-2">Based on your career analysis</p>
+                    <p className="text-[10px] text-muted-foreground font-medium mb-2">Based on your career analysis</p>
                     <div className="space-y-1.5">
                       {careerIntel.data.gaps.slice(0, isPro ? 3 : 1).map((gap, i) => (
                         <div key={i} className="flex items-start gap-2 text-xs" data-testid={`gap-suggestion-${i}`}>

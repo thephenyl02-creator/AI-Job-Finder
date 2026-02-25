@@ -714,11 +714,11 @@ function OptimizationResultsPanel({
               <div key={i} className="space-y-1.5 p-3 rounded-md border border-border/40 bg-muted/20">
                 <div className="flex items-start gap-2">
                   <span className="text-[10px] text-red-500 dark:text-red-400 line-through shrink-0 mt-0.5">Before:</span>
-                  <p className="text-[11px] text-muted-foreground line-through">{rewrite.original}</p>
+                  <p className="text-[10px] text-muted-foreground line-through">{rewrite.original}</p>
                 </div>
                 <div className="flex items-start gap-2">
                   <span className="text-[10px] text-green-600 dark:text-green-400 shrink-0 mt-0.5">After:</span>
-                  <p className="text-[11px] text-foreground">{rewrite.optimized}</p>
+                  <p className="text-[10px] text-foreground">{rewrite.optimized}</p>
                 </div>
                 <Button
                   variant="ghost"
@@ -836,7 +836,7 @@ function ATSPanel({
       <div className="text-center">
         <ATSScoreRing score={atsScore} size={110} />
         <p className="text-xs text-muted-foreground mt-2">ATS Readiness Score</p>
-        {verdict && <p className="text-[11px] text-foreground mt-1">{verdict}</p>}
+        {verdict && <p className="text-[10px] text-foreground mt-1">{verdict}</p>}
       </div>
 
       {jobFitScore != null && (
@@ -848,7 +848,7 @@ function ATSPanel({
               <span className="text-sm font-medium text-foreground">{jobFitScore}%</span>
               <Progress value={jobFitScore} className="h-2 flex-1" />
             </div>
-            {jobFitVerdict && <p className="text-[11px] text-muted-foreground">{jobFitVerdict}</p>}
+            {jobFitVerdict && <p className="text-[10px] text-muted-foreground">{jobFitVerdict}</p>}
           </div>
         </>
       )}
@@ -907,7 +907,7 @@ function ATSPanel({
                 <span className="text-[10px] text-green-600 dark:text-green-400 font-medium">Matched</span>
                 <div className="flex flex-wrap gap-1">
                   {matchedJobKeywords.map((kw: string, i: number) => (
-                    <Badge key={i} variant="secondary" className="text-[9px] bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300">{kw}</Badge>
+                    <Badge key={i} variant="secondary" className="text-[10px] bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300">{kw}</Badge>
                   ))}
                 </div>
               </div>
@@ -917,7 +917,7 @@ function ATSPanel({
                 <span className="text-[10px] text-red-600 dark:text-red-400 font-medium">Missing</span>
                 <div className="flex flex-wrap gap-1">
                   {missingJobKeywords.map((kw: string, i: number) => (
-                    <Badge key={i} variant="outline" className="text-[9px] border-red-200 dark:border-red-800 text-red-600 dark:text-red-400">{kw}</Badge>
+                    <Badge key={i} variant="outline" className="text-[10px] border-red-200 dark:border-red-800 text-red-600 dark:text-red-400">{kw}</Badge>
                   ))}
                 </div>
               </div>
@@ -936,7 +936,7 @@ function ATSPanel({
                 <span className="text-[10px] text-green-600 dark:text-green-400 font-medium">Strong</span>
                 <div className="flex flex-wrap gap-1">
                   {keywordAnalysis.strong.slice(0, 8).map((kw: string, i: number) => (
-                    <Badge key={i} variant="secondary" className="text-[9px]">{kw}</Badge>
+                    <Badge key={i} variant="secondary" className="text-[10px]">{kw}</Badge>
                   ))}
                 </div>
               </div>
@@ -946,7 +946,7 @@ function ATSPanel({
                 <span className="text-[10px] text-red-600 dark:text-red-400 font-medium">Consider Adding</span>
                 <div className="flex flex-wrap gap-1">
                   {keywordAnalysis.missing.slice(0, 8).map((kw: string, i: number) => (
-                    <Badge key={i} variant="outline" className="text-[9px]">{kw}</Badge>
+                    <Badge key={i} variant="outline" className="text-[10px]">{kw}</Badge>
                   ))}
                 </div>
               </div>
