@@ -54,7 +54,7 @@ Legal Tech Careers is a career intelligence platform designed for legal professi
 - **Resume Management & Editing**: Allows users to upload, parse, manage multiple resumes, and use an AI-powered editor for job tailoring and real-time ATS scoring.
 - **Job Matching**: AI-driven comparison of resumes against job postings, providing match scores and gap analysis.
 - **Career Guidance**: Includes a market insights dashboard, conversational assistant, and personalized path recommendations.
-- **Career Diagnostic Engine**: Provides skill clustering, readiness scoring, transition planning, and career path visualizations. It offers an anonymous preview mode and percentile benchmarking.
+- **Career Diagnostic Engine**: Provides skill clustering, readiness scoring, transition planning, and career path visualizations. It offers an anonymous preview mode and percentile benchmarking. Uses a Bloomberg-inspired dark terminal aesthetic (`.diag-page`, `.diag-panel`, `.diag-metric`, `.diag-label` CSS classes) with dedicated CSS tokens (`--diag-bg`, `--diag-panel`, `--diag-text`, etc.) for the always-dark data-intelligence look.
 - **Career Fit Quiz**: A lightweight alternative to resume upload, recommending career paths based on a 4-question quiz, funneling users towards the full diagnostic.
 - **Per-Job Fit Scoring**: AI-computed fit scores (skills/experience/domain/seniority breakdown) displayed on job cards.
 - **Career Intelligence Header**: On job pages, displays readiness score and top path or prompts diagnostic/resume upload.
