@@ -139,7 +139,7 @@ export function NextStepCard({
             <h3 className="text-sm font-semibold text-foreground" data-testid="heading-next-step">Your Next Step</h3>
           </div>
           <p className="text-sm text-muted-foreground mb-1" data-testid="text-next-step-message">
-            Tailor your resume for this role with AI-powered suggestions.
+            Tailor your resume for this role with smart suggestions.
           </p>
           <p className="text-xs text-muted-foreground/70 mb-3">
             Edit inline, review suggestions, and export a polished resume.

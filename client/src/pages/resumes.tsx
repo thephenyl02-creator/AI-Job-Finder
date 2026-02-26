@@ -1234,7 +1234,7 @@ export default function Resumes() {
                   <div className="flex-1 min-w-0">
                     <h3 className="text-sm font-semibold text-foreground">Resume uploaded</h3>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      Go back to the job and tailor your resume with AI-powered suggestions.
+                      Go back to the job and tailor your resume with smart suggestions.
                     </p>
                   </div>
                   <Button

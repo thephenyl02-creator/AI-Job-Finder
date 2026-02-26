@@ -1318,8 +1318,8 @@ export default function DiagnosticPage() {
       const ogTitle = document.querySelector('meta[property="og:title"]');
       const ogDesc = document.querySelector('meta[property="og:description"]');
       const ogUrl = document.querySelector('meta[property="og:url"]');
-      if (ogTitle) ogTitle.setAttribute("content", "Legal Tech Careers - Jobs for Legal Professionals in Technology");
-      if (ogDesc) ogDesc.setAttribute("content", "The career platform for lawyers and legal professionals transitioning into legal technology. AI-powered job matching, resume analysis, and career guidance.");
+      if (ogTitle) ogTitle.setAttribute("content", "Legal Tech Careers — Career Intelligence for Legal Professionals");
+      if (ogDesc) ogDesc.setAttribute("content", "Discover where you fit in legal tech. Get your career readiness score, explore transition paths, and find roles matched to your skills across 650+ positions at top companies.");
       if (ogUrl) ogUrl.remove();
     };
   }, [report]);

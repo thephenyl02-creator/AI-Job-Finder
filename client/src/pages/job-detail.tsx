@@ -379,7 +379,7 @@ function useJobSEO(job: Job | undefined) {
     scriptEl.textContent = JSON.stringify(schema);
 
     return () => {
-      document.title = "Legal Tech Careers - Jobs for Legal Professionals in Technology";
+      document.title = "Legal Tech Careers — Career Intelligence for Legal Professionals";
       const schemaEl = document.getElementById("job-schema-ld");
       if (schemaEl) schemaEl.remove();
     };
