@@ -40,6 +40,14 @@ Legal Tech Careers is a career intelligence platform designed for legal professi
 - **Model**: Freemium SaaS with "Free" and "Pro" tiers, offering enhanced AI features, multi-resume management, job alerts, and market insights for Pro users.
 - **Management**: Stripe Checkout, Billing Portal, and webhooks.
 
+### Role Track Classification
+- **System**: Three role tracks (Lawyer-Led / Technical / Ecosystem) classify every job by relevance to lawyers.
+- **Mapping**: 13 job categories map to 3 tracks. Lawyer-Led (Legal Ops, Compliance, Contracts, Product Mgmt, In-House, Consulting, Knowledge Mgmt, Policy, IP), Technical (Engineering, AI & Analytics, Litigation), Ecosystem (Sales & Client Solutions).
+- **Constants**: `ROLE_TRACKS`, `CATEGORY_TO_TRACK`, `getTrackForCategory()` in `shared/schema.ts`.
+- **Pipeline**: Enrichment worker auto-assigns `careerTrack` after categorization. Backfill runs on startup for any jobs with NULL `career_track`.
+- **UI**: Category badges are color-coded by track (navy = Lawyer-Led, blue = Technical, teal = Ecosystem). Track filter pills on jobs page (desktop pills + mobile dropdown).
+- **API**: `/api/jobs?track=Lawyer-Led` filters by track.
+
 ### Job Curation Pipeline
 - **Process**: A two-layer pipeline (raw ingestion → AI enrichment → trust gate → published inventory) ensures job quality, deduplication, and link validation.
 - **Scrapers**: Utilizes various APIs (Greenhouse, Lever, Ashby, Workday CXS) and generic HTML scrapers for broad job coverage across global regions.

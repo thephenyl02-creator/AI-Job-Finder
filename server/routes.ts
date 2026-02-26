@@ -62,7 +62,7 @@ import { generateMarketIntelligencePDF } from "./lib/market-intelligence-pdf";
 import { db } from "./db";
 import { jobs, users, resumes, resumeEditorVersions } from "@shared/schema";
 import { eq, and, sql, desc, count, or } from "drizzle-orm";
-import { JOB_TAXONOMY } from "@shared/schema";
+import { JOB_TAXONOMY, CATEGORY_TO_TRACK, getTrackForCategory } from "@shared/schema";
 import {
   startScheduler,
   stopScheduler,
@@ -164,6 +164,29 @@ export async function registerRoutes(
       console.error("Event deactivation error:", err);
     }
   }, 6 * 60 * 60 * 1000);
+
+  (async () => {
+    try {
+      const result = await db.execute(sql`
+        UPDATE jobs SET career_track = CASE role_category
+          ${sql.join(
+            Object.entries(CATEGORY_TO_TRACK).map(([cat, track]) =>
+              sql`WHEN ${cat} THEN ${track}`
+            ),
+            sql` `
+          )}
+          ELSE 'Lawyer-Led'
+        END
+        WHERE career_track IS NULL AND role_category IS NOT NULL AND is_published = true
+      `);
+      const updated = (result as any).rowCount || 0;
+      if (updated > 0) {
+        console.log(`Track backfill: assigned career_track to ${updated} published jobs`);
+      }
+    } catch (err) {
+      console.error("Track backfill error:", err);
+    }
+  })();
 
   // Background re-categorization of jobs with invalid/old category names
   (async () => {
@@ -459,7 +482,7 @@ export async function registerRoutes(
     try {
       const page = Math.max(1, parseInt(String(req.query.page || '1')));
       const limit = Math.min(100, Math.max(1, parseInt(String(req.query.limit || '20'))));
-      const filters: { category?: string; location?: string; locationType?: string; search?: string; seniority?: string; sort?: string; region?: string; country?: string; workMode?: string } = {};
+      const filters: { category?: string; location?: string; locationType?: string; search?: string; seniority?: string; sort?: string; region?: string; country?: string; workMode?: string; track?: string } = {};
       if (req.query.category) filters.category = String(req.query.category);
       if (req.query.location) filters.location = String(req.query.location);
       if (req.query.locationType) filters.locationType = String(req.query.locationType);
@@ -468,6 +491,7 @@ export async function registerRoutes(
       if (req.query.region) filters.region = String(req.query.region);
       if (req.query.country) filters.country = String(req.query.country);
       if (req.query.workMode) filters.workMode = String(req.query.workMode);
+      if (req.query.track) filters.track = String(req.query.track);
       if (req.query.sort && ['newest', 'salary', 'company'].includes(String(req.query.sort))) {
         filters.sort = String(req.query.sort);
       }

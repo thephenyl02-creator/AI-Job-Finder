@@ -345,6 +345,53 @@ export const JOB_TAXONOMY = {
 
 export type JobCategoryName = keyof typeof JOB_TAXONOMY;
 
+export const ROLE_TRACKS = {
+  "Lawyer-Led": {
+    label: "Lawyer-Led",
+    shortLabel: "Lawyer-Led",
+    description: "Roles where legal background is a key differentiator",
+    colorClass: "bg-primary/10 text-primary border-primary/30",
+    badgeVariant: "default" as const,
+  },
+  "Technical": {
+    label: "Technical",
+    shortLabel: "Technical",
+    description: "Engineering and technical roles at legal companies",
+    colorClass: "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/30",
+    badgeVariant: "secondary" as const,
+  },
+  "Ecosystem": {
+    label: "Ecosystem",
+    shortLabel: "Ecosystem",
+    description: "Business roles in the legal tech ecosystem",
+    colorClass: "bg-teal-500/10 text-teal-700 dark:text-teal-400 border-teal-500/30",
+    badgeVariant: "outline" as const,
+  },
+} as const;
+
+export type RoleTrack = keyof typeof ROLE_TRACKS;
+
+export const CATEGORY_TO_TRACK: Record<string, RoleTrack> = {
+  "Legal Operations": "Lawyer-Led",
+  "Compliance & Privacy": "Lawyer-Led",
+  "Contract Management": "Lawyer-Led",
+  "Legal Product Management": "Lawyer-Led",
+  "In-House Counsel": "Lawyer-Led",
+  "Legal Consulting & Advisory": "Lawyer-Led",
+  "Knowledge Management": "Lawyer-Led",
+  "Policy & Access to Justice": "Lawyer-Led",
+  "Intellectual Property & Innovation": "Lawyer-Led",
+  "Legal Engineering": "Technical",
+  "Legal AI & Analytics": "Technical",
+  "Litigation & eDiscovery": "Technical",
+  "Legal Sales & Client Solutions": "Ecosystem",
+};
+
+export function getTrackForCategory(category: string | null | undefined): RoleTrack {
+  if (!category) return "Lawyer-Led";
+  return CATEGORY_TO_TRACK[category] || "Lawyer-Led";
+}
+
 export const jobSubmissions = pgTable("job_submissions", {
   id: serial("id").primaryKey(),
   title: varchar("title", { length: 255 }).notNull(),

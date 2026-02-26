@@ -8,7 +8,7 @@ import { LAW_FIRMS_AND_COMPANIES } from '../lib/law-firms-list';
 import { normalizeLocation } from '../lib/location-normalizer';
 import { clearMarketIntelligenceCache } from '../lib/mi-cache';
 import type { Job } from '@shared/schema';
-import { jobs } from '@shared/schema';
+import { jobs, getTrackForCategory } from '@shared/schema';
 import { db } from '../db';
 import { eq, and, sql } from 'drizzle-orm';
 import axios from 'axios';
@@ -797,6 +797,7 @@ async function enrichJob(job: Job): Promise<void> {
       catResult = await categorizeJob(job.title, job.description, job.company);
       enrichedData.roleCategory = catResult.category;
       enrichedData.roleSubcategory = catResult.subcategory;
+      enrichedData.careerTrack = getTrackForCategory(catResult.category);
       enrichedData.keySkills = catResult.keySkills;
       enrichedData.aiSummary = catResult.aiSummary;
       enrichedData.matchKeywords = catResult.matchKeywords;

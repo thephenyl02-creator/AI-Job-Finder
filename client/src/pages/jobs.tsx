@@ -8,7 +8,8 @@ import { useAuth } from "@/hooks/use-auth";
 import { useActivityTracker } from "@/hooks/use-activity-tracker";
 import { apiRequest } from "@/lib/queryClient";
 import type { Job, JobWithScore } from "@shared/schema";
-import { JOB_TAXONOMY } from "@shared/schema";
+import { JOB_TAXONOMY, ROLE_TRACKS, CATEGORY_TO_TRACK, getTrackForCategory } from "@shared/schema";
+import type { RoleTrack } from "@shared/schema";
 import { cleanStructuredText } from "@/lib/structured-description";
 import { getCountryDisplayName } from "@/lib/country-names";
 import { JobLocation } from "@/components/job-location";
@@ -130,6 +131,7 @@ export default function Jobs() {
   const [selectedCategory, setSelectedCategory] = useState<string>(categoryParam || "all");
   const [selectedLevel, setSelectedLevel] = useState<string>(levelParam && ["student", "entry", "mid", "senior"].includes(levelParam) ? levelParam : "all");
   const [selectedLocation, setSelectedLocation] = useState<string>("all");
+  const [selectedTrack, setSelectedTrack] = useState<string>("all");
   const [selectedRegion, setSelectedRegion] = useState<string>("all");
   const [selectedCountry, setSelectedCountry] = useState<string>(countryParam || "all");
   const [filterText, setFilterText] = useState("");
@@ -612,7 +614,7 @@ export default function Jobs() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedCategory, selectedLevel, selectedLocation, selectedRegion, selectedCountry, debouncedFilterText]);
+  }, [selectedCategory, selectedLevel, selectedLocation, selectedRegion, selectedCountry, selectedTrack, debouncedFilterText]);
 
   useEffect(() => {
     const params = new URLSearchParams(searchString);
@@ -650,10 +652,11 @@ export default function Jobs() {
     }
     if (selectedRegion !== "all") params.set("region", selectedRegion);
     if (selectedCountry !== "all") params.set("country", selectedCountry);
+    if (selectedTrack !== "all") params.set("track", selectedTrack);
     if (debouncedFilterText) params.set("search", debouncedFilterText);
     if (sortBy !== "newest") params.set("sort", sortBy);
     return params.toString();
-  }, [currentPage, selectedCategory, selectedLevel, selectedLocation, selectedRegion, selectedCountry, debouncedFilterText, sortBy]);
+  }, [currentPage, selectedCategory, selectedLevel, selectedLocation, selectedRegion, selectedCountry, selectedTrack, debouncedFilterText, sortBy]);
 
   const { data: jobsResponse, isLoading: jobsLoading } = useQuery<{ jobs: Job[]; total: number; page: number; totalPages: number }>({
     queryKey: ["/api/jobs", jobsQueryParams],
@@ -1197,6 +1200,25 @@ export default function Jobs() {
                 </Button>
               ))}
             </div>
+            <div className="hidden sm:flex items-center gap-1 border-l pl-2 ml-1" data-testid="track-filter-pills">
+              {[
+                { value: "all", label: "All Tracks" },
+                { value: "Lawyer-Led", label: "Lawyer-Led" },
+                { value: "Technical", label: "Technical" },
+                { value: "Ecosystem", label: "Ecosystem" },
+              ].map((t) => (
+                <Button
+                  key={t.value}
+                  variant={selectedTrack === t.value ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => { setSelectedTrack(t.value); setCurrentPage(1); track({ eventType: "filter_change", metadata: { filterType: "track", value: t.value } }); }}
+                  className="text-xs"
+                  data-testid={`button-track-${t.value.toLowerCase().replace(/\s+/g, '-')}`}
+                >
+                  {t.label}
+                </Button>
+              ))}
+            </div>
           </div>
           <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0 sm:overflow-visible sm:flex-wrap scrollbar-none">
             <Select value={selectedCategory} onValueChange={(val) => { setSelectedCategory(val); setCurrentPage(1); track({ eventType: "filter_change", metadata: { filterType: "category", value: val } }); }}>
@@ -1269,11 +1291,24 @@ export default function Jobs() {
                 <SelectItem value="company" data-testid="select-sort-company">Company A-Z</SelectItem>
               </SelectContent>
             </Select>
-            {(selectedCategory !== "all" || selectedLevel !== "all" || selectedLocation !== "all" || selectedRegion !== "all" || filterText) && (
+            <div className="sm:hidden shrink-0">
+              <Select value={selectedTrack} onValueChange={(val) => { setSelectedTrack(val); setCurrentPage(1); track({ eventType: "filter_change", metadata: { filterType: "track", value: val } }); }}>
+                <SelectTrigger className="w-auto min-w-[90px]" data-testid="select-track-mobile">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all" data-testid="select-track-mobile-all">All Tracks</SelectItem>
+                  <SelectItem value="Lawyer-Led" data-testid="select-track-mobile-lawyer-led">Lawyer-Led</SelectItem>
+                  <SelectItem value="Technical" data-testid="select-track-mobile-technical">Technical</SelectItem>
+                  <SelectItem value="Ecosystem" data-testid="select-track-mobile-ecosystem">Ecosystem</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {(selectedCategory !== "all" || selectedLevel !== "all" || selectedLocation !== "all" || selectedRegion !== "all" || selectedTrack !== "all" || filterText) && (
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => { setSelectedCategory("all"); setSelectedLevel("all"); setSelectedLocation("all"); setSelectedRegion("all"); setFilterText(""); }}
+                onClick={() => { setSelectedCategory("all"); setSelectedLevel("all"); setSelectedLocation("all"); setSelectedRegion("all"); setSelectedTrack("all"); setFilterText(""); }}
                 className="text-xs text-muted-foreground gap-1 shrink-0"
                 data-testid="button-clear-all-filters"
               >
@@ -1404,13 +1439,13 @@ export default function Jobs() {
                     : "Try adjusting your filters or search for something specific."}
                 </p>
                 <div className="flex flex-wrap gap-2 justify-center mb-4">
-                  {(filterText || selectedCategory !== "all" || selectedLevel !== "all" || selectedLocation !== "all" || selectedRegion !== "all") && (
+                  {(filterText || selectedCategory !== "all" || selectedLevel !== "all" || selectedLocation !== "all" || selectedRegion !== "all" || selectedTrack !== "all") && (
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => { setFilterText(""); setSelectedCategory("all"); setSelectedLevel("all"); setSelectedLocation("all"); setSelectedRegion("all"); }}
+                      onClick={() => { setFilterText(""); setSelectedCategory("all"); setSelectedLevel("all"); setSelectedLocation("all"); setSelectedRegion("all"); setSelectedTrack("all"); }}
                       className="gap-1"
-                      data-testid="button-clear-all-filters"
+                      data-testid="button-clear-all-filters-empty"
                     >
                       <X className="h-3 w-3" />
                       Clear all filters
@@ -1779,11 +1814,20 @@ export default function Jobs() {
                             isRemote={job.isRemote}
                             testIdPrefix={`browse-job-${job.id}`}
                           />
-                          {taxonomy && (
-                            <Badge variant="secondary" className="text-[10px]" data-testid={`badge-category-${job.id}`}>
-                              {taxonomy.shortName}
-                            </Badge>
-                          )}
+                          {taxonomy && (() => {
+                            const trackName = getTrackForCategory(job.roleCategory);
+                            const trackMeta = ROLE_TRACKS[trackName];
+                            return (
+                              <Badge
+                                variant="outline"
+                                className={`text-[10px] border ${trackMeta.colorClass}`}
+                                title={`${trackName} track — ${trackMeta.description}`}
+                                data-testid={`badge-category-${job.id}`}
+                              >
+                                {taxonomy.shortName}
+                              </Badge>
+                            );
+                          })()}
                           {fitScores[job.id]?.fitScore != null && (
                             <Badge
                               variant="outline"

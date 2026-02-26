@@ -23,7 +23,7 @@ export interface IStorage {
   trackJobView(jobId: number): Promise<void>;
   trackApplyClick(jobId: number): Promise<void>;
   getPublishedJobs(): Promise<Job[]>;
-  getPublishedJobsPaginated(page: number, limit: number, filters?: { category?: string; location?: string; locationType?: string; search?: string; seniority?: string; sort?: string }): Promise<{ jobs: Job[]; total: number; page: number; totalPages: number }>;
+  getPublishedJobsPaginated(page: number, limit: number, filters?: { category?: string; location?: string; locationType?: string; search?: string; seniority?: string; sort?: string; track?: string }): Promise<{ jobs: Job[]; total: number; page: number; totalPages: number }>;
   getJobsForStandardization(status?: string): Promise<Job[]>;
   publishJob(id: number): Promise<Job | undefined>;
   unpublishJob(id: number): Promise<Job | undefined>;
@@ -270,7 +270,7 @@ class DatabaseStorage implements IStorage {
   async getPublishedJobsPaginated(
     page: number = 1,
     limit: number = 20,
-    filters?: { category?: string; location?: string; locationType?: string; search?: string; seniority?: string; sort?: string; region?: string; country?: string; workMode?: string }
+    filters?: { category?: string; location?: string; locationType?: string; search?: string; seniority?: string; sort?: string; region?: string; country?: string; workMode?: string; track?: string }
   ): Promise<{ jobs: Job[]; total: number; page: number; totalPages: number }> {
     const conditions: any[] = [
       eq(jobs.isActive, true),
@@ -326,6 +326,9 @@ class DatabaseStorage implements IStorage {
     if (filters?.search) {
       const term = '%' + filters.search.toLowerCase() + '%';
       conditions.push(sql`(lower(${jobs.title}) LIKE ${term} OR lower(${jobs.company}) LIKE ${term})`);
+    }
+    if (filters?.track) {
+      conditions.push(eq(jobs.careerTrack, filters.track));
     }
 
     const whereClause = and(...conditions);
