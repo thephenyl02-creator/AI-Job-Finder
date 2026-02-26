@@ -5,9 +5,9 @@ import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
 function getScoreColor(score: number): string {
-  if (score >= 70) return "hsl(var(--diag-green))";
-  if (score >= 45) return "hsl(var(--diag-amber))";
-  return "hsl(var(--diag-red))";
+  if (score >= 70) return "hsl(var(--status-success))";
+  if (score >= 45) return "hsl(var(--status-warning))";
+  return "hsl(var(--status-danger))";
 }
 
 function getScoreLabel(score: number): string {
@@ -81,25 +81,25 @@ function DiagPanel({ title, subtitle, accent = "green", children, className = ""
   };
 
   return (
-    <div className={`diag-panel border-l-2 ${accentColors[accent]} ${className}`} data-testid="chart-card">
-      <div className="px-4 pt-3 pb-1">
+    <Card className={`border border-border/50 card-elev-static border-l-2 ${accentColors[accent]} ${className}`} data-testid="chart-card">
+      <CardHeader className="px-4 pt-3 pb-1 space-y-0.5">
         <div className="flex items-center justify-between">
           <span className="diag-label">{title}</span>
           {info && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <button className="text-[hsl(var(--diag-text-dim))] hover:text-[hsl(var(--diag-text))] transition-colors">
+                <button className="text-muted-foreground hover:text-foreground transition-colors">
                   <BarChart3 className="h-3 w-3" />
                 </button>
               </TooltipTrigger>
-              <TooltipContent className="max-w-[240px] text-xs bg-[hsl(var(--diag-panel))] border-[hsl(var(--diag-border))] text-[hsl(var(--diag-text))]">{info}</TooltipContent>
+              <TooltipContent className="max-w-[240px] text-xs">{info}</TooltipContent>
             </Tooltip>
           )}
         </div>
-        {subtitle && <p className="text-xs text-[hsl(var(--diag-text-dim))] mt-0.5">{subtitle}</p>}
-      </div>
-      <div className="px-4 pb-4 pt-1">{children}</div>
-    </div>
+        {subtitle && <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>}
+      </CardHeader>
+      <CardContent className="px-4 pb-4 pt-1">{children}</CardContent>
+    </Card>
   );
 }
 
@@ -119,10 +119,10 @@ function SkillRadarChart({ clusters }: { clusters: SkillCluster[] }) {
       <div className="w-full h-[260px]" data-testid="skill-radar-chart">
         <ResponsiveContainer width="100%" height="100%">
           <RadarChart cx="50%" cy="50%" outerRadius="70%" data={data}>
-            <PolarGrid stroke="hsl(var(--diag-border))" strokeOpacity={0.6} />
+            <PolarGrid stroke="hsl(var(--border))" strokeOpacity={0.5} />
             <PolarAngleAxis
               dataKey="subject"
-              tick={{ fontSize: 10, fill: "hsl(var(--diag-text-dim))" }}
+              tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
             />
             <PolarRadiusAxis
               angle={90}
@@ -133,9 +133,9 @@ function SkillRadarChart({ clusters }: { clusters: SkillCluster[] }) {
             <Radar
               name="Your Skills"
               dataKey="score"
-              stroke="hsl(var(--diag-green))"
-              fill="hsl(var(--diag-green))"
-              fillOpacity={0.2}
+              stroke="hsl(var(--status-success))"
+              fill="hsl(var(--status-success))"
+              fillOpacity={0.15}
               strokeWidth={2}
             />
           </RadarChart>
@@ -151,20 +151,20 @@ function SkillRadarChart({ clusters }: { clusters: SkillCluster[] }) {
                 <span
                   className={`inline-flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded cursor-help border ${
                     isStrong
-                      ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
+                      ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30"
                       : isMid
-                      ? "bg-amber-500/10 text-amber-400 border-amber-500/30"
-                      : "bg-[hsl(var(--diag-panel-alt))] text-[hsl(var(--diag-text-dim))] border-[hsl(var(--diag-border-subtle))]"
+                      ? "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30"
+                      : "bg-muted text-muted-foreground border-border/50"
                   }`}
                 >
                   {c.name.replace("Legal ", "").split(" ")[0]}
                   <span className="font-bold">{c.score}</span>
                 </span>
               </TooltipTrigger>
-              <TooltipContent className="max-w-[260px] text-xs bg-[hsl(var(--diag-panel))] border-[hsl(var(--diag-border))] text-[hsl(var(--diag-text))]">
+              <TooltipContent className="max-w-[260px] text-xs">
                 <p className="font-semibold mb-1">{c.name}: {c.score}/100</p>
-                {c.evidence.length > 0 && <p className="text-emerald-400">Evidence: {c.evidence[0]}</p>}
-                {c.missingSignals.length > 0 && <p className="text-amber-400 mt-0.5">Gap: {c.missingSignals[0]}</p>}
+                {c.evidence.length > 0 && <p className="text-emerald-600 dark:text-emerald-400">Evidence: {c.evidence[0]}</p>}
+                {c.missingSignals.length > 0 && <p className="text-amber-600 dark:text-amber-400 mt-0.5">Gap: {c.missingSignals[0]}</p>}
               </TooltipContent>
             </Tooltip>
           );
@@ -182,7 +182,7 @@ function FitBreakdownChart({ breakdown }: { breakdown: DiagnosticReportData["fit
     { name: "Seniority", value: breakdown.seniorityMatch, weight: "15%" },
   ];
 
-  const colors = ["hsl(var(--diag-green))", "hsl(var(--diag-blue))", "hsl(280 55% 65%)", "hsl(var(--diag-amber))"];
+  const colors = ["hsl(var(--chart-5))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))"];
 
   return (
     <DiagPanel
@@ -195,12 +195,12 @@ function FitBreakdownChart({ breakdown }: { breakdown: DiagnosticReportData["fit
         {data.map((d, i) => (
           <div key={d.name}>
             <div className="flex items-center justify-between mb-1">
-              <span className="text-xs text-[hsl(var(--diag-text))]">{d.name}</span>
-              <span className="text-xs font-mono text-[hsl(var(--diag-text-dim))]">
-                <span className="font-bold text-[hsl(var(--diag-text))]">{d.value}</span>/100 · {d.weight}
+              <span className="text-xs text-foreground">{d.name}</span>
+              <span className="text-xs font-mono text-muted-foreground">
+                <span className="font-bold text-foreground">{d.value}</span>/100 · {d.weight}
               </span>
             </div>
-            <div className="h-2 rounded-full bg-[hsl(var(--diag-panel-alt))] overflow-hidden">
+            <div className="h-2 rounded-full bg-muted overflow-hidden">
               <div
                 className="h-full rounded-full transition-all duration-1000"
                 style={{ width: `${d.value}%`, backgroundColor: colors[i] }}
@@ -231,21 +231,21 @@ function MarketDemandChart({ demand }: { demand: DiagnosticReportData["marketDem
       <div className="flex items-center gap-4 mb-3">
         <div className="flex items-center gap-1.5">
           <div className="w-2.5 h-2.5 rounded-sm bg-emerald-500" />
-          <span className="text-[10px] text-[hsl(var(--diag-text-dim))]">You have this</span>
+          <span className="text-[10px] text-muted-foreground">You have this</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <div className="w-2.5 h-2.5 rounded-sm bg-[hsl(var(--diag-text-dim))] opacity-40" />
-          <span className="text-[10px] text-[hsl(var(--diag-text-dim))]">Gap to fill</span>
+          <div className="w-2.5 h-2.5 rounded-sm bg-muted-foreground opacity-40" />
+          <span className="text-[10px] text-muted-foreground">Gap to fill</span>
         </div>
       </div>
       <div className="w-full h-[220px]" data-testid="market-demand-chart">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} margin={{ left: 0, right: 10, top: 5, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--diag-border))" strokeOpacity={0.4} vertical={false} />
-            <XAxis dataKey="skill" tick={{ fontSize: 9, fill: "hsl(var(--diag-text-dim))" }} axisLine={false} tickLine={false} angle={-25} textAnchor="end" height={50} />
-            <YAxis tick={{ fontSize: 10, fill: "hsl(var(--diag-text-dim))" }} axisLine={false} tickLine={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.3} vertical={false} />
+            <XAxis dataKey="skill" tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} angle={-25} textAnchor="end" height={50} />
+            <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
             <RechartsTooltip
-              contentStyle={{ backgroundColor: "hsl(var(--diag-panel))", border: "1px solid hsl(var(--diag-border))", borderRadius: 6, fontSize: 12, color: "hsl(var(--diag-text))" }}
+              contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
               formatter={(value: number, _: any, entry: any) => [
                 `${value} jobs · ${entry.payload.hasIt ? "You have this" : "Gap — you're missing this"}`,
                 entry.payload.fullSkill
@@ -253,7 +253,7 @@ function MarketDemandChart({ demand }: { demand: DiagnosticReportData["marketDem
             />
             <Bar dataKey="count" radius={[3, 3, 0, 0]} barSize={24}>
               {data.map((d, i) => (
-                <Cell key={i} fill={d.hasIt ? "hsl(var(--diag-green))" : "hsl(var(--diag-text-dim))"} fillOpacity={d.hasIt ? 0.8 : 0.25} />
+                <Cell key={i} fill={d.hasIt ? "hsl(var(--status-success))" : "hsl(var(--status-neutral))"} fillOpacity={d.hasIt ? 0.8 : 0.4} />
               ))}
             </Bar>
           </BarChart>
@@ -268,7 +268,7 @@ function TransitionGauge({ difficulty }: { difficulty: DiagnosticReportData["tra
   const circumference = 2 * Math.PI * 45;
   const halfCircumference = circumference / 2;
   const dashOffset = halfCircumference - (pct / 100) * halfCircumference;
-  const color = difficulty.label === "Easy" ? "hsl(var(--diag-green))" : difficulty.label === "Moderate" ? "hsl(var(--diag-amber))" : "hsl(var(--diag-red))";
+  const color = difficulty.label === "Easy" ? "hsl(var(--status-success))" : difficulty.label === "Moderate" ? "hsl(var(--status-warning))" : "hsl(var(--status-danger))";
 
   return (
     <DiagPanel
@@ -281,7 +281,7 @@ function TransitionGauge({ difficulty }: { difficulty: DiagnosticReportData["tra
           <path
             d="M 10 65 A 45 45 0 0 1 110 65"
             fill="none"
-            stroke="hsl(var(--diag-border))"
+            stroke="hsl(var(--muted))"
             strokeWidth="8"
             strokeLinecap="round"
           />
@@ -295,14 +295,14 @@ function TransitionGauge({ difficulty }: { difficulty: DiagnosticReportData["tra
             strokeDashoffset={dashOffset}
             className="transition-all duration-1000"
           />
-          <text x="60" y="50" textAnchor="middle" className="fill-[hsl(var(--diag-text))]" fontSize="20" fontFamily="var(--font-mono)" fontWeight="700">
+          <text x="60" y="50" textAnchor="middle" className="fill-foreground" fontSize="20" fontFamily="var(--font-mono)" fontWeight="700">
             {pct}
           </text>
-          <text x="60" y="66" textAnchor="middle" className="fill-[hsl(var(--diag-text-dim))]" fontSize="10">
+          <text x="60" y="66" textAnchor="middle" className="fill-muted-foreground" fontSize="10">
             {difficulty.label}
           </text>
         </svg>
-        <p className="text-[10px] text-[hsl(var(--diag-text-dim))] text-center mt-1 max-w-[200px]">{difficulty.explanation}</p>
+        <p className="text-[10px] text-muted-foreground text-center mt-1 max-w-[200px]">{difficulty.explanation}</p>
       </div>
     </DiagPanel>
   );
@@ -317,7 +317,7 @@ function ReadinessScoreRing({ score }: { score: number }) {
   return (
     <div className="relative flex items-center justify-center" data-testid="readiness-score-ring">
       <svg className="w-[130px] h-[130px] -rotate-90" viewBox="0 0 100 100">
-        <circle cx="50" cy="50" r="42" fill="none" stroke="hsl(var(--diag-border))" strokeWidth="5" />
+        <circle cx="50" cy="50" r="42" fill="none" stroke="hsl(var(--muted))" strokeWidth="5" />
         <circle
           cx="50" cy="50" r="42" fill="none"
           stroke={color}
@@ -325,12 +325,12 @@ function ReadinessScoreRing({ score }: { score: number }) {
           strokeLinecap="round"
           strokeDasharray={circumference}
           strokeDashoffset={dashOffset}
-          className="transition-all duration-1000 diag-glow"
+          className="transition-all duration-1000"
         />
       </svg>
       <div className="absolute flex flex-col items-center">
         <span className="diag-metric text-3xl" style={{ color }}>{score}</span>
-        <span className="text-[10px] font-medium text-[hsl(var(--diag-text-dim))]">{label}</span>
+        <span className="text-[10px] font-medium text-muted-foreground">{label}</span>
       </div>
     </div>
   );
@@ -342,15 +342,15 @@ function ReadinessLadder({ ladder, isPro }: {
 }) {
   const [expandedTier, setExpandedTier] = useState<string | null>("ready");
   const tiers = [
-    { key: "ready" as const, label: "Ready Now", desc: "You qualify for these today", icon: CheckCircle2, color: "text-emerald-400", borderColor: "border-l-emerald-500", bgColor: "bg-emerald-500/5", roles: ladder.ready },
-    { key: "nearReady" as const, label: "Near-Ready", desc: "2-6 weeks of prep needed", icon: Clock, color: "text-amber-400", borderColor: "border-l-amber-500", bgColor: "bg-amber-500/5", roles: ladder.nearReady },
-    { key: "stretch" as const, label: "Stretch Goals", desc: "3-6 months of development", icon: Target, color: "text-rose-400", borderColor: "border-l-rose-500", bgColor: "bg-rose-500/5", roles: ladder.stretch },
+    { key: "ready" as const, label: "Ready Now", desc: "You qualify for these today", icon: CheckCircle2, color: "text-emerald-600 dark:text-emerald-400", borderColor: "border-l-emerald-500", bgColor: "bg-emerald-500/5", roles: ladder.ready },
+    { key: "nearReady" as const, label: "Near-Ready", desc: "2-6 weeks of prep needed", icon: Clock, color: "text-amber-600 dark:text-amber-400", borderColor: "border-l-amber-500", bgColor: "bg-amber-500/5", roles: ladder.nearReady },
+    { key: "stretch" as const, label: "Stretch Goals", desc: "3-6 months of development", icon: Target, color: "text-rose-600 dark:text-rose-400", borderColor: "border-l-rose-500", bgColor: "bg-rose-500/5", roles: ladder.stretch },
   ];
 
   return (
     <div className="space-y-2" data-testid="readiness-ladder">
       {tiers.map(tier => (
-        <div key={tier.key} className={`diag-panel border-l-2 ${tier.borderColor} overflow-hidden`}>
+        <Card key={tier.key} className={`border border-border/50 card-elev-static border-l-2 ${tier.borderColor} overflow-hidden`}>
           <button
             type="button"
             className="w-full flex items-center justify-between p-3 text-left"
@@ -360,39 +360,39 @@ function ReadinessLadder({ ladder, isPro }: {
             <div className="flex items-center gap-2">
               <tier.icon className={`h-4 w-4 ${tier.color}`} />
               <span className={`text-sm font-semibold ${tier.color}`}>{tier.label}</span>
-              <span className="text-[10px] text-[hsl(var(--diag-text-dim))]">{tier.desc}</span>
-              <span className="diag-metric text-[10px] px-1.5 py-0 rounded bg-[hsl(var(--diag-panel-alt))] text-[hsl(var(--diag-text-dim))]">{tier.roles.length}</span>
+              <span className="text-[10px] text-muted-foreground">{tier.desc}</span>
+              <span className="diag-metric text-[10px] px-1.5 py-0 rounded bg-muted text-muted-foreground">{tier.roles.length}</span>
             </div>
-            {expandedTier === tier.key ? <ChevronUp className="h-4 w-4 text-[hsl(var(--diag-text-dim))]" /> : <ChevronDown className="h-4 w-4 text-[hsl(var(--diag-text-dim))]" />}
+            {expandedTier === tier.key ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
           </button>
           {expandedTier === tier.key && tier.roles.length > 0 && (
             <div className="px-3 pb-3 space-y-2">
               {tier.roles.slice(0, isPro ? undefined : 2).map((role, idx) => (
-                <div key={idx} className="diag-panel-alt p-2.5">
+                <div key={idx} className="bg-muted/30 rounded-md p-2.5 border border-border/30">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <Link href={`/jobs/${role.jobId}`}>
-                        <span className="text-sm font-medium text-[hsl(var(--diag-text))] hover:text-emerald-400 transition-colors cursor-pointer line-clamp-1" data-testid={`readiness-role-${role.jobId}`}>
+                        <span className="text-sm font-medium text-foreground hover:text-primary transition-colors cursor-pointer line-clamp-1" data-testid={`readiness-role-${role.jobId}`}>
                           {role.title}
                         </span>
                       </Link>
-                      <p className="text-xs text-[hsl(var(--diag-text-dim))]">{role.company}</p>
+                      <p className="text-xs text-muted-foreground">{role.company}</p>
                     </div>
-                    <span className="diag-metric text-[10px] shrink-0 px-1.5 py-0.5 rounded bg-[hsl(var(--diag-panel))] border border-[hsl(var(--diag-border))]">{role.fitScore}% fit</span>
+                    <span className="diag-metric text-[10px] shrink-0 px-1.5 py-0.5 rounded bg-background border border-border">{role.fitScore}% fit</span>
                   </div>
-                  <p className="text-xs text-[hsl(var(--diag-text-dim))] mt-1.5 italic">{role.whyThisTier}</p>
+                  <p className="text-xs text-muted-foreground mt-1.5 italic">{role.whyThisTier}</p>
                   {isPro && (
                     <div className="flex gap-3 mt-1.5">
                       <div className="flex-1">
-                        <p className="text-[10px] text-emerald-400 font-medium">Strengths</p>
+                        <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">Strengths</p>
                         {role.topStrengths.slice(0, 2).map((s, i) => (
-                          <p key={i} className="text-[10px] text-[hsl(var(--diag-text-dim))]">+ {s}</p>
+                          <p key={i} className="text-[10px] text-muted-foreground">+ {s}</p>
                         ))}
                       </div>
                       <div className="flex-1">
-                        <p className="text-[10px] text-rose-400 font-medium">Blockers</p>
+                        <p className="text-[10px] text-rose-600 dark:text-rose-400 font-medium">Blockers</p>
                         {role.topBlockers.slice(0, 2).map((b, i) => (
-                          <p key={i} className="text-[10px] text-[hsl(var(--diag-text-dim))]">- {b}</p>
+                          <p key={i} className="text-[10px] text-muted-foreground">- {b}</p>
                         ))}
                       </div>
                     </div>
@@ -400,11 +400,11 @@ function ReadinessLadder({ ladder, isPro }: {
                 </div>
               ))}
               {!isPro && tier.roles.length > 2 && (
-                <div className="flex items-center gap-2 p-2 rounded-md bg-[hsl(var(--diag-panel-alt))] border border-dashed border-[hsl(var(--diag-border))]">
-                  <Lock className="h-3.5 w-3.5 text-[hsl(var(--diag-text-dim))]" />
-                  <span className="text-xs text-[hsl(var(--diag-text-dim))]">+{tier.roles.length - 2} more {tier.key === "ready" ? "roles you qualify for" : "roles within reach"}</span>
+                <div className="flex items-center gap-2 p-2 rounded-md bg-muted/50 border border-dashed border-border">
+                  <Lock className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground">+{tier.roles.length - 2} more {tier.key === "ready" ? "roles you qualify for" : "roles within reach"}</span>
                   <Link href="/pricing">
-                    <Button variant="ghost" size="sm" className="h-auto p-0 text-xs text-emerald-400 hover:text-emerald-300" data-testid="unlock-roles-cta">
+                    <Button variant="ghost" size="sm" className="h-auto p-0 text-xs text-primary" data-testid="unlock-roles-cta">
                       See all matches
                     </Button>
                   </Link>
@@ -412,7 +412,7 @@ function ReadinessLadder({ ladder, isPro }: {
               )}
             </div>
           )}
-        </div>
+        </Card>
       ))}
     </div>
   );
@@ -426,15 +426,15 @@ function TransitionPlan({ plan, isPro }: { plan: TransitionWeek[]; isPro: boolea
         return (
           <div key={week.week} className="relative">
             {isLocked && (
-              <div className="absolute inset-0 bg-[hsl(var(--diag-bg)/.85)] backdrop-blur-[2px] rounded-lg z-10 flex items-center justify-center">
+              <div className="absolute inset-0 bg-background/80 backdrop-blur-[2px] rounded-lg z-10 flex items-center justify-center">
                 <div className="flex flex-col items-center gap-1.5">
-                  <Lock className="h-4 w-4 text-[hsl(var(--diag-text-dim))]" />
-                  <span className="text-xs text-[hsl(var(--diag-text-dim))]">
+                  <Lock className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground">
                     {weekIdx === 1 ? "Your next steps are ready" : `Week ${week.week} plan`}
                   </span>
                   {weekIdx === 1 && (
                     <Link href="/pricing">
-                      <Button size="sm" className="h-7 text-xs mt-1 bg-emerald-600 hover:bg-emerald-500 text-white" data-testid="unlock-plan-cta">
+                      <Button size="sm" className="h-7 text-xs mt-1" data-testid="unlock-plan-cta">
                         Unlock your 30-day plan
                       </Button>
                     </Link>
@@ -442,31 +442,31 @@ function TransitionPlan({ plan, isPro }: { plan: TransitionWeek[]; isPro: boolea
                 </div>
               </div>
             )}
-            <div className="diag-panel border-l-2 border-l-blue-500">
-              <div className="px-4 pt-3 pb-1.5">
+            <Card className="border border-border/50 card-elev-static border-l-2 border-l-blue-500">
+              <CardHeader className="px-4 pt-3 pb-1.5 space-y-0">
                 <div className="flex items-center gap-2">
-                  <span className="diag-metric text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/30">W{week.week}</span>
-                  <span className="text-sm font-semibold text-[hsl(var(--diag-text))]">{week.theme}</span>
+                  <span className="diag-metric text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/30">W{week.week}</span>
+                  <CardTitle className="text-sm font-semibold">{week.theme}</CardTitle>
                 </div>
-              </div>
-              <div className="px-4 pb-3">
+              </CardHeader>
+              <CardContent className="px-4 pb-3">
                 <div className="space-y-2">
                   {week.actions.map((action, i) => (
                     <div key={i} className="flex items-start gap-2.5 text-xs">
                       <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-1.5 shrink-0" />
                       <div className="min-w-0">
-                        <p className="text-[hsl(var(--diag-text))] font-medium">{action.task}</p>
-                        <div className="flex items-center gap-2 mt-0.5 text-[hsl(var(--diag-text-dim))]">
+                        <p className="text-foreground font-medium">{action.task}</p>
+                        <div className="flex items-center gap-2 mt-0.5 text-muted-foreground">
                           <span className="font-mono text-[10px]">{action.timeEstimate}</span>
                           <span>·</span>
-                          <span className="text-emerald-400/80 text-[10px]">{action.skillGapAddressed}</span>
+                          <span className="text-primary/80 text-[10px]">{action.skillGapAddressed}</span>
                         </div>
                       </div>
                     </div>
                   ))}
                 </div>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           </div>
         );
       })}
@@ -528,21 +528,21 @@ function CareerPathFlow({
   };
 
   const fitColor = (fitLevel: string) => {
-    if (fitLevel === "high") return "text-emerald-400";
-    if (fitLevel === "medium") return "text-amber-400";
-    return "text-[hsl(var(--diag-text-dim))]";
+    if (fitLevel === "high") return "text-emerald-600 dark:text-emerald-400";
+    if (fitLevel === "medium") return "text-amber-600 dark:text-amber-400";
+    return "text-muted-foreground";
   };
 
   const fitBorderColor = (fitLevel: string) => {
     if (fitLevel === "high") return "border-l-emerald-500";
     if (fitLevel === "medium") return "border-l-amber-500";
-    return "border-l-[hsl(var(--diag-border))]";
+    return "border-l-border";
   };
 
   const connectorColor = (fitLevel: string) => {
-    if (fitLevel === "high") return "hsl(var(--diag-green))";
-    if (fitLevel === "medium") return "hsl(var(--diag-amber))";
-    return "hsl(var(--diag-text-dim))";
+    if (fitLevel === "high") return "hsl(var(--status-success))";
+    if (fitLevel === "medium") return "hsl(var(--status-warning))";
+    return "hsl(var(--muted-foreground))";
   };
 
   const connectorOpacity = (confidence: number) => {
@@ -560,10 +560,10 @@ function CareerPathFlow({
   if (isMobile) {
     return (
       <div className="space-y-3" data-testid="career-path-flow">
-        <div className="flex items-center gap-3 p-3 diag-panel" data-testid="career-flow-origin">
+        <div className="flex items-center gap-3 p-3 rounded-lg border border-border/50 bg-muted/20" data-testid="career-flow-origin">
           <div className="relative shrink-0">
-            <div className="w-10 h-10 rounded-full bg-[hsl(var(--diag-panel-alt))] border border-[hsl(var(--diag-border))] flex items-center justify-center">
-              <User className="h-5 w-5 text-[hsl(var(--diag-text-dim))]" />
+            <div className="w-10 h-10 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center">
+              <User className="h-5 w-5 text-primary" />
             </div>
             <div
               className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-mono font-bold text-white"
@@ -574,8 +574,8 @@ function CareerPathFlow({
             </div>
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-[hsl(var(--diag-text))] truncate">{currentRole}</p>
-            <p className="text-[10px] text-[hsl(var(--diag-text-dim))]">Your starting point</p>
+            <p className="text-sm font-semibold text-foreground truncate">{currentRole}</p>
+            <p className="text-[10px] text-muted-foreground">Your starting point</p>
           </div>
         </div>
 
@@ -591,17 +591,17 @@ function CareerPathFlow({
               </div>
               {path.topGaps[0] && (
                 <div className="flex justify-center -mt-1 -mb-1 relative z-10">
-                  <span className="text-[10px] text-[hsl(var(--diag-text-dim))] font-mono bg-[hsl(var(--diag-panel))] px-1.5 py-0.5 rounded border border-[hsl(var(--diag-border-subtle))]" data-testid={`career-flow-gap-${i}`}>
+                  <span className="text-[10px] text-muted-foreground font-mono bg-background px-1.5 py-0.5 rounded border border-border/30" data-testid={`career-flow-gap-${i}`}>
                     {path.topGaps[0]}
                   </span>
                 </div>
               )}
-              <div className={`relative diag-panel border-l-2 ${fitBorderColor(path.fitLevel)} p-3 ${isLocked ? "select-none" : ""}`}>
+              <Card className={`border border-border/50 card-elev-static border-l-2 ${fitBorderColor(path.fitLevel)} p-3 ${isLocked ? "select-none" : ""}`}>
                 {isLocked && (
-                  <div className="absolute inset-0 bg-[hsl(var(--diag-bg)/.7)] backdrop-blur-[3px] rounded-lg z-10 flex items-center justify-center gap-2">
-                    <Lock className="h-3.5 w-3.5 text-[hsl(var(--diag-text-dim))]" />
+                  <div className="absolute inset-0 bg-background/70 backdrop-blur-[3px] rounded-lg z-10 flex items-center justify-center gap-2">
+                    <Lock className="h-3.5 w-3.5 text-muted-foreground" />
                     <Link href="/pricing">
-                      <Button variant="ghost" size="sm" className="h-auto p-0 text-xs text-emerald-400" data-testid={`unlock-path-flow-${i}`}>
+                      <Button variant="ghost" size="sm" className="h-auto p-0 text-xs text-primary" data-testid={`unlock-path-flow-${i}`}>
                         Unlock
                       </Button>
                     </Link>
@@ -609,23 +609,23 @@ function CareerPathFlow({
                 )}
                 <div className="flex items-center justify-between gap-2 flex-wrap">
                   <span className={`text-sm font-semibold ${fitColor(path.fitLevel)}`}>{path.name}</span>
-                  <span className="diag-metric text-[10px] px-1.5 py-0.5 rounded bg-[hsl(var(--diag-panel-alt))] border border-[hsl(var(--diag-border-subtle))]">{path.confidence}%</span>
+                  <span className="diag-metric text-[10px] px-1.5 py-0.5 rounded bg-muted border border-border/50">{path.confidence}%</span>
                 </div>
-                <p className="text-xs text-[hsl(var(--diag-text-dim))] mt-1 line-clamp-1">{path.description}</p>
+                <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{path.description}</p>
                 {roles.length > 0 && (
                   <div className="mt-2 space-y-1">
                     {roles.slice(0, 2).map((role) => (
                       <Link key={role.jobId} href={`/jobs/${role.jobId}`}>
-                        <div className="flex items-center gap-1.5 text-[10px] cursor-pointer hover:text-[hsl(var(--diag-text))] transition-colors" data-testid={`career-flow-role-${role.jobId}`}>
+                        <div className="flex items-center gap-1.5 text-[10px] cursor-pointer hover:text-foreground transition-colors" data-testid={`career-flow-role-${role.jobId}`}>
                           <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${role.tierColor === "emerald" ? "bg-emerald-500" : "bg-amber-500"}`} />
-                          <span className="text-[hsl(var(--diag-text))]/80 truncate">{role.title}</span>
-                          <span className="text-[hsl(var(--diag-text-dim))] shrink-0">@ {role.company}</span>
+                          <span className="text-foreground/80 truncate">{role.title}</span>
+                          <span className="text-muted-foreground shrink-0">@ {role.company}</span>
                         </div>
                       </Link>
                     ))}
                   </div>
                 )}
-              </div>
+              </Card>
             </div>
           );
         })}
@@ -645,8 +645,8 @@ function CareerPathFlow({
       <div className="flex items-start gap-0">
         <div className="shrink-0 flex flex-col items-center pt-2" style={{ width: "120px", marginTop: `${originY - 40}px` }} data-testid="career-flow-origin">
           <div className="relative">
-            <div className="w-14 h-14 rounded-full bg-[hsl(var(--diag-panel-alt))] border-2 border-[hsl(var(--diag-border))] flex items-center justify-center">
-              <User className="h-7 w-7 text-[hsl(var(--diag-text-dim))]" />
+            <div className="w-14 h-14 rounded-full bg-primary/10 border-2 border-primary/30 flex items-center justify-center">
+              <User className="h-7 w-7 text-primary" />
             </div>
             <div
               className="absolute -bottom-1.5 -right-1.5 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-mono font-bold text-white shadow-sm"
@@ -656,8 +656,8 @@ function CareerPathFlow({
               {readinessScore}
             </div>
           </div>
-          <p className="text-xs font-semibold text-[hsl(var(--diag-text))] mt-2 text-center leading-tight max-w-[110px] truncate">{currentRole}</p>
-          <p className="text-[10px] text-[hsl(var(--diag-text-dim))]">You</p>
+          <p className="text-xs font-semibold text-foreground mt-2 text-center leading-tight max-w-[110px] truncate">{currentRole}</p>
+          <p className="text-[10px] text-muted-foreground">You</p>
         </div>
 
         <div className="shrink-0" style={{ width: `${destX - 60}px` }}>
@@ -685,7 +685,7 @@ function CareerPathFlow({
                       x={cpX}
                       y={startY + (endY - startY) * 0.5 - 6}
                       textAnchor="middle"
-                      fill="hsl(var(--diag-text-dim))"
+                      className="fill-muted-foreground"
                       fontSize="9"
                       fontFamily="var(--font-mono)"
                       data-testid={`career-flow-gap-${i}`}
@@ -705,12 +705,12 @@ function CareerPathFlow({
               const isLocked = !isPro && i >= 2;
               const roles = getRolesForPath(path.name);
               return (
-                <div key={i} className={`relative diag-panel border-l-2 ${fitBorderColor(path.fitLevel)} p-3 ${isLocked ? "select-none" : ""}`} data-testid={`career-flow-path-${i}`}>
+                <Card key={i} className={`relative border border-border/50 card-elev-static border-l-2 ${fitBorderColor(path.fitLevel)} p-3 ${isLocked ? "select-none" : ""}`} data-testid={`career-flow-path-${i}`}>
                   {isLocked && (
-                    <div className="absolute inset-0 bg-[hsl(var(--diag-bg)/.7)] backdrop-blur-[3px] rounded-lg z-10 flex items-center justify-center gap-2">
-                      <Lock className="h-3.5 w-3.5 text-[hsl(var(--diag-text-dim))]" />
+                    <div className="absolute inset-0 bg-background/70 backdrop-blur-[3px] rounded-lg z-10 flex items-center justify-center gap-2">
+                      <Lock className="h-3.5 w-3.5 text-muted-foreground" />
                       <Link href="/pricing">
-                        <Button variant="ghost" size="sm" className="h-auto p-0 text-xs text-emerald-400" data-testid={`unlock-path-flow-${i}`}>
+                        <Button variant="ghost" size="sm" className="h-auto p-0 text-xs text-primary" data-testid={`unlock-path-flow-${i}`}>
                           Unlock
                         </Button>
                       </Link>
@@ -718,23 +718,23 @@ function CareerPathFlow({
                   )}
                   <div className="flex items-center justify-between gap-2 flex-wrap">
                     <span className={`text-sm font-semibold ${fitColor(path.fitLevel)}`}>{path.name}</span>
-                    <span className="diag-metric text-[10px] px-1.5 py-0.5 rounded bg-[hsl(var(--diag-panel-alt))] border border-[hsl(var(--diag-border-subtle))]">{path.confidence}%</span>
+                    <span className="diag-metric text-[10px] px-1.5 py-0.5 rounded bg-muted border border-border/50">{path.confidence}%</span>
                   </div>
-                  <p className="text-xs text-[hsl(var(--diag-text-dim))] mt-0.5 line-clamp-1">{path.description}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{path.description}</p>
                   {roles.length > 0 && (
                     <div className="mt-2 space-y-1">
                       {roles.slice(0, 2).map((role) => (
                         <Link key={role.jobId} href={`/jobs/${role.jobId}`}>
-                          <div className="flex items-center gap-1.5 text-[10px] cursor-pointer hover:text-[hsl(var(--diag-text))] transition-colors" data-testid={`career-flow-role-${role.jobId}`}>
+                          <div className="flex items-center gap-1.5 text-[10px] cursor-pointer hover:text-foreground transition-colors" data-testid={`career-flow-role-${role.jobId}`}>
                             <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${role.tierColor === "emerald" ? "bg-emerald-500" : "bg-amber-500"}`} />
-                            <span className="text-[hsl(var(--diag-text))]/80 truncate">{role.title}</span>
-                            <span className="text-[hsl(var(--diag-text-dim))] shrink-0">@ {role.company}</span>
+                            <span className="text-foreground/80 truncate">{role.title}</span>
+                            <span className="text-muted-foreground shrink-0">@ {role.company}</span>
                           </div>
                         </Link>
                       ))}
                     </div>
                   )}
-                </div>
+                </Card>
               );
             })}
           </div>
@@ -746,22 +746,20 @@ function CareerPathFlow({
 
 function DiagnosticSkeleton() {
   return (
-    <div className="diag-page">
-      <div className="max-w-5xl mx-auto px-4 py-6 space-y-6 animate-pulse">
-        <div className="flex items-center gap-4">
-          <div className="h-[130px] w-[130px] rounded-full bg-[hsl(var(--diag-panel))]" />
-          <div className="space-y-2 flex-1">
-            <div className="h-6 w-48 bg-[hsl(var(--diag-panel))] rounded" />
-            <div className="h-4 w-72 bg-[hsl(var(--diag-panel))] rounded" />
-            <div className="h-4 w-56 bg-[hsl(var(--diag-panel))] rounded" />
-          </div>
+    <div className="space-y-6 animate-pulse">
+      <div className="flex items-center gap-4">
+        <Skeleton className="h-[130px] w-[130px] rounded-full" />
+        <div className="space-y-2 flex-1">
+          <Skeleton className="h-6 w-48" />
+          <Skeleton className="h-4 w-72" />
+          <Skeleton className="h-4 w-56" />
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="h-[300px] bg-[hsl(var(--diag-panel))] rounded-lg" />
-          <div className="h-[300px] bg-[hsl(var(--diag-panel))] rounded-lg" />
-        </div>
-        <div className="h-[200px] bg-[hsl(var(--diag-panel))] rounded-lg" />
       </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Skeleton className="h-[300px] rounded-lg" />
+        <Skeleton className="h-[300px] rounded-lg" />
+      </div>
+      <Skeleton className="h-[200px] rounded-lg" />
     </div>
   );
 }
@@ -848,38 +846,36 @@ function AnonymousPreview() {
 
   if (isUploading) {
     return (
-      <div className="diag-page">
-        <div className="min-h-[60vh] flex flex-col items-center justify-center px-4">
-          <div className="max-w-md w-full text-center space-y-6">
-            <div className="relative flex items-center justify-center">
-              <svg className="w-[120px] h-[120px] -rotate-90 animate-pulse" viewBox="0 0 100 100">
-                <circle cx="50" cy="50" r="42" fill="none" stroke="hsl(var(--diag-border))" strokeWidth="6" />
-                <circle
-                  cx="50" cy="50" r="42" fill="none"
-                  stroke="hsl(var(--diag-green))"
-                  strokeWidth="6"
-                  strokeLinecap="round"
-                  strokeDasharray={`${2 * Math.PI * 42}`}
-                  strokeDashoffset={`${2 * Math.PI * 42 * 0.7}`}
-                  className="animate-spin origin-center"
-                  style={{ animationDuration: "3s" }}
-                />
-              </svg>
-              <div className="absolute flex flex-col items-center">
-                <Loader2 className="h-6 w-6 text-emerald-400 animate-spin" />
-              </div>
+      <div className="min-h-[60vh] flex flex-col items-center justify-center px-4">
+        <div className="max-w-md w-full text-center space-y-6">
+          <div className="relative flex items-center justify-center">
+            <svg className="w-[120px] h-[120px] -rotate-90 animate-pulse" viewBox="0 0 100 100">
+              <circle cx="50" cy="50" r="42" fill="none" stroke="hsl(var(--muted))" strokeWidth="6" />
+              <circle
+                cx="50" cy="50" r="42" fill="none"
+                stroke="hsl(var(--primary))"
+                strokeWidth="6"
+                strokeLinecap="round"
+                strokeDasharray={`${2 * Math.PI * 42}`}
+                strokeDashoffset={`${2 * Math.PI * 42 * 0.7}`}
+                className="animate-spin origin-center"
+                style={{ animationDuration: "3s" }}
+              />
+            </svg>
+            <div className="absolute flex flex-col items-center">
+              <Loader2 className="h-6 w-6 text-primary animate-spin" />
             </div>
-            <div>
-              <h2 className="text-xl font-bold font-serif text-[hsl(var(--diag-text))]" data-testid="text-analyzing">Analyzing your resume</h2>
-              <p className="text-sm text-[hsl(var(--diag-text-dim))] mt-2">
-                Evaluating your skills against {statsData?.totalJobs ?? ""}+ legal tech roles. This takes about 30–60 seconds.
-              </p>
-            </div>
-            <div className="space-y-2 max-w-xs mx-auto">
-              <div className="h-3 w-full rounded bg-[hsl(var(--diag-panel))]" />
-              <div className="h-3 w-4/5 rounded bg-[hsl(var(--diag-panel))]" />
-              <div className="h-3 w-3/5 rounded bg-[hsl(var(--diag-panel))]" />
-            </div>
+          </div>
+          <div>
+            <h2 className="text-xl font-bold font-serif text-foreground" data-testid="text-analyzing">Analyzing your resume</h2>
+            <p className="text-sm text-muted-foreground mt-2">
+              Evaluating your skills against {statsData?.totalJobs ?? ""}+ legal tech roles. This takes about 30–60 seconds.
+            </p>
+          </div>
+          <div className="space-y-2 max-w-xs mx-auto">
+            <Skeleton className="h-3 w-full rounded" />
+            <Skeleton className="h-3 w-4/5 rounded" />
+            <Skeleton className="h-3 w-3/5 rounded" />
           </div>
         </div>
       </div>
@@ -893,29 +889,29 @@ function AnonymousPreview() {
     const dashOffset = circumference - (preview.score / 100) * circumference;
 
     return (
-      <div className="diag-page">
-        <div className="min-h-[60vh] flex flex-col items-center px-4 py-10">
-          <div className="max-w-lg w-full space-y-8">
-            <div className="mb-2">
-              <Link href="/">
-                <Button variant="ghost" size="sm" className="text-[hsl(var(--diag-text-dim))] hover:text-[hsl(var(--diag-text))] gap-1.5" data-testid="button-preview-back-home">
-                  <ArrowLeft className="h-4 w-4" />
-                  Back to home
-                </Button>
-              </Link>
-            </div>
-            <div className="text-center">
-              <p className="diag-label mb-2">Your Preview Results</p>
-              <h1 className="text-2xl sm:text-3xl font-serif font-medium text-[hsl(var(--diag-text))] tracking-tight" data-testid="text-preview-title">
-                Here's where you stand
-              </h1>
-            </div>
+      <div className="min-h-[60vh] flex flex-col items-center px-4 py-10">
+        <div className="max-w-lg w-full space-y-8">
+          <div className="mb-2">
+            <Link href="/">
+              <Button variant="ghost" size="sm" className="text-muted-foreground gap-1.5" data-testid="button-preview-back-home">
+                <ArrowLeft className="h-4 w-4" />
+                Back to home
+              </Button>
+            </Link>
+          </div>
+          <div className="text-center">
+            <p className="diag-label mb-2">Your Preview Results</p>
+            <h1 className="text-2xl sm:text-3xl font-serif font-medium text-foreground tracking-tight" data-testid="text-preview-title">
+              Here's where you stand
+            </h1>
+          </div>
 
-            <div className="diag-panel overflow-hidden p-6 sm:p-8" data-testid="preview-results-card">
+          <Card className="overflow-hidden" data-testid="preview-results-card">
+            <CardContent className="p-6 sm:p-8">
               <div className="flex flex-col sm:flex-row items-center gap-6">
                 <div className="relative flex items-center justify-center shrink-0" data-testid="preview-score-ring">
                   <svg className="w-[120px] h-[120px] -rotate-90" viewBox="0 0 100 100">
-                    <circle cx="50" cy="50" r="42" fill="none" stroke="hsl(var(--diag-border))" strokeWidth="6" />
+                    <circle cx="50" cy="50" r="42" fill="none" stroke="hsl(var(--muted))" strokeWidth="6" />
                     <circle
                       cx="50" cy="50" r="42" fill="none"
                       stroke={scoreColor}
@@ -923,12 +919,12 @@ function AnonymousPreview() {
                       strokeLinecap="round"
                       strokeDasharray={circumference}
                       strokeDashoffset={dashOffset}
-                      className="transition-all duration-1000 diag-glow"
+                      className="transition-all duration-1000"
                     />
                   </svg>
                   <div className="absolute flex flex-col items-center">
                     <span className="diag-metric text-2xl" style={{ color: scoreColor }}>{preview.score}</span>
-                    <span className="text-[10px] text-[hsl(var(--diag-text-dim))]">{scoreLabel}</span>
+                    <span className="text-[10px] text-muted-foreground">{scoreLabel}</span>
                   </div>
                 </div>
 
@@ -937,10 +933,10 @@ function AnonymousPreview() {
                     <div>
                       <p className="diag-label mb-1">Top career path</p>
                       <div className="flex items-center gap-2 justify-center sm:justify-start">
-                        <span className="text-base font-semibold text-[hsl(var(--diag-text))]" data-testid="text-preview-path">{preview.topPath.name}</span>
-                        <span className="diag-metric text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/30" data-testid="badge-preview-confidence">
+                        <span className="text-base font-semibold text-foreground" data-testid="text-preview-path">{preview.topPath.name}</span>
+                        <Badge variant="secondary" className="text-[10px]" data-testid="badge-preview-confidence">
                           {preview.topPath.confidence}% match
-                        </span>
+                        </Badge>
                       </div>
                     </div>
                   )}
@@ -950,62 +946,64 @@ function AnonymousPreview() {
                       <p className="diag-label mb-1.5">Key skills detected</p>
                       <div className="flex flex-wrap gap-1.5 justify-center sm:justify-start" data-testid="preview-skills">
                         {preview.skills.map((skill) => (
-                          <span key={skill} className="text-xs font-mono px-2 py-0.5 rounded border border-[hsl(var(--diag-border))] bg-[hsl(var(--diag-panel-alt))] text-[hsl(var(--diag-text))]">
+                          <Badge key={skill} variant="outline" className="text-xs font-mono">
                             {skill}
-                          </span>
+                          </Badge>
                         ))}
                       </div>
                     </div>
                   )}
 
-                  <p className="text-sm text-[hsl(var(--diag-text-dim))]" data-testid="text-preview-matched">
-                    <span className="font-semibold diag-metric text-[hsl(var(--diag-text))]">{preview.totalMatched}</span> roles matched to your profile
+                  <p className="text-sm text-muted-foreground" data-testid="text-preview-matched">
+                    <span className="font-semibold diag-metric text-foreground">{preview.totalMatched}</span> roles matched to your profile
                   </p>
 
                   {percentileData?.percentile !== null && percentileData?.percentile !== undefined && (
-                    <p className="text-xs text-[hsl(var(--diag-text-dim))]" data-testid="text-preview-percentile">
-                      You scored higher than <span className="font-semibold text-[hsl(var(--diag-text))]">{percentileData.percentile}%</span> of lawyers on this platform
+                    <p className="text-xs text-muted-foreground" data-testid="text-preview-percentile">
+                      You scored higher than <span className="font-semibold text-foreground">{percentileData.percentile}%</span> of lawyers on this platform
                     </p>
                   )}
                 </div>
               </div>
-            </div>
+            </CardContent>
+          </Card>
 
-            <div className="diag-panel border-dashed p-6 sm:p-8 text-center space-y-4" data-testid="preview-gate-card">
+          <Card className="border-dashed border-2 border-border/60 bg-muted/10" data-testid="preview-gate-card">
+            <CardContent className="p-6 sm:p-8 text-center space-y-4">
               <div className="flex items-center justify-center gap-2">
-                <Lock className="h-4 w-4 text-[hsl(var(--diag-text-dim))]" />
-                <h3 className="text-base font-semibold text-[hsl(var(--diag-text))]">Your full report is ready</h3>
+                <Lock className="h-4 w-4 text-muted-foreground" />
+                <h3 className="text-base font-semibold text-foreground">Your full report is ready</h3>
               </div>
-              <p className="text-sm text-[hsl(var(--diag-text-dim))] max-w-sm mx-auto">
+              <p className="text-sm text-muted-foreground max-w-sm mx-auto">
                 Sign up free to unlock your complete career diagnostic — including all career paths, detailed skill gaps, a role readiness ladder, and a personalized 30-day transition plan.
               </p>
               <div className="grid grid-cols-2 gap-3 max-w-xs mx-auto text-left">
                 {["All career paths", "Skill gap analysis", "Readiness ladder", "30-day plan"].map(item => (
-                  <div key={item} className="flex items-center gap-2 text-xs text-[hsl(var(--diag-text-dim))]">
+                  <div key={item} className="flex items-center gap-2 text-xs text-muted-foreground">
                     <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
                     <span>{item}</span>
                   </div>
                 ))}
               </div>
               <Link href="/auth?returnTo=/diagnostic">
-                <Button size="lg" className="mt-2 bg-emerald-600 hover:bg-emerald-500 text-white" data-testid="button-signup-unlock">
+                <Button size="lg" className="mt-2" data-testid="button-signup-unlock">
                   <Sparkles className="h-4 w-4 mr-2" />
                   Create free account
                 </Button>
               </Link>
-              <p className="text-[10px] text-[hsl(var(--diag-text-dim))]">
+              <p className="text-[10px] text-muted-foreground">
                 No credit card required
               </p>
-            </div>
+            </CardContent>
+          </Card>
 
-            <div className="text-center">
-              <Link href="/jobs">
-                <Button variant="ghost" size="sm" className="text-[hsl(var(--diag-text-dim))] hover:text-[hsl(var(--diag-text))]" data-testid="link-browse-jobs-preview">
-                  Or browse roles without signing up
-                  <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
-                </Button>
-              </Link>
-            </div>
+          <div className="text-center">
+            <Link href="/jobs">
+              <Button variant="ghost" size="sm" className="text-muted-foreground" data-testid="link-browse-jobs-preview">
+                Or browse roles without signing up
+                <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
+              </Button>
+            </Link>
           </div>
         </div>
       </div>
@@ -1013,97 +1011,95 @@ function AnonymousPreview() {
   }
 
   return (
-    <div className="diag-page">
-      <div className="min-h-[60vh] flex flex-col items-center justify-center px-4">
-        <div className="max-w-lg w-full space-y-6">
-          <div className="mb-2">
-            <Link href="/">
-              <Button variant="ghost" size="sm" className="text-[hsl(var(--diag-text-dim))] hover:text-[hsl(var(--diag-text))] gap-1.5" data-testid="button-back-home">
-                <ArrowLeft className="h-4 w-4" />
-                Back to home
-              </Button>
-            </Link>
-          </div>
+    <div className="min-h-[60vh] flex flex-col items-center justify-center px-4">
+      <div className="max-w-lg w-full space-y-6">
+        <div className="mb-2">
+          <Link href="/">
+            <Button variant="ghost" size="sm" className="text-muted-foreground gap-1.5" data-testid="button-back-home">
+              <ArrowLeft className="h-4 w-4" />
+              Back to home
+            </Button>
+          </Link>
+        </div>
+        <div className="text-center">
+          <p className="diag-label mb-3">Career Diagnostic</p>
+          <h1 className="text-2xl sm:text-3xl font-serif font-medium text-foreground tracking-tight" data-testid="text-anon-diagnostic-title">
+            See where you fit in legal tech
+          </h1>
+          <p className="text-sm text-muted-foreground mt-3 max-w-md mx-auto">
+            Upload your resume — no account needed. Get your career readiness score and top matching path in about 60 seconds.
+          </p>
+        </div>
+
+        <div
+          className={`border-2 border-dashed rounded-lg p-10 text-center cursor-pointer transition-colors ${
+            isDragging
+              ? "border-primary bg-primary/5"
+              : "border-border/60 hover:border-primary/50 hover:bg-muted/30"
+          }`}
+          onClick={() => fileInputRef.current?.click()}
+          onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+          onDragLeave={() => setIsDragging(false)}
+          onDrop={onDrop}
+          data-testid="upload-drop-zone"
+        >
+          <Upload className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+          <p className="text-sm font-medium text-foreground">
+            Drop your resume here or click to browse
+          </p>
+          <p className="text-xs text-muted-foreground mt-1.5">
+            PDF or DOCX · Max 5MB
+          </p>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            className="hidden"
+            onChange={onFileChange}
+            data-testid="input-resume-file"
+          />
+        </div>
+
+        {error && (
           <div className="text-center">
-            <p className="diag-label mb-3">Career Diagnostic</p>
-            <h1 className="text-2xl sm:text-3xl font-serif font-medium text-[hsl(var(--diag-text))] tracking-tight" data-testid="text-anon-diagnostic-title">
-              See where you fit in legal tech
-            </h1>
-            <p className="text-sm text-[hsl(var(--diag-text-dim))] mt-3 max-w-md mx-auto">
-              Upload your resume — no account needed. Get your career readiness score and top matching path in about 60 seconds.
-            </p>
+            <p className="text-sm text-destructive" data-testid="text-upload-error">{error}</p>
           </div>
+        )}
 
-          <div
-            className={`border-2 border-dashed rounded-lg p-10 text-center cursor-pointer transition-colors ${
-              isDragging
-                ? "border-emerald-500 bg-emerald-500/5"
-                : "border-[hsl(var(--diag-border))] hover:border-emerald-500/50 hover:bg-[hsl(var(--diag-panel-alt))]"
-            }`}
-            onClick={() => fileInputRef.current?.click()}
-            onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-            onDragLeave={() => setIsDragging(false)}
-            onDrop={onDrop}
-            data-testid="upload-drop-zone"
-          >
-            <Upload className="h-10 w-10 text-[hsl(var(--diag-text-dim))] mx-auto mb-3" />
-            <p className="text-sm font-medium text-[hsl(var(--diag-text))]">
-              Drop your resume here or click to browse
-            </p>
-            <p className="text-xs text-[hsl(var(--diag-text-dim))] mt-1.5">
-              PDF or DOCX · Max 5MB
-            </p>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-              className="hidden"
-              onChange={onFileChange}
-              data-testid="input-resume-file"
-            />
+        <div className="space-y-3 max-w-sm mx-auto">
+          <div className="flex items-center gap-3 text-sm">
+            <div className="shrink-0 w-7 h-7 rounded-full bg-emerald-500/10 flex items-center justify-center">
+              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <span className="text-foreground">Instant readiness score across 7 skill areas</span>
           </div>
-
-          {error && (
-            <div className="text-center">
-              <p className="text-sm text-rose-400" data-testid="text-upload-error">{error}</p>
+          <div className="flex items-center gap-3 text-sm">
+            <div className="shrink-0 w-7 h-7 rounded-full bg-blue-500/10 flex items-center justify-center">
+              <Target className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
             </div>
-          )}
-
-          <div className="space-y-3 max-w-sm mx-auto">
-            <div className="flex items-center gap-3 text-sm">
-              <div className="shrink-0 w-7 h-7 rounded-full bg-emerald-500/10 flex items-center justify-center">
-                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
-              </div>
-              <span className="text-[hsl(var(--diag-text))]">Instant readiness score across 7 skill areas</span>
-            </div>
-            <div className="flex items-center gap-3 text-sm">
-              <div className="shrink-0 w-7 h-7 rounded-full bg-blue-500/10 flex items-center justify-center">
-                <Target className="h-3.5 w-3.5 text-blue-400" />
-              </div>
-              <span className="text-[hsl(var(--diag-text))]">Your top matching career path</span>
-            </div>
-            <div className="flex items-center gap-3 text-sm">
-              <div className="shrink-0 w-7 h-7 rounded-full bg-amber-500/10 flex items-center justify-center">
-                <Shield className="h-3.5 w-3.5 text-amber-400" />
-              </div>
-              <span className="text-[hsl(var(--diag-text))]">Your resume is never stored or shared</span>
-            </div>
+            <span className="text-foreground">Your top matching career path</span>
           </div>
-
-          <div className="text-center pt-2 space-y-1.5">
-            <p className="text-xs text-[hsl(var(--diag-text-dim))]">
-              No resume handy?{" "}
-              <Link href="/quiz" className="text-emerald-400 hover:underline" data-testid="link-quiz-from-diagnostic">
-                Take a quick career quiz instead →
-              </Link>
-            </p>
-            <p className="text-xs text-[hsl(var(--diag-text-dim))]">
-              Already have an account?{" "}
-              <Link href="/auth?returnTo=/diagnostic" className="text-emerald-400 hover:underline" data-testid="link-sign-in">
-                Sign in
-              </Link>
-            </p>
+          <div className="flex items-center gap-3 text-sm">
+            <div className="shrink-0 w-7 h-7 rounded-full bg-amber-500/10 flex items-center justify-center">
+              <Shield className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+            </div>
+            <span className="text-foreground">Your resume is never stored or shared</span>
           </div>
+        </div>
+
+        <div className="text-center pt-2 space-y-1.5">
+          <p className="text-xs text-muted-foreground">
+            No resume handy?{" "}
+            <Link href="/quiz" className="text-primary hover:underline" data-testid="link-quiz-from-diagnostic">
+              Take a quick career quiz instead →
+            </Link>
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Already have an account?{" "}
+            <Link href="/auth?returnTo=/diagnostic" className="text-primary hover:underline" data-testid="link-sign-in">
+              Sign in
+            </Link>
+          </p>
         </div>
       </div>
     </div>
@@ -1167,126 +1163,126 @@ function LoggedInNoResume() {
 
   const scoreColor = cachedPreview
     ? getScoreColor(cachedPreview.score)
-    : "hsl(var(--diag-text-dim))";
+    : "hsl(var(--status-neutral))";
   const circumference = 2 * Math.PI * 42;
   const dashOffset = cachedPreview ? circumference - (cachedPreview.score / 100) * circumference : circumference;
 
   return (
-    <div className="diag-page">
-      <div className="min-h-[60vh] flex flex-col items-center px-4 py-10">
-        <div className="max-w-lg w-full space-y-6">
-          <div className="max-w-lg w-full mb-2">
-            <Link href="/dashboard">
-              <Button variant="ghost" size="sm" className="text-[hsl(var(--diag-text-dim))] hover:text-[hsl(var(--diag-text))]" data-testid="button-back-dashboard">
-                <ArrowLeft className="h-4 w-4 mr-1.5" />
-                Back to Dashboard
-              </Button>
-            </Link>
-          </div>
+    <div className="min-h-[60vh] flex flex-col items-center px-4 py-10">
+      <div className="max-w-lg w-full space-y-6">
+        <div className="max-w-lg w-full mb-2">
+          <Link href="/dashboard">
+            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground" data-testid="button-back-dashboard">
+              <ArrowLeft className="h-4 w-4 mr-1.5" />
+              Back to Dashboard
+            </Button>
+          </Link>
+        </div>
 
-          {cachedPreview && (
-            <>
-              <div className="text-center">
-                <p className="diag-label mb-2">Welcome back</p>
-                <h1 className="text-2xl sm:text-3xl font-serif font-medium text-[hsl(var(--diag-text))] tracking-tight" data-testid="text-cached-preview-title">
-                  Your preview results
-                </h1>
-                <p className="text-sm text-[hsl(var(--diag-text-dim))] mt-2">
-                  We saved your earlier analysis. Upload your resume to your account for the full report.
-                </p>
-              </div>
+        {cachedPreview && (
+          <>
+            <div className="text-center">
+              <p className="diag-label mb-2">Welcome back</p>
+              <h1 className="text-2xl sm:text-3xl font-serif font-medium text-foreground tracking-tight" data-testid="text-cached-preview-title">
+                Your preview results
+              </h1>
+              <p className="text-sm text-muted-foreground mt-2">
+                We saved your earlier analysis. Upload your resume to your account for the full report.
+              </p>
+            </div>
 
-              <div className="diag-panel overflow-hidden p-6" data-testid="cached-preview-card">
+            <Card className="overflow-hidden" data-testid="cached-preview-card">
+              <CardContent className="p-6">
                 <div className="flex flex-col sm:flex-row items-center gap-5">
                   <div className="relative flex items-center justify-center shrink-0">
                     <svg className="w-[100px] h-[100px] -rotate-90" viewBox="0 0 100 100">
-                      <circle cx="50" cy="50" r="42" fill="none" stroke="hsl(var(--diag-border))" strokeWidth="6" />
-                      <circle cx="50" cy="50" r="42" fill="none" stroke={scoreColor} strokeWidth="6" strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={dashOffset} className="transition-all duration-1000 diag-glow" />
+                      <circle cx="50" cy="50" r="42" fill="none" stroke="hsl(var(--muted))" strokeWidth="6" />
+                      <circle cx="50" cy="50" r="42" fill="none" stroke={scoreColor} strokeWidth="6" strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={dashOffset} className="transition-all duration-1000" />
                     </svg>
                     <div className="absolute flex flex-col items-center">
                       <span className="diag-metric text-xl" style={{ color: scoreColor }}>{cachedPreview.score}</span>
-                      <span className="text-[10px] text-[hsl(var(--diag-text-dim))]">{getScoreLabel(cachedPreview.score)}</span>
+                      <span className="text-[10px] text-muted-foreground">{getScoreLabel(cachedPreview.score)}</span>
                     </div>
                   </div>
                   <div className="flex-1 min-w-0 space-y-2 text-center sm:text-left">
                     {cachedPreview.topPath && (
                       <div>
                         <p className="diag-label mb-0.5">Top path</p>
-                        <p className="text-sm font-semibold text-[hsl(var(--diag-text))]">{cachedPreview.topPath.name}</p>
+                        <p className="text-sm font-semibold text-foreground">{cachedPreview.topPath.name}</p>
                       </div>
                     )}
-                    <p className="text-xs text-[hsl(var(--diag-text-dim))]">
-                      <span className="font-semibold diag-metric text-[hsl(var(--diag-text))]">{cachedPreview.totalMatched}</span> roles matched
+                    <p className="text-xs text-muted-foreground">
+                      <span className="font-semibold diag-metric text-foreground">{cachedPreview.totalMatched}</span> roles matched
                     </p>
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+          </>
+        )}
+
+        {!cachedPreview && (
+          <div className="text-center">
+            <h1 className="text-2xl sm:text-3xl font-serif font-medium text-foreground tracking-tight">
+              Upload your resume
+            </h1>
+            <p className="text-sm text-muted-foreground mt-2">
+              Get your career readiness score, personalized skill gaps, and matching roles.
+            </p>
+          </div>
+        )}
+
+        <Card className={isUploading ? "pointer-events-none opacity-70" : ""} data-testid="inline-upload-card">
+          <CardContent className="p-6 text-center space-y-4">
+            {isUploading ? (
+              <div className="py-6 space-y-3">
+                <Loader2 className="h-8 w-8 text-primary animate-spin mx-auto" />
+                <p className="text-sm font-medium text-foreground">Uploading your resume...</p>
+                <p className="text-xs text-muted-foreground">This will just take a moment.</p>
               </div>
-            </>
-          )}
-
-          {!cachedPreview && (
-            <div className="text-center">
-              <h1 className="text-2xl sm:text-3xl font-serif font-medium text-[hsl(var(--diag-text))] tracking-tight">
-                Upload your resume
-              </h1>
-              <p className="text-sm text-[hsl(var(--diag-text-dim))] mt-2">
-                Get your career readiness score, personalized skill gaps, and matching roles.
-              </p>
-            </div>
-          )}
-
-          <div className={`diag-panel ${isUploading ? "pointer-events-none opacity-70" : ""}`} data-testid="inline-upload-card">
-            <div className="p-6 text-center space-y-4">
-              {isUploading ? (
-                <div className="py-6 space-y-3">
-                  <Loader2 className="h-8 w-8 text-emerald-400 animate-spin mx-auto" />
-                  <p className="text-sm font-medium text-[hsl(var(--diag-text))]">Uploading your resume...</p>
-                  <p className="text-xs text-[hsl(var(--diag-text-dim))]">This will just take a moment.</p>
-                </div>
-              ) : (
-                <div
-                  className={`border-2 border-dashed rounded-lg p-8 transition-colors cursor-pointer ${
-                    isDragging ? "border-emerald-500 bg-emerald-500/5" : "border-[hsl(var(--diag-border))] hover:border-emerald-500/40"
-                  }`}
-                  onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-                  onDragLeave={() => setIsDragging(false)}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    setIsDragging(false);
-                    const file = e.dataTransfer.files?.[0];
+            ) : (
+              <div
+                className={`border-2 border-dashed rounded-lg p-8 transition-colors cursor-pointer ${
+                  isDragging ? "border-primary bg-primary/5" : "border-border/60 hover:border-primary/40"
+                }`}
+                onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                onDragLeave={() => setIsDragging(false)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setIsDragging(false);
+                  const file = e.dataTransfer.files?.[0];
+                  if (file) handleUpload(file);
+                }}
+                onClick={() => fileInputRef.current?.click()}
+                data-testid="inline-upload-zone"
+              >
+                <Upload className="h-8 w-8 text-muted-foreground/60 mx-auto mb-3" />
+                <p className="text-sm font-medium text-foreground">
+                  {cachedPreview ? "Upload resume for your full report" : "Drop your resume here or click to browse"}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">PDF or DOCX, up to 5MB</p>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf,.docx,.doc"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
                     if (file) handleUpload(file);
                   }}
-                  onClick={() => fileInputRef.current?.click()}
-                  data-testid="inline-upload-zone"
-                >
-                  <Upload className="h-8 w-8 text-[hsl(var(--diag-text-dim))]/60 mx-auto mb-3" />
-                  <p className="text-sm font-medium text-[hsl(var(--diag-text))]">
-                    {cachedPreview ? "Upload resume for your full report" : "Drop your resume here or click to browse"}
-                  </p>
-                  <p className="text-xs text-[hsl(var(--diag-text-dim))] mt-1">PDF or DOCX, up to 5MB</p>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept=".pdf,.docx,.doc"
-                    className="hidden"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) handleUpload(file);
-                    }}
-                    data-testid="inline-upload-input"
-                  />
-                </div>
-              )}
-              {uploadError && (
-                <p className="text-sm text-rose-400" data-testid="text-upload-error">{uploadError}</p>
-              )}
-              <p className="text-[10px] text-[hsl(var(--diag-text-dim))] flex items-center justify-center gap-1.5">
-                <Lock className="h-3 w-3" />
-                Your resume stays private. Never shared.
-              </p>
-            </div>
-          </div>
-        </div>
+                  data-testid="inline-upload-input"
+                />
+              </div>
+            )}
+            {uploadError && (
+              <p className="text-sm text-destructive" data-testid="text-upload-error">{uploadError}</p>
+            )}
+            <p className="text-[10px] text-muted-foreground flex items-center justify-center gap-1.5">
+              <Lock className="h-3 w-3" />
+              Your resume stays private. Never shared.
+            </p>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
@@ -1373,250 +1369,248 @@ export default function DiagnosticPage() {
   }
 
   return (
-    <div className="diag-page">
-      <div className="max-w-5xl mx-auto px-4 py-6 space-y-6">
-        <div className="mb-1">
-          <Link href="/dashboard">
-            <Button variant="ghost" size="sm" className="text-[hsl(var(--diag-text-dim))] hover:text-[hsl(var(--diag-text))] -ml-2" data-testid="button-back-dashboard-main">
-              <ArrowLeft className="h-4 w-4 mr-1.5" />
-              Back to Dashboard
-            </Button>
-          </Link>
+    <div className="max-w-5xl mx-auto px-4 py-6 space-y-6">
+      <div className="mb-1">
+        <Link href="/dashboard">
+          <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground -ml-2" data-testid="button-back-dashboard-main">
+            <ArrowLeft className="h-4 w-4 mr-1.5" />
+            Back to Dashboard
+          </Button>
+        </Link>
+      </div>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold font-serif text-foreground" data-testid="diagnostic-title">
+            Career Diagnostic
+          </h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            {report ? "Your personalized career intelligence report" : "Generate your career diagnostic to see where you stand"}
+          </p>
         </div>
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold font-serif text-[hsl(var(--diag-text))]" data-testid="diagnostic-title">
-              Career Diagnostic
-            </h1>
-            <p className="text-sm text-[hsl(var(--diag-text-dim))] mt-0.5">
-              {report ? "Your personalized career intelligence report" : "Generate your career diagnostic to see where you stand"}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            {report && (
-              <>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="border-[hsl(var(--diag-border))] bg-[hsl(var(--diag-panel))] text-[hsl(var(--diag-text))] hover:bg-[hsl(var(--diag-panel-alt))]"
-                  onClick={() => {
-                    const topPath = report.topPaths?.[0];
-                    const shareText = encodeURIComponent(
-                      `I scored ${report.overallReadinessScore}/100 on my Legal Tech Career Readiness assessment.${topPath ? ` Top path: ${topPath.name}.` : ""} Check yours at Legal Tech Careers.`
-                    );
-                    const shareUrl = encodeURIComponent(`${window.location.origin}/diagnostic`);
-                    window.open(
-                      `https://www.linkedin.com/sharing/share-offsite/?url=${shareUrl}`,
-                      "_blank",
-                      "noopener,noreferrer,width=600,height=600"
-                    );
-                  }}
-                  data-testid="button-share-linkedin"
-                >
-                  <SiLinkedin className="h-3.5 w-3.5 mr-1.5" />
-                  Share
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="border-[hsl(var(--diag-border))] bg-[hsl(var(--diag-panel))] text-[hsl(var(--diag-text))] hover:bg-[hsl(var(--diag-panel-alt))]"
-                  onClick={() => runDiagnostic.mutate({})}
-                  disabled={runDiagnostic.isPending}
-                  data-testid="button-rerun-diagnostic"
-                >
-                  <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${runDiagnostic.isPending ? "animate-spin" : ""}`} />
-                  Recompute
-                </Button>
-              </>
-            )}
-            {!report && (
+        <div className="flex items-center gap-2">
+          {report && (
+            <>
               <Button
-                className="bg-emerald-600 hover:bg-emerald-500 text-white"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const topPath = report.topPaths?.[0];
+                  const shareText = encodeURIComponent(
+                    `I scored ${report.overallReadinessScore}/100 on my Legal Tech Career Readiness assessment.${topPath ? ` Top path: ${topPath.name}.` : ""} Check yours at Legal Tech Careers.`
+                  );
+                  const shareUrl = encodeURIComponent(`${window.location.origin}/diagnostic`);
+                  window.open(
+                    `https://www.linkedin.com/sharing/share-offsite/?url=${shareUrl}`,
+                    "_blank",
+                    "noopener,noreferrer,width=600,height=600"
+                  );
+                }}
+                data-testid="button-share-linkedin"
+              >
+                <SiLinkedin className="h-3.5 w-3.5 mr-1.5" />
+                Share
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => runDiagnostic.mutate({})}
                 disabled={runDiagnostic.isPending}
-                data-testid="button-run-diagnostic"
+                data-testid="button-rerun-diagnostic"
               >
-                {runDiagnostic.isPending ? (
-                  <>
-                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                    Analyzing your career...
-                  </>
-                ) : (
-                  <>
-                    <Brain className="h-4 w-4 mr-2" />
-                    Get My Diagnostic
-                  </>
-                )}
+                <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${runDiagnostic.isPending ? "animate-spin" : ""}`} />
+                Recompute
               </Button>
-            )}
-          </div>
+            </>
+          )}
+          {!report && (
+            <Button
+              onClick={() => runDiagnostic.mutate({})}
+              disabled={runDiagnostic.isPending}
+              data-testid="button-run-diagnostic"
+            >
+              {runDiagnostic.isPending ? (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  Analyzing your career...
+                </>
+              ) : (
+                <>
+                  <Brain className="h-4 w-4 mr-2" />
+                  Get My Diagnostic
+                </>
+              )}
+            </Button>
+          )}
         </div>
+      </div>
 
-        {runDiagnostic.isPending && <DiagnosticSkeleton />}
+      {runDiagnostic.isPending && <DiagnosticSkeleton />}
 
-        {report && !runDiagnostic.isPending && (
-          <>
-            <nav className="sticky top-0 z-50 -mx-4 px-4 py-2 bg-[hsl(var(--diag-bg)/.9)] backdrop-blur-md border-b border-[hsl(var(--diag-border-subtle))]" data-testid="section-nav">
-              <div className="flex items-center gap-1 overflow-x-auto scrollbar-none">
-                {[
-                  { id: "overview", label: "Overview", icon: BarChart3 },
-                  { id: "skills", label: "Skills", icon: Brain },
-                  { id: "career-paths", label: "Career Paths", icon: TrendingUp },
-                  { id: "action-plan", label: "Action Plan", icon: FileText },
-                ].map((section) => (
-                  <button
-                    key={section.id}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium text-[hsl(var(--diag-text-dim))] hover:text-[hsl(var(--diag-text))] hover:bg-[hsl(var(--diag-panel))] transition-colors"
-                    onClick={() => {
-                      const el = document.getElementById(`section-${section.id}`);
-                      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
-                    }}
-                    data-testid={`nav-${section.id}`}
-                  >
-                    <section.icon className="h-3.5 w-3.5" />
-                    {section.label}
-                  </button>
-                ))}
+      {report && !runDiagnostic.isPending && (
+        <>
+          <nav className="sticky top-0 z-50 -mx-4 px-4 py-2.5 bg-background/80 backdrop-blur-md border-b border-border/40" data-testid="section-nav">
+            <div className="flex items-center gap-1 overflow-x-auto scrollbar-none">
+              {[
+                { id: "overview", label: "Overview", icon: BarChart3 },
+                { id: "skills", label: "Skills", icon: Brain },
+                { id: "career-paths", label: "Career Paths", icon: TrendingUp },
+                { id: "action-plan", label: "Action Plan", icon: FileText },
+              ].map((section) => (
+                <Button
+                  key={section.id}
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    const el = document.getElementById(`section-${section.id}`);
+                    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }}
+                  data-testid={`nav-${section.id}`}
+                >
+                  <section.icon className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
+                  {section.label}
+                </Button>
+              ))}
+            </div>
+          </nav>
+
+          <div id="section-overview" />
+          <Card className="border border-border/50 card-elev-static p-6">
+            <div className="grid grid-cols-1 md:grid-cols-[auto_1fr] gap-6 items-center">
+              <div className="flex flex-col items-center gap-2">
+                <ReadinessScoreRing score={report.overallReadinessScore} />
+                {percentileData?.percentile !== null && percentileData?.percentile !== undefined && (
+                  <p className="text-[10px] text-muted-foreground text-center font-mono" data-testid="text-diagnostic-percentile">
+                    Top <span className="font-bold text-foreground">{100 - percentileData.percentile}%</span> of lawyers assessed
+                  </p>
+                )}
               </div>
-            </nav>
-
-            <div id="section-overview" />
-            <div className="diag-panel p-6">
-              <div className="grid grid-cols-1 md:grid-cols-[auto_1fr] gap-6 items-center">
-                <div className="flex flex-col items-center gap-2">
-                  <ReadinessScoreRing score={report.overallReadinessScore} />
-                  {percentileData?.percentile !== null && percentileData?.percentile !== undefined && (
-                    <p className="text-[10px] text-[hsl(var(--diag-text-dim))] text-center font-mono" data-testid="text-diagnostic-percentile">
-                      Top <span className="font-bold text-[hsl(var(--diag-text))]">{100 - percentileData.percentile}%</span> of lawyers assessed
-                    </p>
-                  )}
+              <div className="space-y-4">
+                <div>
+                  <p className="diag-label mb-1">Your Readiness</p>
+                  <p className="text-sm text-foreground">
+                    {report.overallReadinessScore >= 70
+                      ? "You're in a strong position to transition into legal tech. Your background maps well to current market demands."
+                      : report.overallReadinessScore >= 45
+                      ? `You're making progress. A few targeted improvements will move you into the "Strong Fit" range.`
+                      : "There are significant skill gaps to address, but every career changer starts somewhere. Your 30-day plan below will help."}
+                  </p>
                 </div>
-                <div className="space-y-4">
-                  <div>
-                    <p className="diag-label mb-1">Your Readiness</p>
-                    <p className="text-sm text-[hsl(var(--diag-text))]">
-                      {report.overallReadinessScore >= 70
-                        ? "You're in a strong position to transition into legal tech. Your background maps well to current market demands."
-                        : report.overallReadinessScore >= 45
-                        ? `You're making progress. A few targeted improvements will move you into the "Strong Fit" range.`
-                        : "There are significant skill gaps to address, but every career changer starts somewhere. Your 30-day plan below will help."}
-                    </p>
+                <div className="diag-divider" />
+                <div className="flex items-center gap-4 text-xs">
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                    <span className="text-muted-foreground"><span className="diag-metric text-foreground">{report.readinessLadder.ready.length}</span> Ready Now</span>
                   </div>
-                  <div className="diag-divider" />
-                  <div className="flex items-center gap-4 text-xs">
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                      <span className="text-[hsl(var(--diag-text-dim))]"><span className="diag-metric text-[hsl(var(--diag-text))]">{report.readinessLadder.ready.length}</span> Ready Now</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-2 h-2 rounded-full bg-amber-500" />
-                      <span className="text-[hsl(var(--diag-text-dim))]"><span className="diag-metric text-[hsl(var(--diag-text))]">{report.readinessLadder.nearReady.length}</span> Near-Ready</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-2 h-2 rounded-full bg-rose-500" />
-                      <span className="text-[hsl(var(--diag-text-dim))]"><span className="diag-metric text-[hsl(var(--diag-text))]">{report.readinessLadder.stretch.length}</span> Stretch</span>
-                    </div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-2 h-2 rounded-full bg-amber-500" />
+                    <span className="text-muted-foreground"><span className="diag-metric text-foreground">{report.readinessLadder.nearReady.length}</span> Near-Ready</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-2 h-2 rounded-full bg-rose-500" />
+                    <span className="text-muted-foreground"><span className="diag-metric text-foreground">{report.readinessLadder.stretch.length}</span> Stretch</span>
                   </div>
                 </div>
               </div>
             </div>
+          </Card>
 
-            <div id="section-career-paths" />
-            <div>
-              <div className="diag-section-title mb-4">Career Paths</div>
-              <p className="text-xs text-[hsl(var(--diag-text-dim))] mb-4 ml-3">Your top career directions based on your skills and experience, with matching roles</p>
-              <CareerPathFlow
-                topPaths={report.topPaths}
-                readinessLadder={report.readinessLadder}
-                isPro={isPro}
-                currentRole={(resumeData as any)?.[0]?.extractedData?.experience?.[0]?.title || "Your Current Role"}
-                readinessScore={report.overallReadinessScore}
-              />
-            </div>
+          <div id="section-career-paths" />
+          <div>
+            <div className="diag-section-title mb-4">Career Paths</div>
+            <p className="text-xs text-muted-foreground mb-4 ml-3">Your top career directions based on your skills and experience, with matching roles</p>
+            <CareerPathFlow
+              topPaths={report.topPaths}
+              readinessLadder={report.readinessLadder}
+              isPro={isPro}
+              currentRole={(resumeData as any)?.[0]?.extractedData?.experience?.[0]?.title || "Your Current Role"}
+              readinessScore={report.overallReadinessScore}
+            />
+          </div>
 
-            <div className="diag-divider" />
+          <div className="diag-divider" />
 
-            <div id="section-skills" />
-            <div>
-              <div className="diag-section-title mb-4">Skills & Market Analysis</div>
-              <p className="text-xs text-[hsl(var(--diag-text-dim))] mb-4 ml-3">How your skills measure up and what the market is looking for right now</p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <SkillRadarChart clusters={report.skillClusters} />
-                <div className="space-y-4">
-                  <FitBreakdownChart breakdown={report.fitBreakdown} />
-                  <TransitionGauge difficulty={report.transitionDifficulty} />
-                </div>
+          <div id="section-skills" />
+          <div>
+            <div className="diag-section-title mb-4">Skills & Market Analysis</div>
+            <p className="text-xs text-muted-foreground mb-4 ml-3">How your skills measure up and what the market is looking for right now</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <SkillRadarChart clusters={report.skillClusters} />
+              <div className="space-y-4">
+                <FitBreakdownChart breakdown={report.fitBreakdown} />
+                <TransitionGauge difficulty={report.transitionDifficulty} />
               </div>
             </div>
+          </div>
 
-            <MarketDemandChart demand={report.marketDemand} />
+          <MarketDemandChart demand={report.marketDemand} />
 
-            <div className="diag-divider" />
+          <div className="diag-divider" />
 
-            <div className="diag-panel border-l-2 border-l-rose-500 p-4" data-testid="brutal-honesty-section">
-              <div className="flex items-center gap-2 mb-3">
+          <Card className="border-2 border-rose-500/30 bg-rose-500/5 card-elev-static border-l-2 border-l-rose-500" data-testid="brutal-honesty-section">
+            <CardHeader className="pb-2">
+              <div className="flex items-center gap-2">
                 <div className="w-7 h-7 rounded-full bg-rose-500/10 flex items-center justify-center shrink-0">
-                  <Shield className="h-4 w-4 text-rose-400" />
+                  <Shield className="h-4 w-4 text-rose-500" />
                 </div>
                 <div>
-                  <span className="diag-label text-rose-400">Honest Assessment</span>
-                  <p className="text-[10px] text-[hsl(var(--diag-text-dim))]">Direct feedback on what you need to know</p>
+                  <CardTitle className="text-sm font-semibold text-rose-700 dark:text-rose-400">Honest Assessment</CardTitle>
+                  <p className="text-[10px] text-muted-foreground">Direct feedback on what you need to know</p>
                 </div>
               </div>
-              <div className="space-y-2">
-                {report.brutalHonesty.map((statement, i) => (
-                  <p key={i} className="text-sm text-[hsl(var(--diag-text))]/90 flex items-start gap-2">
-                    <span className="text-rose-400 font-mono font-bold shrink-0">{i + 1}.</span>
-                    {statement}
-                  </p>
-                ))}
-              </div>
-            </div>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {report.brutalHonesty.map((statement, i) => (
+                <p key={i} className="text-sm text-foreground/90 flex items-start gap-2">
+                  <span className="text-rose-500 font-mono font-bold shrink-0">{i + 1}.</span>
+                  {statement}
+                </p>
+              ))}
+            </CardContent>
+          </Card>
 
-            <div className="diag-divider" />
+          <div className="diag-divider" />
 
-            <div id="section-action-plan" />
-            <div>
-              <div className="diag-section-title mb-2">Role Readiness Ladder</div>
-              <p className="text-xs text-[hsl(var(--diag-text-dim))] mb-4 ml-3">Jobs matched to your profile, grouped by how ready you are to apply</p>
-              <ReadinessLadder ladder={report.readinessLadder} isPro={isPro} />
-            </div>
+          <div id="section-action-plan" />
+          <div>
+            <div className="diag-section-title mb-2">Role Readiness Ladder</div>
+            <p className="text-xs text-muted-foreground mb-4 ml-3">Jobs matched to your profile, grouped by how ready you are to apply</p>
+            <ReadinessLadder ladder={report.readinessLadder} isPro={isPro} />
+          </div>
 
-            <div>
-              <div className="diag-section-title mb-2" style={{ borderLeftColor: "hsl(var(--diag-blue))" }}>30-Day Transition Plan</div>
-              <p className="text-xs text-[hsl(var(--diag-text-dim))] mb-4 ml-3">Week-by-week actions tied to your skill gaps and real job requirements</p>
-              <TransitionPlan plan={report.transitionPlan} isPro={isPro} />
-            </div>
+          <div>
+            <div className="diag-section-title mb-2" style={{ borderLeftColor: "hsl(var(--chart-2))" }}>30-Day Transition Plan</div>
+            <p className="text-xs text-muted-foreground mb-4 ml-3">Week-by-week actions tied to your skill gaps and real job requirements</p>
+            <TransitionPlan plan={report.transitionPlan} isPro={isPro} />
+          </div>
 
-            <div className="diag-panel p-6 text-center border-l-2 border-l-emerald-500" data-testid="diagnostic-bottom-cta">
-              <h3 className="text-lg font-bold font-serif text-[hsl(var(--diag-text))] mb-2">Ready to take the next step?</h3>
-              <p className="text-sm text-[hsl(var(--diag-text-dim))] mb-4">
-                {report.readinessLadder.ready.length > 0
-                  ? `You're ready for ${report.readinessLadder.ready.length} role${report.readinessLadder.ready.length === 1 ? "" : "s"} right now. Start applying today.`
-                  : report.readinessLadder.nearReady.length > 0
-                  ? `You're ${report.readinessLadder.nearReady.length > 1 ? "a few improvements" : "one step"} away from being market-ready. Browse matching roles now.`
-                  : "Your transition starts with understanding the market. Browse roles that match your background."}
-              </p>
-              <div className="flex items-center justify-center gap-3 flex-wrap">
-                <Link href="/jobs">
-                  <Button className="bg-emerald-600 hover:bg-emerald-500 text-white" data-testid="button-browse-matches">
-                    <Briefcase className="h-4 w-4 mr-2" />
-                    Browse Matched Roles
+          <Card className="bg-primary/5 border-primary/20 p-6 text-center card-elev-static" data-testid="diagnostic-bottom-cta">
+            <h3 className="text-lg font-bold font-serif text-foreground mb-2">Ready to take the next step?</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              {report.readinessLadder.ready.length > 0
+                ? `You're ready for ${report.readinessLadder.ready.length} role${report.readinessLadder.ready.length === 1 ? "" : "s"} right now. Start applying today.`
+                : report.readinessLadder.nearReady.length > 0
+                ? `You're ${report.readinessLadder.nearReady.length > 1 ? "a few improvements" : "one step"} away from being market-ready. Browse matching roles now.`
+                : "Your transition starts with understanding the market. Browse roles that match your background."}
+            </p>
+            <div className="flex items-center justify-center gap-3 flex-wrap">
+              <Link href="/jobs">
+                <Button data-testid="button-browse-matches">
+                  <Briefcase className="h-4 w-4 mr-2" />
+                  Browse Matched Roles
+                </Button>
+              </Link>
+              {!isPro && (
+                <Link href="/pricing">
+                  <Button variant="outline" data-testid="button-upgrade-pro">
+                    <Zap className="h-4 w-4 mr-2" />
+                    Unlock Full Diagnostic
                   </Button>
                 </Link>
-                {!isPro && (
-                  <Link href="/pricing">
-                    <Button variant="outline" className="border-[hsl(var(--diag-border))] bg-[hsl(var(--diag-panel))] text-[hsl(var(--diag-text))] hover:bg-[hsl(var(--diag-panel-alt))]" data-testid="button-upgrade-pro">
-                      <Zap className="h-4 w-4 mr-2" />
-                      Unlock Full Diagnostic
-                    </Button>
-                  </Link>
-                )}
-              </div>
+              )}
             </div>
-          </>
-        )}
-      </div>
+          </Card>
+        </>
+      )}
     </div>
   );
 }

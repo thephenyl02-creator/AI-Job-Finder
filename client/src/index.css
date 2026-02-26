@@ -427,46 +427,6 @@
   box-shadow: 0 1px 3px hsl(0 0% 0% / 0.20), 0 1px 2px hsl(0 0% 0% / 0.12);
 }
 
-:root {
-  --diag-bg: 222 35% 10%;
-  --diag-panel: 222 30% 13%;
-  --diag-panel-alt: 222 28% 16%;
-  --diag-border: 222 20% 22%;
-  --diag-border-subtle: 222 15% 18%;
-  --diag-text: 210 30% 95%;
-  --diag-text-dim: 215 15% 65%;
-  --diag-green: 152 69% 46%;
-  --diag-amber: 45 93% 58%;
-  --diag-red: 0 84% 60%;
-  --diag-blue: 210 80% 60%;
-}
-
-.dark {
-  --diag-bg: 224 35% 5%;
-  --diag-panel: 224 30% 8%;
-  --diag-panel-alt: 224 28% 11%;
-  --diag-border: 224 20% 16%;
-  --diag-border-subtle: 224 15% 12%;
-}
-
-.diag-page {
-  background: hsl(var(--diag-bg));
-  color: hsl(var(--diag-text));
-  min-height: 100vh;
-}
-
-.diag-panel {
-  background: hsl(var(--diag-panel));
-  border: 1px solid hsl(var(--diag-border));
-  border-radius: 0.5rem;
-}
-
-.diag-panel-alt {
-  background: hsl(var(--diag-panel-alt));
-  border: 1px solid hsl(var(--diag-border-subtle));
-  border-radius: 0.375rem;
-}
-
 .diag-metric {
   font-family: var(--font-mono);
   font-weight: 700;
@@ -478,7 +438,7 @@
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: hsl(var(--diag-text-dim));
+  color: hsl(var(--muted-foreground));
 }
 
 .diag-section-title {
@@ -486,22 +446,13 @@
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: hsl(var(--diag-text));
+  color: hsl(var(--foreground));
   padding-left: 0.75rem;
-  border-left: 2px solid hsl(var(--diag-green));
+  border-left: 2px solid hsl(var(--status-success));
 }
 
 .diag-divider {
   height: 1px;
-  background: linear-gradient(90deg, hsl(var(--diag-border)) 0%, transparent 100%);
-}
-
-@keyframes diag-glow {
-  0%, 100% { filter: drop-shadow(0 0 2px currentColor); }
-  50% { filter: drop-shadow(0 0 6px currentColor); }
-}
-
-.diag-glow {
-  animation: diag-glow 3s ease-in-out infinite;
+  background: linear-gradient(90deg, hsl(var(--border)) 0%, transparent 100%);
 }
 
