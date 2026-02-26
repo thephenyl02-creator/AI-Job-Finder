@@ -491,7 +491,7 @@ class DatabaseStorage implements IStorage {
       if (descriptionChanged) {
         updateData.description = newDesc;
         updateData.descriptionFormatted = true;
-        const PERMANENT_REJECTION_CODES = ['AUDIT_TITLE_REJECT', 'AUDIT_COMPANY_REJECT', 'HARD_REJECT', 'NON_ENGLISH', 'GARBAGE_DESCRIPTION', 'AUDIT_DUPLICATE'];
+        const PERMANENT_REJECTION_CODES = ['AUDIT_TITLE_REJECT', 'AUDIT_COMPANY_REJECT', 'HARD_REJECT', 'NON_ENGLISH', 'AUDIT_DUPLICATE'];
         if (existing.pipelineStatus === 'ready') {
           updateData.pipelineStatus = 'raw';
         } else if (existing.pipelineStatus === 'rejected') {

@@ -974,11 +974,13 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   {
     name: 'Allen & Overy (A&O Shearman)',
     careerUrl: 'https://www.aoshearman.com/careers',
+    workday: { company: 'aoshearman', instance: 'wd3', site: 'External_AO_Shearman' },
     type: 'biglaw',
   },
   {
     name: 'Freshfields',
     careerUrl: 'https://www.freshfields.com/en-gb/careers/',
+    workday: { company: 'freshfields', instance: 'wd3', site: 'FBD_101' },
     type: 'biglaw',
   },
   {

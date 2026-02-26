@@ -485,9 +485,60 @@ export async function scrapeWorkday(
             });
             const detail = detailResp.data;
             if (detail.jobPostingInfo) {
-              description = detail.jobPostingInfo.jobDescription || detail.jobPostingInfo.externalDescription || description;
+              description = detail.jobPostingInfo.jobDescription
+                || detail.jobPostingInfo.externalDescription
+                || detail.jobPostingInfo.additionalInformation
+                || description;
+              if (detail.jobPostingInfo.qualifications && (!description || description.trim() === listing.title)) {
+                description = detail.jobPostingInfo.qualifications;
+              }
+            }
+            const descMissing = !description || description.trim().length < 50 || description.trim() === listing.title;
+            if (descMissing && detail.structuredDataAttributes) {
+              const sda = detail.structuredDataAttributes;
+              description = sda.description || sda.jobDescription || description;
             }
           } catch {
+          }
+          const needsHtmlFallback = !description || description.trim().length < 50 || description.trim() === listing.title;
+          if (needsHtmlFallback) {
+            try {
+              const htmlUrl = listing.applyUrl;
+              if (htmlUrl) {
+                const htmlResp = await axios.get(htmlUrl, {
+                  headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                  },
+                  timeout: 15000,
+                  maxRedirects: 5,
+                });
+                const htmlText = typeof htmlResp.data === 'string' ? htmlResp.data : '';
+                const ldJsonMatch = htmlText.match(/<script[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/i);
+                if (ldJsonMatch) {
+                  try {
+                    const ldJson = JSON.parse(ldJsonMatch[1]);
+                    if (ldJson.description && ldJson.description.length > 50) {
+                      description = ldJson.description;
+                    }
+                  } catch {}
+                }
+                const stillMissing = !description || description.trim().length < 50 || description.trim() === listing.title;
+                if (stillMissing) {
+                  const descMatch = htmlText.match(/data-automation-id="jobPostingDescription"[^>]*>([\s\S]*?)<\/div>/i);
+                  if (descMatch) {
+                    const cleaned = descMatch[1]
+                      .replace(/<[^>]+>/g, '\n')
+                      .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+                      .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, ' ')
+                      .replace(/\n{3,}/g, '\n\n').replace(/[ \t]+/g, ' ').trim();
+                    if (cleaned.length > 100) {
+                      description = cleaned;
+                    }
+                  }
+                }
+              }
+            } catch {}
           }
 
           const salary = parseSalaryFromText(description);
