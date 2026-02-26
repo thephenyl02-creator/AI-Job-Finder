@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { usePageTitle } from "@/hooks/use-page-title";
 import { useAuth } from "@/hooks/use-auth";
 import { useSubscription } from "@/hooks/use-subscription";
+import { useToast } from "@/hooks/use-toast";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { Button } from "@/components/ui/button";
@@ -201,6 +202,7 @@ export default function MarketIntelligence() {
   const { isPro } = useSubscription();
   const canDownload = isPro || isAdmin;
 
+  const { toast } = useToast();
   const [downloading, setDownloading] = useState(false);
 
   const { data, isLoading, isError, refetch } = useQuery<MarketIntelligenceData>({
@@ -270,13 +272,18 @@ export default function MarketIntelligence() {
     try {
       const response = await fetch(`/api/market-intelligence/report?period=${period}`, {
         credentials: "include",
+        headers: { "Accept": "application/pdf" },
       });
       if (!response.ok) {
         if (response.status === 401 || response.status === 403) {
-          window.location.href = "/pricing";
+          toast({ title: "Upgrade required", description: "Pro subscription is needed to download reports.", variant: "destructive" });
           return;
         }
         throw new Error("Failed to download report");
+      }
+      const contentType = response.headers.get("content-type") || "";
+      if (!contentType.includes("application/pdf")) {
+        throw new Error("Unexpected response — expected a PDF file");
       }
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
@@ -287,8 +294,10 @@ export default function MarketIntelligence() {
       a.click();
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
+      toast({ title: "Report downloaded", description: `Your ${period} report has been saved.` });
     } catch (err) {
       console.error("Download failed:", err);
+      toast({ title: "Download failed", description: "Something went wrong generating the report. Please try again.", variant: "destructive" });
     } finally {
       setDownloading(false);
     }

@@ -356,3 +356,15 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
   (req as any).user = user;
   next();
 };
+
+export const optionalAuth: RequestHandler = async (req, _res, next) => {
+  if (req.session?.userId) {
+    try {
+      const user = await authStorage.getUser(req.session.userId);
+      if (user) {
+        (req as any).user = user;
+      }
+    } catch {}
+  }
+  next();
+};

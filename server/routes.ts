@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
+import { setupAuth, registerAuthRoutes, isAuthenticated, optionalAuth } from "./replit_integrations/auth";
 
 
 declare global {
@@ -278,7 +278,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/market-pulse", async (req: any, res) => {
+  app.get("/api/market-pulse", optionalAuth, async (req: any, res) => {
     try {
       let topCategory: string | undefined;
       if (req.user?.id) {
@@ -8125,7 +8125,7 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
     }
   });
 
-  app.get("/api/market-intelligence/report", async (req, res) => {
+  app.get("/api/market-intelligence/report", optionalAuth, async (req, res) => {
     try {
       console.log(`[Report] req.user present: ${!!req.user}, id: ${req.user?.id}, session: ${!!req.session}`);
       const wantsPdf = req.headers.accept?.includes("application/pdf") || req.query.format === "pdf" || (req.headers['sec-fetch-dest'] === 'document');
