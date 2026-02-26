@@ -1,0 +1,37 @@
+Act as a senior full-stack engineer. I’m building lawjobs.co (a legal tech job platform). My problem: if I only include JD-required roles there are too few jobs; if I include all tech roles it dilutes the brand. Fix this by building “smart tracks + tagging” so we can include more jobs while keeping clarity.
+
+Build a Next.js (App Router) + TypeScript app with Prisma + SQLite and Tailwind.
+
+Features:
+1) Data model:
+- Job: id, title, company, description, location, remote_type, url, date_posted, source
+- Tags: jd_required (yes/no/unknown), jd_preferred (yes/no/unknown), technical_required (yes/no/unknown), hybrid_role (boolean)
+- Track: A=Lawyer-led tech, B=Technical roles in legal industry, C=Ecosystem/business roles in legal tech
+- Employer type: law_firm / legal_vendor / ALSP / in_house / gov_court / unknown
+- Tools: extracted list (Relativity, Clio, iManage, NetDocuments, Ironclad, DocuSign, Salesforce, SQL, Python, AWS, etc.)
+- Confidence score for track/tags
+- Overrides table so admin can correct track/tags and those overrides always win
+
+2) Rules-based classifier (no API key required):
+- Create an editable rules file (JSON or TS) with keyword patterns to assign Track + tags.
+- Extract tools from job description by keyword dictionary.
+- Return confidence scores.
+
+3) UI:
+- Jobs list with filters: Track (A/B/C), “For Lawyers” toggle (Track A + jd_required/jd_preferred), “For Engineers” toggle (Track B + technical_required), “Hybrid only”, employer type, tools, remote type.
+- Job cards show: title, company, location, Track badge, tag chips, top 5 tools.
+
+4) Admin review:
+- Admin page shows low-confidence jobs (<0.65).
+- Admin can override track/tags/tools; store overrides.
+
+5) Ingestion:
+- Simple admin “Add Job” form + CSV upload (title, company, description, location, remote_type, url, date_posted).
+
+Deliver:
+- Prisma schema + migrations
+- Seed with 20 realistic sample legal-tech jobs across Tracks A/B/C
+- Clean folder structure
+- README with setup steps.
+
+Start by implementing the database schema + classifier + seed data, then the job list UI, then admin review/override, then CSV upload.

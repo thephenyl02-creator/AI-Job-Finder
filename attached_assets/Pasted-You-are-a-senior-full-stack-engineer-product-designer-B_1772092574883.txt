@@ -1,0 +1,63 @@
+You are a senior full-stack engineer + product designer. Build a web app feature for my platform (lawjobs.co) that expands job coverage without diluting focus.
+
+Goal:
+Legal tech jobs have messy titles. If we only list JD-required roles, there are too few jobs. If we list all tech roles, we lose clarity. We need “concentric circles” + smart tagging.
+
+Build:
+1) Job Ingestion + Normalization
+- Accept jobs from: (a) RSS/JSON feed, (b) manual form, (c) CSV upload
+- Each job has: title, company, description, location, remote/hybrid, salary (optional), URL, date posted, source
+
+2) Role Track Classification (3 Tracks)
+- Track A: Lawyer-Led Tech Roles (e.g., Legal Product, Innovation, Legal Ops, Knowledge Mgmt, Legal AI)
+- Track B: Technical Roles in Legal Industry (e.g., Solutions Architect, Implementation, Integrations, Legal Systems, E-discovery engineering)
+- Track C: Ecosystem / Business Roles in Legal Tech (e.g., Sales Engineer, Customer Success, RevOps, Marketing for legal SaaS)
+
+3) Tagging System (the core)
+For every job, automatically generate tags:
+- JD_required: yes/no/unknown
+- JD_preferred: yes/no/unknown
+- technical_required: yes/no/unknown
+- hybrid_role: yes/no (true if both legal domain + technical requirements)
+- employer_type: law_firm / legal_vendor / ALSP / in_house / court_gov / unknown
+- practice_area: litigation / corporate / IP / privacy / compliance / eDiscovery / general
+- tools: extract tools mentioned (Relativity, Clio, iManage, NetDocuments, Ironclad, DocuSign, Salesforce, SQL, Python, AWS, etc.)
+- seniority: intern / junior / mid / senior / lead / manager / director
+
+4) How classification works
+- Use a deterministic rules layer first (keyword patterns), then optionally a lightweight LLM call (only if an OPENAI_API_KEY is present).
+- If no key, the rules layer must still work.
+- Output: a confidence score for track + tags.
+
+5) UI
+- Job list page with filters:
+  - Role Track (A/B/C)
+  - “For Lawyers” toggle (shows Track A + jobs tagged JD_required or JD_preferred)
+  - “For Engineers” toggle (shows Track B + technical_required)
+  - “Hybrid only” toggle
+  - Employer type, tools, location, remote, seniority
+- Each job card shows:
+  - Title, company, location, remote
+  - Track badge (A/B/C)
+  - Tag chips (JD preferred, technical required, employer type)
+  - Top extracted tools (max 5)
+
+6) Admin
+- Admin dashboard to review classifications
+- Ability to override track/tags manually (store overrides)
+- Show “low confidence” queue (<0.65) for manual review
+
+Tech constraints:
+- Use Next.js (App Router) + TypeScript
+- Use SQLite (or Postgres if easy in Replit) with Prisma ORM
+- Tailwind for styling
+- Provide: schema, seed data, and a few sample jobs
+- Include a README with setup steps and environment variables
+- Keep it production-minded: input validation, error handling, pagination.
+
+Deliverables:
+- Working app with: ingest, classify, tag, filter UI, admin overrides
+- Clear folder structure and comments
+- Example rules file for classification (editable by me)
+
+Start by creating the database schema and the rules-based classifier, then build the UI and admin review flow.
