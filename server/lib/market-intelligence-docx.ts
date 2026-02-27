@@ -21,6 +21,7 @@ import {
   TabStopType,
   TabStopPosition,
   VerticalAlign,
+  LevelFormat,
 } from "docx";
 
 interface MarketData {
@@ -608,7 +609,7 @@ export async function generateMarketIntelligenceDocx(data: MarketData, period: s
     if (compInsight) bodyChildren.push(insightCallout(compInsight));
   }
 
-  bodyChildren.push(new PageBreak());
+  bodyChildren.push(new Paragraph({ children: [new PageBreak()] }));
   bodyChildren.push(new Paragraph({
     heading: HeadingLevel.HEADING_1,
     spacing: { before: 120, after: 200 },
@@ -639,7 +640,7 @@ export async function generateMarketIntelligenceDocx(data: MarketData, period: s
   bodyChildren.push(bulletItem("Build bridge skills: ", "Identify the 2\u20133 technical skills most relevant to your target path and invest in foundational fluency, not mastery."));
   bodyChildren.push(bulletItem("Leverage your legal edge: ", "In applications and interviews, frame your legal experience as a strategic advantage \u2014 you understand the problems these companies are solving."));
 
-  bodyChildren.push(new PageBreak());
+  bodyChildren.push(new Paragraph({ children: [new PageBreak()] }));
   bodyChildren.push(new Paragraph({
     heading: HeadingLevel.HEADING_1,
     spacing: { before: 120, after: 200 },
@@ -715,7 +716,7 @@ export async function generateMarketIntelligenceDocx(data: MarketData, period: s
         reference: "default-bullet",
         levels: [{
           level: 0,
-          format: "bullet" as any,
+          format: LevelFormat.BULLET,
           text: "\u2022",
           alignment: AlignmentType.LEFT,
           style: { paragraph: { indent: { left: 720, hanging: 360 } } },

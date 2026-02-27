@@ -122,10 +122,10 @@ function sectionTitle(doc: PDFKit.PDFDocument, num: string, title: string, pn: {
   doc.moveTo(MARGIN, y).lineTo(PAGE_WIDTH - MARGIN, y).strokeColor(GRAY_300).lineWidth(0.5).stroke();
   doc.restore();
   doc.save();
-  doc.fontSize(7).fillColor(ACCENT).font("Helvetica-Bold").text(num, MARGIN, y + 8);
-  doc.fontSize(14).fillColor(NAVY).font("Helvetica-Bold").text(title, MARGIN + 24, y + 6, { width: CONTENT_WIDTH - 24 });
+  doc.fontSize(7).fillColor(ACCENT).font("Helvetica-Bold").text(num, MARGIN, y + 10);
+  doc.fontSize(14).fillColor(NAVY).font("Helvetica-Bold").text(title, MARGIN + 24, y + 8, { width: CONTENT_WIDTH - 24 });
   doc.restore();
-  doc.y = y + 28;
+  doc.y = y + 36;
 }
 
 function insightBlock(doc: PDFKit.PDFDocument, text: string, pn: { val: number }) {
@@ -165,14 +165,20 @@ function tableHeaderRow(doc: PDFKit.PDFDocument, cols: { text: string; x: number
 
 function tableDataRow(doc: PDFKit.PDFDocument, cols: { text: string; x: number; w: number; align?: string; color?: string }[], striped: boolean) {
   const y = doc.y;
-  if (striped) drawRect(doc, MARGIN, y - 2, CONTENT_WIDTH, 15, GRAY_50);
+  let maxH = 12;
+  for (const c of cols) {
+    const h = doc.font("Helvetica").fontSize(8).heightOfString(c.text, { width: c.w });
+    if (h > maxH) maxH = h;
+  }
+  const rowH = maxH + 4;
+  if (striped) drawRect(doc, MARGIN, y - 2, CONTENT_WIDTH, rowH + 1, GRAY_50);
   doc.save();
   for (const c of cols) {
     doc.fontSize(8).fillColor(c.color || NAVY).font("Helvetica")
       .text(c.text, c.x, y, { width: c.w, align: (c.align as any) || "left" });
   }
   doc.restore();
-  doc.y = y + 15;
+  doc.y = y + rowH;
 }
 
 function generateKeyFindings(data: MarketData): string[] {
@@ -471,7 +477,7 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string):
       { text: "NEW THIS WEEK", ...cpCols[3], align: "right" },
     ]);
     for (let i = 0; i < data.careerPaths.length; i++) {
-      ensureSpace(doc, 15, pn);
+      ensureSpace(doc, 18, pn);
       const cp = data.careerPaths[i];
       tableDataRow(doc, [
         { text: cp.name, ...cpCols[0] },
@@ -500,7 +506,7 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string):
       { text: "SAMPLE SIZE", ...salCols[2], align: "right" },
     ]);
     for (let i = 0; i < data.salaryByPath.length; i++) {
-      ensureSpace(doc, 15, pn);
+      ensureSpace(doc, 18, pn);
       const sp = data.salaryByPath[i];
       tableDataRow(doc, [
         { text: sp.name, ...salCols[0] },
@@ -585,7 +591,7 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string):
     sectionTitle(doc, "06", "Seniority Distribution", pn);
     const maxSen = Math.max(...data.seniorityDistribution.map(s => s.count), 1);
     for (const s of data.seniorityDistribution) {
-      ensureSpace(doc, 15, pn);
+      ensureSpace(doc, 18, pn);
       const ry = doc.y;
       doc.save();
       doc.fontSize(8).fillColor(NAVY).font("Helvetica")
@@ -596,7 +602,7 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string):
       doc.fontSize(7.5).fillColor(GRAY_500).font("Helvetica-Bold")
         .text(fmtNum(s.count), MARGIN + CONTENT_WIDTH - 40, ry, { width: 40, align: "right" });
       doc.restore();
-      doc.y = ry + 15;
+      doc.y = ry + 18;
     }
     doc.y += 6;
 
@@ -630,7 +636,7 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string):
         doc.fontSize(7.5).fillColor(GRAY_500).font("Helvetica-Bold")
           .text(`${tc.jobCount}`, MARGIN + halfW - 12, cy, { width: 12, align: "right" });
         doc.restore();
-        cy += 14;
+        cy += 16;
       }
     }
 
@@ -654,12 +660,12 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string):
         doc.fontSize(7.5).fillColor(GRAY_500).font("Helvetica-Bold")
           .text(`${g.jobCount}`, gx + halfW - 12, gy, { width: 12, align: "right" });
         doc.restore();
-        gy += 14;
+        gy += 16;
       }
     }
 
-    const companiesEnd = startY + 16 + Math.min(data.topCompanies.length, 10) * 14;
-    const geoEnd = startY + 16 + Math.min(data.geography.length, 10) * 14;
+    const companiesEnd = startY + 16 + Math.min(data.topCompanies.length, 10) * 16;
+    const geoEnd = startY + 16 + Math.min(data.geography.length, 10) * 16;
     doc.y = Math.max(companiesEnd, geoEnd) + 6;
 
     const companiesInsight = generateSectionInsight("companies", data);
