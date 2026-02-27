@@ -116,7 +116,7 @@ function newContentPage(doc: PDFKit.PDFDocument, pn: { val: number }) {
 }
 
 function sectionTitle(doc: PDFKit.PDFDocument, num: string, title: string, pn: { val: number }) {
-  ensureSpace(doc, 40, pn);
+  ensureSpace(doc, 120, pn);
   const y = doc.y;
   doc.save();
   doc.moveTo(MARGIN, y).lineTo(PAGE_WIDTH - MARGIN, y).strokeColor(GRAY_300).lineWidth(0.5).stroke();
@@ -388,6 +388,7 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string):
 
   // ── EXECUTIVE SUMMARY ──
   sectionTitle(doc, "01", "Executive Summary", pn);
+  ensureSpace(doc, 110, pn);
 
   const boxW = (CONTENT_WIDTH - 16) / 3;
   const boxH = 48;
@@ -515,6 +516,7 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string):
 
   if (wmTotal > 0 || aiTotal > 0) {
     sectionTitle(doc, "05", "Work Mode & AI Intensity", pn);
+    ensureSpace(doc, 80, pn);
 
     if (wmTotal > 0) {
       const wmBoxW = (CONTENT_WIDTH / 2 - 20) / 3;
@@ -602,6 +604,7 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string):
   // ── TOP COMPANIES & GEOGRAPHY ──
   if (data.topCompanies.length > 0 || data.geography.length > 0) {
     sectionTitle(doc, "07", "Top Companies & Geography", pn);
+    ensureSpace(doc, 170, pn);
 
     const halfW = (CONTENT_WIDTH - 24) / 2;
     const startY = doc.y;
@@ -662,7 +665,7 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string):
   }
 
   // ── WHAT THIS MEANS FOR LAWYERS ──
-  ensureSpace(doc, 80, pn);
+  ensureSpace(doc, 120, pn);
 
   doc.save();
   doc.fontSize(7).fillColor(ACCENT).font("Helvetica-Bold").text("ANALYSIS", MARGIN, doc.y, { characterSpacing: 1.5 });
