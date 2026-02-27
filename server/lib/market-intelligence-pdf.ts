@@ -102,12 +102,13 @@ function pageFooter(doc: PDFKit.PDFDocument) {
 }
 
 function ensureSpace(doc: PDFKit.PDFDocument, needed: number, pn: { val: number }) {
-  if (doc.y + needed > USABLE_BOTTOM) {
+  if (doc.y > USABLE_BOTTOM || doc.y + needed > USABLE_BOTTOM) {
     newContentPage(doc, pn);
   }
 }
 
 function newContentPage(doc: PDFKit.PDFDocument, pn: { val: number }) {
+  (doc as any)._explicitPage = true;
   doc.addPage({ size: "LETTER", margin: MARGIN });
   pn.val++;
   pageHeader(doc, pn.val);
@@ -116,7 +117,7 @@ function newContentPage(doc: PDFKit.PDFDocument, pn: { val: number }) {
 }
 
 function sectionTitle(doc: PDFKit.PDFDocument, num: string, title: string, pn: { val: number }) {
-  ensureSpace(doc, 60, pn);
+  ensureSpace(doc, 120, pn);
   const y = doc.y;
   doc.save();
   doc.moveTo(MARGIN, y).lineTo(PAGE_WIDTH - MARGIN, y).strokeColor(GRAY_300).lineWidth(0.5).stroke();
@@ -310,7 +311,8 @@ function generateSectionInsight(section: string, data: MarketData): string {
 export function generateMarketIntelligencePDF(data: MarketData, period: string): PDFKit.PDFDocument {
   const doc = new PDFDocument({
     size: "LETTER",
-    margin: MARGIN,
+    margins: { top: MARGIN, bottom: 0, left: MARGIN, right: MARGIN },
+    compress: true,
     info: {
       Title: `Legal Tech Careers - ${getQuarterLabel()} Hiring Report`,
       Author: "Legal Tech Careers",
@@ -323,8 +325,22 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string):
 
   const pn = { val: 1 };
 
+  const _origAddPage = doc.addPage.bind(doc);
+  (doc as any)._blockedAutoPages = 0;
+  (doc as any)._explicitPage = false;
+  (doc as any).addPage = function (...args: any[]) {
+    if (!(doc as any)._explicitPage) {
+      (doc as any)._blockedAutoPages++;
+      return doc;
+    }
+    (doc as any)._explicitPage = false;
+    return _origAddPage(...args);
+  };
+
   // ── COVER PAGE ──
+  doc.save();
   doc.rect(0, 0, PAGE_WIDTH, PAGE_HEIGHT).fill(NAVY);
+  doc.restore();
 
   doc.save();
   doc.fontSize(8).fillColor(GRAY_400).font("Helvetica-Bold")
@@ -372,7 +388,6 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string):
 
   // ── KEY FINDINGS PAGE ──
   newContentPage(doc, pn);
-  doc.y = 56;
 
   const kfY1 = doc.y;
   doc.save();
@@ -400,6 +415,7 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string):
 
   const boxW = (CONTENT_WIDTH - 16) / 3;
   const boxH = 48;
+  ensureSpace(doc, boxH * 2 + 6 * 2 + 4, pn);
   const row1 = [
     { value: fmtNum(data.overview.totalJobs), label: "ACTIVE ROLES" },
     { value: String(data.overview.totalCompanies), label: "COMPANIES" },
@@ -526,6 +542,7 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string):
 
   if (wmTotal > 0 || aiTotal > 0) {
     sectionTitle(doc, "05", "Work Mode & AI Intensity", pn);
+    ensureSpace(doc, 70, pn);
 
     if (wmTotal > 0) {
       const wmBoxW = (CONTENT_WIDTH / 2 - 20) / 3;
@@ -615,6 +632,10 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string):
     sectionTitle(doc, "07", "Top Companies & Geography", pn);
 
     const halfW = (CONTENT_WIDTH - 24) / 2;
+    const companyRows = Math.min(data.topCompanies.length, 10);
+    const geoRows = Math.min(data.geography.length, 10);
+    const twoColHeight = 16 + Math.max(companyRows, geoRows) * 16 + 6;
+    ensureSpace(doc, twoColHeight, pn);
     const startY = doc.y;
 
     if (data.topCompanies.length > 0) {
@@ -673,7 +694,7 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string):
   }
 
   // ── WHAT THIS MEANS FOR LAWYERS ──
-  ensureSpace(doc, 80, pn);
+  ensureSpace(doc, 160, pn);
 
   const wtY1 = doc.y;
   doc.save();
@@ -730,14 +751,15 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string):
     "Leverage your legal edge: In applications and interviews, frame your legal experience as a strategic advantage — you understand the problems these companies are solving.",
   ];
   for (const step of steps) {
-    ensureSpace(doc, 20, pn);
+    const stepH = doc.font("Helvetica").fontSize(9).heightOfString(step, { width: CONTENT_WIDTH - 14, lineGap: 2.5 }) + 8;
+    ensureSpace(doc, stepH, pn);
     const stepY = doc.y;
     doc.save();
     drawRect(doc, MARGIN, stepY + 3, 4, 4, ACCENT, 2);
     doc.fontSize(9).fillColor(GRAY_600).font("Helvetica")
       .text(step, MARGIN + 14, stepY, { width: CONTENT_WIDTH - 14, lineGap: 2.5 });
     doc.restore();
-    doc.y = stepY + doc.font("Helvetica").fontSize(9).heightOfString(step, { width: CONTENT_WIDTH - 14, lineGap: 2.5 }) + 8;
+    doc.y = stepY + stepH;
   }
   doc.y += 6;
 
@@ -754,8 +776,12 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string):
   doc.y = ctaY + 58;
 
   // ── METHODOLOGY PAGE ──
-  newContentPage(doc, pn);
+  (doc as any)._explicitPage = true;
+  doc.addPage({ size: "LETTER", margin: MARGIN });
+  pn.val++;
+  doc.save();
   doc.rect(0, 0, PAGE_WIDTH, PAGE_HEIGHT).fill(NAVY);
+  doc.restore();
 
   doc.save();
   doc.fontSize(6.5).fillColor(GRAY_500).font("Helvetica")
