@@ -1178,13 +1178,13 @@ export default function ResumeEditor() {
                   >
                     <div className="flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors cursor-pointer" data-testid={`card-suggestion-${sj.id}`}>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-foreground truncate">{sj.title}</p>
+                        <p className="text-sm font-medium text-foreground truncate" title={sj.title}>{sj.title}</p>
                         <div className="flex items-center gap-1.5 mt-0.5">
-                          <span className="text-xs text-muted-foreground truncate">{sj.company}</span>
+                          <span className="text-xs text-muted-foreground truncate" title={sj.company}>{sj.company}</span>
                           {sj.location && (
                             <>
                               <span className="text-xs text-muted-foreground/40">·</span>
-                              <span className="text-xs text-muted-foreground truncate">{sj.location}</span>
+                              <span className="text-xs text-muted-foreground truncate" title={sj.location}>{sj.location}</span>
                             </>
                           )}
                         </div>

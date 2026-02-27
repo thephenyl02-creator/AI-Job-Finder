@@ -127,10 +127,10 @@ export function Header() {
                           </AvatarFallback>
                         </Avatar>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">
+                          <p className="text-sm font-medium truncate" title={`${user?.firstName} ${user?.lastName}`}>
                             {user?.firstName} {user?.lastName}
                           </p>
-                          <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+                          <p className="text-xs text-muted-foreground truncate" title={user?.email ?? undefined}>{user?.email}</p>
                         </div>
                       </div>
                     </div>

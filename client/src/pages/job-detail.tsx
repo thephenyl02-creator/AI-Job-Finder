@@ -1061,7 +1061,7 @@ export default function JobDetail() {
                       <div className="flex items-center justify-between gap-3 mb-2 flex-wrap">
                         <div className="flex items-center gap-2 min-w-0">
                           <FileText className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                          <span className="text-sm font-medium text-foreground truncate">{rf.label}</span>
+                          <span className="text-sm font-medium text-foreground truncate" title={rf.label ?? undefined}>{rf.label}</span>
                           {rf.isPrimary && (
                             <Badge variant="secondary" className="text-[10px]">Primary</Badge>
                           )}
@@ -1334,8 +1334,8 @@ export default function JobDetail() {
       >
         <div className="max-w-3xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
           <div className="min-w-0 flex-1 hidden sm:block">
-            <p className="text-sm font-medium text-foreground truncate">{job.title}</p>
-            <p className="text-xs text-muted-foreground truncate">{job.company}</p>
+            <p className="text-sm font-medium text-foreground truncate" title={job.title}>{job.title}</p>
+            <p className="text-xs text-muted-foreground truncate" title={job.company}>{job.company}</p>
           </div>
           <div className="flex items-center gap-2 w-full sm:w-auto min-w-0">
             {isAuthenticated ? (

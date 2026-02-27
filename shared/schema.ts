@@ -832,6 +832,10 @@ export interface EditorBullet {
   grounded?: boolean;
   reverted?: boolean;
   addedByAI?: boolean;
+  suggestion?: string;
+  status?: "pending" | "accepted" | "rejected" | "needs_confirmation";
+  improvementNote?: string;
+  evidenceRefs?: string[];
 }
 
 export interface EditorExperience {
@@ -882,6 +886,9 @@ export interface EditorSections {
     issuer: string;
     date: string;
   }>;
+  summarySuggestion?: string;
+  summarySuggestionStatus?: "pending" | "accepted" | "rejected" | "needs_confirmation";
+  summarySuggestionGrounded?: boolean;
   strengthNotes?: string[];
   changedCount?: number;
   changeBreakdown?: {

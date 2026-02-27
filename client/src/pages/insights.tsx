@@ -145,7 +145,7 @@ function HorizontalBar({
   return (
     <div className="group" data-testid={testId}>
       <div className="flex items-center justify-between gap-2 mb-1.5">
-        <span className="text-sm text-foreground truncate">{label}</span>
+        <span className="text-sm text-foreground truncate" title={label}>{label}</span>
         <div className="flex items-center gap-2 shrink-0">
           <span className="text-sm font-semibold text-foreground tabular-nums">
             {value}
@@ -684,7 +684,7 @@ export default function Insights() {
                   </span>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2 mb-1">
-                      <span className="text-sm text-foreground truncate" data-testid={`text-skill-name-${i}`}>
+                      <span className="text-sm text-foreground truncate" title={s.skill} data-testid={`text-skill-name-${i}`}>
                         {s.skill}
                       </span>
                       <span className="text-xs text-muted-foreground shrink-0 tabular-nums" data-testid={`text-skill-count-${i}`}>
@@ -722,7 +722,7 @@ export default function Insights() {
                       <span className="text-xs font-medium text-muted-foreground w-5 text-right tabular-nums shrink-0">
                         {i + 1}
                       </span>
-                      <span className="text-sm text-foreground truncate" data-testid={`text-company-name-${i}`}>{c.company}</span>
+                      <span className="text-sm text-foreground truncate" title={c.company} data-testid={`text-company-name-${i}`}>{c.company}</span>
                     </div>
                     <Badge variant="secondary" className="shrink-0 tabular-nums" data-testid={`text-company-count-${i}`}>
                       {c.jobCount} {c.jobCount === 1 ? "position" : "positions"}

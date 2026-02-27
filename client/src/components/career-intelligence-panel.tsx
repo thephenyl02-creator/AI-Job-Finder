@@ -372,7 +372,7 @@ function ProfileCard({ strengths, gaps }: { strengths: StrengthItem[]; gaps: Gap
                         style={{ width: `${85 - i * 10}%` }}
                       />
                     </div>
-                    <span className="text-xs text-foreground min-w-0 truncate max-w-[140px]">{s.label}</span>
+                    <span className="text-xs text-foreground min-w-0 truncate max-w-[140px]" title={s.label}>{s.label}</span>
                   </div>
                 </div>
               ))}
@@ -395,7 +395,7 @@ function ProfileCard({ strengths, gaps }: { strengths: StrengthItem[]; gaps: Gap
                         style={{ width: `${30 + i * 10}%` }}
                       />
                     </div>
-                    <span className="text-xs text-muted-foreground min-w-0 truncate max-w-[140px]">{g.label}</span>
+                    <span className="text-xs text-muted-foreground min-w-0 truncate max-w-[140px]" title={g.label}>{g.label}</span>
                   </div>
                 </div>
               ))}
@@ -420,7 +420,7 @@ function DemoFlowchart() {
               className={`rounded-md border p-2.5 ${colors.border} ${colors.bg}`}
             >
               <div className="flex items-center justify-between gap-1 mb-1">
-                <span className="text-xs font-medium text-foreground truncate">{path.path}</span>
+                <span className="text-xs font-medium text-foreground truncate" title={path.path}>{path.path}</span>
                 <span className={`flex items-center gap-1 text-[10px] shrink-0 ${colors.text}`}>
                   <span className={`h-1.5 w-1.5 rounded-full ${colors.dot}`} />
                   {FIT_LABELS[path.fit]}

@@ -605,7 +605,7 @@ export default function DashboardPage() {
                                 <Briefcase className="h-4 w-4 text-primary" />
                               </div>
                               <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-foreground truncate">{topReadyJob.title}</p>
+                                <p className="text-sm font-medium text-foreground truncate" title={topReadyJob.title}>{topReadyJob.title}</p>
                                 <p className="text-xs text-muted-foreground">{topReadyJob.company} · {topReadyJob.fitScore}% fit</p>
                               </div>
                               <ChevronRight className="h-4 w-4 text-muted-foreground" />
@@ -698,7 +698,7 @@ export default function DashboardPage() {
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex-1 min-w-0">
                             <p className="text-xs text-muted-foreground mb-1.5 font-medium uppercase tracking-wide">Top Hiring</p>
-                            <p className="text-xl font-bold text-foreground truncate">
+                            <p className="text-xl font-bold text-foreground truncate" title={marketPulse.topHiringCompanies?.[0]?.name || "N/A"}>
                               {marketPulse.topHiringCompanies?.[0]?.name || "N/A"}
                             </p>
                             <p className="text-xs text-muted-foreground mt-1">
@@ -722,7 +722,7 @@ export default function DashboardPage() {
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex-1 min-w-0">
                             <p className="text-xs text-muted-foreground mb-1.5 font-medium uppercase tracking-wide">Most In-Demand</p>
-                            <p className="text-xl font-bold text-foreground truncate">
+                            <p className="text-xl font-bold text-foreground truncate" title={marketPulse.trendingSkill?.name || "N/A"}>
                               {marketPulse.trendingSkill?.name || "N/A"}
                             </p>
                             <p className="text-xs text-muted-foreground mt-1">
@@ -775,10 +775,10 @@ export default function DashboardPage() {
                               <div className="flex items-start justify-between gap-2">
                                 <div className="flex-1 min-w-0">
                                   <p className="text-xs text-muted-foreground mb-1.5 font-medium uppercase tracking-wide">Avg Salary</p>
-                                  <p className="text-xl font-bold text-foreground truncate">
+                                  <p className="text-xl font-bold text-foreground truncate" title={formatSalary(marketPulse.salaryInsight.avgMin, marketPulse.salaryInsight.avgMax) ?? undefined}>
                                     {formatSalary(marketPulse.salaryInsight.avgMin, marketPulse.salaryInsight.avgMax)}
                                   </p>
-                                  <p className="text-xs text-muted-foreground mt-1 truncate">
+                                  <p className="text-xs text-muted-foreground mt-1 truncate" title={marketPulse.salaryInsight.category}>
                                     {marketPulse.salaryInsight.category}
                                   </p>
                                 </div>

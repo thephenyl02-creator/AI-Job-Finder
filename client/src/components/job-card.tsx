@@ -169,7 +169,7 @@ export function JobCard({ job, isSaved = false, isAuthenticated = false, fitData
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-2">
               <Link to={`/jobs/${job.id}`} className="min-w-0 flex-1">
-                <h3 className="text-base font-semibold text-foreground group-hover:text-primary transition-colors truncate" data-testid={`text-job-title-${job.id}`}>
+                <h3 className="text-base font-semibold text-foreground group-hover:text-primary transition-colors truncate" title={job.title} data-testid={`text-job-title-${job.id}`}>
                   {job.title}
                 </h3>
               </Link>
@@ -209,11 +209,11 @@ export function JobCard({ job, isSaved = false, isAuthenticated = false, fitData
 
             <Link to={`/jobs/${job.id}`}>
               <div className="flex items-center gap-1.5 text-sm text-muted-foreground mt-0.5" data-testid={`text-job-company-${job.id}`}>
-                <span className="truncate font-medium">{job.company}</span>
+                <span className="truncate font-medium" title={job.company}>{job.company}</span>
                 {companyDescriptor && (
                   <>
                     <span className="flex-shrink-0 text-muted-foreground/40">·</span>
-                    <span className="flex-shrink-0 text-xs text-muted-foreground/70 truncate max-w-[140px] sm:max-w-[180px]">{companyDescriptor}</span>
+                    <span className="flex-shrink-0 text-xs text-muted-foreground/70 truncate max-w-[140px] sm:max-w-[180px]" title={companyDescriptor}>{companyDescriptor}</span>
                   </>
                 )}
                 <span className="flex-shrink-0 text-muted-foreground/40">·</span>

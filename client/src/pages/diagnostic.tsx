@@ -575,7 +575,7 @@ function CareerPathFlow({
             </div>
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-foreground truncate">{currentRole}</p>
+            <p className="text-sm font-semibold text-foreground truncate" title={currentRole}>{currentRole}</p>
             <p className="text-[10px] text-muted-foreground">Your starting point</p>
           </div>
         </div>
@@ -619,7 +619,7 @@ function CareerPathFlow({
                       <Link key={role.jobId} href={`/jobs/${role.jobId}`}>
                         <div className="flex items-center gap-1.5 text-[10px] cursor-pointer hover:text-foreground transition-colors" data-testid={`career-flow-role-${role.jobId}`}>
                           <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${role.tierColor === "emerald" ? "bg-emerald-500" : "bg-amber-500"}`} />
-                          <span className="text-foreground/80 truncate">{role.title}</span>
+                          <span className="text-foreground/80 truncate" title={role.title}>{role.title}</span>
                           <span className="text-muted-foreground shrink-0">@ {role.company}</span>
                         </div>
                       </Link>
@@ -657,7 +657,7 @@ function CareerPathFlow({
               {readinessScore}
             </div>
           </div>
-          <p className="text-xs font-semibold text-foreground mt-2 text-center leading-tight max-w-[110px] truncate">{currentRole}</p>
+          <p className="text-xs font-semibold text-foreground mt-2 text-center leading-tight max-w-[110px] truncate" title={currentRole}>{currentRole}</p>
           <p className="text-[10px] text-muted-foreground">You</p>
         </div>
 
@@ -728,7 +728,7 @@ function CareerPathFlow({
                         <Link key={role.jobId} href={`/jobs/${role.jobId}`}>
                           <div className="flex items-center gap-1.5 text-[10px] cursor-pointer hover:text-foreground transition-colors" data-testid={`career-flow-role-${role.jobId}`}>
                             <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${role.tierColor === "emerald" ? "bg-emerald-500" : "bg-amber-500"}`} />
-                            <span className="text-foreground/80 truncate">{role.title}</span>
+                            <span className="text-foreground/80 truncate" title={role.title}>{role.title}</span>
                             <span className="text-muted-foreground shrink-0">@ {role.company}</span>
                           </div>
                         </Link>

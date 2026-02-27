@@ -338,7 +338,7 @@ export default function AdminReview() {
           <div className="space-y-1">
             {recentlyPublished.slice(0, 5).map((rp) => (
               <div key={rp.id} className="flex items-center justify-between text-xs text-muted-foreground">
-                <span className="truncate">
+                <span className="truncate" title={`${rp.title} at ${rp.company}`}>
                   <span className="font-medium text-foreground">{rp.title}</span> at {rp.company}
                 </span>
                 <span className="shrink-0 ml-2">{new Date(rp.publishedAt).toLocaleTimeString()}</span>
@@ -385,7 +385,7 @@ export default function AdminReview() {
                             data-testid={`checkbox-job-${job.id}`}
                           />
                         )}
-                        <span className="font-medium truncate" data-testid={`text-job-title-${job.id}`}>
+                        <span className="font-medium truncate" title={job.title} data-testid={`text-job-title-${job.id}`}>
                           {job.title}
                         </span>
                         <QAStatusBadge status={job.qa.qaStatus} />

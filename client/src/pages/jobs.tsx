@@ -2053,7 +2053,7 @@ function CareerGearPopover({
                           style={{ width: `${85 - i * 12}%` }}
                         />
                       </div>
-                      <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium w-20 truncate text-right">{s.label}</span>
+                      <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium w-20 truncate text-right" title={s.label}>{s.label}</span>
                     </div>
                   </div>
                 ))}
@@ -2074,7 +2074,7 @@ function CareerGearPopover({
                           style={{ width: `${70 - i * 15}%` }}
                         />
                       </div>
-                      <span className="text-[10px] text-muted-foreground font-medium w-20 truncate text-right">{g.label}</span>
+                      <span className="text-[10px] text-muted-foreground font-medium w-20 truncate text-right" title={g.label}>{g.label}</span>
                     </div>
                   </div>
                 ))}

@@ -743,7 +743,7 @@ export default function OpportunityMap() {
                       >
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between gap-2 mb-1">
-                            <span className="text-sm font-medium text-foreground truncate">{c.countryName}</span>
+                            <span className="text-sm font-medium text-foreground truncate" title={c.countryName}>{c.countryName}</span>
                             <span className="text-xs text-muted-foreground tabular-nums shrink-0">{c.jobCount}</span>
                           </div>
                           <div className="h-1 rounded-full bg-muted/50 overflow-hidden">

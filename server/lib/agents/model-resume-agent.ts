@@ -128,10 +128,10 @@ function applyModelSuggestions(original: EditorSections, aiResult: any): EditorS
   }
 
   if (Array.isArray(aiResult.suggestedSkills)) {
-    const existingLower = new Set(model.skills.map(s => s.toLowerCase()));
+    const existingLower = new Set(model.skills.map(s => s.name.toLowerCase()));
     for (const skill of aiResult.suggestedSkills) {
       if (!existingLower.has(skill.toLowerCase())) {
-        model.skills.push(skill);
+        model.skills.push({ name: skill, addedByAI: true });
       }
     }
   }

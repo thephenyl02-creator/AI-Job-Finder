@@ -1088,11 +1088,11 @@ function ResumeListView({
                 <CardContent className="p-5">
                   <div className="flex items-start justify-between gap-3 mb-3">
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-sm font-medium text-foreground truncate" data-testid={`text-resume-title-${resume.id}`}>
+                      <h3 className="text-sm font-medium text-foreground truncate" title={resume.title} data-testid={`text-resume-title-${resume.id}`}>
                         {resume.title}
                       </h3>
                       {contactName && (
-                        <p className="text-xs text-muted-foreground mt-0.5 truncate">{contactName}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5 truncate" title={contactName}>{contactName}</p>
                       )}
                     </div>
                     {resume.atsScore != null && resume.atsScore > 0 && (
@@ -1177,7 +1177,7 @@ function JobSelector({
       >
         <Target className="h-3.5 w-3.5 mr-1.5 shrink-0" />
         {selectedJob ? (
-          <span className="truncate">{selectedJob.title} - {selectedJob.company}</span>
+          <span className="truncate" title={`${selectedJob.title} - ${selectedJob.company}`}>{selectedJob.title} - {selectedJob.company}</span>
         ) : (
           "Select Target Job"
         )}
@@ -1212,8 +1212,8 @@ function JobSelector({
                 className={`w-full text-left px-2 py-2 rounded-md hover-elevate min-h-[44px] flex flex-col justify-center ${selectedJobId === job.id ? "bg-muted" : ""}`}
                 data-testid={`button-job-option-${job.id}`}
               >
-                <span className="text-xs font-medium text-foreground truncate block">{job.title}</span>
-                <span className="text-[10px] text-muted-foreground truncate block">{job.company}</span>
+                <span className="text-xs font-medium text-foreground truncate block" title={job.title}>{job.title}</span>
+                <span className="text-[10px] text-muted-foreground truncate block" title={job.company}>{job.company}</span>
               </button>
             ))}
             {filtered.length === 0 && (

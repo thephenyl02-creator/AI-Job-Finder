@@ -197,7 +197,7 @@ function StatsCards() {
               {stats.chargeBreakdown.map((charge) => (
                 <div key={charge.id} className="flex items-center justify-between gap-2 text-sm border-b border-border/30 pb-2 last:border-0 last:pb-0">
                   <div className="flex flex-col min-w-0">
-                    <span className="text-foreground font-medium truncate">
+                    <span className="text-foreground font-medium truncate" title={charge.customerEmail || "Unknown customer"}>
                       {charge.customerEmail || "Unknown customer"}
                     </span>
                     <span className="text-xs text-muted-foreground">
@@ -319,7 +319,7 @@ function PaymentHistory({ userId }: { userId: string }) {
                           {payment.status}
                         </Badge>
                       </td>
-                      <td className="py-2 px-3 hidden md:table-cell text-muted-foreground truncate max-w-[200px]">
+                      <td className="py-2 px-3 hidden md:table-cell text-muted-foreground truncate max-w-[200px]" title={payment.description || "-"}>
                         {payment.description || "-"}
                       </td>
                       <td className="py-2 px-3 text-right">
@@ -399,7 +399,7 @@ function UserRow({ user }: { user: AdminUser }) {
       >
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-medium text-sm truncate" data-testid={`text-user-name-${user.id}`}>
+            <span className="font-medium text-sm truncate" title={displayName} data-testid={`text-user-name-${user.id}`}>
               {displayName}
             </span>
             {user.isAdmin && (
@@ -418,7 +418,7 @@ function UserRow({ user }: { user: AdminUser }) {
               </Badge>
             )}
           </div>
-          <p className="text-xs text-muted-foreground mt-0.5 truncate" data-testid={`text-user-email-${user.id}`}>
+          <p className="text-xs text-muted-foreground mt-0.5 truncate" title={user.email || "No email"} data-testid={`text-user-email-${user.id}`}>
             {user.email || "No email"}
           </p>
         </div>
@@ -484,11 +484,11 @@ function UserRow({ user }: { user: AdminUser }) {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
             <div>
               <p className="text-xs text-muted-foreground">User ID</p>
-              <p className="text-xs font-mono truncate">{user.id}</p>
+              <p className="text-xs font-mono truncate" title={user.id}>{user.id}</p>
             </div>
             <div>
               <p className="text-xs text-muted-foreground">Stripe Customer</p>
-              <p className="text-xs font-mono truncate">{user.stripeCustomerId || "None"}</p>
+              <p className="text-xs font-mono truncate" title={user.stripeCustomerId || "None"}>{user.stripeCustomerId || "None"}</p>
             </div>
             <div>
               <p className="text-xs text-muted-foreground">Subscription Status</p>

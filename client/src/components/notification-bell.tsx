@@ -147,7 +147,7 @@ export function NotificationBell() {
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-foreground leading-tight truncate">
+                    <p className="text-sm font-medium text-foreground leading-tight truncate" title={notif.title}>
                       {notif.title}
                     </p>
                     {notif.message && (

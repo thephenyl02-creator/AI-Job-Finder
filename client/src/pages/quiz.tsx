@@ -146,7 +146,7 @@ export default function QuizPage() {
     },
     onSuccess: (data) => {
       setResult(data);
-      track({ eventType: "quiz_complete", metadata: { topPath: data?.topPaths?.[0]?.name } });
+      track({ eventType: "quiz_complete", metadata: { topPath: data?.paths?.[0]?.name } });
       fetch("/api/track", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ eventType: "quiz_completion" }) }).catch(() => {});
     },
   });

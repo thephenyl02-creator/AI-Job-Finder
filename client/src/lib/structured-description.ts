@@ -65,11 +65,14 @@ export function parseStructuredDescription(raw: unknown): StructuredDescription 
   if (!hasAnyKey) return null;
 
   const result: StructuredDescription = {
+    summary: typeof obj.summary === 'string' ? obj.summary : '',
     aboutCompany: typeof obj.aboutCompany === 'string' ? obj.aboutCompany : '',
     responsibilities: Array.isArray(obj.responsibilities) ? obj.responsibilities.filter((x): x is string => typeof x === 'string' && x.trim().length > 0) : [],
     minimumQualifications: Array.isArray(obj.minimumQualifications) ? obj.minimumQualifications.filter((x): x is string => typeof x === 'string' && x.trim().length > 0) : [],
     preferredQualifications: Array.isArray(obj.preferredQualifications) ? obj.preferredQualifications.filter((x): x is string => typeof x === 'string' && x.trim().length > 0) : [],
     skillsRequired: Array.isArray(obj.skillsRequired) ? obj.skillsRequired.filter((x): x is string => typeof x === 'string' && x.trim().length > 0) : [],
+    seniority: typeof obj.seniority === 'string' ? obj.seniority : '',
+    legalTechCategory: typeof obj.legalTechCategory === 'string' ? obj.legalTechCategory : '',
   };
 
   return result;

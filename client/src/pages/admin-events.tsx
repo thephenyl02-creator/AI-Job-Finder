@@ -500,8 +500,8 @@ export default function AdminEvents() {
                             <Badge variant="secondary" className="text-xs no-default-hover-elevate no-default-active-elevate" data-testid={`badge-inactive-${event.id}`}>Inactive</Badge>
                           )}
                         </span>
-                        <span className="text-sm font-medium truncate" data-testid={`text-title-${event.id}`}>{event.title}</span>
-                        <span className="text-xs text-muted-foreground truncate" data-testid={`text-organizer-${event.id}`}>{event.organizer}</span>
+                        <span className="text-sm font-medium truncate" title={event.title} data-testid={`text-title-${event.id}`}>{event.title}</span>
+                        <span className="text-xs text-muted-foreground truncate" title={event.organizer} data-testid={`text-organizer-${event.id}`}>{event.organizer}</span>
                         <span>
                           <Badge
                             variant="secondary"
@@ -514,7 +514,7 @@ export default function AdminEvents() {
                         <span className="text-xs" data-testid={`text-date-${event.id}`}>
                           {new Date(event.startDate).toLocaleDateString()}
                         </span>
-                        <span className="text-xs text-muted-foreground truncate" data-testid={`text-location-${event.id}`}>
+                        <span className="text-xs text-muted-foreground truncate" title={event.location || "TBD"} data-testid={`text-location-${event.id}`}>
                           {event.location || "TBD"}
                         </span>
                         <span className="text-xs" data-testid={`text-attendance-${event.id}`}>
@@ -592,8 +592,8 @@ export default function AdminEvents() {
                   {validationResults.brokenLinks.map((link) => (
                     <div key={link.eventId} className="flex items-center justify-between gap-2 p-2 rounded border border-border/50" data-testid={`broken-link-${link.eventId}`}>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{link.title}</p>
-                        <p className="text-xs text-muted-foreground truncate">{link.url}</p>
+                        <p className="text-sm font-medium truncate" title={link.title}>{link.title}</p>
+                        <p className="text-xs text-muted-foreground truncate" title={link.url}>{link.url}</p>
                         <Badge variant="destructive" className="text-xs mt-1 no-default-hover-elevate no-default-active-elevate">Status: {link.statusCode}</Badge>
                       </div>
                       <Button

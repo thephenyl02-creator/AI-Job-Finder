@@ -181,6 +181,7 @@ function ResumeCard({
               ) : (
                 <span
                   className="font-medium text-foreground text-sm truncate cursor-pointer hover:underline"
+                  title={resume.label}
                   onClick={() => {
                     setEditValue(resume.label);
                     setEditing(true);
@@ -332,7 +333,7 @@ function MatchJobCard({
                           key={s.resumeId}
                           className="flex items-center gap-2 text-xs"
                         >
-                          <span className="text-muted-foreground truncate max-w-[120px]">
+                          <span className="text-muted-foreground truncate max-w-[120px]" title={s.label}>
                             {s.label}
                           </span>
                           <div className="flex-1 max-w-[100px]">
@@ -695,7 +696,7 @@ function MatchDashboard({ results }: { results: ResumeMatchResult[] }) {
           >
             <CardContent className="p-4">
               <div className="flex items-center justify-between gap-2 mb-2">
-                <span className="text-sm font-medium text-foreground truncate">
+                <span className="text-sm font-medium text-foreground truncate" title={stat.label}>
                   {stat.label}
                 </span>
                 <span className="text-lg font-bold text-foreground">
@@ -713,7 +714,7 @@ function MatchDashboard({ results }: { results: ResumeMatchResult[] }) {
                 </span>
               </div>
               {stat.bestMatch && (
-                <p className="text-xs text-muted-foreground mt-2 truncate">
+                <p className="text-xs text-muted-foreground mt-2 truncate" title={`Best: ${stat.bestMatch.title} (${stat.bestMatch.matchScore}%)`}>
                   Best: {stat.bestMatch.title} ({stat.bestMatch.matchScore}%)
                 </p>
               )}

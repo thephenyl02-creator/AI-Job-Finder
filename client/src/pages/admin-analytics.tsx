@@ -108,7 +108,7 @@ function KpiCard({ label, value, icon: Icon, detail, testId }: {
       <CardContent className="p-4">
         <div className="flex items-center justify-between gap-2">
           <div className="min-w-0">
-            <p className="text-xs text-muted-foreground truncate">{label}</p>
+            <p className="text-xs text-muted-foreground truncate" title={label}>{label}</p>
             <p className="text-2xl font-bold tracking-tight">{value}</p>
             {detail && <p className="text-xs text-muted-foreground mt-0.5">{detail}</p>}
           </div>
@@ -150,7 +150,7 @@ function FunnelStep({ label, value, total, index }: { label: string; value: numb
           />
         </div>
       </div>
-      <span className="text-xs text-muted-foreground w-40 truncate">{label}</span>
+      <span className="text-xs text-muted-foreground w-40 truncate" title={label}>{label}</span>
     </div>
   );
 }
@@ -493,7 +493,7 @@ export default function AdminAnalyticsPage() {
                   <div className="space-y-2">
                     {engagement.pageViewsByPage.slice(0, 10).map((p, i) => (
                       <div key={i} className="flex items-center justify-between gap-2">
-                        <span className="text-sm truncate flex-1">{p.page || "/"}</span>
+                        <span className="text-sm truncate flex-1" title={p.page || "/"}>{p.page || "/"}</span>
                         <div className="flex items-center gap-2 shrink-0">
                           <span className="text-sm font-medium">{p.views}</span>
                           <Tooltip>
@@ -591,7 +591,7 @@ export default function AdminAnalyticsPage() {
                       <div key={i} className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2 min-w-0">
                           <span className="text-xs text-muted-foreground w-5 shrink-0">{i + 1}.</span>
-                          <span className="text-sm truncate">{t.term}</span>
+                          <span className="text-sm truncate" title={t.term}>{t.term}</span>
                         </div>
                         <Badge variant="secondary" className="shrink-0">{t.count}</Badge>
                       </div>
@@ -617,7 +617,7 @@ export default function AdminAnalyticsPage() {
                       return (
                         <div key={i} className="space-y-1">
                           <div className="flex items-center justify-between gap-2">
-                            <span className="text-sm truncate">{c.category}</span>
+                            <span className="text-sm truncate" title={c.category}>{c.category}</span>
                             <span className="text-sm font-medium shrink-0">{c.count} jobs</span>
                           </div>
                           <MiniBar value={c.count} max={maxCat} color="bg-primary/70" />
@@ -681,7 +681,7 @@ export default function AdminAnalyticsPage() {
                     <div className="space-y-2 pr-3">
                       {topContent.topCompanies.map((c, i) => (
                         <div key={i} className="flex items-center justify-between gap-2 py-1">
-                          <span className="text-sm truncate">{c.company}</span>
+                          <span className="text-sm truncate" title={c.company}>{c.company}</span>
                           <div className="flex items-center gap-2 shrink-0">
                             <Badge variant="secondary" className="text-xs">{c.jobCount} jobs</Badge>
                             <Badge variant="outline" className="text-xs">{c.totalViews} views</Badge>

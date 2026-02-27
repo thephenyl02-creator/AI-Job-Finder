@@ -560,7 +560,7 @@ export default function MarketIntelligence() {
                           <div className="space-y-1.5">
                             {youHaveVisible.map(s => (
                               <div key={s.skill} className="flex items-center justify-between gap-1">
-                                <span className="text-[11px] text-foreground truncate">{s.skill}</span>
+                                <span className="text-[11px] text-foreground truncate" title={s.skill}>{s.skill}</span>
                                 <span className="text-[10px] text-muted-foreground tabular-nums shrink-0">{s.count}</span>
                               </div>
                             ))}
@@ -571,7 +571,7 @@ export default function MarketIntelligence() {
                           <div className="space-y-1.5">
                             {toBuildVisible.map(s => (
                               <div key={s.skill} className="flex items-center justify-between gap-1">
-                                <span className="text-[11px] text-foreground truncate">{s.skill}</span>
+                                <span className="text-[11px] text-foreground truncate" title={s.skill}>{s.skill}</span>
                                 <span className="text-[10px] text-muted-foreground tabular-nums shrink-0">{s.count}</span>
                               </div>
                             ))}
@@ -620,7 +620,7 @@ export default function MarketIntelligence() {
                     >
                       <div className="flex items-center gap-2 col-span-2 sm:col-span-1">
                         <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: trackColors?.primary }} />
-                        <span className="text-xs font-medium text-foreground truncate">{c.category}</span>
+                        <span className="text-xs font-medium text-foreground truncate" title={c.category}>{c.category}</span>
                       </div>
                       <div className="text-right">
                         <span className="text-xs text-foreground tabular-nums font-medium">{c.jobCount}</span>
@@ -672,7 +672,7 @@ export default function MarketIntelligence() {
                         <BarChart data={hardSkillsChartData} layout="vertical" margin={{ top: 0, right: 30, left: 0, bottom: 0 }}>
                           <XAxis type="number" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
                           <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: "hsl(var(--foreground))" }} axisLine={false} tickLine={false} width={160} />
-                          <Tooltip {...SHARED_TOOLTIP_STYLE} cursor={{ fill: "hsl(var(--muted) / 0.2)" }} formatter={(value: number) => [`${value} jobs`, "Demand"]} />
+                          <Tooltip {...SHARED_TOOLTIP_STYLE} cursor={{ fill: "hsl(var(--muted) / 0.2)" }} formatter={(value: number) => [`${value} jobs`, "Demand"]} labelFormatter={(_: string, payload: any[]) => payload?.[0]?.payload?.fullName || _} />
                           <Bar dataKey="count" radius={[0, 3, 3, 0]} barSize={18} name="Jobs">
                             {hardSkillsChartData.map((_, index) => (
                               <Cell key={`hard-cell-${index}`} fill={GENERIC_PALETTE[index % GENERIC_PALETTE.length]} />
@@ -691,7 +691,7 @@ export default function MarketIntelligence() {
                         <BarChart data={softSkillsChartData} layout="vertical" margin={{ top: 0, right: 30, left: 0, bottom: 0 }}>
                           <XAxis type="number" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
                           <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: "hsl(var(--foreground))" }} axisLine={false} tickLine={false} width={160} />
-                          <Tooltip {...SHARED_TOOLTIP_STYLE} cursor={{ fill: "hsl(var(--muted) / 0.2)" }} formatter={(value: number) => [`${value} jobs`, "Demand"]} />
+                          <Tooltip {...SHARED_TOOLTIP_STYLE} cursor={{ fill: "hsl(var(--muted) / 0.2)" }} formatter={(value: number) => [`${value} jobs`, "Demand"]} labelFormatter={(_: string, payload: any[]) => payload?.[0]?.payload?.fullName || _} />
                           <Bar dataKey="count" radius={[0, 3, 3, 0]} barSize={18} name="Jobs">
                             {softSkillsChartData.map((_, index) => (
                               <Cell key={`soft-cell-${index}`} fill={GENERIC_PALETTE[index % GENERIC_PALETTE.length]} />
@@ -709,7 +709,7 @@ export default function MarketIntelligence() {
                       <BarChart data={skillsChartData} layout="vertical" margin={{ top: 0, right: 30, left: 0, bottom: 0 }}>
                         <XAxis type="number" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
                         <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: "hsl(var(--foreground))" }} axisLine={false} tickLine={false} width={160} />
-                        <Tooltip {...SHARED_TOOLTIP_STYLE} cursor={{ fill: "hsl(var(--muted) / 0.2)" }} formatter={(value: number) => [`${value} jobs`, "Demand"]} />
+                        <Tooltip {...SHARED_TOOLTIP_STYLE} cursor={{ fill: "hsl(var(--muted) / 0.2)" }} formatter={(value: number) => [`${value} jobs`, "Demand"]} labelFormatter={(_: string, payload: any[]) => payload?.[0]?.payload?.fullName || _} />
                         <Bar dataKey="count" radius={[0, 3, 3, 0]} barSize={18} name="Jobs">
                           {skillsChartData.map((_, index) => (
                             <Cell key={`skill-cell-${index}`} fill={GENERIC_PALETTE[index % GENERIC_PALETTE.length]} />
@@ -744,7 +744,7 @@ export default function MarketIntelligence() {
                           <div className="flex items-center justify-between gap-2 mb-1">
                             <div className="flex items-center gap-1.5 min-w-0">
                               <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: trackColor }} />
-                              <span className="text-[11px] text-foreground font-medium truncate">{sp.name}</span>
+                              <span className="text-[11px] text-foreground font-medium truncate" title={sp.name}>{sp.name}</span>
                             </div>
                             <span className="text-[11px] font-semibold text-foreground tabular-nums shrink-0">
                               {formatSalary(sp.medianMin)} – {formatSalary(sp.medianMax)}
@@ -871,7 +871,7 @@ export default function MarketIntelligence() {
                       <BarChart data={companyChartData} layout="vertical" margin={{ top: 0, right: 30, left: 0, bottom: 0 }}>
                         <XAxis type="number" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
                         <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: "hsl(var(--foreground))" }} axisLine={false} tickLine={false} width={130} />
-                        <Tooltip {...SHARED_TOOLTIP_STYLE} cursor={{ fill: "hsl(var(--muted) / 0.2)" }} formatter={(value: number) => [`${value} jobs`, "Open Roles"]} />
+                        <Tooltip {...SHARED_TOOLTIP_STYLE} cursor={{ fill: "hsl(var(--muted) / 0.2)" }} formatter={(value: number) => [`${value} jobs`, "Open Roles"]} labelFormatter={(_: string, payload: any[]) => payload?.[0]?.payload?.fullName || _} />
                         <Bar dataKey="count" radius={[0, 3, 3, 0]} barSize={16} fill="hsl(var(--chart-1))" name="Jobs" />
                       </BarChart>
                     </ResponsiveContainer>
@@ -917,7 +917,7 @@ export default function MarketIntelligence() {
                     className={`grid grid-cols-[1fr_auto] sm:grid-cols-[1fr_100px_120px] gap-2 px-3 py-2.5 ${i % 2 === 0 ? "" : "bg-muted/30"}`}
                     data-testid={`employer-${i}`}
                   >
-                    <span className="text-xs font-medium text-foreground truncate">{e.company}</span>
+                    <span className="text-xs font-medium text-foreground truncate" title={e.company}>{e.company}</span>
                     <span className="text-xs text-foreground tabular-nums text-right font-medium">{e.transitionFriendlyCount}</span>
                     <div className="hidden sm:flex items-center justify-end gap-1">
                       {e.tracks.map(t => (
@@ -979,7 +979,7 @@ export default function MarketIntelligence() {
                     <div className="space-y-1.5">
                       {communityBenchmarks.topSkillGaps.slice(0, 6).map((sg) => (
                         <div key={sg.skill} className="flex items-center justify-between gap-2 text-[11px]" data-testid={`skill-gap-${sg.skill.toLowerCase().replace(/\s+/g, "-")}`}>
-                          <span className="text-foreground truncate">{sg.skill}</span>
+                          <span className="text-foreground truncate" title={sg.skill}>{sg.skill}</span>
                           <span className="text-muted-foreground tabular-nums shrink-0">{sg.count}</span>
                         </div>
                       ))}
@@ -1061,7 +1061,7 @@ export default function MarketIntelligence() {
           for (const skills of Object.values(historicalData.skillTrends || {})) {
             for (const s of skills) allSkills.set(s.name, (allSkills.get(s.name) || 0) + s.count);
           }
-          const topSkills = [...allSkills.entries()].sort(([,a], [,b]) => b - a).slice(0, 5).map(([name]) => name);
+          const topSkills = Array.from(allSkills.entries()).sort(([,a], [,b]) => b - a).slice(0, 5).map(([name]) => name);
 
           const skillsData = months.map(m => {
             const row: Record<string, any> = { month: formatMonth(m) };

@@ -3164,7 +3164,7 @@ class DatabaseStorage implements IStorage {
 
     let trendingSkill: { name: string; count: number } | null = null;
     let maxSkillCount = 0;
-    for (const [skill, cnt] of skillCounts) {
+    for (const [skill, cnt] of Array.from(skillCounts)) {
       if (cnt > maxSkillCount) {
         maxSkillCount = cnt;
         trendingSkill = { name: skill, count: cnt };

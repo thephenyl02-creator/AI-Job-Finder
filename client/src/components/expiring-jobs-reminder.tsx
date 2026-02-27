@@ -85,7 +85,7 @@ export function ExpiringJobsReminder() {
               <div key={sj.id} className="flex items-center justify-between gap-2 text-sm">
                 <div className="min-w-0 flex-1">
                   <Link href={`/jobs/${sj.job.id}`}>
-                    <span className="text-foreground font-medium hover:text-primary cursor-pointer truncate block text-xs" data-testid={`text-expiring-job-${sj.job.id}`}>
+                    <span className="text-foreground font-medium hover:text-primary cursor-pointer truncate block text-xs" title={sj.job.title} data-testid={`text-expiring-job-${sj.job.id}`}>
                       {sj.job.title}
                     </span>
                   </Link>

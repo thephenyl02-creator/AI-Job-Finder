@@ -113,7 +113,7 @@ function buildResumeContext(sections: EditorSections): string {
   });
 
   if (sections.skills.length > 0) {
-    parts.push(`\nSkills: ${sections.skills.join(", ")}`);
+    parts.push(`\nSkills: ${sections.skills.map(s => s.name).join(", ")}`);
   }
 
   sections.certifications.forEach((c) => {
@@ -163,10 +163,10 @@ export function applyTailoringSuggestions(
   }
 
   if (tailoring.missingSkills.length > 0) {
-    const existingLower = new Set(result.skills.map(s => s.toLowerCase()));
+    const existingLower = new Set(result.skills.map(s => s.name.toLowerCase()));
     for (const skill of tailoring.missingSkills) {
       if (skill && !existingLower.has(skill.toLowerCase())) {
-        result.skills.push(skill);
+        result.skills.push({ name: skill, addedByAI: true });
       }
     }
   }

@@ -962,7 +962,7 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string, 
     for (const cats of Object.values(ht.categoryByMonth)) {
       for (const cat of Object.keys(cats)) allCats.add(cat);
     }
-    const topCats = [...allCats]
+    const topCats = Array.from(allCats)
       .map(cat => ({
         name: cat,
         total: Object.values(ht.categoryByMonth).reduce((s, m) => s + (m[cat] || 0), 0),
@@ -1016,7 +1016,7 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string, 
     for (const skills of Object.values(ht.skillTrends || {})) {
       for (const s of skills) allSkills.set(s.name, (allSkills.get(s.name) || 0) + s.count);
     }
-    const topPdfSkills = [...allSkills.entries()].sort(([,a],[,b]) => b - a).slice(0, 8);
+    const topPdfSkills = Array.from(allSkills.entries()).sort(([,a],[,b]) => b - a).slice(0, 8);
 
     if (topPdfSkills.length > 0) {
       ensureSpace(doc, 40, pn);

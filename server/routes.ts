@@ -8143,8 +8143,12 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
     "ai integration": "ai solutions",
     "ai implementation": "ai solutions",
     "ai utilization": "ai solutions",
+    "ai tools": "ai solutions",
+    "ai": "ai solutions",
+    "ai applications": "ai solutions",
     "process improvement": "process optimization",
     "process intelligence": "process optimization",
+    "legal process improvement": "process optimization",
     "workflow optimization": "process optimization",
     "workflow design": "process optimization",
     "stakeholder engagement": "stakeholder management",
@@ -8164,6 +8168,7 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
     "consulting": "strategic consulting",
     "strategic advisory": "strategic consulting",
     "user experience": "ux design",
+    "user experience design": "ux design",
     "customer support": "technical support",
     "data analysis": "data analytics",
     "data management": "data governance",
@@ -8202,6 +8207,21 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
     "incident response": "security incident response",
     "ai governance": "ai compliance",
     "data infrastructure": "data engineering",
+    "cross-functional collaboration": "cross-functional collaboration",
+    "legal domain knowledge": "legal technology",
+    "legal tech knowledge": "legal technology",
+    "legal technology knowledge": "legal technology",
+    "legal technology solutions": "legal technology",
+    "legal tech adoption": "legal technology",
+    "legal tech implementation": "legal technology",
+    "legal technology implementation": "legal technology",
+    "training": "training & development",
+    "training development": "training & development",
+    "go-to-market strategy": "go-to-market strategy",
+    "gtm strategy": "go-to-market strategy",
+    "market strategy": "go-to-market strategy",
+    "research": "legal research",
+    "relationship management": "client account management",
   };
 
   const UPPERCASE_WORDS = new Set(["ai", "ml", "api", "it", "crm", "erp", "saas", "nlp", "llm", "sql", "ui", "ux"]);
@@ -8479,7 +8499,7 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
   function isLegalSkill(skill: string): boolean {
     const lower = skill.toLowerCase().trim();
     if (LEGAL_SKILLS.has(lower)) return true;
-    for (const ls of LEGAL_SKILLS) {
+    for (const ls of Array.from(LEGAL_SKILLS)) {
       if (lower.includes(ls) || ls.includes(lower)) return true;
     }
     return false;

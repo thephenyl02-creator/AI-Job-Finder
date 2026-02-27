@@ -1066,7 +1066,7 @@ export default function AdminPage() {
                                 {log.level}
                               </Badge>
                               <span className="text-muted-foreground">[{log.category}]</span>
-                              <span className="truncate">{log.message}</span>
+                              <span className="truncate" title={log.message}>{log.message}</span>
                             </div>
                           ))}
                         </div>
@@ -1133,8 +1133,8 @@ export default function AdminPage() {
                         data-testid={`multi-job-result-${idx}`}
                       >
                         <div className="min-w-0">
-                          <p className="font-medium truncate">{job.title}</p>
-                          <p className="text-sm text-muted-foreground truncate">{job.company} &middot; {job.location}</p>
+                          <p className="font-medium truncate" title={job.title}>{job.title}</p>
+                          <p className="text-sm text-muted-foreground truncate" title={`${job.company} · ${job.location}`}>{job.company} &middot; {job.location}</p>
                         </div>
                         <Button size="sm" variant="outline" data-testid={`button-preview-job-${idx}`}>
                           Review
@@ -1224,9 +1224,9 @@ export default function AdminPage() {
                                 {r.status === 'skipped' && <XCircle className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />}
                                 <div className="min-w-0 flex-1">
                                   {r.title ? (
-                                    <p className="font-medium truncate">{r.title} at {r.company}</p>
+                                    <p className="font-medium truncate" title={`${r.title} at ${r.company}`}>{r.title} at {r.company}</p>
                                   ) : (
-                                    <p className="font-medium truncate text-muted-foreground break-all">{r.url}</p>
+                                    <p className="font-medium truncate text-muted-foreground break-all" title={r.url}>{r.url}</p>
                                   )}
                                   <p className="text-xs text-muted-foreground">
                                     {r.status === 'added' && 'Added successfully'}
@@ -1335,7 +1335,7 @@ export default function AdminPage() {
                                   <XCircle className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
                                 )}
                                 <div className="min-w-0">
-                                  <p className="font-medium truncate">{result.filename}</p>
+                                  <p className="font-medium truncate" title={result.filename}>{result.filename}</p>
                                   {result.success && result.job ? (
                                     <p className="text-muted-foreground">
                                       {result.job.title} at {result.job.company}
@@ -1893,7 +1893,7 @@ export default function AdminPage() {
                         >
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0 flex-1">
-                              <h4 className="font-medium truncate" data-testid={`text-job-title-${job.id}`}>{cleanStructuredText(job.title)}</h4>
+                              <h4 className="font-medium truncate" title={cleanStructuredText(job.title)} data-testid={`text-job-title-${job.id}`}>{cleanStructuredText(job.title)}</h4>
                               <p className="text-sm text-muted-foreground" data-testid={`text-job-company-${job.id}`}>
                                 {cleanStructuredText(job.company)}
                                 {job.location && ` \u2022 ${cleanStructuredText(job.location)}`}
@@ -2016,7 +2016,7 @@ export default function AdminPage() {
                             >
                               <SelectTrigger className="h-auto py-0.5 px-2 text-xs border-dashed w-auto min-w-0 gap-1" data-testid={`select-inline-category-${job.id}`}>
                                 <Tag className="h-3 w-3 shrink-0" />
-                                <span className="truncate">{job.roleCategory ? cleanStructuredText(job.roleCategory) : "No category"}</span>
+                                <span className="truncate" title={job.roleCategory ? cleanStructuredText(job.roleCategory) : "No category"}>{job.roleCategory ? cleanStructuredText(job.roleCategory) : "No category"}</span>
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="_none">No category</SelectItem>
@@ -2034,7 +2034,7 @@ export default function AdminPage() {
                             >
                               <SelectTrigger className="h-auto py-0.5 px-2 text-xs border-dashed w-auto min-w-0 gap-1" data-testid={`select-inline-seniority-${job.id}`}>
                                 <GraduationCap className="h-3 w-3 shrink-0" />
-                                <span className="truncate">{job.seniorityLevel || "No level"}</span>
+                                <span className="truncate" title={job.seniorityLevel || "No level"}>{job.seniorityLevel || "No level"}</span>
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="_none">No level</SelectItem>

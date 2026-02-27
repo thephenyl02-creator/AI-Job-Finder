@@ -1055,17 +1055,19 @@ async function runLiveJobAudit(): Promise<{ audited: number; flagged: number; pr
         continue;
       }
 
+      const isAdminApproved = job.reviewStatus === 'approved';
+
       let failReason: string | null = null;
       const jobIsLegalTech = isLegalTechCompany(job.company);
       const auditQualityThreshold = (job.legalRelevanceScore ?? 0) >= 7 ? 40 : (jobIsLegalTech ? 40 : 50);
       const auditMinRelevance = jobIsLegalTech ? 4 : 5;
       const auditMinConfidence = jobIsLegalTech ? 40 : 50;
-      if (!job.isActive) failReason = 'INACTIVE';
-      else if (job.jobStatus !== 'open') failReason = 'JOB_CLOSED';
-      else if ((job.qualityScore ?? 0) < auditQualityThreshold) failReason = 'LOW_QUALITY_SCORE';
-      else if ((job.legalRelevanceScore ?? 0) < auditMinRelevance) failReason = 'LOW_RELEVANCE_SCORE';
+      if (!job.isActive && !isAdminApproved) failReason = 'INACTIVE';
+      else if (job.jobStatus !== 'open' && !isAdminApproved) failReason = 'JOB_CLOSED';
+      else if (!isAdminApproved && (job.qualityScore ?? 0) < auditQualityThreshold) failReason = 'LOW_QUALITY_SCORE';
+      else if (!isAdminApproved && (job.legalRelevanceScore ?? 0) < auditMinRelevance) failReason = 'LOW_RELEVANCE_SCORE';
       else if (!job.roleCategory) failReason = 'MISSING_CATEGORY';
-      else if ((job.relevanceConfidence ?? 0) < auditMinConfidence) failReason = 'LOW_CONFIDENCE';
+      else if (!isAdminApproved && (job.relevanceConfidence ?? 0) < auditMinConfidence) failReason = 'LOW_CONFIDENCE';
       else if (!job.applyUrl || job.applyUrl.trim() === '') failReason = 'NO_APPLY_URL';
 
       if (failReason) {
@@ -1188,7 +1190,9 @@ export async function recoverStuckReadyJobs(): Promise<{ promoted: number; total
 
     let passes = false;
 
-    if (isTracked || jobIsLegalTech) {
+    if (job.reviewStatus === 'approved') {
+      passes = true;
+    } else if (isTracked || jobIsLegalTech) {
       passes = quality >= 40 && relevance >= 4 && confidence >= 30;
     } else if (relevance >= 7) {
       passes = quality >= 40 && confidence >= 40;
