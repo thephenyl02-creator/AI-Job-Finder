@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { jobs, users, userPreferences, jobCategories, jobSubmissions, jobAlerts, notifications, resumes, builtResumes, userActivities, userPersonas, savedJobs, jobApplications, events, scrapeRuns, jobReports, anonymousEvents, reportLeads, type Job, type InsertJob, type User, type UserPreferences, type InsertUserPreferences, type ResumeExtractedData, type JobCategory, type JobSubmission, type InsertJobSubmission, type JobAlert, type InsertJobAlert, type Notification, type InsertNotification, type Resume, type InsertResume, type BuiltResume, type InsertBuiltResume, type UserActivity, type InsertUserActivity, type UserPersona, type InsertUserPersona, type SavedJob, type InsertSavedJob, type JobApplication, type InsertJobApplication, type JobApplicationWithJob, type Event, type InsertEvent, type ScrapeRun, type InsertScrapeRun, type JobReport, type InsertJobReport, JOB_TAXONOMY } from "@shared/schema";
+import { jobs, users, userPreferences, jobCategories, jobSubmissions, jobAlerts, notifications, resumes, builtResumes, userActivities, userPersonas, savedJobs, jobApplications, events, scrapeRuns, jobReports, anonymousEvents, reportLeads, publishedReports, type Job, type InsertJob, type User, type UserPreferences, type InsertUserPreferences, type ResumeExtractedData, type JobCategory, type JobSubmission, type InsertJobSubmission, type JobAlert, type InsertJobAlert, type Notification, type InsertNotification, type Resume, type InsertResume, type BuiltResume, type InsertBuiltResume, type UserActivity, type InsertUserActivity, type UserPersona, type InsertUserPersona, type SavedJob, type InsertSavedJob, type JobApplication, type InsertJobApplication, type JobApplicationWithJob, type Event, type InsertEvent, type ScrapeRun, type InsertScrapeRun, type JobReport, type InsertJobReport, JOB_TAXONOMY } from "@shared/schema";
 import { eq, desc, asc, and, sql, inArray, lt, gte, count } from "drizzle-orm";
 import { cleanJobDescription } from "./lib/description-cleaner";
 import { deriveSourceInfo } from "./lib/url-utils";
@@ -114,6 +114,10 @@ export interface IStorage {
   trackAnonymousEvent(eventType: string, hashedIp: string, metadata?: any): Promise<void>;
   getAnonymousFunnel(days?: number): Promise<any>;
   insertReportLead(email: string, reportSlug: string, source?: string): Promise<void>;
+  insertPublishedReport(data: { slug: string; title: string; period: string; fileData: Buffer; fileName: string; fileSize: number; publishedBy: string }): Promise<any>;
+  getActivePublishedReport(period: string): Promise<any | null>;
+  listPublishedReports(): Promise<any[]>;
+  deactivatePublishedReport(id: number): Promise<void>;
   // User Dashboard
   getUserDashboard(userId: string, days?: number): Promise<any>;
   // Saved Jobs
@@ -1940,6 +1944,44 @@ class DatabaseStorage implements IStorage {
 
   async insertReportLead(email: string, reportSlug: string, source?: string): Promise<void> {
     await db.insert(reportLeads).values({ email, reportSlug, source: source || null });
+  }
+
+  async insertPublishedReport(data: { slug: string; title: string; period: string; fileData: Buffer; fileName: string; fileSize: number; publishedBy: string }): Promise<any> {
+    await db.update(publishedReports).set({ isActive: false }).where(and(eq(publishedReports.period, data.period), eq(publishedReports.isActive, true)));
+    const [report] = await db.insert(publishedReports).values({
+      slug: data.slug,
+      title: data.title,
+      period: data.period,
+      fileData: data.fileData,
+      fileName: data.fileName,
+      fileSize: data.fileSize,
+      publishedBy: data.publishedBy,
+      isActive: true,
+    }).returning();
+    return report;
+  }
+
+  async getActivePublishedReport(period: string): Promise<any | null> {
+    const [report] = await db.select().from(publishedReports).where(and(eq(publishedReports.period, period), eq(publishedReports.isActive, true))).limit(1);
+    return report || null;
+  }
+
+  async listPublishedReports(): Promise<any[]> {
+    return db.select({
+      id: publishedReports.id,
+      slug: publishedReports.slug,
+      title: publishedReports.title,
+      period: publishedReports.period,
+      fileName: publishedReports.fileName,
+      fileSize: publishedReports.fileSize,
+      publishedAt: publishedReports.publishedAt,
+      publishedBy: publishedReports.publishedBy,
+      isActive: publishedReports.isActive,
+    }).from(publishedReports).orderBy(desc(publishedReports.publishedAt));
+  }
+
+  async deactivatePublishedReport(id: number): Promise<void> {
+    await db.update(publishedReports).set({ isActive: false }).where(eq(publishedReports.id, id));
   }
 
   async getAnonymousFunnel(days: number = 30): Promise<{

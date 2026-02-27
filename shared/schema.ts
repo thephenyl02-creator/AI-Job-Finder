@@ -1,5 +1,17 @@
 import { sql } from "drizzle-orm";
-import { pgTable, serial, text, varchar, integer, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, varchar, integer, boolean, timestamp, jsonb, customType } from "drizzle-orm/pg-core";
+
+const bytea = customType<{ data: Buffer; driverData: Buffer }>({
+  dataType() {
+    return "bytea";
+  },
+  toDriver(value: Buffer): Buffer {
+    return value;
+  },
+  fromDriver(value: Buffer): Buffer {
+    return Buffer.from(value);
+  },
+});
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -940,6 +952,27 @@ export const insertReportLeadSchema = createInsertSchema(reportLeads).omit({
 
 export type ReportLead = typeof reportLeads.$inferSelect;
 export type InsertReportLead = z.infer<typeof insertReportLeadSchema>;
+
+export const publishedReports = pgTable("published_reports", {
+  id: serial("id").primaryKey(),
+  slug: varchar("slug", { length: 200 }).notNull(),
+  title: varchar("title", { length: 500 }).notNull(),
+  period: varchar("period", { length: 20 }).notNull(),
+  fileData: bytea("file_data").notNull(),
+  fileName: varchar("file_name", { length: 500 }).notNull(),
+  fileSize: integer("file_size").notNull(),
+  publishedAt: timestamp("published_at").default(sql`CURRENT_TIMESTAMP`),
+  publishedBy: varchar("published_by", { length: 255 }),
+  isActive: boolean("is_active").default(true),
+});
+
+export const insertPublishedReportSchema = createInsertSchema(publishedReports).omit({
+  id: true,
+  publishedAt: true,
+});
+
+export type PublishedReport = typeof publishedReports.$inferSelect;
+export type InsertPublishedReport = z.infer<typeof insertPublishedReportSchema>;
 
 export interface SkillCluster {
   name: string;

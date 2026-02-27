@@ -59,6 +59,7 @@ import { runQAChecks, checkDuplicate } from "./lib/job-qa";
 import { enforceJobDefaults } from "./lib/job-defaults";
 import { generateJobHash } from "./lib/job-hash";
 import { generateMarketIntelligencePDF } from "./lib/market-intelligence-pdf";
+import { generateMarketIntelligenceDocx } from "./lib/market-intelligence-docx";
 import { db } from "./db";
 import { jobs, users, resumes, resumeEditorVersions } from "@shared/schema";
 import { eq, and, sql, desc, count, or } from "drizzle-orm";
@@ -8207,54 +8208,152 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
         return res.status(400).json({ error: "Invalid period. Use weekly, monthly, or annual." });
       }
 
-      let miData: any = getMarketIntelligenceCache();
-      if (!miData) {
-        const response = await fetch(`http://localhost:${process.env.PORT || 5000}/api/market-intelligence`);
-        if (response.ok) {
-          miData = await response.json();
-        } else {
-          miData = getMarketIntelligenceCache();
-          if (!miData) {
-            return res.status(500).json({ error: "Could not load market data" });
-          }
-        }
+      const report = await storage.getActivePublishedReport(period);
+      if (!report) {
+        return res.status(404).json({ error: "No published report available for this period yet." });
       }
 
-      const pdfData = {
-        overview: {
-          ...miData.overview,
-          totalCountries: miData.overview.countriesCount || miData.overview.totalCountries || 0,
-        },
-        skillsDemand: miData.skillsDemand || [],
-        careerPaths: miData.careerPaths || [],
-        salaryByPath: miData.salaryByPath || [],
-        workMode: {
-          remote: miData.workMode?.remote?.count ?? miData.workMode?.remote ?? 0,
-          hybrid: miData.workMode?.hybrid?.count ?? miData.workMode?.hybrid ?? 0,
-          onsite: miData.workMode?.onsite?.count ?? miData.workMode?.onsite ?? 0,
-        },
-        aiIntensity: {
-          low: miData.aiIntensity?.low?.count ?? miData.aiIntensity?.low ?? 0,
-          medium: miData.aiIntensity?.medium?.count ?? miData.aiIntensity?.medium ?? 0,
-          high: miData.aiIntensity?.high?.count ?? miData.aiIntensity?.high ?? 0,
-        },
-        seniorityDistribution: miData.seniorityDistribution || [],
-        topCompanies: miData.topCompanies || [],
-        geography: miData.geography || [],
-      };
-
-      const periodLabels: Record<string, string> = { weekly: "Weekly_Briefing", monthly: "Monthly_Report", annual: "Annual_Report" };
-      const filename = `LegalTechCareers_${periodLabels[period]}_${new Date().toISOString().split("T")[0]}.pdf`;
-
       res.setHeader("Content-Type", "application/pdf");
-      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-
-      const pdfDoc = generateMarketIntelligencePDF(pdfData, period);
-      pdfDoc.pipe(res);
-      pdfDoc.end();
+      res.setHeader("Content-Disposition", `attachment; filename="${report.fileName}"`);
+      res.setHeader("Content-Length", report.fileSize);
+      res.send(report.fileData);
     } catch (error: any) {
-      console.error("Error generating PDF report:", error);
-      res.status(500).json({ error: "Failed to generate PDF report" });
+      console.error("Error serving published report:", error);
+      res.status(500).json({ error: "Failed to serve report" });
+    }
+  });
+
+  app.get("/api/market-intelligence/report/status", async (_req, res) => {
+    try {
+      const periods = ["weekly", "monthly", "annual"];
+      const status: Record<string, boolean> = {};
+      for (const p of periods) {
+        const report = await storage.getActivePublishedReport(p);
+        status[p] = !!report;
+      }
+      res.json(status);
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to check report status" });
+    }
+  });
+
+  async function getMarketDataForReport() {
+    let miData: any = getMarketIntelligenceCache();
+    if (!miData) {
+      const response = await fetch(`http://localhost:${process.env.PORT || 5000}/api/market-intelligence`);
+      if (response.ok) {
+        miData = await response.json();
+      } else {
+        miData = getMarketIntelligenceCache();
+      }
+    }
+    if (!miData) return null;
+    return {
+      overview: {
+        ...miData.overview,
+        totalCountries: miData.overview.countriesCount || miData.overview.totalCountries || 0,
+      },
+      skillsDemand: miData.skillsDemand || [],
+      careerPaths: miData.careerPaths || [],
+      salaryByPath: miData.salaryByPath || [],
+      workMode: {
+        remote: miData.workMode?.remote?.count ?? miData.workMode?.remote ?? 0,
+        hybrid: miData.workMode?.hybrid?.count ?? miData.workMode?.hybrid ?? 0,
+        onsite: miData.workMode?.onsite?.count ?? miData.workMode?.onsite ?? 0,
+      },
+      aiIntensity: {
+        low: miData.aiIntensity?.low?.count ?? miData.aiIntensity?.low ?? 0,
+        medium: miData.aiIntensity?.medium?.count ?? miData.aiIntensity?.medium ?? 0,
+        high: miData.aiIntensity?.high?.count ?? miData.aiIntensity?.high ?? 0,
+      },
+      seniorityDistribution: miData.seniorityDistribution || [],
+      topCompanies: miData.topCompanies || [],
+      geography: miData.geography || [],
+    };
+  }
+
+  app.get("/api/admin/market-intelligence/docx", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const isAdmin = await storage.isUserAdmin(user.id);
+      if (!isAdmin) return res.status(403).json({ error: "Admin access required" });
+
+      const period = (req.query.period as string) || "monthly";
+      if (!["weekly", "monthly", "annual"].includes(period)) {
+        return res.status(400).json({ error: "Invalid period." });
+      }
+
+      const pdfData = await getMarketDataForReport();
+      if (!pdfData) return res.status(500).json({ error: "Could not load market data" });
+
+      const buffer = await generateMarketIntelligenceDocx(pdfData, period);
+      const periodLabels: Record<string, string> = { weekly: "Weekly_Briefing", monthly: "Monthly_Report", annual: "Annual_Report" };
+      const filename = `LegalTechCareers_${periodLabels[period]}_DRAFT_${new Date().toISOString().split("T")[0]}.docx`;
+
+      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+      res.setHeader("Content-Length", buffer.length);
+      res.send(buffer);
+    } catch (error: any) {
+      console.error("Error generating DOCX report:", error);
+      res.status(500).json({ error: "Failed to generate Word report" });
+    }
+  });
+
+  app.post("/api/admin/published-reports/upload", isAuthenticated, adminUpload.single("file"), async (req, res) => {
+    try {
+      const user = req.user as any;
+      const isAdmin = await storage.isUserAdmin(user.id);
+      if (!isAdmin) return res.status(403).json({ error: "Admin access required" });
+
+      const file = req.file;
+      if (!file) return res.status(400).json({ error: "No file uploaded." });
+      if (file.mimetype !== "application/pdf") return res.status(400).json({ error: "Only PDF files are accepted." });
+
+      const { title, period } = req.body;
+      if (!title || !period) return res.status(400).json({ error: "Title and period are required." });
+      if (!["weekly", "monthly", "annual"].includes(period)) return res.status(400).json({ error: "Invalid period." });
+
+      const slug = `${period}-${new Date().toISOString().split("T")[0]}`;
+
+      const report = await storage.insertPublishedReport({
+        slug,
+        title,
+        period,
+        fileData: file.buffer,
+        fileName: file.originalname,
+        fileSize: file.size,
+        publishedBy: user.id,
+      });
+
+      res.json({ success: true, report: { id: report.id, slug: report.slug, title: report.title, period: report.period, fileName: report.fileName, fileSize: report.fileSize, publishedAt: report.publishedAt } });
+    } catch (error: any) {
+      console.error("Error uploading published report:", error);
+      res.status(500).json({ error: "Failed to upload report." });
+    }
+  });
+
+  app.get("/api/admin/published-reports", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const isAdmin = await storage.isUserAdmin(user.id);
+      if (!isAdmin) return res.status(403).json({ error: "Admin access required" });
+      const reports = await storage.listPublishedReports();
+      res.json(reports);
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to list reports." });
+    }
+  });
+
+  app.delete("/api/admin/published-reports/:id", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const isAdmin = await storage.isUserAdmin(user.id);
+      if (!isAdmin) return res.status(403).json({ error: "Admin access required" });
+      await storage.deactivatePublishedReport(parseInt(req.params.id));
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to deactivate report." });
     }
   });
 
