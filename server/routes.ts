@@ -8252,7 +8252,8 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
       res.setHeader("Content-Type", "application/pdf");
       res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
 
-      const pdfDoc = generateMarketIntelligencePDF(pdfData, period);
+      const reportSiteUrl = process.env.REPLIT_DOMAINS?.split(",")[0] || "legaltechcareers.com";
+      const pdfDoc = generateMarketIntelligencePDF(pdfData, period, reportSiteUrl);
       pdfDoc.pipe(res);
       pdfDoc.end();
     } catch (error: any) {
@@ -8275,7 +8276,8 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
       const pdfData = await getMarketDataForReport();
       if (!pdfData) return res.status(500).json({ error: "Could not load market data" });
 
-      const buffer = await generateMarketIntelligenceDocx(pdfData, period);
+      const docxSiteUrl = process.env.REPLIT_DOMAINS?.split(",")[0] || "legaltechcareers.com";
+      const buffer = await generateMarketIntelligenceDocx(pdfData, period, docxSiteUrl);
       const periodLabels: Record<string, string> = { weekly: "Weekly_Briefing", monthly: "Monthly_Report", annual: "Annual_Report" };
       const filename = `LegalTechCareers_${periodLabels[period]}_DRAFT_${new Date().toISOString().split("T")[0]}.docx`;
 

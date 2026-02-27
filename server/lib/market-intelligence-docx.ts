@@ -331,7 +331,8 @@ function makePageFooter(): Footer {
   });
 }
 
-export async function generateMarketIntelligenceDocx(data: MarketData, period: string): Promise<Buffer> {
+export async function generateMarketIntelligenceDocx(data: MarketData, period: string, siteUrl?: string): Promise<Buffer> {
+  const baseUrl = siteUrl || "legaltechcareers.com";
   const coverChildren: any[] = [];
 
   coverChildren.push(spacer(600));
@@ -378,7 +379,7 @@ export async function generateMarketIntelligenceDocx(data: MarketData, period: s
   coverChildren.push(new Paragraph({
     spacing: { after: 0 },
     children: [new TextRun({
-      text: "legaltechcareers.com",
+      text: baseUrl,
       size: 16, font: FONT, color: GRAY_400,
     })],
   }));

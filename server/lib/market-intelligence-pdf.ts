@@ -91,11 +91,11 @@ function pageHeader(doc: PDFKit.PDFDocument, pageNum: number) {
   doc.restore();
 }
 
-function pageFooter(doc: PDFKit.PDFDocument) {
+function pageFooter(doc: PDFKit.PDFDocument, siteUrl: string = "legaltechcareers.com") {
   doc.save();
   doc.moveTo(MARGIN, PAGE_HEIGHT - 40).lineTo(PAGE_WIDTH - MARGIN, PAGE_HEIGHT - 40).strokeColor(GRAY_300).lineWidth(0.3).stroke();
   doc.fontSize(6).fillColor(GRAY_400).font("Helvetica")
-    .text("legaltechcareers.com", MARGIN, PAGE_HEIGHT - 32, { width: CONTENT_WIDTH / 2 });
+    .text(siteUrl, MARGIN, PAGE_HEIGHT - 32, { width: CONTENT_WIDTH / 2 });
   doc.fontSize(6).fillColor(GRAY_400).font("Helvetica")
     .text(`© ${new Date().getFullYear()} Legal Tech Careers`, MARGIN, PAGE_HEIGHT - 32, { width: CONTENT_WIDTH, align: "right" });
   doc.restore();
@@ -112,7 +112,7 @@ function newContentPage(doc: PDFKit.PDFDocument, pn: { val: number }) {
   doc.addPage({ size: "LETTER", margin: MARGIN });
   pn.val++;
   pageHeader(doc, pn.val);
-  pageFooter(doc);
+  pageFooter(doc, (doc as any)._siteUrl || "legaltechcareers.com");
   doc.y = 56;
 }
 
@@ -308,7 +308,9 @@ function generateSectionInsight(section: string, data: MarketData): string {
   }
 }
 
-export function generateMarketIntelligencePDF(data: MarketData, period: string): PDFKit.PDFDocument {
+export function generateMarketIntelligencePDF(data: MarketData, period: string, siteUrl?: string): PDFKit.PDFDocument {
+  const baseUrl = siteUrl || "legaltechcareers.com";
+
   const doc = new PDFDocument({
     size: "LETTER",
     margins: { top: MARGIN, bottom: 0, left: MARGIN, right: MARGIN },
@@ -324,6 +326,7 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string):
   });
 
   const pn = { val: 1 };
+  (doc as any)._siteUrl = baseUrl;
 
   const _origAddPage = doc.addPage.bind(doc);
   (doc as any)._blockedAutoPages = 0;
@@ -383,7 +386,7 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string):
       MARGIN, PAGE_HEIGHT - 80, { width: CONTENT_WIDTH }
     );
   doc.fontSize(7.5).fillColor(GRAY_500).font("Helvetica")
-    .text("legaltechcareers.com", MARGIN, PAGE_HEIGHT - 66, { width: CONTENT_WIDTH });
+    .text(baseUrl, MARGIN, PAGE_HEIGHT - 66, { width: CONTENT_WIDTH });
   doc.restore();
 
   // ── KEY FINDINGS PAGE ──
@@ -771,7 +774,7 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string):
   doc.fontSize(11).fillColor(WHITE).font("Helvetica-Bold")
     .text("Ready to explore your fit?", MARGIN + 16, ctaY + 12, { width: CONTENT_WIDTH - 32 });
   doc.fontSize(9).fillColor(GRAY_200).font("Helvetica")
-    .text("Take the free career diagnostic at legaltechcareers.com/diagnostic", MARGIN + 16, ctaY + 28, { width: CONTENT_WIDTH - 32 });
+    .text(`Take the free career diagnostic at ${baseUrl}/diagnostic`, MARGIN + 16, ctaY + 28, { width: CONTENT_WIDTH - 32 });
   doc.restore();
   doc.y = ctaY + 58;
 
@@ -855,7 +858,7 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string):
   doc.fontSize(7.5).fillColor(GRAY_500).font("Helvetica")
     .text(`© ${new Date().getFullYear()} Legal Tech Careers. All rights reserved.`, MARGIN, PAGE_HEIGHT - 72, { width: CONTENT_WIDTH });
   doc.fontSize(7.5).fillColor(GRAY_500).font("Helvetica")
-    .text("legaltechcareers.com", MARGIN, PAGE_HEIGHT - 58, { width: CONTENT_WIDTH });
+    .text(baseUrl, MARGIN, PAGE_HEIGHT - 58, { width: CONTENT_WIDTH });
   doc.restore();
 
   return doc;
