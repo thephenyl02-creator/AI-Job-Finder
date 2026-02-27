@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { usePageTitle } from "@/hooks/use-page-title";
 import { useAuth } from "@/hooks/use-auth";
 import { useSubscription } from "@/hooks/use-subscription";
@@ -11,20 +11,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Input } from "@/components/ui/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuSeparator,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
 import { Link } from "wouter";
@@ -57,9 +48,7 @@ import {
   DollarSign,
   ChevronDown,
   MapPin,
-  Upload,
   FileText,
-  Trash2,
   Loader2,
 } from "lucide-react";
 
@@ -219,25 +208,10 @@ export default function MarketIntelligence() {
   useEffect(() => { track({ eventType: "page_view", pagePath: "/market-intelligence" }); }, []);
 
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   const [downloading, setDownloading] = useState(false);
-  const [uploadOpen, setUploadOpen] = useState(false);
-  const [uploadTitle, setUploadTitle] = useState("");
-  const [uploadPeriod, setUploadPeriod] = useState("monthly");
-  const [uploading, setUploading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data, isLoading, isError, refetch } = useQuery<MarketIntelligenceData>({
     queryKey: ["/api/market-intelligence"],
-  });
-
-  const { data: reportStatus } = useQuery<Record<string, boolean>>({
-    queryKey: ["/api/market-intelligence/report/status"],
-  });
-
-  const { data: publishedReports } = useQuery<any[]>({
-    queryKey: ["/api/admin/published-reports"],
-    enabled: isAdmin,
   });
 
   useEffect(() => {
@@ -363,46 +337,6 @@ export default function MarketIntelligence() {
     }
   };
 
-  const handleUpload = async () => {
-    const file = fileInputRef.current?.files?.[0];
-    if (!file) { toast({ title: "No file selected", variant: "destructive" }); return; }
-    if (!uploadTitle.trim()) { toast({ title: "Title is required", variant: "destructive" }); return; }
-    setUploading(true);
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("title", uploadTitle.trim());
-      formData.append("period", uploadPeriod);
-      const res = await fetch("/api/admin/published-reports/upload", { method: "POST", body: formData });
-      if (!res.ok) { const body = await res.json().catch(() => ({})); throw new Error(body.error || "Upload failed"); }
-      toast({ title: "Report published", description: "The report is now available for Pro users." });
-      setUploadOpen(false);
-      setUploadTitle("");
-      if (fileInputRef.current) fileInputRef.current.value = "";
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/published-reports"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/market-intelligence/report/status"] });
-    } catch (err: any) {
-      toast({ title: "Upload failed", description: err.message, variant: "destructive" });
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const handleDeactivateReport = async (id: number) => {
-    try {
-      const res = await fetch(`/api/admin/published-reports/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Failed to deactivate");
-      toast({ title: "Report deactivated" });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/published-reports"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/market-intelligence/report/status"] });
-    } catch (err: any) {
-      toast({ title: "Failed to deactivate", variant: "destructive" });
-    }
-  };
-
-  const hasPublishedReport = (period: string) => reportStatus?.[period] === true;
-
-
   return (
     <div className="min-h-screen bg-background flex flex-col overflow-x-hidden">
       <Header />
@@ -423,14 +357,35 @@ export default function MarketIntelligence() {
               <div className="flex gap-2 shrink-0">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="gap-2" disabled={downloading} data-testid="button-admin-actions">
-                      {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
-                      Admin Tools
+                    <Button variant="outline" className="gap-2" disabled={downloading} data-testid="button-download-report">
+                      {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                      Download Report
                       <ChevronDown className="h-3.5 w-3.5" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuLabel>Download Word Draft</DropdownMenuLabel>
+                    <DropdownMenuLabel>PDF Report</DropdownMenuLabel>
+                    {(["weekly", "monthly", "annual"] as const).map(p => (
+                      <DropdownMenuItem
+                        key={p}
+                        onClick={() => handleDownload(p)}
+                        data-testid={`menu-download-${p}`}
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        {p.charAt(0).toUpperCase() + p.slice(1)} Report
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="gap-2" disabled={downloading} data-testid="button-admin-actions">
+                      {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
+                      Word Draft
+                      <ChevronDown className="h-3.5 w-3.5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
                     <DropdownMenuItem onClick={() => handleDocxDownload("weekly")} data-testid="menu-docx-weekly">
                       <FileText className="h-4 w-4 mr-2" />
                       Weekly Briefing (.docx)
@@ -443,72 +398,8 @@ export default function MarketIntelligence() {
                       <FileText className="h-4 w-4 mr-2" />
                       Annual Report (.docx)
                     </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuLabel>Download Published PDF</DropdownMenuLabel>
-                    {(["weekly", "monthly", "annual"] as const).map(p => (
-                      <DropdownMenuItem
-                        key={p}
-                        disabled={!hasPublishedReport(p)}
-                        onClick={() => handleDownload(p)}
-                        data-testid={`menu-download-${p}`}
-                      >
-                        <Download className="h-4 w-4 mr-2" />
-                        {p.charAt(0).toUpperCase() + p.slice(1)} PDF {!hasPublishedReport(p) && "(none)"}
-                      </DropdownMenuItem>
-                    ))}
                   </DropdownMenuContent>
                 </DropdownMenu>
-                <Dialog open={uploadOpen} onOpenChange={setUploadOpen}>
-                  <DialogTrigger asChild>
-                    <Button variant="default" className="gap-2" data-testid="button-upload-report">
-                      <Upload className="h-4 w-4" />
-                      Publish Report
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Publish Report</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4 pt-2">
-                      <div>
-                        <label className="text-sm font-medium text-foreground mb-1.5 block">Title</label>
-                        <Input
-                          value={uploadTitle}
-                          onChange={(e) => setUploadTitle(e.target.value)}
-                          placeholder="Q1 2026 Monthly Hiring Report"
-                          data-testid="input-upload-title"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-foreground mb-1.5 block">Period</label>
-                        <select
-                          value={uploadPeriod}
-                          onChange={(e) => setUploadPeriod(e.target.value)}
-                          className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
-                          data-testid="select-upload-period"
-                        >
-                          <option value="weekly">Weekly</option>
-                          <option value="monthly">Monthly</option>
-                          <option value="annual">Annual</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-foreground mb-1.5 block">PDF File</label>
-                        <input
-                          ref={fileInputRef}
-                          type="file"
-                          accept=".pdf"
-                          className="text-sm text-muted-foreground"
-                          data-testid="input-upload-file"
-                        />
-                      </div>
-                      <Button onClick={handleUpload} disabled={uploading} className="w-full gap-2" data-testid="button-confirm-upload">
-                        {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                        {uploading ? "Publishing..." : "Publish"}
-                      </Button>
-                    </div>
-                  </DialogContent>
-                </Dialog>
               </div>
             ) : isPro ? (
               <DropdownMenu>
@@ -523,12 +414,11 @@ export default function MarketIntelligence() {
                   {(["weekly", "monthly", "annual"] as const).map(p => (
                     <DropdownMenuItem
                       key={p}
-                      disabled={!hasPublishedReport(p)}
                       onClick={() => handleDownload(p)}
                       data-testid={`menu-download-${p}`}
                     >
                       <Download className="h-4 w-4 mr-2" />
-                      {p.charAt(0).toUpperCase() + p.slice(1)} Report {!hasPublishedReport(p) && "(coming soon)"}
+                      {p.charAt(0).toUpperCase() + p.slice(1)} Report
                     </DropdownMenuItem>
                   ))}
                 </DropdownMenuContent>
@@ -544,39 +434,6 @@ export default function MarketIntelligence() {
             )}
           </div>
         </section>
-
-        {isAdmin && publishedReports && publishedReports.length > 0 && (
-          <section className="border-t border-border/30 bg-muted/30" data-testid="section-admin-reports">
-            <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4">
-              <h3 className="text-sm font-medium text-muted-foreground mb-3">Published Reports</h3>
-              <div className="space-y-2">
-                {publishedReports.map((r: any) => (
-                  <div key={r.id} className="flex items-center justify-between bg-background rounded-lg border px-4 py-2.5" data-testid={`report-row-${r.id}`}>
-                    <div className="flex items-center gap-3">
-                      <FileText className="h-4 w-4 text-muted-foreground" />
-                      <div>
-                        <span className="text-sm font-medium">{r.title}</span>
-                        <span className="text-xs text-muted-foreground ml-2">
-                          {r.period} · {r.fileName} · {(r.fileSize / 1024).toFixed(0)} KB
-                        </span>
-                      </div>
-                      {r.isActive && <Badge variant="secondary" className="text-xs">Active</Badge>}
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDeactivateReport(r.id)}
-                      disabled={!r.isActive}
-                      data-testid={`button-deactivate-${r.id}`}
-                    >
-                      <Trash2 className="h-4 w-4 text-muted-foreground" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </section>
-        )}
 
         <section className="border-t border-border/30" data-testid="section-key-stats">
           <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8">

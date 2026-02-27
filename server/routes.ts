@@ -8201,42 +8201,6 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
     }
   });
 
-  app.get("/api/market-intelligence/report", isAuthenticated, requirePro, async (req, res) => {
-    try {
-      const period = (req.query.period as string) || "monthly";
-      if (!["weekly", "monthly", "annual"].includes(period)) {
-        return res.status(400).json({ error: "Invalid period. Use weekly, monthly, or annual." });
-      }
-
-      const report = await storage.getActivePublishedReport(period);
-      if (!report) {
-        return res.status(404).json({ error: "No published report available for this period yet." });
-      }
-
-      res.setHeader("Content-Type", "application/pdf");
-      res.setHeader("Content-Disposition", `attachment; filename="${report.fileName}"`);
-      res.setHeader("Content-Length", report.fileSize);
-      res.send(report.fileData);
-    } catch (error: any) {
-      console.error("Error serving published report:", error);
-      res.status(500).json({ error: "Failed to serve report" });
-    }
-  });
-
-  app.get("/api/market-intelligence/report/status", async (_req, res) => {
-    try {
-      const periods = ["weekly", "monthly", "annual"];
-      const status: Record<string, boolean> = {};
-      for (const p of periods) {
-        const report = await storage.getActivePublishedReport(p);
-        status[p] = !!report;
-      }
-      res.json(status);
-    } catch (error: any) {
-      res.status(500).json({ error: "Failed to check report status" });
-    }
-  });
-
   async function getMarketDataForReport() {
     let miData: any = getMarketIntelligenceCache();
     if (!miData) {
@@ -8272,6 +8236,31 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
     };
   }
 
+  app.get("/api/market-intelligence/report", isAuthenticated, requirePro, async (req, res) => {
+    try {
+      const period = (req.query.period as string) || "monthly";
+      if (!["weekly", "monthly", "annual"].includes(period)) {
+        return res.status(400).json({ error: "Invalid period. Use weekly, monthly, or annual." });
+      }
+
+      const pdfData = await getMarketDataForReport();
+      if (!pdfData) return res.status(500).json({ error: "Could not load market data" });
+
+      const periodLabels: Record<string, string> = { weekly: "Weekly_Briefing", monthly: "Monthly_Report", annual: "Annual_Report" };
+      const filename = `LegalTechCareers_${periodLabels[period]}_${new Date().toISOString().split("T")[0]}.pdf`;
+
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+
+      const pdfDoc = generateMarketIntelligencePDF(pdfData, period);
+      pdfDoc.pipe(res);
+      pdfDoc.end();
+    } catch (error: any) {
+      console.error("Error generating PDF report:", error);
+      res.status(500).json({ error: "Failed to generate PDF report" });
+    }
+  });
+
   app.get("/api/admin/market-intelligence/docx", isAuthenticated, async (req, res) => {
     try {
       const user = req.user as any;
@@ -8297,63 +8286,6 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
     } catch (error: any) {
       console.error("Error generating DOCX report:", error);
       res.status(500).json({ error: "Failed to generate Word report" });
-    }
-  });
-
-  app.post("/api/admin/published-reports/upload", isAuthenticated, adminUpload.single("file"), async (req, res) => {
-    try {
-      const user = req.user as any;
-      const isAdmin = await storage.isUserAdmin(user.id);
-      if (!isAdmin) return res.status(403).json({ error: "Admin access required" });
-
-      const file = req.file;
-      if (!file) return res.status(400).json({ error: "No file uploaded." });
-      if (file.mimetype !== "application/pdf") return res.status(400).json({ error: "Only PDF files are accepted." });
-
-      const { title, period } = req.body;
-      if (!title || !period) return res.status(400).json({ error: "Title and period are required." });
-      if (!["weekly", "monthly", "annual"].includes(period)) return res.status(400).json({ error: "Invalid period." });
-
-      const slug = `${period}-${new Date().toISOString().split("T")[0]}`;
-
-      const report = await storage.insertPublishedReport({
-        slug,
-        title,
-        period,
-        fileData: file.buffer,
-        fileName: file.originalname,
-        fileSize: file.size,
-        publishedBy: user.id,
-      });
-
-      res.json({ success: true, report: { id: report.id, slug: report.slug, title: report.title, period: report.period, fileName: report.fileName, fileSize: report.fileSize, publishedAt: report.publishedAt } });
-    } catch (error: any) {
-      console.error("Error uploading published report:", error);
-      res.status(500).json({ error: "Failed to upload report." });
-    }
-  });
-
-  app.get("/api/admin/published-reports", isAuthenticated, async (req, res) => {
-    try {
-      const user = req.user as any;
-      const isAdmin = await storage.isUserAdmin(user.id);
-      if (!isAdmin) return res.status(403).json({ error: "Admin access required" });
-      const reports = await storage.listPublishedReports();
-      res.json(reports);
-    } catch (error: any) {
-      res.status(500).json({ error: "Failed to list reports." });
-    }
-  });
-
-  app.delete("/api/admin/published-reports/:id", isAuthenticated, async (req, res) => {
-    try {
-      const user = req.user as any;
-      const isAdmin = await storage.isUserAdmin(user.id);
-      if (!isAdmin) return res.status(403).json({ error: "Admin access required" });
-      await storage.deactivatePublishedReport(parseInt(req.params.id));
-      res.json({ success: true });
-    } catch (error: any) {
-      res.status(500).json({ error: "Failed to deactivate report." });
     }
   });
 
