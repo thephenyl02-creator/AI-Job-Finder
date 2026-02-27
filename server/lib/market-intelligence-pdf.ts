@@ -116,7 +116,7 @@ function newContentPage(doc: PDFKit.PDFDocument, pn: { val: number }) {
 }
 
 function sectionTitle(doc: PDFKit.PDFDocument, num: string, title: string, pn: { val: number }) {
-  ensureSpace(doc, 120, pn);
+  ensureSpace(doc, 60, pn);
   const y = doc.y;
   doc.save();
   doc.moveTo(MARGIN, y).lineTo(PAGE_WIDTH - MARGIN, y).strokeColor(GRAY_300).lineWidth(0.5).stroke();
@@ -129,7 +129,7 @@ function sectionTitle(doc: PDFKit.PDFDocument, num: string, title: string, pn: {
 }
 
 function insightBlock(doc: PDFKit.PDFDocument, text: string, pn: { val: number }) {
-  const textHeight = doc.font("Times-Italic").fontSize(9).heightOfString(text, { width: CONTENT_WIDTH - 24 });
+  const textHeight = doc.font("Times-Italic").fontSize(9).heightOfString(text, { width: CONTENT_WIDTH - 24, lineGap: 3 });
   ensureSpace(doc, textHeight + 16, pn);
   const y = doc.y + 4;
   doc.save();
@@ -368,14 +368,16 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string):
   newContentPage(doc, pn);
   doc.y = 56;
 
+  const kfY1 = doc.y;
   doc.save();
-  doc.fontSize(7).fillColor(ACCENT).font("Helvetica-Bold").text("OVERVIEW", MARGIN, doc.y, { characterSpacing: 1.5 });
+  doc.fontSize(7).fillColor(ACCENT).font("Helvetica-Bold").text("OVERVIEW", MARGIN, kfY1, { characterSpacing: 1.5 });
   doc.restore();
-  doc.y += 14;
+  doc.y = kfY1 + 14;
+  const kfY2 = doc.y;
   doc.save();
-  doc.fontSize(22).fillColor(NAVY).font("Helvetica-Bold").text("Key Findings", MARGIN, doc.y, { width: CONTENT_WIDTH });
+  doc.fontSize(22).fillColor(NAVY).font("Helvetica-Bold").text("Key Findings", MARGIN, kfY2, { width: CONTENT_WIDTH });
   doc.restore();
-  doc.y += 30;
+  doc.y = kfY2 + 30;
 
   doc.save();
   doc.moveTo(MARGIN, doc.y).lineTo(PAGE_WIDTH - MARGIN, doc.y).strokeColor(GRAY_300).lineWidth(0.5).stroke();
@@ -388,7 +390,6 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string):
   }
 
   // ── EXECUTIVE SUMMARY ──
-  ensureSpace(doc, 150, pn);
   sectionTitle(doc, "01", "Executive Summary", pn);
 
   const boxW = (CONTENT_WIDTH - 16) / 3;
@@ -666,23 +667,25 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string):
   }
 
   // ── WHAT THIS MEANS FOR LAWYERS ──
-  ensureSpace(doc, 120, pn);
+  ensureSpace(doc, 80, pn);
 
+  const wtY1 = doc.y;
   doc.save();
-  doc.fontSize(7).fillColor(ACCENT).font("Helvetica-Bold").text("ANALYSIS", MARGIN, doc.y, { characterSpacing: 1.5 });
+  doc.fontSize(7).fillColor(ACCENT).font("Helvetica-Bold").text("ANALYSIS", MARGIN, wtY1, { characterSpacing: 1.5 });
   doc.restore();
-  doc.y += 14;
+  doc.y = wtY1 + 14;
+  const wtY2 = doc.y;
   doc.save();
   doc.fontSize(20).fillColor(NAVY).font("Helvetica-Bold")
-    .text("What This Means for Lawyers", MARGIN, doc.y, { width: CONTENT_WIDTH });
+    .text("What This Means for Lawyers", MARGIN, wtY2, { width: CONTENT_WIDTH });
   doc.fontSize(12).fillColor(GRAY_500).font("Helvetica")
-    .text("Considering Legal Tech", MARGIN, doc.y, { width: CONTENT_WIDTH });
+    .text("Considering Legal Tech", MARGIN, wtY2 + 24, { width: CONTENT_WIDTH });
   doc.restore();
-  doc.y += 16;
+  doc.y = wtY2 + 40;
   doc.save();
   doc.moveTo(MARGIN, doc.y).lineTo(PAGE_WIDTH - MARGIN, doc.y).strokeColor(GRAY_300).lineWidth(0.5).stroke();
   doc.restore();
-  doc.y += 16;
+  doc.y += 10;
 
   // The Opportunity
   const opY = doc.y;
@@ -728,7 +731,7 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string):
     doc.fontSize(9).fillColor(GRAY_600).font("Helvetica")
       .text(step, MARGIN + 14, stepY, { width: CONTENT_WIDTH - 14, lineGap: 2.5 });
     doc.restore();
-    doc.y = stepY + doc.font("Helvetica").fontSize(9).heightOfString(step, { width: CONTENT_WIDTH - 14 }) + 8;
+    doc.y = stepY + doc.font("Helvetica").fontSize(9).heightOfString(step, { width: CONTENT_WIDTH - 14, lineGap: 2.5 }) + 8;
   }
   doc.y += 6;
 
