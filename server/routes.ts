@@ -204,7 +204,7 @@ export async function registerRoutes(
     "/api/stats", "/api/stats/social-proof", "/api/market-pulse",
     "/api/job-density", "/api/track", "/api/events",
   ]);
-  const publicApiPrefixes = ["/api/auth/", "/api/stats/", "/api/jobs"];
+  const publicApiPrefixes = ["/api/auth/", "/api/stats/", "/api/jobs", "/api/public/", "/api/quiz", "/api/search/", "/api/resume/anonymous"];
 
   async function apiKeyGuard(req: any, res: any, next: any) {
     if (req.user) return next();
@@ -580,13 +580,13 @@ export async function registerRoutes(
         }
       }
 
-      function limitMonths<T>(data: Record<string, T>, limit: number): Record<string, T> {
+      const limitMonths = <T,>(data: Record<string, T>, limit: number): Record<string, T> => {
         const keys = Object.keys(data).sort();
         const recent = keys.slice(-limit);
         const result: Record<string, T> = {};
         for (const k of recent) result[k] = data[k];
         return result;
-      }
+      };
 
       const monthLimit = userIsPro ? Infinity : 2;
       const jbm = monthLimit === Infinity ? jobsByMonth : limitMonths(jobsByMonth, monthLimit);
@@ -628,8 +628,8 @@ export async function registerRoutes(
           .where(eq(diagnosticReports.userId, req.user.id))
           .orderBy(desc(diagnosticReports.createdAt))
           .limit(1);
-        if (latestDiag.length > 0 && latestDiag[0].report) {
-          const report = latestDiag[0].report as any;
+        if (latestDiag.length > 0 && latestDiag[0].reportJson) {
+          const report = latestDiag[0].reportJson as any;
           const topPath = report?.careerPaths?.[0];
           if (topPath?.title) {
             topCategory = topPath.title;
@@ -8886,7 +8886,7 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
   });
 
   app.post("/api/admin/backfill-skills", async (req, res) => {
-    if (!req.isAuthenticated() || !(req.user as any)?.isAdmin) {
+    if (!req.user || !(req.user as any)?.isAdmin) {
       return res.status(403).json({ error: "Admin access required" });
     }
 
