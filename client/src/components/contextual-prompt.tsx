@@ -200,7 +200,7 @@ export function ContextualPrompt({ pageContext, jobId, searchQuery, className = 
   };
 
   return (
-    <Card className={`overflow-visible ${className}`} data-testid={`contextual-prompt-${pageContext}`}>
+    <Card className={`overflow-visible relative z-10 ${className}`} data-testid={`contextual-prompt-${pageContext}`}>
       <div
         className="flex items-center justify-between gap-3 px-4 py-3 cursor-pointer"
         onClick={() => setExpanded(!expanded)}
@@ -238,7 +238,7 @@ export function ContextualPrompt({ pageContext, jobId, searchQuery, className = 
 
       {expanded && (
         <div className="border-t">
-          <div ref={scrollRef} className="max-h-[300px] overflow-y-auto px-4 py-3 space-y-3">
+          <div ref={scrollRef} className="max-h-[250px] sm:max-h-[300px] overflow-y-auto px-3 sm:px-4 py-3 space-y-3">
             {messages.length === 0 && chips.length > 0 && (
               <div className="flex flex-wrap gap-2">
                 {chips.map((chip) => (
@@ -262,7 +262,7 @@ export function ContextualPrompt({ pageContext, jobId, searchQuery, className = 
                 data-testid={`contextual-message-${msg.role}-${msg.id}`}
               >
                 <div
-                  className={`max-w-[85%] rounded-lg px-3 py-2 text-sm ${
+                  className={`max-w-[90%] sm:max-w-[85%] rounded-lg px-3 py-2 text-sm ${
                     msg.role === "user"
                       ? "bg-primary text-primary-foreground"
                       : "bg-muted text-foreground"

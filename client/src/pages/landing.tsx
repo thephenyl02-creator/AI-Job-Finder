@@ -106,28 +106,28 @@ export default function Landing() {
 
       <main className="pt-14 flex-1">
 
-        <section className="max-w-6xl mx-auto px-4 sm:px-6 pt-14 sm:pt-24 pb-14 sm:pb-24">
-          <div className="flex flex-col lg:flex-row items-start gap-10 lg:gap-14">
+        <section className="max-w-6xl mx-auto px-4 sm:px-6 pt-10 sm:pt-24 pb-10 sm:pb-24">
+          <div className="flex flex-col lg:flex-row items-start gap-8 lg:gap-14">
             <div className="flex-1 max-w-md lg:max-w-xl lg:pt-4">
               <p className="text-sm font-semibold text-primary tracking-[0.2em] uppercase mb-6 border-l-2 border-primary pl-3 -ml-3" data-testid="text-hero-label">
                 Career intelligence for legal professionals
               </p>
 
               <h1
-                className="text-4xl sm:text-[3.25rem] font-serif font-medium text-foreground leading-[1.5]"
+                className="text-3xl sm:text-[3.25rem] font-serif font-medium text-foreground leading-[1.3] sm:leading-[1.5]"
                 data-testid="text-hero-title"
               >
                 Where do you fit in legal tech?
               </h1>
 
               <p
-                className="text-base text-muted-foreground mt-10 leading-relaxed"
+                className="text-sm sm:text-base text-muted-foreground mt-6 sm:mt-10 leading-relaxed"
                 data-testid="text-hero-subtitle"
               >
                 Upload your resume. In 60 seconds, see your readiness score, matching career paths, and a plan to get there.
               </p>
 
-              <div className="mt-10 flex items-center gap-4 flex-wrap">
+              <div className="mt-6 sm:mt-10 flex items-center gap-4 flex-wrap">
                 <Button size="lg" asChild data-testid="button-hero-diagnostic">
                   <a href="/diagnostic" onClick={() => {
                     if (!hasDiagnostic) {
@@ -159,7 +159,7 @@ export default function Landing() {
               </p>
             </div>
 
-            <div className="w-full lg:w-[380px] shrink-0">
+            <div className="w-full max-w-sm mx-auto lg:mx-0 lg:w-[380px] shrink-0">
               <Card className="overflow-visible card-elev-prominent" data-testid="diagnostic-preview-card">
                 <CardContent className="p-5">
                   <p className="text-[10px] font-semibold text-muted-foreground tracking-wide uppercase mb-4">Sample Readiness Report</p>
@@ -224,7 +224,7 @@ export default function Landing() {
         {stats && (
           <section className="border-t border-border/30" data-testid="stats-strip-section">
             <div className="max-w-5xl mx-auto px-4 sm:px-6 py-5 sm:py-6">
-              <div className="flex items-center justify-center gap-6 sm:gap-10 text-sm text-muted-foreground flex-wrap" data-testid="stats-strip">
+              <div className="flex items-center justify-center gap-4 sm:gap-10 text-xs sm:text-sm text-muted-foreground flex-wrap" data-testid="stats-strip">
                 {stats.totalJobs > 0 && (
                   <span data-testid="stat-jobs"><span className="font-semibold text-foreground">{stats.totalJobs}+</span> curated roles</span>
                 )}
@@ -305,12 +305,12 @@ export default function Landing() {
                   Upload your resume to see which paths match your background and how close you are to each one.
                 </p>
               </div>
-              <div className="flex items-center justify-center gap-2.5 sm:gap-3 flex-wrap max-w-2xl mx-auto" data-testid="career-paths-list">
+              <div className="flex items-center justify-center gap-2 sm:gap-3 flex-wrap max-w-2xl mx-auto" data-testid="career-paths-list">
                 {careerPathsWithCounts.map(([path, count], index) => (
-                  <a key={path} href="/diagnostic" className={index >= 6 ? "hidden sm:block" : ""}>
+                  <a key={path} href="/diagnostic" className={index >= 8 ? "hidden sm:block" : ""}>
                     <Badge
                       variant="outline"
-                      className="text-xs px-3 sm:px-4 py-1.5 sm:py-2 cursor-pointer no-default-active-elevate hover-elevate"
+                      className="text-xs px-3 sm:px-4 py-2 sm:py-2 cursor-pointer no-default-active-elevate hover-elevate"
                       data-testid={`career-path-${path.toLowerCase().replace(/\s+/g, "-")}`}
                     >
                       {CAREER_PATH_LABELS[path] || path}
@@ -328,7 +328,7 @@ export default function Landing() {
             <div className="max-w-5xl mx-auto px-4 sm:px-6 py-14 sm:py-24">
               <div className="flex flex-col sm:flex-row items-center gap-8 sm:gap-12">
                 <div className="flex-1 text-center sm:text-left">
-                  <p className="text-sm font-semibold text-primary tracking-[0.2em] uppercase mb-3 border-l-2 border-primary pl-3 -ml-3">
+                  <p className="text-sm font-semibold text-primary tracking-[0.2em] uppercase mb-3 border-l-2 border-primary pl-3 sm:-ml-3">
                     Global coverage
                   </p>
                   <h2
@@ -409,8 +409,8 @@ export default function Landing() {
                 Get started for free. Upgrade when you're ready to go deeper.
               </p>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-2xl mx-auto" data-testid="pro-comparison">
-              <div className="rounded-lg border border-border/40 bg-background p-6 space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 max-w-2xl mx-auto" data-testid="pro-comparison">
+              <div className="rounded-lg border border-border/40 bg-background p-5 sm:p-6 space-y-4">
                 <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide">Free</h3>
                 <ul className="space-y-3">
                   <li className="flex items-start gap-2.5 text-sm text-muted-foreground">
@@ -431,7 +431,7 @@ export default function Landing() {
                   </li>
                 </ul>
               </div>
-              <div className="rounded-lg border-2 border-primary/30 bg-background p-6 space-y-4 relative">
+              <div className="rounded-lg border-2 border-primary/30 bg-background p-5 sm:p-6 space-y-4 relative">
                 <Badge variant="secondary" className="absolute -top-2.5 right-4 text-[10px] no-default-active-elevate">From $2.50/mo</Badge>
                 <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide">Pro</h3>
                 <ul className="space-y-3">

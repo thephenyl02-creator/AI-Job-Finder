@@ -102,21 +102,21 @@ function StatCard({
 }) {
   return (
     <Card data-testid={testId}>
-      <CardContent className="p-5">
-        <div className="flex items-start justify-between gap-3">
+      <CardContent className="p-3 sm:p-5">
+        <div className="flex items-start justify-between gap-2 sm:gap-3">
           <div className="min-w-0">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">
+            <p className="text-[10px] sm:text-xs font-medium text-muted-foreground uppercase tracking-wider mb-0.5 sm:mb-1">
               {label}
             </p>
-            <p className="text-2xl sm:text-3xl font-serif font-semibold text-foreground tracking-tight" data-testid={`${testId}-value`}>
+            <p className="text-xl sm:text-3xl font-serif font-semibold text-foreground tracking-tight" data-testid={`${testId}-value`}>
               {value}
             </p>
             {subtitle && (
-              <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>
+              <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1">{subtitle}</p>
             )}
           </div>
-          <div className="rounded-md bg-muted/60 p-2 shrink-0">
-            <Icon className="h-4 w-4 text-muted-foreground" />
+          <div className="rounded-md bg-muted/60 p-1.5 sm:p-2 shrink-0">
+            <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
           </div>
         </div>
       </CardContent>
@@ -362,17 +362,17 @@ function SkeletonDashboard() {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-10">
-        <div className="mb-8">
-          <Skeleton className="h-8 w-64 mb-2" />
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
+        <div className="mb-6 sm:mb-8">
+          <Skeleton className="h-7 sm:h-8 w-48 sm:w-64 mb-2" />
           <Skeleton className="h-5 w-full max-w-96" />
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-8">
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 mb-8">
           {[1, 2, 3, 4].map((i) => (
             <Card key={i}>
-              <CardContent className="p-5">
-                <Skeleton className="h-4 w-20 mb-2" />
-                <Skeleton className="h-8 w-16" />
+              <CardContent className="p-3 sm:p-5">
+                <Skeleton className="h-3 sm:h-4 w-16 sm:w-20 mb-2" />
+                <Skeleton className="h-6 sm:h-8 w-12 sm:w-16" />
               </CardContent>
             </Card>
           ))}
@@ -438,14 +438,14 @@ export default function Insights() {
     <div className="min-h-screen bg-background overflow-x-hidden">
       <Header />
 
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-10">
-        <div className="mb-8">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
+        <div className="mb-6 sm:mb-8">
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <div>
-              <h1 className="text-2xl sm:text-3xl font-serif font-medium text-foreground tracking-tight mb-2" data-testid="text-insights-title">
+              <h1 className="text-xl sm:text-3xl font-serif font-medium text-foreground tracking-tight mb-1 sm:mb-2" data-testid="text-insights-title">
                 Market insights
               </h1>
-              <p className="text-muted-foreground max-w-xl">
+              <p className="text-sm sm:text-base text-muted-foreground max-w-xl">
                 See what's happening in legal tech hiring right now. Ask questions or explore the live data below.
               </p>
             </div>
@@ -513,7 +513,7 @@ export default function Insights() {
           </Card>
         )}
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-10">
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 mb-8 sm:mb-10">
           <StatCard
             icon={Briefcase}
             label="Active Positions"
@@ -545,7 +545,7 @@ export default function Insights() {
         </div>
 
         {(overview.medianSalaryMin || overview.medianSalaryMax) && (
-          <Card className="mb-10">
+          <Card className="mb-8 sm:mb-10">
             <CardHeader className="pb-4">
               <CardTitle className="text-base font-medium flex items-center gap-2">
                 <DollarSign className="h-4 w-4 text-muted-foreground" />
@@ -586,7 +586,7 @@ export default function Insights() {
           </Card>
         )}
 
-        <div className="grid md:grid-cols-2 gap-6 mb-6">
+        <div className="grid md:grid-cols-2 gap-4 sm:gap-6 mb-4 sm:mb-6">
           <Card>
             <CardHeader className="pb-4">
               <CardTitle className="text-base font-medium flex items-center gap-2">
@@ -668,7 +668,7 @@ export default function Insights() {
           </Card>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-6 mb-6">
+        <div className="grid md:grid-cols-2 gap-4 sm:gap-6 mb-4 sm:mb-6">
           <Card>
             <CardHeader className="pb-4">
               <CardTitle className="text-base font-medium flex items-center gap-2">
@@ -734,7 +734,7 @@ export default function Insights() {
           </Card>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-6 mb-6">
+        <div className="grid md:grid-cols-2 gap-4 sm:gap-6 mb-4 sm:mb-6">
           <Card>
             <CardHeader className="pb-4">
               <CardTitle className="text-base font-medium flex items-center gap-2">

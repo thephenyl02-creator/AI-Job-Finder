@@ -169,7 +169,7 @@ export function JobCard({ job, isSaved = false, isAuthenticated = false, fitData
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-2">
               <Link to={`/jobs/${job.id}`} className="min-w-0 flex-1">
-                <h3 className="text-base font-semibold text-foreground group-hover:text-primary transition-colors truncate" title={job.title} data-testid={`text-job-title-${job.id}`}>
+                <h3 className="text-base font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-2 sm:line-clamp-1" title={job.title} data-testid={`text-job-title-${job.id}`}>
                   {job.title}
                 </h3>
               </Link>

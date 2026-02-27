@@ -333,10 +333,10 @@ function MatchJobCard({
                           key={s.resumeId}
                           className="flex items-center gap-2 text-xs"
                         >
-                          <span className="text-muted-foreground truncate max-w-[120px]" title={s.label}>
+                          <span className="text-muted-foreground truncate max-w-[80px] sm:max-w-[120px]" title={s.label}>
                             {s.label}
                           </span>
-                          <div className="flex-1 max-w-[100px]">
+                          <div className="flex-1 max-w-[80px] sm:max-w-[100px]">
                             <Progress
                               value={s.score}
                               className="h-1.5"
@@ -1171,7 +1171,7 @@ export default function Resumes() {
   return (
     <div className="min-h-screen bg-background overflow-x-hidden">
       <Header />
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+      <main className="max-w-5xl mx-auto px-3 sm:px-6 py-4 sm:py-8">
         <div className="mb-6">
           <h1
             className="text-2xl font-bold text-foreground tracking-tight font-serif"
@@ -1186,20 +1186,23 @@ export default function Resumes() {
         </div>
 
         <Card className="mb-6 bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20">
-          <CardContent className="p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-            <div className="flex-1 min-w-0">
-              <h3 className="text-sm font-semibold text-foreground">Resume Builder</h3>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Build ATS-optimized resumes from scratch or import your uploaded resume. Get real-time scoring and smart suggestions.
-              </p>
+          <CardContent className="p-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div className="flex-1 min-w-0">
+                <h3 className="text-sm font-semibold text-foreground">Resume Builder</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Build ATS-optimized resumes from scratch or import your uploaded resume. Get real-time scoring and smart suggestions.
+                </p>
+              </div>
+              <Button
+                onClick={() => setLocation("/resume-builder")}
+                className="w-full sm:w-auto"
+                data-testid="button-go-to-builder"
+              >
+                <Zap className="h-4 w-4 mr-1.5" />
+                Open Builder
+              </Button>
             </div>
-            <Button
-              onClick={() => setLocation("/resume-builder")}
-              data-testid="button-go-to-builder"
-            >
-              <Zap className="h-4 w-4 mr-1.5" />
-              Open Builder
-            </Button>
           </CardContent>
         </Card>
 
@@ -1231,21 +1234,24 @@ export default function Resumes() {
 
             {showReturnBanner && returnTo && (
               <Card className="mb-4 border-primary/30 bg-primary/5" data-testid="card-return-banner">
-                <CardContent className="p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-sm font-semibold text-foreground">Resume uploaded</h3>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Go back to the job and tailor your resume with smart suggestions.
-                    </p>
+                <CardContent className="p-4">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-sm font-semibold text-foreground">Resume uploaded</h3>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Go back to the job and tailor your resume with smart suggestions.
+                      </p>
+                    </div>
+                    <Button
+                      size="sm"
+                      className="w-full sm:w-auto"
+                      onClick={() => setLocation(returnTo)}
+                      data-testid="button-return-to-job"
+                    >
+                      <ArrowRight className="w-3.5 h-3.5 mr-1" />
+                      Back to Job
+                    </Button>
                   </div>
-                  <Button
-                    size="sm"
-                    onClick={() => setLocation(returnTo)}
-                    data-testid="button-return-to-job"
-                  >
-                    <ArrowRight className="w-3.5 h-3.5 mr-1" />
-                    Back to Job
-                  </Button>
                 </CardContent>
               </Card>
             )}
@@ -1260,32 +1266,31 @@ export default function Resumes() {
 
             {showJourneyNudge && !returnTo && (
               <Card className="border-primary/30 bg-gradient-to-r from-primary/5 to-transparent animate-in slide-in-from-top-2 duration-300" data-testid="card-journey-nudge">
-                <CardContent className="p-4 flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-3">
                     <div className="shrink-0 w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
                       <Briefcase className="h-4 w-4 text-primary" />
                     </div>
-                    <div className="min-w-0">
+                    <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-foreground">Resume uploaded!</p>
                       <p className="text-xs text-muted-foreground">Head to Jobs to discover career paths that match your background.</p>
+                      <div className="flex items-center gap-2 mt-2">
+                        <Link href="/jobs">
+                          <Button size="sm" data-testid="button-nudge-to-jobs">
+                            <ArrowRight className="h-3.5 w-3.5 mr-1" />
+                            Explore Jobs
+                          </Button>
+                        </Link>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => setShowJourneyNudge(false)}
+                          data-testid="button-dismiss-nudge"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <Link href="/jobs">
-                      <Button size="sm" data-testid="button-nudge-to-jobs">
-                        <ArrowRight className="h-3.5 w-3.5 mr-1" />
-                        Explore Jobs
-                      </Button>
-                    </Link>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-7 w-7"
-                      onClick={() => setShowJourneyNudge(false)}
-                      data-testid="button-dismiss-nudge"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </Button>
                   </div>
                 </CardContent>
               </Card>

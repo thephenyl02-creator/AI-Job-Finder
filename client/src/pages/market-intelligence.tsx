@@ -554,7 +554,7 @@ export default function MarketIntelligence() {
                         <span className="w-2 h-2 rounded-full" style={{ backgroundColor: colors.primary }} />
                         <span className="text-xs font-semibold text-foreground">{trackName}</span>
                       </div>
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
                           <p className="mi-label text-emerald-600 dark:text-emerald-400 mb-2">You Likely Have</p>
                           <div className="space-y-1.5">
@@ -615,28 +615,57 @@ export default function MarketIntelligence() {
                   return (
                     <div
                       key={c.category}
-                      className={`grid grid-cols-2 sm:grid-cols-[1fr_80px_90px_60px_70px_80px] gap-1 sm:gap-2 px-3 py-2.5 ${i % 2 === 0 ? "" : "bg-muted/30"}`}
+                      className={`px-3 py-2.5 ${i % 2 === 0 ? "" : "bg-muted/30"}`}
                       data-testid={`corridor-${c.category.toLowerCase().replace(/\s+/g, "-")}`}
                     >
-                      <div className="flex items-center gap-2 col-span-2 sm:col-span-1">
-                        <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: trackColors?.primary }} />
-                        <span className="text-xs font-medium text-foreground truncate" title={c.category}>{c.category}</span>
+                      <div className="hidden sm:grid grid-cols-[1fr_80px_90px_60px_70px_80px] gap-2">
+                        <div className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: trackColors?.primary }} />
+                          <span className="text-xs font-medium text-foreground truncate" title={c.category}>{c.category}</span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-xs text-foreground tabular-nums font-medium">{c.jobCount}</span>
+                        </div>
+                        <div className="text-right">
+                          <span className={`text-xs font-semibold ${acc.className}`}>{acc.label}</span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-xs text-foreground tabular-nums">{c.transitionFriendly}</span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-xs text-foreground tabular-nums">{c.avgExperience}y</span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-xs text-foreground tabular-nums">{c.entryMidPct}%</span>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <span className="text-xs text-foreground tabular-nums font-medium">{c.jobCount}</span>
-                        <span className="text-[10px] text-muted-foreground sm:hidden ml-1">jobs</span>
-                      </div>
-                      <div className="text-right">
-                        <span className={`text-xs font-semibold ${acc.className}`}>{acc.label}</span>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-xs text-foreground tabular-nums">{c.transitionFriendly}</span>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-xs text-foreground tabular-nums">{c.avgExperience}y</span>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-xs text-foreground tabular-nums">{c.entryMidPct}%</span>
+                      <div className="sm:hidden">
+                        <div className="flex items-center gap-2 mb-1.5">
+                          <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: trackColors?.primary }} />
+                          <span className="text-xs font-medium text-foreground" title={c.category}>{c.category}</span>
+                        </div>
+                        <div className="grid grid-cols-3 gap-x-3 gap-y-1 pl-4">
+                          <div>
+                            <span className="mi-label">Jobs</span>
+                            <p className="text-xs text-foreground font-medium tabular-nums">{c.jobCount}</p>
+                          </div>
+                          <div>
+                            <span className="mi-label">Access</span>
+                            <p className={`text-xs font-semibold ${acc.className}`}>{acc.label}</p>
+                          </div>
+                          <div>
+                            <span className="mi-label">TF</span>
+                            <p className="text-xs text-foreground tabular-nums">{c.transitionFriendly}</p>
+                          </div>
+                          <div>
+                            <span className="mi-label">Exp</span>
+                            <p className="text-xs text-foreground tabular-nums">{c.avgExperience}y</p>
+                          </div>
+                          <div>
+                            <span className="mi-label">Entry %</span>
+                            <p className="text-xs text-foreground tabular-nums">{c.entryMidPct}%</p>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   );
@@ -669,9 +698,9 @@ export default function MarketIntelligence() {
                     </p>
                     <div className="h-[300px] w-full">
                       <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={hardSkillsChartData} layout="vertical" margin={{ top: 0, right: 30, left: 0, bottom: 0 }}>
-                          <XAxis type="number" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
-                          <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: "hsl(var(--foreground))" }} axisLine={false} tickLine={false} width={160} />
+                        <BarChart data={hardSkillsChartData} layout="vertical" margin={{ top: 0, right: 20, left: 0, bottom: 0 }}>
+                          <XAxis type="number" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+                          <YAxis type="category" dataKey="name" tick={{ fontSize: 10, fill: "hsl(var(--foreground))" }} axisLine={false} tickLine={false} width={120} />
                           <Tooltip {...SHARED_TOOLTIP_STYLE} cursor={{ fill: "hsl(var(--muted) / 0.2)" }} formatter={(value: number) => [`${value} jobs`, "Demand"]} labelFormatter={(_: string, payload: any[]) => payload?.[0]?.payload?.fullName || _} />
                           <Bar dataKey="count" radius={[0, 3, 3, 0]} barSize={18} name="Jobs">
                             {hardSkillsChartData.map((_, index) => (
@@ -688,9 +717,9 @@ export default function MarketIntelligence() {
                     </p>
                     <div className="h-[300px] w-full">
                       <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={softSkillsChartData} layout="vertical" margin={{ top: 0, right: 30, left: 0, bottom: 0 }}>
-                          <XAxis type="number" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
-                          <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: "hsl(var(--foreground))" }} axisLine={false} tickLine={false} width={160} />
+                        <BarChart data={softSkillsChartData} layout="vertical" margin={{ top: 0, right: 20, left: 0, bottom: 0 }}>
+                          <XAxis type="number" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+                          <YAxis type="category" dataKey="name" tick={{ fontSize: 10, fill: "hsl(var(--foreground))" }} axisLine={false} tickLine={false} width={120} />
                           <Tooltip {...SHARED_TOOLTIP_STYLE} cursor={{ fill: "hsl(var(--muted) / 0.2)" }} formatter={(value: number) => [`${value} jobs`, "Demand"]} labelFormatter={(_: string, payload: any[]) => payload?.[0]?.payload?.fullName || _} />
                           <Bar dataKey="count" radius={[0, 3, 3, 0]} barSize={18} name="Jobs">
                             {softSkillsChartData.map((_, index) => (
@@ -706,9 +735,9 @@ export default function MarketIntelligence() {
                 <div className="mi-panel">
                   <div className="h-[300px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={skillsChartData} layout="vertical" margin={{ top: 0, right: 30, left: 0, bottom: 0 }}>
-                        <XAxis type="number" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
-                        <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: "hsl(var(--foreground))" }} axisLine={false} tickLine={false} width={160} />
+                      <BarChart data={skillsChartData} layout="vertical" margin={{ top: 0, right: 20, left: 0, bottom: 0 }}>
+                        <XAxis type="number" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+                        <YAxis type="category" dataKey="name" tick={{ fontSize: 10, fill: "hsl(var(--foreground))" }} axisLine={false} tickLine={false} width={120} />
                         <Tooltip {...SHARED_TOOLTIP_STYLE} cursor={{ fill: "hsl(var(--muted) / 0.2)" }} formatter={(value: number) => [`${value} jobs`, "Demand"]} labelFormatter={(_: string, payload: any[]) => payload?.[0]?.payload?.fullName || _} />
                         <Bar dataKey="count" radius={[0, 3, 3, 0]} barSize={18} name="Jobs">
                           {skillsChartData.map((_, index) => (
@@ -741,12 +770,12 @@ export default function MarketIntelligence() {
                       const trackColor = getCategoryColor(sp.name);
                       return (
                         <div key={sp.name} data-testid={`salary-path-${sp.name.toLowerCase().replace(/\s+/g, "-")}`}>
-                          <div className="flex items-center justify-between gap-2 mb-1">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-0.5 sm:gap-2 mb-1">
                             <div className="flex items-center gap-1.5 min-w-0">
                               <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: trackColor }} />
                               <span className="text-[11px] text-foreground font-medium truncate" title={sp.name}>{sp.name}</span>
                             </div>
-                            <span className="text-[11px] font-semibold text-foreground tabular-nums shrink-0">
+                            <span className="text-[11px] font-semibold text-foreground tabular-nums shrink-0 pl-3 sm:pl-0">
                               {formatSalary(sp.medianMin)} – {formatSalary(sp.medianMax)}
                             </span>
                           </div>
@@ -792,7 +821,7 @@ export default function MarketIntelligence() {
                       </div>
                     ))}
                   </div>
-                  <div className="flex items-center gap-4 mt-2">
+                  <div className="flex flex-wrap items-center gap-3 sm:gap-4 mt-2">
                     {[
                       { label: "Remote", pct: safeRemote.percentage, color: WORK_MODE_PALETTE.remote },
                       { label: "Hybrid", pct: safeHybrid.percentage, color: WORK_MODE_PALETTE.hybrid },
@@ -833,7 +862,7 @@ export default function MarketIntelligence() {
         {seniorityDistribution.length > 0 && (
           <section className="border-t border-border/40" data-testid="section-seniority">
             <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-4">
                 <p className="mi-section-title">Seniority Landscape</p>
                 <span className="mi-insight">{entryAccessiblePct}% are entry-to-mid level</span>
               </div>
@@ -870,7 +899,7 @@ export default function MarketIntelligence() {
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={companyChartData} layout="vertical" margin={{ top: 0, right: 30, left: 0, bottom: 0 }}>
                         <XAxis type="number" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
-                        <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: "hsl(var(--foreground))" }} axisLine={false} tickLine={false} width={130} />
+                        <YAxis type="category" dataKey="name" tick={{ fontSize: 10, fill: "hsl(var(--foreground))" }} axisLine={false} tickLine={false} width={110} />
                         <Tooltip {...SHARED_TOOLTIP_STYLE} cursor={{ fill: "hsl(var(--muted) / 0.2)" }} formatter={(value: number) => [`${value} jobs`, "Open Roles"]} labelFormatter={(_: string, payload: any[]) => payload?.[0]?.payload?.fullName || _} />
                         <Bar dataKey="count" radius={[0, 3, 3, 0]} barSize={16} fill="hsl(var(--chart-1))" name="Jobs" />
                       </BarChart>

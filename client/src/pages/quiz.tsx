@@ -196,7 +196,7 @@ export default function QuizPage() {
         </nav>
       </header>
 
-      <main className="pt-14 flex-1 flex items-center justify-center px-4 py-10">
+      <main className="pt-14 flex-1 flex items-center justify-center px-3 sm:px-4 py-6 sm:py-10">
         <div className="w-full max-w-lg">
           {!showResult && !isSubmitting && (
             <>
@@ -327,11 +327,11 @@ export default function QuizPage() {
                     className="border-border/50"
                     data-testid={`result-path-${i}`}
                   >
-                    <CardContent className="p-5">
+                    <CardContent className="p-4 sm:p-5">
                       <div className="flex items-start justify-between gap-3 flex-wrap">
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <h3 className="text-base font-semibold text-foreground">
+                            <h3 className="text-sm sm:text-base font-semibold text-foreground">
                               {path.name}
                             </h3>
                             <Badge
@@ -366,7 +366,7 @@ export default function QuizPage() {
               </div>
 
               <Card className="border-primary/30 bg-primary/[0.03]" data-testid="quiz-upgrade-bridge">
-                <CardContent className="p-5 space-y-4">
+                <CardContent className="p-4 sm:p-5 space-y-3 sm:space-y-4">
                   <div className="text-center">
                     <p className="text-xs font-semibold text-muted-foreground tracking-wide uppercase mb-1">
                       Quiz estimate vs. resume analysis
@@ -376,7 +376,7 @@ export default function QuizPage() {
                     </p>
                   </div>
 
-                  <div className="grid grid-cols-[1fr_auto_1fr] gap-0 text-xs">
+                  <div className="grid grid-cols-[1fr_auto_1fr] gap-x-1 sm:gap-x-0 text-xs">
                     <div className="text-center pb-2 border-b border-border/50">
                       <Badge variant="secondary" className="text-[10px]">Quiz Estimate</Badge>
                       <p className="text-[10px] text-muted-foreground mt-1">~60% confidence</p>
@@ -387,49 +387,49 @@ export default function QuizPage() {
                       <p className="text-[10px] text-muted-foreground mt-1">95%+ confidence</p>
                     </div>
 
-                    <div className="py-2.5 text-center border-b border-border/30">
-                      <p className="text-muted-foreground">Top 2 paths</p>
+                    <div className="py-2 sm:py-2.5 text-center border-b border-border/30">
+                      <p className="text-muted-foreground text-[11px] sm:text-xs">Top 2 paths</p>
                       <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 mx-auto mt-1" />
                     </div>
-                    <div className="py-2.5 border-b border-border/30 flex items-center justify-center">
+                    <div className="py-2 sm:py-2.5 border-b border-border/30 flex items-center justify-center">
                       <span className="text-muted-foreground/40 text-[10px]">vs</span>
                     </div>
-                    <div className="py-2.5 text-center border-b border-border/30">
-                      <p className="text-foreground font-medium">All paths ranked</p>
+                    <div className="py-2 sm:py-2.5 text-center border-b border-border/30">
+                      <p className="text-foreground font-medium text-[11px] sm:text-xs">All paths ranked</p>
                       <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 mx-auto mt-1" />
                     </div>
 
-                    <div className="py-2.5 text-center border-b border-border/30">
-                      <p className="text-muted-foreground">Difficulty level</p>
+                    <div className="py-2 sm:py-2.5 text-center border-b border-border/30">
+                      <p className="text-muted-foreground text-[11px] sm:text-xs">Difficulty level</p>
                       <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 mx-auto mt-1" />
                     </div>
-                    <div className="py-2.5 border-b border-border/30 flex items-center justify-center">
+                    <div className="py-2 sm:py-2.5 border-b border-border/30 flex items-center justify-center">
                       <span className="text-muted-foreground/40 text-[10px]">vs</span>
                     </div>
-                    <div className="py-2.5 text-center border-b border-border/30">
-                      <p className="text-foreground font-medium">Readiness score</p>
+                    <div className="py-2 sm:py-2.5 text-center border-b border-border/30">
+                      <p className="text-foreground font-medium text-[11px] sm:text-xs">Readiness score</p>
                       <Lock className="h-3.5 w-3.5 text-muted-foreground/40 mx-auto mt-1" />
                     </div>
 
-                    <div className="py-2.5 text-center border-b border-border/30">
+                    <div className="py-2 sm:py-2.5 text-center border-b border-border/30">
                       <p className="text-muted-foreground/50">—</p>
                     </div>
-                    <div className="py-2.5 border-b border-border/30 flex items-center justify-center">
+                    <div className="py-2 sm:py-2.5 border-b border-border/30 flex items-center justify-center">
                       <span className="text-muted-foreground/40 text-[10px]">vs</span>
                     </div>
-                    <div className="py-2.5 text-center border-b border-border/30">
-                      <p className="text-foreground font-medium">Exact skill gaps</p>
+                    <div className="py-2 sm:py-2.5 text-center border-b border-border/30">
+                      <p className="text-foreground font-medium text-[11px] sm:text-xs">Exact skill gaps</p>
                       <Lock className="h-3.5 w-3.5 text-muted-foreground/40 mx-auto mt-1" />
                     </div>
 
-                    <div className="py-2.5 text-center">
+                    <div className="py-2 sm:py-2.5 text-center">
                       <p className="text-muted-foreground/50">—</p>
                     </div>
-                    <div className="py-2.5 flex items-center justify-center">
+                    <div className="py-2 sm:py-2.5 flex items-center justify-center">
                       <span className="text-muted-foreground/40 text-[10px]">vs</span>
                     </div>
-                    <div className="py-2.5 text-center">
-                      <p className="text-foreground font-medium">Best job matches</p>
+                    <div className="py-2 sm:py-2.5 text-center">
+                      <p className="text-foreground font-medium text-[11px] sm:text-xs">Best job matches</p>
                       <Lock className="h-3.5 w-3.5 text-muted-foreground/40 mx-auto mt-1" />
                     </div>
                   </div>

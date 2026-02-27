@@ -1220,6 +1220,9 @@ export default function Jobs() {
               ))}
             </div>
           </div>
+          <div className="relative">
+          <div className="pointer-events-none absolute left-0 top-0 bottom-0 w-4 bg-gradient-to-r from-background to-transparent z-10 sm:hidden" />
+          <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-4 bg-gradient-to-l from-background to-transparent z-10 sm:hidden" />
           <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0 sm:overflow-visible sm:flex-wrap scrollbar-none">
             <Select value={selectedCategory} onValueChange={(val) => { setSelectedCategory(val); setCurrentPage(1); track({ eventType: "filter_change", metadata: { filterType: "category", value: val } }); }}>
               <SelectTrigger className="w-auto min-w-[110px] sm:min-w-[130px] max-w-[200px] shrink-0" data-testid="select-category">
@@ -1316,6 +1319,7 @@ export default function Jobs() {
                 Clear
               </Button>
             )}
+          </div>
           </div>
         </div>
 
@@ -1874,25 +1878,25 @@ export default function Jobs() {
         )}
 
         {!searchResults && totalPages > 1 && filteredJobs.length > 0 && (
-          <div className="flex items-center justify-center gap-2 mt-6 mb-2" data-testid="pagination-controls">
+          <div className="flex items-center justify-center gap-3 mt-6 mb-2" data-testid="pagination-controls">
             <Button
               variant="outline"
-              size="sm"
               disabled={currentPage <= 1}
               onClick={() => { setCurrentPage(p => Math.max(1, p - 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+              className="min-w-[100px]"
               data-testid="button-prev-page"
             >
               <ArrowLeft className="h-4 w-4 mr-1" />
               Previous
             </Button>
-            <span className="text-sm text-muted-foreground px-3" data-testid="text-page-info">
-              Page {currentPage} of {totalPages}
+            <span className="text-sm text-muted-foreground px-2" data-testid="text-page-info">
+              {currentPage} / {totalPages}
             </span>
             <Button
               variant="outline"
-              size="sm"
               disabled={currentPage >= totalPages}
               onClick={() => { setCurrentPage(p => Math.min(totalPages, p + 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+              className="min-w-[100px]"
               data-testid="button-next-page"
             >
               Next

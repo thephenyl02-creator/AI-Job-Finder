@@ -196,18 +196,18 @@ function DashboardSkeleton() {
             <Skeleton className="h-8 w-56 mb-2" />
             <Skeleton className="h-5 w-80" />
           </div>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-5 mb-10">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5 mb-8 sm:mb-10">
             {[...Array(4)].map((_, i) => (
-              <Card key={i} className="card-elev-static"><CardContent className="p-6"><Skeleton className="h-28 w-full" /></CardContent></Card>
+              <Card key={i} className="card-elev-static"><CardContent className="p-3.5 sm:p-6"><Skeleton className="h-28 w-full" /></CardContent></Card>
             ))}
           </div>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
             <div className="lg:col-span-2">
-              <Card className="card-elev-static"><CardContent className="p-6"><Skeleton className="h-56 w-full" /></CardContent></Card>
+              <Card className="card-elev-static"><CardContent className="p-4 sm:p-6"><Skeleton className="h-56 w-full" /></CardContent></Card>
             </div>
-            <div className="space-y-5">
-              <Card className="card-elev-static"><CardContent className="p-5"><Skeleton className="h-28 w-full" /></CardContent></Card>
-              <Card className="card-elev-static"><CardContent className="p-5"><Skeleton className="h-28 w-full" /></CardContent></Card>
+            <div className="space-y-4 sm:space-y-5">
+              <Card className="card-elev-static"><CardContent className="p-4 sm:p-5"><Skeleton className="h-28 w-full" /></CardContent></Card>
+              <Card className="card-elev-static"><CardContent className="p-4 sm:p-5"><Skeleton className="h-28 w-full" /></CardContent></Card>
             </div>
           </div>
         </div>
@@ -298,14 +298,14 @@ export default function DashboardPage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-5 mb-10">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5 mb-8 sm:mb-10">
             <Card className={`card-elev-prominent ${heroCardConfigs[0].bg} overflow-visible`} data-testid="card-hero-readiness">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-2 mb-3 flex-wrap">
-                  <div className={`p-1.5 rounded-md ${heroCardConfigs[0].iconBg}`}>
-                    <Sparkles className="h-3.5 w-3.5" />
+              <CardContent className="p-3.5 sm:p-6">
+                <div className="flex items-center gap-1.5 sm:gap-2 mb-2 sm:mb-3 flex-wrap">
+                  <div className={`p-1 sm:p-1.5 rounded-md ${heroCardConfigs[0].iconBg}`}>
+                    <Sparkles className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                   </div>
-                  <span className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Readiness</span>
+                  <span className="text-[10px] sm:text-xs text-muted-foreground font-medium uppercase tracking-wide">Readiness</span>
                 </div>
                 <div className="flex flex-col items-center gap-2">
                   {hasDiagnostic ? (
@@ -334,18 +334,18 @@ export default function DashboardPage() {
             </Card>
 
             <Card className={`card-elev-prominent ${heroCardConfigs[1].bg} overflow-visible`} data-testid="card-hero-active-jobs">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-2 mb-3 flex-wrap">
-                  <div className={`p-1.5 rounded-md ${heroCardConfigs[1].iconBg}`}>
-                    <Briefcase className="h-3.5 w-3.5" />
+              <CardContent className="p-3.5 sm:p-6">
+                <div className="flex items-center gap-1.5 sm:gap-2 mb-2 sm:mb-3 flex-wrap">
+                  <div className={`p-1 sm:p-1.5 rounded-md ${heroCardConfigs[1].iconBg}`}>
+                    <Briefcase className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                   </div>
-                  <span className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Active Jobs</span>
+                  <span className="text-[10px] sm:text-xs text-muted-foreground font-medium uppercase tracking-wide">Active Jobs</span>
                 </div>
-                <p className="text-4xl font-bold text-foreground tabular-nums" data-testid="text-active-jobs-count">
+                <p className="text-2xl sm:text-4xl font-bold text-foreground tabular-nums" data-testid="text-active-jobs-count">
                   {marketPulse?.totalJobs ?? dashData.totalActiveJobs}
                 </p>
                 {marketPulse && marketPulse.newJobsThisWeek > 0 && (
-                  <Badge variant="secondary" className="text-[10px] mt-2 w-fit">
+                  <Badge variant="secondary" className="text-[10px] mt-1.5 sm:mt-2 w-fit">
                     +{marketPulse.newJobsThisWeek} this week
                   </Badge>
                 )}
@@ -353,30 +353,30 @@ export default function DashboardPage() {
             </Card>
 
             <Card className={`card-elev-prominent ${heroCardConfigs[2].bg} overflow-visible`} data-testid="card-hero-top-path">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-2 mb-3 flex-wrap">
-                  <div className={`p-1.5 rounded-md ${heroCardConfigs[2].iconBg}`}>
-                    <Target className="h-3.5 w-3.5" />
+              <CardContent className="p-3.5 sm:p-6">
+                <div className="flex items-center gap-1.5 sm:gap-2 mb-2 sm:mb-3 flex-wrap">
+                  <div className={`p-1 sm:p-1.5 rounded-md ${heroCardConfigs[2].iconBg}`}>
+                    <Target className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                   </div>
-                  <span className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Top Path</span>
+                  <span className="text-[10px] sm:text-xs text-muted-foreground font-medium uppercase tracking-wide">Top Path</span>
                 </div>
                 {topPathName ? (
                   <>
-                    <p className="text-sm font-semibold text-foreground leading-tight" data-testid="text-top-path-name">
+                    <p className="text-xs sm:text-sm font-semibold text-foreground leading-tight line-clamp-2" data-testid="text-top-path-name">
                       {topPathName}
                     </p>
                     {topPathConfidence && (
-                      <p className="text-xs text-muted-foreground mt-1.5">{topPathConfidence}% match</p>
+                      <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 sm:mt-1.5">{topPathConfidence}% match</p>
                     )}
                     {topAlignedCategory && (
-                      <p className="text-[10px] text-muted-foreground mt-1">
+                      <p className="text-[10px] text-muted-foreground mt-0.5 sm:mt-1">
                         {topAlignedCategory.availableJobs} roles available
                       </p>
                     )}
                   </>
                 ) : (
                   <>
-                    <p className="text-sm text-muted-foreground">Run diagnostic</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground">Run diagnostic</p>
                     <p className="text-[10px] text-muted-foreground mt-0.5">to discover your path</p>
                   </>
                 )}
@@ -384,18 +384,18 @@ export default function DashboardPage() {
             </Card>
 
             <Card className={`card-elev-prominent ${heroCardConfigs[3].bg} overflow-visible`} data-testid="card-hero-streak">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-2 mb-3 flex-wrap">
-                  <div className={`p-1.5 rounded-md ${heroCardConfigs[3].iconBg}`}>
-                    <Flame className="h-3.5 w-3.5" />
+              <CardContent className="p-3.5 sm:p-6">
+                <div className="flex items-center gap-1.5 sm:gap-2 mb-2 sm:mb-3 flex-wrap">
+                  <div className={`p-1 sm:p-1.5 rounded-md ${heroCardConfigs[3].iconBg}`}>
+                    <Flame className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                   </div>
-                  <span className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Activity</span>
+                  <span className="text-[10px] sm:text-xs text-muted-foreground font-medium uppercase tracking-wide">Activity</span>
                 </div>
                 <div className="flex items-baseline gap-1.5">
-                  <p className="text-4xl font-bold text-foreground tabular-nums" data-testid="text-streak-count">
+                  <p className="text-2xl sm:text-4xl font-bold text-foreground tabular-nums" data-testid="text-streak-count">
                     {streak}
                   </p>
-                  <span className="text-xs text-muted-foreground">day streak</span>
+                  <span className="text-[10px] sm:text-xs text-muted-foreground">day streak</span>
                 </div>
                 <p className={`text-xs font-semibold mt-1.5 ${streak >= 3 ? "text-green-600 dark:text-green-400" : "text-muted-foreground"}`}>
                   {getStreakLabel(streak)}
@@ -405,8 +405,8 @@ export default function DashboardPage() {
           </div>
 
           {hasDiagnostic && (
-            <Card className="mb-10 card-elev-prominent" data-testid="card-career-snapshot">
-              <CardContent className="p-6 sm:p-7">
+            <Card className="mb-8 sm:mb-10 card-elev-prominent" data-testid="card-career-snapshot">
+              <CardContent className="p-4 sm:p-7">
                 <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5">
                   <div className="w-1 self-stretch rounded-full bg-gradient-to-b from-primary to-chart-3 hidden sm:block shrink-0" />
                   <div className="flex-1 min-w-0 text-center sm:text-left">
@@ -462,8 +462,8 @@ export default function DashboardPage() {
           )}
 
           {!hasDiagnostic && (
-            <Card className="mb-10 border-dashed card-elev-static" data-testid="card-diagnostic-cta">
-              <CardContent className="p-7 sm:p-9">
+            <Card className="mb-8 sm:mb-10 border-dashed card-elev-static" data-testid="card-diagnostic-cta">
+              <CardContent className="p-5 sm:p-9">
                 <div className="flex flex-col sm:flex-row items-center gap-5 text-center sm:text-left">
                   <div className="p-4 rounded-md bg-primary/10 text-primary shrink-0">
                     <Sparkles className="h-7 w-7" />
@@ -485,8 +485,8 @@ export default function DashboardPage() {
             </Card>
           )}
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10">
-            <div className="lg:col-span-2 space-y-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8 mb-8 sm:mb-10">
+            <div className="lg:col-span-2 space-y-6 sm:space-y-8">
               <Card className="card-elev-static" data-testid="card-this-week">
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -497,13 +497,13 @@ export default function DashboardPage() {
                       This Week
                     </CardTitle>
                     {hasDiagnostic && !planComplete && transitionPlan.length > 0 && (
-                      <div className="flex items-center gap-3 flex-wrap">
-                        <div className="flex items-center gap-2">
-                          <div className="flex gap-1">
+                      <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                        <div className="flex items-center gap-1.5 sm:gap-2">
+                          <div className="flex gap-0.5 sm:gap-1">
                             {[1, 2, 3, 4].map((w) => (
                               <div
                                 key={w}
-                                className={`h-2 w-7 rounded-full transition-colors ${
+                                className={`h-1.5 sm:h-2 w-5 sm:w-7 rounded-full transition-colors ${
                                   w < currentWeek
                                     ? "bg-gradient-to-r from-primary to-chart-2"
                                     : w === currentWeek
@@ -672,14 +672,14 @@ export default function DashboardPage() {
                 </h2>
 
                 {marketPulse ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5">
                     <Card className="card-elev-static hover-elevate" data-testid="card-pulse-new-roles">
-                      <CardContent className="p-5">
+                      <CardContent className="p-4 sm:p-5">
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex-1 min-w-0">
                             <p className="text-xs text-muted-foreground mb-1.5 font-medium uppercase tracking-wide">New This Week</p>
-                            <p className="text-3xl font-bold text-foreground tabular-nums">{marketPulse.newJobsThisWeek}</p>
-                            <p className="text-xs text-muted-foreground mt-1">roles added</p>
+                            <p className="text-2xl sm:text-3xl font-bold text-foreground tabular-nums">{marketPulse.newJobsThisWeek}</p>
+                            <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">roles added</p>
                           </div>
                           <div className="p-2.5 rounded-md bg-green-500/10 dark:bg-green-500/20 text-green-600 dark:text-green-400">
                             <TrendingUp className="h-5 w-5" />
@@ -694,7 +694,7 @@ export default function DashboardPage() {
                     </Card>
 
                     <Card className="card-elev-static hover-elevate" data-testid="card-pulse-top-hiring">
-                      <CardContent className="p-5">
+                      <CardContent className="p-4 sm:p-5">
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex-1 min-w-0">
                             <p className="text-xs text-muted-foreground mb-1.5 font-medium uppercase tracking-wide">Top Hiring</p>
@@ -718,7 +718,7 @@ export default function DashboardPage() {
                     </Card>
 
                     <Card className="card-elev-static hover-elevate" data-testid="card-pulse-trending-skill">
-                      <CardContent className="p-5">
+                      <CardContent className="p-4 sm:p-5">
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex-1 min-w-0">
                             <p className="text-xs text-muted-foreground mb-1.5 font-medium uppercase tracking-wide">Most In-Demand</p>
@@ -743,12 +743,12 @@ export default function DashboardPage() {
 
                     <Card className="card-elev-static hover-elevate" data-testid="card-pulse-remote">
                       {isPro ? (
-                        <CardContent className="p-5">
+                        <CardContent className="p-4 sm:p-5">
                           <div className="flex items-start justify-between gap-2">
                             <div className="flex-1 min-w-0">
                               <p className="text-xs text-muted-foreground mb-1.5 font-medium uppercase tracking-wide">Remote</p>
-                              <p className="text-3xl font-bold text-foreground tabular-nums">{remotePercent}%</p>
-                              <p className="text-xs text-muted-foreground mt-1">of all roles</p>
+                              <p className="text-2xl sm:text-3xl font-bold text-foreground tabular-nums">{remotePercent}%</p>
+                              <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">of all roles</p>
                             </div>
                             <div className="p-2.5 rounded-md bg-chart-2/10 dark:bg-chart-2/20 text-chart-2">
                               <Wifi className="h-5 w-5" />
@@ -771,7 +771,7 @@ export default function DashboardPage() {
                       <>
                         {marketPulse.salaryInsight && (
                           <Card className="card-elev-static hover-elevate" data-testid="card-pulse-salary">
-                            <CardContent className="p-5">
+                            <CardContent className="p-4 sm:p-5">
                               <div className="flex items-start justify-between gap-2">
                                 <div className="flex-1 min-w-0">
                                   <p className="text-xs text-muted-foreground mb-1.5 font-medium uppercase tracking-wide">Avg Salary</p>
@@ -791,12 +791,12 @@ export default function DashboardPage() {
                         )}
 
                         <Card className="card-elev-static hover-elevate" data-testid="card-pulse-total">
-                          <CardContent className="p-5">
+                          <CardContent className="p-4 sm:p-5">
                             <div className="flex items-start justify-between gap-2">
                               <div className="flex-1 min-w-0">
                                 <p className="text-xs text-muted-foreground mb-1.5 font-medium uppercase tracking-wide">Total Active</p>
-                                <p className="text-3xl font-bold text-foreground tabular-nums">{marketPulse.totalJobs}</p>
-                                <p className="text-xs text-muted-foreground mt-1">open positions</p>
+                                <p className="text-2xl sm:text-3xl font-bold text-foreground tabular-nums">{marketPulse.totalJobs}</p>
+                                <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">open positions</p>
                               </div>
                               <div className="p-2.5 rounded-md bg-chart-5/10 dark:bg-chart-5/20 text-chart-5">
                                 <Globe className="h-5 w-5" />
@@ -816,18 +816,18 @@ export default function DashboardPage() {
                     )}
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5">
                     {[...Array(4)].map((_, i) => (
-                      <Card key={i} className="card-elev-static"><CardContent className="p-5"><Skeleton className="h-24 w-full" /></CardContent></Card>
+                      <Card key={i} className="card-elev-static"><CardContent className="p-4 sm:p-5"><Skeleton className="h-24 w-full" /></CardContent></Card>
                     ))}
                   </div>
                 )}
               </div>
             </div>
 
-            <div className="space-y-6">
+            <div className="space-y-4 sm:space-y-6">
               <Card className="card-elev-static" data-testid="card-saved-jobs-sidebar">
-                <CardContent className="p-5">
+                <CardContent className="p-4 sm:p-5">
                   <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
                     <div className="flex items-center gap-2">
                       <div className="p-1.5 rounded-md bg-chart-4/10 text-chart-4">
@@ -862,7 +862,7 @@ export default function DashboardPage() {
               </Card>
 
               <Card className="card-elev-static" data-testid="card-alerts-sidebar">
-                <CardContent className="p-5">
+                <CardContent className="p-4 sm:p-5">
                   <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
                     <div className="flex items-center gap-2">
                       <div className="p-1.5 rounded-md bg-chart-2/10 text-chart-2">
@@ -887,7 +887,7 @@ export default function DashboardPage() {
               </Card>
 
               <Card className="card-elev-static" data-testid="card-engagement-sidebar">
-                <CardContent className="p-5">
+                <CardContent className="p-4 sm:p-5">
                   <div className="flex items-center justify-between gap-2 mb-4">
                     <div className="flex items-center gap-2">
                       <div className="p-1.5 rounded-md bg-chart-3/10 text-chart-3">
@@ -926,7 +926,7 @@ export default function DashboardPage() {
               </Card>
 
               <Card className="card-elev-static" data-testid="card-quick-links">
-                <CardContent className="p-5">
+                <CardContent className="p-4 sm:p-5">
                   <p className="text-sm font-semibold text-foreground mb-3">Quick Links</p>
                   <div className="space-y-1.5">
                     {[

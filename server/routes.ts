@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, registerAuthRoutes, isAuthenticated, optionalAuth } from "./replit_integrations/auth";
+import { SKILLS_SYNONYM_MAP, toTitleCase, normalizeSkill } from "./lib/skills-normalization";
 
 
 declare global {
@@ -362,10 +363,11 @@ export async function registerRoutes(
         if (job.keySkills && Array.isArray(job.keySkills)) {
           if (!skillsByMonth[key]) skillsByMonth[key] = {};
           for (const skill of job.keySkills.slice(0, 5)) {
-            const normalized = skill.trim();
-            if (normalized) {
-              skillsByMonth[key][normalized] = (skillsByMonth[key][normalized] || 0) + 1;
-            }
+            const raw = skill.toLowerCase().trim();
+            if (!raw) continue;
+            const normalized = SKILLS_SYNONYM_MAP[raw] || raw;
+            const display = toTitleCase(normalized);
+            skillsByMonth[key][display] = (skillsByMonth[key][display] || 0) + 1;
           }
         }
 
@@ -8128,112 +8130,6 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
       res.status(500).json({ error: "Failed to compute market demand" });
     }
   });
-
-  const SKILLS_SYNONYM_MAP: Record<string, string> = {
-    "legal tech": "legal technology",
-    "legal knowledge": "legal technology",
-    "customer engagement": "client management",
-    "client engagement": "client management",
-    "client relations": "client management",
-    "client relationship management": "client management",
-    "customer relationship management": "client management",
-    "customer success": "client management",
-    "collaboration": "cross-functional collaboration",
-    "cross-department collaboration": "cross-functional collaboration",
-    "ai integration": "ai solutions",
-    "ai implementation": "ai solutions",
-    "ai utilization": "ai solutions",
-    "ai tools": "ai solutions",
-    "ai": "ai solutions",
-    "ai applications": "ai solutions",
-    "process improvement": "process optimization",
-    "process intelligence": "process optimization",
-    "legal process improvement": "process optimization",
-    "workflow optimization": "process optimization",
-    "workflow design": "process optimization",
-    "stakeholder engagement": "stakeholder management",
-    "stakeholder collaboration": "stakeholder management",
-    "communication": "stakeholder communication",
-    "problem solving": "analytical problem solving",
-    "critical thinking": "analytical problem solving",
-    "analytical skills": "analytical problem solving",
-    "leadership": "team leadership",
-    "team development": "team leadership",
-    "sales management": "sales leadership",
-    "pipeline generation": "business development",
-    "lead generation": "business development",
-    "account management": "client account management",
-    "relationship building": "client account management",
-    "sales": "sales strategy",
-    "consulting": "strategic consulting",
-    "strategic advisory": "strategic consulting",
-    "user experience": "ux design",
-    "user experience design": "ux design",
-    "customer support": "technical support",
-    "data analysis": "data analytics",
-    "data management": "data governance",
-    "information governance": "data governance",
-    "data reporting": "data analytics",
-    "product development": "product management",
-    "product strategy": "product management",
-    "project tracking": "project management",
-    "agile methodologies": "agile/scrum",
-    "documentation": "technical documentation",
-    "investigative research": "legal research",
-    "client communication": "stakeholder communication",
-    "negotiation": "contract negotiation",
-    "legal compliance": "regulatory compliance",
-    "compliance": "regulatory compliance",
-    "regulation": "regulatory compliance",
-    "regulatory": "regulatory compliance",
-    "ip law": "intellectual property",
-    "software development": "software engineering",
-    "technical consulting": "strategic consulting",
-    "technical advisory": "strategic consulting",
-    "b2b saas": "saas platforms",
-    "web-based applications": "saas platforms",
-    "legal content management": "knowledge management",
-    "consultative selling": "solution selling",
-    "revenue operations": "sales operations",
-    "sales forecasting": "sales operations",
-    "data protection": "data privacy",
-    "privacy law": "data privacy",
-    "global ip laws": "intellectual property",
-    "brand protection": "intellectual property",
-    "integration management": "api integrations",
-    "technical architecture": "systems architecture",
-    "bpm": "business process management",
-    "legal pricing strategies": "legal pricing",
-    "incident response": "security incident response",
-    "ai governance": "ai compliance",
-    "data infrastructure": "data engineering",
-    "cross-functional collaboration": "cross-functional collaboration",
-    "legal domain knowledge": "legal technology",
-    "legal tech knowledge": "legal technology",
-    "legal technology knowledge": "legal technology",
-    "legal technology solutions": "legal technology",
-    "legal tech adoption": "legal technology",
-    "legal tech implementation": "legal technology",
-    "legal technology implementation": "legal technology",
-    "training": "training & development",
-    "training development": "training & development",
-    "go-to-market strategy": "go-to-market strategy",
-    "gtm strategy": "go-to-market strategy",
-    "market strategy": "go-to-market strategy",
-    "research": "legal research",
-    "relationship management": "client account management",
-  };
-
-  const UPPERCASE_WORDS = new Set(["ai", "ml", "api", "it", "crm", "erp", "saas", "nlp", "llm", "sql", "ui", "ux"]);
-
-  function toTitleCase(str: string): string {
-    return str.replace(/\b\w+/g, (word, offset) => {
-      const lower = word.toLowerCase();
-      if (UPPERCASE_WORDS.has(lower)) return lower.toUpperCase();
-      if (["of", "and", "in", "for", "the", "a", "an", "to", "with"].includes(lower) && offset > 0) return lower;
-      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
-    });
-  }
 
   app.get("/api/market-intelligence", async (_req, res) => {
     try {

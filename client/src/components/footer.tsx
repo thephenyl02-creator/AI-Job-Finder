@@ -35,44 +35,44 @@ export function Footer() {
               Legal Tech Careers
             </span>
           </div>
-          <div className="flex flex-wrap items-center gap-x-1 gap-y-0">
+          <div className="flex flex-wrap items-center gap-x-1 gap-y-1">
             <Link href="/about">
-              <Button variant="ghost" size="sm" className="text-muted-foreground h-auto py-1 text-xs font-normal" data-testid="footer-link-about">
+              <Button variant="ghost" size="sm" className="text-muted-foreground text-xs font-normal" data-testid="footer-link-about">
                 About
               </Button>
             </Link>
             <Link href="/pricing">
-              <Button variant="ghost" size="sm" className="text-muted-foreground h-auto py-1 text-xs font-normal" data-testid="footer-link-pricing">
+              <Button variant="ghost" size="sm" className="text-muted-foreground text-xs font-normal" data-testid="footer-link-pricing">
                 Pricing
               </Button>
             </Link>
             <Link href="/post-job">
-              <Button variant="ghost" size="sm" className="text-muted-foreground h-auto py-1 text-xs font-normal" data-testid="footer-link-post-job">
+              <Button variant="ghost" size="sm" className="text-muted-foreground text-xs font-normal" data-testid="footer-link-post-job">
                 Post a Job
               </Button>
             </Link>
             <Link href="/market-intelligence">
-              <Button variant="ghost" size="sm" className="text-muted-foreground h-auto py-1 text-xs font-normal" data-testid="footer-link-trends">
+              <Button variant="ghost" size="sm" className="text-muted-foreground text-xs font-normal" data-testid="footer-link-trends">
                 Trends
               </Button>
             </Link>
             <Link href="/opportunity-map">
-              <Button variant="ghost" size="sm" className="text-muted-foreground h-auto py-1 text-xs font-normal" data-testid="footer-link-map">
+              <Button variant="ghost" size="sm" className="text-muted-foreground text-xs font-normal" data-testid="footer-link-map">
                 Map
               </Button>
             </Link>
             <Link href="/events">
-              <Button variant="ghost" size="sm" className="text-muted-foreground h-auto py-1 text-xs font-normal" data-testid="footer-link-events">
+              <Button variant="ghost" size="sm" className="text-muted-foreground text-xs font-normal" data-testid="footer-link-events">
                 Events
               </Button>
             </Link>
             <Link href="/terms">
-              <Button variant="ghost" size="sm" className="text-muted-foreground h-auto py-1 text-xs font-normal" data-testid="footer-link-terms">
+              <Button variant="ghost" size="sm" className="text-muted-foreground text-xs font-normal" data-testid="footer-link-terms">
                 Terms
               </Button>
             </Link>
             <Link href="/privacy">
-              <Button variant="ghost" size="sm" className="text-muted-foreground h-auto py-1 text-xs font-normal" data-testid="footer-link-privacy">
+              <Button variant="ghost" size="sm" className="text-muted-foreground text-xs font-normal" data-testid="footer-link-privacy">
                 Privacy
               </Button>
             </Link>

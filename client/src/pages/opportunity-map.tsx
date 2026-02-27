@@ -485,9 +485,9 @@ export default function OpportunityMap() {
         <main className="flex-1">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
             <Skeleton className="h-8 w-64 mb-6" />
-            <div className="flex items-center gap-6 mb-6">
+            <div className="flex items-center gap-4 sm:gap-6 mb-6">
               {[...Array(3)].map((_, i) => (
-                <Skeleton key={i} className="h-12 w-28" />
+                <Skeleton key={i} className="h-10 sm:h-12 w-20 sm:w-28" />
               ))}
             </div>
             <div className="flex flex-col lg:flex-row gap-6">
@@ -525,25 +525,25 @@ export default function OpportunityMap() {
           </div>
 
           {data && (
-            <div className="flex items-center gap-6 sm:gap-10 mb-5 lg:mb-6" data-testid="stats-summary">
+            <div className="flex items-center gap-4 sm:gap-6 lg:gap-10 mb-5 lg:mb-6" data-testid="stats-summary">
               <div>
-                <p className="text-2xl lg:text-3xl font-semibold text-foreground tabular-nums" data-testid="text-stat-jobs">{data.totalJobs}</p>
+                <p className="text-xl sm:text-2xl lg:text-3xl font-semibold text-foreground tabular-nums" data-testid="text-stat-jobs">{data.totalJobs}</p>
                 <p className="text-[10px] lg:text-xs text-muted-foreground mt-0.5">Active roles</p>
               </div>
-              <div className="w-px h-8 bg-border/50" />
+              <div className="w-px h-6 sm:h-8 bg-border/50" />
               <div>
-                <p className="text-2xl lg:text-3xl font-semibold text-foreground tabular-nums" data-testid="text-stat-countries">{data.countriesCount}</p>
+                <p className="text-xl sm:text-2xl lg:text-3xl font-semibold text-foreground tabular-nums" data-testid="text-stat-countries">{data.countriesCount}</p>
                 <p className="text-[10px] lg:text-xs text-muted-foreground mt-0.5">Countries</p>
               </div>
-              <div className="w-px h-8 bg-border/50" />
+              <div className="w-px h-6 sm:h-8 bg-border/50" />
               <div>
-                <p className="text-2xl lg:text-3xl font-semibold text-foreground tabular-nums" data-testid="text-stat-remote">{data.remoteShare}%</p>
+                <p className="text-xl sm:text-2xl lg:text-3xl font-semibold text-foreground tabular-nums" data-testid="text-stat-remote">{data.remoteShare}%</p>
                 <p className="text-[10px] lg:text-xs text-muted-foreground mt-0.5">Remote-friendly</p>
               </div>
             </div>
           )}
 
-          <div className="flex flex-col lg:flex-row gap-5 lg:gap-6">
+          <div className="flex flex-col lg:flex-row gap-4 sm:gap-5 lg:gap-6">
 
             <div
               className="lg:flex-1 relative"
@@ -709,7 +709,7 @@ export default function OpportunityMap() {
               )}
             </div>
 
-            <div className="lg:w-[320px] shrink-0" data-testid="panel-stats">
+            <div className="w-full lg:w-[320px] shrink-0" data-testid="panel-stats">
               <div className="space-y-3">
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-[10px] lg:text-xs font-semibold text-muted-foreground tracking-wide uppercase">
@@ -756,7 +756,7 @@ export default function OpportunityMap() {
                             />
                           </div>
                         </div>
-                        <ArrowRight className={`h-3.5 w-3.5 shrink-0 transition-opacity ${isActive ? "text-primary opacity-100" : "text-muted-foreground opacity-0 group-hover:opacity-100"} invisible lg:visible`} />
+                        <ArrowRight className={`h-3.5 w-3.5 shrink-0 transition-opacity ${isActive ? "text-primary opacity-100" : "text-muted-foreground opacity-0 group-hover:opacity-100"} hidden lg:block`} />
                       </button>
                     );
                   })}
@@ -779,8 +779,8 @@ export default function OpportunityMap() {
                 )}
 
                 {activeCountry && (
-                  <Card className="overflow-visible mt-3">
-                    <CardContent className="p-4">
+                  <Card className="overflow-visible mt-3" data-testid="panel-country-detail">
+                    <CardContent className="p-3 sm:p-4">
                       <div className="space-y-3">
                         <div>
                           <div className="flex items-center gap-2 mb-1">

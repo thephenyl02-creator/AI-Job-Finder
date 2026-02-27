@@ -1542,7 +1542,7 @@ function ResumeEditorView({
 
         <div className="lg:hidden">
           <Tabs value={activeSection} onValueChange={(v) => setActiveSection(v as SectionKey)}>
-            <TabsList className="w-full grid grid-cols-3 sm:grid-cols-6 h-auto">
+            <TabsList className="w-full grid grid-cols-3 xs:grid-cols-6 sm:grid-cols-6 h-auto gap-1">
               {SECTION_NAV.map((item) => {
                 const Icon = item.icon;
                 return (
@@ -1773,7 +1773,7 @@ export default function ResumeBuilder() {
   return (
     <div className="min-h-screen bg-background overflow-x-hidden">
       <Header />
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+      <main className="max-w-7xl mx-auto px-3 sm:px-6 py-4 sm:py-8">
         {!editingId && (
           <div className="mb-6">
             <h1 className="text-2xl font-serif font-medium text-foreground" data-testid="text-page-title">

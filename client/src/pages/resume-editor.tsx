@@ -167,7 +167,7 @@ function ChangeIndicator({
           <Diff className="w-3.5 h-3.5" />
         </button>
       </PopoverTrigger>
-      <PopoverContent className="w-80 space-y-3" align="start" data-testid="change-popover">
+      <PopoverContent className="w-80 max-w-[calc(100vw-2rem)] space-y-3" align="start" data-testid="change-popover">
         <div>
           <p className="text-xs font-medium text-muted-foreground mb-1">Original</p>
           <p className="text-sm text-muted-foreground italic line-through">{originalText}</p>
@@ -264,7 +264,7 @@ function RequirementsPanel({ requirements, isOpen, onToggle }: { requirements: R
   }
 
   return (
-    <div className="w-80 xl:w-96 border-l bg-card flex flex-col h-full shrink-0" data-testid="requirements-panel">
+    <div className="w-80 xl:w-96 border-l bg-card flex flex-col h-full shrink-0 max-w-[calc(100vw-3rem)]" data-testid="requirements-panel">
       <div className="p-4 border-b flex items-center justify-between">
         <div>
           <h3 className="text-sm font-semibold">Job Requirements</h3>
@@ -820,10 +820,10 @@ export default function ResumeEditor() {
   return (
     <div className="flex flex-col h-screen bg-muted/30" data-testid="resume-editor">
       <div className="border-b bg-card sticky top-0 z-30 shadow-sm" data-testid="editor-header">
-        <div className="flex items-center justify-between gap-3 px-4 h-12">
-          <div className="flex items-center gap-3 min-w-0">
+        <div className="flex items-center justify-between gap-2 sm:gap-3 px-3 sm:px-4 h-12">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <Link href={job ? `/jobs/${job.id}` : "/jobs"}>
-              <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" data-testid="button-back"><ArrowLeft className="w-4 h-4" /></Button>
+              <Button variant="ghost" size="icon" className="shrink-0" data-testid="button-back"><ArrowLeft className="w-4 h-4" /></Button>
             </Link>
             {job && (
               <div className="min-w-0 hidden sm:block">
@@ -870,8 +870,8 @@ export default function ResumeEditor() {
           </div>
         </div>
 
-        <div className="flex items-center justify-between gap-3 px-4 py-1.5 bg-muted/40 border-t" data-testid="status-bar">
-          <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex items-center justify-between gap-2 px-3 sm:px-4 py-1.5 bg-muted/40 border-t" data-testid="status-bar">
+          <div className="flex items-center gap-2 sm:gap-3 flex-wrap min-w-0 overflow-hidden">
             {jobRequirements.length > 0 && sections && (
               <ReadinessBar requirements={jobRequirements} sections={sections} />
             )}
@@ -893,8 +893,8 @@ export default function ResumeEditor() {
 
       <div className="flex-1 flex overflow-hidden">
         <div className="flex-1 overflow-y-auto">
-          <div className="max-w-3xl mx-auto py-6 sm:py-8 px-4 sm:px-6">
-            <div className="bg-white dark:bg-card rounded-lg shadow-sm border p-6 sm:p-10 space-y-6" data-testid="resume-document">
+          <div className="max-w-3xl mx-auto py-4 sm:py-8 px-3 sm:px-6">
+            <div className="bg-white dark:bg-card rounded-lg shadow-sm border p-4 sm:p-10 space-y-6" data-testid="resume-document">
               {sections.rewriteWarning && (
                 <div className="p-3 rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900" data-testid="rewrite-warning">
                   <div className="flex items-start gap-2">
@@ -1078,12 +1078,12 @@ export default function ResumeEditor() {
         </div>
       </div>
 
-      <div className="lg:hidden border-t bg-card px-4 py-2 flex items-center justify-between" data-testid="mobile-toolbar">
+      <div className="lg:hidden border-t bg-card px-3 py-2 flex items-center justify-between gap-2" data-testid="mobile-toolbar">
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={undo} disabled={undoStack.length === 0}>
+          <Button variant="ghost" size="icon" onClick={undo} disabled={undoStack.length === 0}>
             <Undo2 className="w-4 h-4" />
           </Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={redo} disabled={redoStack.length === 0}>
+          <Button variant="ghost" size="icon" onClick={redo} disabled={redoStack.length === 0}>
             <Redo2 className="w-4 h-4" />
           </Button>
         </div>
@@ -1098,7 +1098,7 @@ export default function ResumeEditor() {
       {requirementsPanelOpen && jobRequirements.length > 0 && (
         <div className="lg:hidden fixed inset-0 z-40 flex" data-testid="mobile-requirements-overlay">
           <div className="absolute inset-0 bg-black/40" onClick={() => setRequirementsPanelOpen(false)} />
-          <div className="ml-auto relative bg-card w-80 h-full shadow-xl overflow-y-auto">
+          <div className="ml-auto relative bg-card w-[min(20rem,calc(100vw-3rem))] h-full shadow-xl overflow-y-auto">
             <RequirementsPanel
               requirements={jobRequirements}
               isOpen={true}
@@ -1110,12 +1110,12 @@ export default function ResumeEditor() {
 
       {showRevertConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" data-testid="dialog-revert-confirm">
-          <div className="bg-card rounded-xl shadow-2xl max-w-sm w-full mx-4 p-6 space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+          <div className="bg-card rounded-xl shadow-2xl max-w-sm w-full mx-3 sm:mx-4 p-4 sm:p-6 space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="h-10 w-10 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center shrink-0">
                 <RotateCcw className="h-5 w-5 text-amber-600 dark:text-amber-400" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <h3 className="font-semibold text-foreground">Revert all changes?</h3>
                 <p className="text-sm text-muted-foreground">This will undo every AI change and return your resume to its original state.</p>
               </div>
@@ -1134,16 +1134,16 @@ export default function ResumeEditor() {
 
       {showPostExport && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={() => setShowPostExport(false)} data-testid="dialog-post-export">
-          <div className="bg-card rounded-xl shadow-2xl max-w-md w-full mx-4 p-6 space-y-4" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+          <div className="bg-card rounded-xl shadow-2xl max-w-md w-full mx-3 sm:mx-4 p-4 sm:p-6 space-y-4" onClick={e => e.stopPropagation()}>
+            <div className="flex items-start gap-3">
+              <div className="h-10 w-10 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center shrink-0">
                 <CheckCircle className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
               </div>
-              <div>
+              <div className="flex-1 min-w-0">
                 <h3 className="font-semibold text-foreground">Resume downloaded</h3>
-                <p className="text-sm text-muted-foreground">Tailored for {editorQuery.data?.job?.company || "this role"}</p>
+                <p className="text-sm text-muted-foreground truncate">Tailored for {editorQuery.data?.job?.company || "this role"}</p>
               </div>
-              <Button variant="ghost" size="icon" className="ml-auto" onClick={() => setShowPostExport(false)} data-testid="button-close-dialog">
+              <Button variant="ghost" size="icon" className="shrink-0" onClick={() => setShowPostExport(false)} data-testid="button-close-dialog">
                 <X className="h-4 w-4" />
               </Button>
             </div>

@@ -266,14 +266,14 @@ function DescriptionContent({ text, testId, compact, isPro }: { text?: string | 
         if (isBullet) {
           const content = trimmed.replace(/^[-•*]\s+|^\d+[.)]\s+/, '');
           return (
-            <li key={i} className="flex gap-3 text-[0.925rem] text-foreground/80 leading-[1.7] pl-1" data-testid={`bullet-${i}`}>
+            <li key={i} className="flex gap-2 sm:gap-3 text-[0.875rem] sm:text-[0.925rem] text-foreground/80 leading-[1.7] pl-0 sm:pl-1 overflow-hidden" data-testid={`bullet-${i}`}>
               <span className="shrink-0 mt-[0.65rem] w-[5px] h-[5px] rounded-full bg-primary/40" />
-              <span>{renderContent(content)}</span>
+              <span className="min-w-0 break-words">{renderContent(content)}</span>
             </li>
           );
         }
         return (
-          <p key={i} className="text-[0.925rem] text-foreground/80 leading-[1.7]" data-testid={`para-${i}`}>
+          <p key={i} className="text-[0.875rem] sm:text-[0.925rem] text-foreground/80 leading-[1.7] break-words overflow-hidden" data-testid={`para-${i}`}>
             {renderContent(trimmed)}
           </p>
         );
@@ -721,7 +721,7 @@ export default function JobDetail() {
     <div className="min-h-screen bg-background overflow-x-hidden">
       <Header />
 
-      <main className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+      <main className="max-w-3xl mx-auto px-3 sm:px-6 py-4 sm:py-8">
         <Link href="/jobs" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-3" data-testid="button-back-jobs">
           <ArrowLeft className="h-4 w-4" />
           Back to Jobs
@@ -732,7 +732,7 @@ export default function JobDetail() {
         {/* === HEADER === */}
         <div className="mb-6" ref={applyButtonRef}>
           <h1
-            className="text-2xl sm:text-3xl font-serif font-medium text-foreground tracking-tight leading-tight"
+            className="text-xl sm:text-3xl font-serif font-medium text-foreground tracking-tight leading-tight"
             data-testid="text-job-detail-title"
           >
             {cleanStructuredText(job.title)}
@@ -946,10 +946,10 @@ export default function JobDetail() {
 
         {/* === CAREER CONTEXT + READINESS === */}
         {isAuthenticated && careerMatch && (
-          <div className="flex items-center gap-2 mb-3" data-testid="career-path-match-badge">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2 mb-3" data-testid="career-path-match-badge">
             <Badge
               variant="outline"
-              className={`text-xs px-2.5 py-1 ${
+              className={`text-xs px-2.5 py-1 shrink-0 w-fit ${
                 careerMatch.fit === "high"
                   ? "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800"
                   : careerMatch.fit === "medium"
@@ -960,7 +960,7 @@ export default function JobDetail() {
               <Compass className="h-3 w-3 mr-1" />
               On your recommended path
             </Badge>
-            <span className="text-[10px] text-muted-foreground">{careerMatch.why}</span>
+            <span className="text-[10px] text-muted-foreground leading-snug">{careerMatch.why}</span>
           </div>
         )}
 
@@ -969,7 +969,7 @@ export default function JobDetail() {
           if (!primaryFit || !isAuthenticated) return null;
           return (
             <Card className="mb-4" data-testid="card-readiness">
-              <CardContent className="p-4 sm:p-5">
+              <CardContent className="p-3 sm:p-5">
                 <ReadinessDisplay
                   score={primaryFit.score}
                   matched={primaryFit.matched}
@@ -1006,17 +1006,17 @@ export default function JobDetail() {
 
         {/* === UNIFIED JOB DETAILS CARD === */}
         <Card className="mb-6" data-testid="section-job-details">
-          <CardContent className="p-5 sm:p-6">
+          <CardContent className="p-3.5 sm:p-6">
             {job.aiSummary && (
               <div data-testid="section-ai-summary" className="mb-6">
-                <div className="rounded-md bg-muted/50 border border-border/30 p-4">
+                <div className="rounded-md bg-muted/50 border border-border/30 p-3 sm:p-4">
                   <div className="flex items-center gap-2 mb-2.5">
                     <Sparkles className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                     <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground" data-testid="heading-ai-summary">
                       At a Glance
                     </span>
                   </div>
-                  <p className="text-[0.925rem] text-foreground/80 leading-[1.75]" data-testid="text-ai-summary">
+                  <p className="text-[0.875rem] sm:text-[0.925rem] text-foreground/80 leading-[1.75]" data-testid="text-ai-summary">
                     {cleanStructuredText(job.aiSummary)}
                   </p>
                 </div>
@@ -1055,19 +1055,19 @@ export default function JobDetail() {
                   {resumeFit.map((rf) => (
                     <div
                       key={rf.resumeId}
-                      className="rounded-md border border-border/40 p-3"
+                      className="rounded-md border border-border/40 p-2.5 sm:p-3"
                       data-testid={`resume-fit-${rf.resumeId}`}
                     >
-                      <div className="flex items-center justify-between gap-3 mb-2 flex-wrap">
-                        <div className="flex items-center gap-2 min-w-0">
+                      <div className="flex items-center justify-between gap-2 sm:gap-3 mb-2 flex-wrap">
+                        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1">
                           <FileText className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                          <span className="text-sm font-medium text-foreground truncate" title={rf.label ?? undefined}>{rf.label}</span>
+                          <span className="text-xs sm:text-sm font-medium text-foreground truncate" title={rf.label ?? undefined}>{rf.label}</span>
                           {rf.isPrimary && (
                             <Badge variant="secondary" className="text-[10px]">Primary</Badge>
                           )}
                         </div>
-                        <div className="flex items-center gap-2">
-                          <span className={`text-sm font-semibold ${
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className={`text-xs sm:text-sm font-semibold ${
                             rf.score >= 60 ? "text-green-600 dark:text-green-400" :
                             rf.score >= 30 ? "text-amber-600 dark:text-amber-400" :
                             "text-muted-foreground"
@@ -1124,7 +1124,7 @@ export default function JobDetail() {
         {/* === ATS RESUME KEYWORDS === */}
         {job.keySkills && job.keySkills.length >= 3 && (
           <Card className="mb-6" data-testid="card-ats-keywords">
-            <CardContent className="p-5 sm:p-6">
+            <CardContent className="p-3.5 sm:p-6">
               <div className="flex items-center gap-2 mb-3">
                 <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
                 <h3 className="text-sm font-semibold text-foreground">Resume Keywords for This Role</h3>
@@ -1167,7 +1167,7 @@ export default function JobDetail() {
           if (!isAuthenticated) {
             return (
               <Card className="mb-6 border-primary/20" data-testid="card-match-teaser-anon">
-                <CardContent className="p-5 sm:p-6">
+                <CardContent className="p-3.5 sm:p-6">
                   <div className="flex items-start gap-4">
                     <div className="shrink-0 w-10 h-10 rounded-md bg-primary/10 flex items-center justify-center">
                       <FileText className="h-5 w-5 text-primary" />
@@ -1194,7 +1194,7 @@ export default function JobDetail() {
           if (!hasResumes) {
             return (
               <Card className="mb-6 border-primary/20" data-testid="card-match-teaser-no-resume">
-                <CardContent className="p-5 sm:p-6">
+                <CardContent className="p-3.5 sm:p-6">
                   <div className="flex items-start gap-4">
                     <div className="shrink-0 w-10 h-10 rounded-md bg-primary/10 flex items-center justify-center">
                       <FileText className="h-5 w-5 text-primary" />
@@ -1223,7 +1223,7 @@ export default function JobDetail() {
             const topFit = resumeFit![0];
             return (
               <Card className="mb-6 border-primary/20" data-testid="card-match-teaser-upgrade">
-                <CardContent className="p-5 sm:p-6">
+                <CardContent className="p-3.5 sm:p-6">
                   <div className="flex items-start gap-4">
                     <div className="shrink-0 w-10 h-10 rounded-md bg-primary/10 flex items-center justify-center">
                       <Lock className="h-5 w-5 text-primary" />
@@ -1266,18 +1266,18 @@ export default function JobDetail() {
         })()}
 
         {similarJobs.length > 0 && (
-          <div className="mb-8" data-testid="section-similar-jobs">
+          <div className="mb-8 pb-16 sm:pb-0" data-testid="section-similar-jobs">
             <h2 className="text-lg font-serif font-medium text-foreground mb-4 tracking-tight">
               {job?.roleCategory ? `More in ${job.roleCategory}` : "Similar Roles"}
             </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
               {similarJobs.map(sj => {
                 const sjSalary = formatSalary(sj.salaryMin, sj.salaryMax, (sj as any).salaryCurrency);
                 const sjLegalFit = sj.legalRelevanceScore && sj.legalRelevanceScore >= 8;
                 return (
                   <Link key={sj.id} href={`/jobs/${sj.id}`}>
                     <Card className="hover-elevate cursor-pointer h-full" data-testid={`card-similar-job-${sj.id}`}>
-                      <CardContent className="p-4">
+                      <CardContent className="p-3 sm:p-4">
                         <h3 className="font-medium text-foreground text-sm leading-snug line-clamp-2" data-testid={`text-similar-title-${sj.id}`}>
                           {cleanStructuredText(sj.title)}
                         </h3>
@@ -1332,7 +1332,7 @@ export default function JobDetail() {
         className={`fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-background/95 backdrop-blur-lg transition-transform duration-300 ${showStickyBar ? "translate-y-0" : "translate-y-full"}`}
         data-testid="sticky-apply-bar"
       >
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
+        <div className="max-w-3xl mx-auto px-3 sm:px-6 py-2.5 sm:py-3 flex items-center justify-between gap-2 sm:gap-3">
           <div className="min-w-0 flex-1 hidden sm:block">
             <p className="text-sm font-medium text-foreground truncate" title={job.title}>{job.title}</p>
             <p className="text-xs text-muted-foreground truncate" title={job.company}>{job.company}</p>
@@ -1340,8 +1340,7 @@ export default function JobDetail() {
           <div className="flex items-center gap-2 w-full sm:w-auto min-w-0">
             {isAuthenticated ? (
               <Button
-                size="sm"
-                className="gap-1.5 flex-1 sm:flex-none text-xs sm:text-sm"
+                className="gap-1.5 flex-1 sm:flex-none text-xs sm:text-sm min-h-[44px] sm:min-h-9"
                 onClick={handleTailorClick}
                 data-testid="button-tailor-sticky"
               >
@@ -1351,7 +1350,7 @@ export default function JobDetail() {
               </Button>
             ) : (
               <Link href={authReturnUrl} className="flex-1 sm:flex-none">
-                <Button size="sm" className="gap-1.5 w-full text-xs sm:text-sm" data-testid="button-tailor-sticky-signin">
+                <Button className="gap-1.5 w-full text-xs sm:text-sm min-h-[44px] sm:min-h-9" data-testid="button-tailor-sticky-signin">
                   <FileText className="h-4 w-4 flex-shrink-0" />
                   <span className="hidden sm:inline">Tailor Resume</span>
                   <span className="sm:hidden">Tailor</span>
@@ -1360,13 +1359,13 @@ export default function JobDetail() {
             )}
             {job?.applyUrl ? (
               <a href={job.applyUrl} target="_blank" rel="noopener noreferrer" onClick={handleApplyClick} className="flex-1 sm:flex-none">
-                <Button variant="outline" size="sm" className="gap-1.5 w-full text-xs sm:text-sm" data-testid="button-apply-sticky">
+                <Button variant="outline" className="gap-1.5 w-full text-xs sm:text-sm min-h-[44px] sm:min-h-9" data-testid="button-apply-sticky">
                   <ExternalLink className="h-4 w-4 flex-shrink-0" />
                   Apply
                 </Button>
               </a>
             ) : (
-              <Button variant="outline" size="sm" className="gap-2 flex-1 sm:flex-none" disabled data-testid="button-apply-sticky">
+              <Button variant="outline" className="gap-2 flex-1 sm:flex-none min-h-[44px] sm:min-h-9" disabled data-testid="button-apply-sticky">
                 <ExternalLink className="h-4 w-4" />
                 Apply
               </Button>

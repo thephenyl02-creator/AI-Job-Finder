@@ -253,8 +253,8 @@ export function CareerIntelligencePanel({ onSelectPath, selectedPath }: CareerIn
 
   return (
     <Card className="border-foreground/10" data-testid="panel-intelligence-result">
-      <CardContent className="p-5">
-        <div className="flex items-center justify-between mb-4">
+      <CardContent className="p-4 sm:p-5">
+        <div className="flex items-center justify-between gap-2 mb-4">
           <div className="flex items-center gap-2">
             <Compass className="h-4 w-4 text-primary" />
             <h2 className="text-sm font-semibold text-foreground">Career Intelligence</h2>
@@ -282,7 +282,7 @@ export function CareerIntelligencePanel({ onSelectPath, selectedPath }: CareerIn
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto_1.5fr] gap-5">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto_1.5fr] gap-4 sm:gap-5">
           <ProfileCard strengths={result.strengths} gaps={result.gaps} />
 
           <div className="hidden lg:block w-px bg-foreground/10" />
@@ -411,7 +411,7 @@ function DemoFlowchart() {
   return (
     <div className="space-y-2" data-testid="demo-flowchart">
       <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-2">Example career paths</p>
-      <div className="grid grid-cols-2 gap-2 opacity-60">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 opacity-60">
         {DEMO_PATHS.map((path, i) => {
           const colors = FIT_COLORS[path.fit] || FIT_COLORS.medium;
           return (

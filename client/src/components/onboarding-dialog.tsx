@@ -77,7 +77,7 @@ export function OnboardingDialog() {
 
   return (
     <Dialog open={isOpen} onOpenChange={() => {}}>
-      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto" onPointerDownOutside={(e) => e.preventDefault()}>
+      <DialogContent className="sm:max-w-lg max-w-[calc(100vw-2rem)] max-h-[90vh] overflow-y-auto" onPointerDownOutside={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle className="text-xl font-serif" data-testid="text-onboarding-title">
             {step === 0 ? "Welcome — tell us about yourself" : "What kind of roles interest you?"}
@@ -121,7 +121,7 @@ export function OnboardingDialog() {
         {step === 1 && (
           <div className="space-y-2" data-testid="onboarding-step-interests">
             <p className="text-sm font-medium text-foreground">Select all that sound interesting</p>
-            <div className="grid grid-cols-2 gap-1.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
               {ROLE_CATEGORIES.map(cat => (
                 <button
                   key={cat.name}

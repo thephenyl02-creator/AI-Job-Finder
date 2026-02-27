@@ -112,7 +112,7 @@ export function Header() {
                     <Menu className="h-5 w-5" />
                   </Button>
                 </SheetTrigger>
-                <SheetContent side="right" className="w-72 p-0">
+                <SheetContent side="right" className="w-72 max-w-[calc(100vw-3rem)] p-0">
                   <SheetHeader className="sr-only">
                     <SheetTitle>Navigation Menu</SheetTitle>
                     <SheetDescription>Main navigation and account options</SheetDescription>
@@ -159,7 +159,7 @@ export function Header() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="w-full justify-start text-muted-foreground"
+                          className="w-full justify-start text-muted-foreground min-h-[44px]"
                           onClick={() => logout()}
                           data-testid="button-logout-mobile"
                         >
@@ -305,7 +305,7 @@ function MobileNavItem({ href, icon: Icon, label, active, testId }: {
         <Button
           variant="ghost"
           size="sm"
-          className={`w-full justify-start gap-2 ${active ? "bg-muted text-foreground" : "text-muted-foreground"}`}
+          className={`w-full justify-start gap-2 min-h-[44px] ${active ? "bg-muted text-foreground" : "text-muted-foreground"}`}
           data-testid={testId}
         >
           <Icon className="h-4 w-4" />

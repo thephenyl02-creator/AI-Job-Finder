@@ -106,10 +106,19 @@ function DiagPanel({ title, subtitle, accent = "green", children, className = ""
 
 function SkillRadarChart({ clusters }: { clusters: SkillCluster[] }) {
   const data = clusters.map(c => ({
-    subject: c.name.replace("Legal ", "").replace("& ", "& \n"),
+    subject: c.name.replace("Legal ", "").replace("& ", "&\n"),
+    shortSubject: c.name.replace("Legal ", "").split(" ")[0],
     score: c.score,
     fullMark: 100,
   }));
+
+  const [isMobileChart, setIsMobileChart] = useState(false);
+  useEffect(() => {
+    const check = () => setIsMobileChart(window.innerWidth < 640);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
 
   return (
     <DiagPanel
@@ -119,11 +128,11 @@ function SkillRadarChart({ clusters }: { clusters: SkillCluster[] }) {
     >
       <div className="w-full h-[260px]" data-testid="skill-radar-chart">
         <ResponsiveContainer width="100%" height="100%">
-          <RadarChart cx="50%" cy="50%" outerRadius="70%" data={data}>
+          <RadarChart cx="50%" cy="50%" outerRadius={isMobileChart ? "60%" : "70%"} data={data}>
             <PolarGrid stroke="hsl(var(--border))" strokeOpacity={0.5} />
             <PolarAngleAxis
-              dataKey="subject"
-              tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+              dataKey={isMobileChart ? "shortSubject" : "subject"}
+              tick={{ fontSize: isMobileChart ? 9 : 10, fill: "hsl(var(--muted-foreground))" }}
             />
             <PolarRadiusAxis
               angle={90}
@@ -215,8 +224,18 @@ function FitBreakdownChart({ breakdown }: { breakdown: DiagnosticReportData["fit
 }
 
 function MarketDemandChart({ demand }: { demand: DiagnosticReportData["marketDemand"] }) {
-  const data = demand.slice(0, 8).map(d => ({
-    skill: d.skill.length > 18 ? d.skill.slice(0, 16) + "..." : d.skill,
+  const [isMobileBar, setIsMobileBar] = useState(false);
+  useEffect(() => {
+    const check = () => setIsMobileBar(window.innerWidth < 640);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+
+  const maxItems = isMobileBar ? 6 : 8;
+  const maxLen = isMobileBar ? 12 : 18;
+  const data = demand.slice(0, maxItems).map(d => ({
+    skill: d.skill.length > maxLen ? d.skill.slice(0, maxLen - 2) + "..." : d.skill,
     fullSkill: d.skill,
     count: d.demandCount,
     hasIt: d.userHasIt,
@@ -229,7 +248,7 @@ function MarketDemandChart({ demand }: { demand: DiagnosticReportData["marketDem
       accent="blue"
       info="Skills demanded across all published jobs. Green = you have it, gray = you're missing it."
     >
-      <div className="flex items-center gap-4 mb-3">
+      <div className="flex items-center gap-3 sm:gap-4 mb-3">
         <div className="flex items-center gap-1.5">
           <div className="w-2.5 h-2.5 rounded-sm bg-emerald-500" />
           <span className="text-[10px] text-muted-foreground">You have this</span>
@@ -241,10 +260,10 @@ function MarketDemandChart({ demand }: { demand: DiagnosticReportData["marketDem
       </div>
       <div className="w-full h-[220px]" data-testid="market-demand-chart">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} margin={{ left: 0, right: 10, top: 5, bottom: 5 }}>
+          <BarChart data={data} margin={{ left: -10, right: 5, top: 5, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.3} vertical={false} />
-            <XAxis dataKey="skill" tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} angle={-25} textAnchor="end" height={50} />
-            <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+            <XAxis dataKey="skill" tick={{ fontSize: 8, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} angle={-30} textAnchor="end" height={55} interval={0} />
+            <YAxis tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} width={30} />
             <RechartsTooltip
               contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
               formatter={(value: number, _: any, entry: any) => [
@@ -316,8 +335,8 @@ function ReadinessScoreRing({ score }: { score: number }) {
   const label = getScoreLabel(score);
 
   return (
-    <div className="relative flex items-center justify-center" data-testid="readiness-score-ring">
-      <svg className="w-[130px] h-[130px] -rotate-90" viewBox="0 0 100 100">
+    <div className="relative flex items-center justify-center shrink-0" data-testid="readiness-score-ring">
+      <svg className="w-[100px] h-[100px] sm:w-[130px] sm:h-[130px] -rotate-90" viewBox="0 0 100 100">
         <circle cx="50" cy="50" r="42" fill="none" stroke="hsl(var(--muted))" strokeWidth="5" />
         <circle
           cx="50" cy="50" r="42" fill="none"
@@ -354,17 +373,17 @@ function ReadinessLadder({ ladder, isPro }: {
         <Card key={tier.key} className={`border border-border/50 card-elev-static border-l-2 ${tier.borderColor} overflow-hidden`}>
           <button
             type="button"
-            className="w-full flex items-center justify-between p-3 text-left"
+            className="w-full flex items-center justify-between gap-2 p-3 text-left"
             onClick={() => setExpandedTier(expandedTier === tier.key ? null : tier.key)}
             data-testid={`readiness-tier-${tier.key}`}
           >
-            <div className="flex items-center gap-2">
-              <tier.icon className={`h-4 w-4 ${tier.color}`} />
+            <div className="flex items-center gap-2 flex-wrap min-w-0">
+              <tier.icon className={`h-4 w-4 shrink-0 ${tier.color}`} />
               <span className={`text-sm font-semibold ${tier.color}`}>{tier.label}</span>
-              <span className="text-[10px] text-muted-foreground">{tier.desc}</span>
+              <span className="hidden sm:inline text-[10px] text-muted-foreground">{tier.desc}</span>
               <span className="diag-metric text-[10px] px-1.5 py-0 rounded bg-muted text-muted-foreground">{tier.roles.length}</span>
             </div>
-            {expandedTier === tier.key ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+            {expandedTier === tier.key ? <ChevronUp className="h-4 w-4 shrink-0 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />}
           </button>
           {expandedTier === tier.key && tier.roles.length > 0 && (
             <div className="px-3 pb-3 space-y-2">
@@ -444,20 +463,20 @@ function TransitionPlan({ plan, isPro }: { plan: TransitionWeek[]; isPro: boolea
               </div>
             )}
             <Card className="border border-border/50 card-elev-static border-l-2 border-l-blue-500">
-              <CardHeader className="px-4 pt-3 pb-1.5 space-y-0">
+              <CardHeader className="px-3 sm:px-4 pt-3 pb-1.5 space-y-0">
                 <div className="flex items-center gap-2">
-                  <span className="diag-metric text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/30">W{week.week}</span>
+                  <span className="diag-metric text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/30 shrink-0">W{week.week}</span>
                   <CardTitle className="text-sm font-semibold">{week.theme}</CardTitle>
                 </div>
               </CardHeader>
-              <CardContent className="px-4 pb-3">
-                <div className="space-y-2">
+              <CardContent className="px-3 sm:px-4 pb-3">
+                <div className="space-y-2.5 sm:space-y-2">
                   {week.actions.map((action, i) => (
-                    <div key={i} className="flex items-start gap-2.5 text-xs">
+                    <div key={i} className="flex items-start gap-2 sm:gap-2.5 text-xs">
                       <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-1.5 shrink-0" />
                       <div className="min-w-0">
                         <p className="text-foreground font-medium">{action.task}</p>
-                        <div className="flex items-center gap-2 mt-0.5 text-muted-foreground">
+                        <div className="flex items-center gap-1.5 sm:gap-2 mt-0.5 text-muted-foreground flex-wrap">
                           <span className="font-mono text-[10px]">{action.timeEstimate}</span>
                           <span>·</span>
                           <span className="text-primary/80 text-[10px]">{action.skillGapAddressed}</span>
@@ -748,19 +767,19 @@ function CareerPathFlow({
 function DiagnosticSkeleton() {
   return (
     <div className="space-y-6 animate-pulse">
-      <div className="flex items-center gap-4">
-        <Skeleton className="h-[130px] w-[130px] rounded-full" />
-        <div className="space-y-2 flex-1">
-          <Skeleton className="h-6 w-48" />
-          <Skeleton className="h-4 w-72" />
-          <Skeleton className="h-4 w-56" />
+      <div className="flex items-center gap-3 sm:gap-4">
+        <Skeleton className="h-[80px] w-[80px] sm:h-[130px] sm:w-[130px] rounded-full shrink-0" />
+        <div className="space-y-2 flex-1 min-w-0">
+          <Skeleton className="h-6 w-full max-w-[12rem]" />
+          <Skeleton className="h-4 w-full max-w-[18rem]" />
+          <Skeleton className="h-4 w-full max-w-[14rem]" />
         </div>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Skeleton className="h-[300px] rounded-lg" />
-        <Skeleton className="h-[300px] rounded-lg" />
+        <Skeleton className="h-[260px] sm:h-[300px] rounded-lg" />
+        <Skeleton className="h-[260px] sm:h-[300px] rounded-lg" />
       </div>
-      <Skeleton className="h-[200px] rounded-lg" />
+      <Skeleton className="h-[180px] sm:h-[200px] rounded-lg" />
     </div>
   );
 }
@@ -1374,7 +1393,7 @@ export default function DiagnosticPage() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-6 space-y-6">
+    <div className="max-w-5xl mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-5 sm:space-y-6">
       <div className="mb-1">
         <Link href="/dashboard">
           <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground -ml-2" data-testid="button-back-dashboard-main">
@@ -1383,12 +1402,12 @@ export default function DiagnosticPage() {
           </Button>
         </Link>
       </div>
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-2xl font-bold font-serif text-foreground" data-testid="diagnostic-title">
+          <h1 className="text-xl sm:text-2xl font-bold font-serif text-foreground" data-testid="diagnostic-title">
             Career Diagnostic
           </h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
+          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
             {report ? "Your personalized career intelligence report" : "Generate your career diagnostic to see where you stand"}
           </p>
         </div>
@@ -1454,13 +1473,13 @@ export default function DiagnosticPage() {
 
       {report && !runDiagnostic.isPending && (
         <>
-          <nav className="sticky top-0 z-50 -mx-4 px-4 py-2.5 bg-background/80 backdrop-blur-md border-b border-border/40" data-testid="section-nav">
-            <div className="flex items-center gap-1 overflow-x-auto scrollbar-none">
+          <nav className="sticky top-0 z-50 -mx-4 px-4 py-1.5 sm:py-2.5 bg-background/80 backdrop-blur-md border-b border-border/40" data-testid="section-nav">
+            <div className="flex items-center gap-0.5 sm:gap-1 overflow-x-auto scrollbar-none">
               {[
                 { id: "overview", label: "Overview", icon: BarChart3 },
                 { id: "skills", label: "Skills", icon: Brain },
-                { id: "career-paths", label: "Career Paths", icon: TrendingUp },
-                { id: "action-plan", label: "Action Plan", icon: FileText },
+                { id: "career-paths", label: "Paths", icon: TrendingUp },
+                { id: "action-plan", label: "Plan", icon: FileText },
               ].map((section) => (
                 <Button
                   key={section.id}
@@ -1472,7 +1491,7 @@ export default function DiagnosticPage() {
                   }}
                   data-testid={`nav-${section.id}`}
                 >
-                  <section.icon className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
+                  <section.icon className="h-3.5 w-3.5 mr-1 sm:mr-1.5 text-muted-foreground" />
                   {section.label}
                 </Button>
               ))}
@@ -1480,9 +1499,9 @@ export default function DiagnosticPage() {
           </nav>
 
           <div id="section-overview" />
-          <Card className="border border-border/50 card-elev-static p-6">
-            <div className="grid grid-cols-1 md:grid-cols-[auto_1fr] gap-6 items-center">
-              <div className="flex flex-col items-center gap-2">
+          <Card className="border border-border/50 card-elev-static p-4 sm:p-6">
+            <div className="grid grid-cols-1 md:grid-cols-[auto_1fr] gap-4 sm:gap-6 items-center">
+              <div className="flex flex-row md:flex-col items-center gap-3 sm:gap-2">
                 <ReadinessScoreRing score={report.overallReadinessScore} />
                 {percentileData?.percentile !== null && percentileData?.percentile !== undefined && (
                   <p className="text-[10px] text-muted-foreground text-center font-mono" data-testid="text-diagnostic-percentile">
@@ -1490,7 +1509,7 @@ export default function DiagnosticPage() {
                   </p>
                 )}
               </div>
-              <div className="space-y-4">
+              <div className="space-y-3 sm:space-y-4">
                 <div>
                   <p className="diag-label mb-1">Your Readiness</p>
                   <p className="text-sm text-foreground">
@@ -1502,14 +1521,14 @@ export default function DiagnosticPage() {
                   </p>
                 </div>
                 <div className="diag-divider" />
-                <div className="flex items-center gap-4 text-xs">
+                <div className="flex items-center gap-3 sm:gap-4 text-xs flex-wrap">
                   <div className="flex items-center gap-1.5">
                     <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                    <span className="text-muted-foreground"><span className="diag-metric text-foreground">{report.readinessLadder.ready.length}</span> Ready Now</span>
+                    <span className="text-muted-foreground"><span className="diag-metric text-foreground">{report.readinessLadder.ready.length}</span> Ready</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <div className="w-2 h-2 rounded-full bg-amber-500" />
-                    <span className="text-muted-foreground"><span className="diag-metric text-foreground">{report.readinessLadder.nearReady.length}</span> Near-Ready</span>
+                    <span className="text-muted-foreground"><span className="diag-metric text-foreground">{report.readinessLadder.nearReady.length}</span> Near</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <div className="w-2 h-2 rounded-full bg-rose-500" />
@@ -1553,7 +1572,7 @@ export default function DiagnosticPage() {
           <div className="diag-divider" />
 
           <Card className="border-2 border-rose-500/30 bg-rose-500/5 card-elev-static border-l-2 border-l-rose-500" data-testid="brutal-honesty-section">
-            <CardHeader className="pb-2">
+            <CardHeader className="pb-2 px-3 sm:px-6">
               <div className="flex items-center gap-2">
                 <div className="w-7 h-7 rounded-full bg-rose-500/10 flex items-center justify-center shrink-0">
                   <Shield className="h-4 w-4 text-rose-500" />
@@ -1564,9 +1583,9 @@ export default function DiagnosticPage() {
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="space-y-2">
+            <CardContent className="space-y-2 px-3 sm:px-6">
               {report.brutalHonesty.map((statement, i) => (
-                <p key={i} className="text-sm text-foreground/90 flex items-start gap-2">
+                <p key={i} className="text-xs sm:text-sm text-foreground/90 flex items-start gap-2">
                   <span className="text-rose-500 font-mono font-bold shrink-0">{i + 1}.</span>
                   {statement}
                 </p>
@@ -1589,9 +1608,9 @@ export default function DiagnosticPage() {
             <TransitionPlan plan={report.transitionPlan} isPro={isPro} />
           </div>
 
-          <Card className="bg-primary/5 border-primary/20 p-6 text-center card-elev-static" data-testid="diagnostic-bottom-cta">
-            <h3 className="text-lg font-bold font-serif text-foreground mb-2">Ready to take the next step?</h3>
-            <p className="text-sm text-muted-foreground mb-4">
+          <Card className="bg-primary/5 border-primary/20 p-4 sm:p-6 text-center card-elev-static" data-testid="diagnostic-bottom-cta">
+            <h3 className="text-base sm:text-lg font-bold font-serif text-foreground mb-2">Ready to take the next step?</h3>
+            <p className="text-xs sm:text-sm text-muted-foreground mb-4">
               {report.readinessLadder.ready.length > 0
                 ? `You're ready for ${report.readinessLadder.ready.length} role${report.readinessLadder.ready.length === 1 ? "" : "s"} right now. Start applying today.`
                 : report.readinessLadder.nearReady.length > 0
