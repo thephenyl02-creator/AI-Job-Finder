@@ -141,13 +141,14 @@ function insightBlock(doc: PDFKit.PDFDocument, text: string, pn: { val: number }
 }
 
 function narrativeParagraph(doc: PDFKit.PDFDocument, text: string, pn: { val: number }) {
-  const textHeight = doc.font("Helvetica").fontSize(9).heightOfString(text, { width: CONTENT_WIDTH });
+  const textHeight = doc.font("Helvetica").fontSize(9).heightOfString(text, { width: CONTENT_WIDTH, lineGap: 3 });
   ensureSpace(doc, textHeight + 12, pn);
+  const startY = doc.y;
   doc.save();
   doc.fontSize(9).fillColor(GRAY_600).font("Helvetica")
-    .text(text, MARGIN, doc.y, { width: CONTENT_WIDTH, lineGap: 3 });
+    .text(text, MARGIN, startY, { width: CONTENT_WIDTH, lineGap: 3 });
   doc.restore();
-  doc.y += textHeight + 12;
+  doc.y = startY + textHeight + 12;
 }
 
 function tableHeaderRow(doc: PDFKit.PDFDocument, cols: { text: string; x: number; w: number; align?: string }[]) {
@@ -429,8 +430,10 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string):
     const barMax = CONTENT_WIDTH - 170;
 
     for (let i = 0; i < Math.min(data.skillsDemand.length, 15); i++) {
-      ensureSpace(doc, 15, pn);
       const s = data.skillsDemand[i];
+      const nameHeight = doc.font("Helvetica").fontSize(8.5).heightOfString(s.skill, { width: 115 });
+      const rowH = Math.max(15, nameHeight + 4);
+      ensureSpace(doc, rowH, pn);
       const ry = doc.y;
       doc.save();
       doc.fontSize(7).fillColor(GRAY_400).font("Helvetica")
@@ -443,7 +446,7 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string):
       doc.fontSize(7.5).fillColor(GRAY_500).font("Helvetica-Bold")
         .text(fmtNum(s.count), MARGIN + 140 + barMax + 6, ry, { width: 30, align: "right" });
       doc.restore();
-      doc.y = ry + 15;
+      doc.y = ry + rowH;
     }
     doc.y += 6;
 
@@ -682,10 +685,11 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string):
   doc.y += 16;
 
   // The Opportunity
+  const opY = doc.y;
   doc.save();
-  doc.fontSize(12).fillColor(NAVY).font("Helvetica-Bold").text("The Opportunity", MARGIN, doc.y, { width: CONTENT_WIDTH });
+  doc.fontSize(12).fillColor(NAVY).font("Helvetica-Bold").text("The Opportunity", MARGIN, opY, { width: CONTENT_WIDTH });
   doc.restore();
-  doc.y += 18;
+  doc.y = opY + 18;
 
   const wmTotalForLawyers = (data.workMode.remote || 0) + (data.workMode.hybrid || 0) + (data.workMode.onsite || 0);
   const flexPct = wmTotalForLawyers > 0 ? fmtPct(data.workMode.remote + data.workMode.hybrid, wmTotalForLawyers) : 0;
@@ -693,20 +697,22 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string):
   narrativeParagraph(doc, opportunityText, pn);
 
   // Most Accessible Entry Points
+  const maeY = doc.y;
   doc.save();
-  doc.fontSize(12).fillColor(NAVY).font("Helvetica-Bold").text("Most Accessible Entry Points", MARGIN, doc.y, { width: CONTENT_WIDTH });
+  doc.fontSize(12).fillColor(NAVY).font("Helvetica-Bold").text("Most Accessible Entry Points", MARGIN, maeY, { width: CONTENT_WIDTH });
   doc.restore();
-  doc.y += 18;
+  doc.y = maeY + 18;
 
   const accessiblePaths = data.careerPaths.slice(0, 3).map(c => c.name).join(", ");
   const entryText = `Among current openings, ${accessiblePaths} represent the highest-volume categories — and all three draw heavily on core legal competencies. ${data.skillsDemand.length >= 2 ? `The most demanded skills — ${data.skillsDemand[0].skill} and ${data.skillsDemand[1].skill} — ` : "Top skills "}overlap significantly with the capabilities developed in legal practice. For lawyers with 3-7 years of experience, these paths offer the strongest alignment between existing expertise and employer requirements.`;
   narrativeParagraph(doc, entryText, pn);
 
   // Recommended Next Steps
+  const rnsY = doc.y;
   doc.save();
-  doc.fontSize(12).fillColor(NAVY).font("Helvetica-Bold").text("Recommended Next Steps", MARGIN, doc.y, { width: CONTENT_WIDTH });
+  doc.fontSize(12).fillColor(NAVY).font("Helvetica-Bold").text("Recommended Next Steps", MARGIN, rnsY, { width: CONTENT_WIDTH });
   doc.restore();
-  doc.y += 18;
+  doc.y = rnsY + 18;
 
   const steps = [
     "Assess your readiness: Upload your resume for a personalized career diagnostic that maps your skills to current market demand.",
