@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef, lazy, Suspense } from "react"
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation, Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
+import { useActivityTracker } from "@/hooks/use-activity-tracker";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
 function getScoreColor(score: number): string {
@@ -1292,6 +1293,9 @@ export default function DiagnosticPage() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { track, trackNow } = useActivityTracker();
+
+  useEffect(() => { track({ eventType: "page_view", pagePath: "/diagnostic" }); }, []);
 
   const { data: authData } = useQuery<any>({ queryKey: ["/api/auth/user"] });
   const isPro = authData?.isPro === true;
@@ -1316,6 +1320,7 @@ export default function DiagnosticPage() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/diagnostic/latest"] });
       toast({ title: "Diagnostic complete", description: "Your career report is ready." });
+      trackNow({ eventType: "diagnostic_complete", metadata: { score: data?.overallReadinessScore, topPath: data?.topPaths?.[0]?.name } });
     },
     onError: (err: any) => {
       toast({ title: "Error", description: err?.message || "Failed to generate diagnostic", variant: "destructive" });
@@ -1399,6 +1404,7 @@ export default function DiagnosticPage() {
                     `I scored ${report.overallReadinessScore}/100 on my Legal Tech Career Readiness assessment.${topPath ? ` Top path: ${topPath.name}.` : ""} Check yours at Legal Tech Careers.`
                   );
                   const shareUrl = encodeURIComponent(`${window.location.origin}/diagnostic`);
+                  trackNow({ eventType: "diagnostic_share", metadata: { score: report.overallReadinessScore, platform: "linkedin" } });
                   window.open(
                     `https://www.linkedin.com/sharing/share-offsite/?url=${shareUrl}`,
                     "_blank",

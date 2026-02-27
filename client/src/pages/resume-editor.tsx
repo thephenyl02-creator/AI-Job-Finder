@@ -3,6 +3,7 @@ import { useParams, useLocation, Link } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { usePageTitle } from "@/hooks/use-page-title";
 import { useAuth } from "@/hooks/use-auth";
+import { useActivityTracker } from "@/hooks/use-activity-tracker";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -380,7 +381,10 @@ export default function ResumeEditor() {
   const { resumeId } = useParams<{ resumeId: string }>();
   const [, setLocation] = useLocation();
   const { isAuthenticated, isPro } = useAuth();
+  const { track } = useActivityTracker();
   const { toast } = useToast();
+
+  useEffect(() => { track({ eventType: "page_view", pagePath: `/resume-editor/${resumeId}` }); }, [resumeId]);
 
   const searchParams = new URLSearchParams(window.location.search);
   const jobId = parseInt(searchParams.get("jobId") || "0");
@@ -598,6 +602,7 @@ export default function ResumeEditor() {
   useEffect(() => { contactNameRef.current = sections?.contact?.fullName || ""; }, [sections?.contact?.fullName]);
 
   const downloadFile = useCallback(async (type: "pdf" | "docx" | "apply-pack") => {
+    track({ eventType: "resume_export", metadata: { type, resumeId, jobId } });
     try {
       toast({ title: "Saving latest edits..." });
       try {

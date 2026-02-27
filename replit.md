@@ -48,6 +48,16 @@ Legal Tech Careers is a career intelligence platform designed for legal professi
 - **UI**: Category badges are color-coded by track (navy = Lawyer-Led, blue = Technical, teal = Ecosystem). Track filter pills on jobs page (desktop pills + mobile dropdown).
 - **API**: `/api/jobs?track=Lawyer-Led` filters by track.
 
+### Analytics & Tracking
+- **Authenticated**: `useActivityTracker` hook → `POST /api/activities` → `user_activities` table. Tracks page views, searches, saves, exports, diagnostics, upgrades across all major pages.
+- **Anonymous**: `POST /api/track` → `anonymous_events` table. Whitelisted events: `landing_page_view`, `pricing_page_view`, `landing_cta_click`, `quiz_completion`, `anon_diagnostic_upload`.
+- **Coverage**: All user-facing pages fire `page_view` on mount. Key conversion events: `upgrade_click`, `job_save`, `job_card_click`, `diagnostic_complete`, `diagnostic_share`, `quiz_complete`, `mi_report_download`, `resume_export`, `map_country_click`.
+
+### Job Archiving & Historical Data
+- **Soft Archive**: Admin "delete" sets `jobStatus='archived'`, `isActive=false`, `isPublished=false` with timestamps — no data destruction.
+- **Timestamps**: `statusChangedAt` (any state change), `deactivatedAt` (when deactivated), `publishedAt` (when published), `closedAt` (when closed/archived). Set automatically by storage layer, reliability worker, and deactivation logic.
+- **Historical API**: `GET /api/stats/historical` returns `totalEverScraped`, `totalPublished`, `totalArchived`, `jobsByMonth`, `categoryByMonth`.
+
 ### Job Curation Pipeline
 - **Process**: A two-layer pipeline (raw ingestion → AI enrichment → trust gate → published inventory) ensures job quality, deduplication, and link validation.
 - **Scrapers**: Utilizes various APIs (Greenhouse, Lever, Ashby, Workday CXS) and generic HTML scrapers for broad job coverage across global regions.

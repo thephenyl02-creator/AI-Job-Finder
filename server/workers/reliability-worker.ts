@@ -82,8 +82,11 @@ async function runStaleJobCleanup(): Promise<number> {
   console.log(`[Reliability] Found ${staleJobs.length} stale published jobs (not seen in ${STALENESS_DAYS}+ days)`);
 
   for (const job of staleJobs) {
+    const now = new Date();
     await storage.updateJobWorkerFields(job.id, {
       jobStatus: 'closed',
+      closedAt: now,
+      statusChangedAt: now,
       reviewReasonCode: 'STALE_LISTING',
     });
   }
@@ -98,11 +101,15 @@ async function runNonJobUrlCleanup(): Promise<number> {
 
   for (const job of publishedJobs) {
     if (isNonJobUrl(job.applyUrl) || isGenericPortalUrl(job.applyUrl)) {
+      const now = new Date();
       await storage.updateJobWorkerFields(job.id, {
         isPublished: false,
         jobStatus: 'closed',
+        closedAt: now,
+        statusChangedAt: now,
+        deactivatedAt: now,
         reviewReasonCode: 'NON_JOB_URL',
-        lastCheckedAt: new Date(),
+        lastCheckedAt: now,
       });
       removed++;
       console.log(`[Reliability] Non-job URL detected, unpublishing job ${job.id} "${job.title}" -> ${job.applyUrl}`);
@@ -142,11 +149,15 @@ async function runApplyLinkValidation(): Promise<{ checked: number; broken: numb
         const failCount = (job as any).linkFailCount || 0;
 
         if (failCount >= 1) {
+          const now = new Date();
           await storage.updateJobWorkerFields(job.id, {
             isPublished: false,
             jobStatus: 'closed',
+            closedAt: now,
+            statusChangedAt: now,
+            deactivatedAt: now,
             reviewReasonCode: 'BROKEN_APPLY_LINK',
-            lastCheckedAt: new Date(),
+            lastCheckedAt: now,
           });
           broken++;
           console.log(`[Reliability] Broken apply link confirmed (HTTP ${finalCode}, fails: ${failCount + 1}), unpublishing job ${job.id} "${job.title}" -> ${job.applyUrl}`);

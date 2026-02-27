@@ -399,6 +399,7 @@ class DatabaseStorage implements IStorage {
   }
 
   async publishJob(id: number): Promise<Job | undefined> {
+    const now = new Date();
     const [updated] = await db
       .update(jobs)
       .set({
@@ -406,6 +407,8 @@ class DatabaseStorage implements IStorage {
         isActive: true,
         pipelineStatus: 'ready',
         jobStatus: 'open',
+        publishedAt: now,
+        statusChangedAt: now,
       })
       .where(eq(jobs.id, id))
       .returning();
@@ -415,7 +418,7 @@ class DatabaseStorage implements IStorage {
   async unpublishJob(id: number): Promise<Job | undefined> {
     const [updated] = await db
       .update(jobs)
-      .set({ isPublished: false })
+      .set({ isPublished: false, statusChangedAt: new Date() })
       .where(eq(jobs.id, id))
       .returning();
     return updated;
@@ -644,8 +647,9 @@ class DatabaseStorage implements IStorage {
       if (job.isPublished && job.lastEnrichedAt && job.lastEnrichedAt > twentyFourHoursAgo) continue;
       if (normalizedScrapedCompanies && job.company && !normalizedScrapedCompanies.has(normalizeCompany(job.company))) continue;
       if (!scrapedExternalIds.has(job.externalId)) {
+        const now = new Date();
         await db.update(jobs)
-          .set({ isActive: false })
+          .set({ isActive: false, deactivatedAt: now, statusChangedAt: now })
           .where(eq(jobs.id, job.id));
         deactivated++;
       }
@@ -2905,6 +2909,7 @@ class DatabaseStorage implements IStorage {
       'title', 'description', 'descriptionFormatted', 'jobHash',
       'keySkills', 'matchKeywords', 'aiResponsibilities', 'aiQualifications', 'aiNiceToHaves',
       'isRemote', 'locationType', 'reviewStatus',
+      'statusChangedAt', 'deactivatedAt', 'publishedAt', 'closedAt',
     ]);
     const safeData: Record<string, any> = {};
     for (const [key, val] of Object.entries(data)) {

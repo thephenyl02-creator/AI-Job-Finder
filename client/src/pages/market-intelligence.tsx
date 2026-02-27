@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { usePageTitle } from "@/hooks/use-page-title";
 import { useAuth } from "@/hooks/use-auth";
 import { useSubscription } from "@/hooks/use-subscription";
+import { useActivityTracker } from "@/hooks/use-activity-tracker";
 import { useToast } from "@/hooks/use-toast";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
@@ -201,6 +202,9 @@ export default function MarketIntelligence() {
   const { isAuthenticated, isAdmin } = useAuth();
   const { isPro } = useSubscription();
   const canDownload = isPro || isAdmin;
+  const { track } = useActivityTracker();
+
+  useEffect(() => { track({ eventType: "page_view", pagePath: "/market-intelligence" }); }, []);
 
   const { toast } = useToast();
   const [downloading, setDownloading] = useState(false);
@@ -268,6 +272,7 @@ export default function MarketIntelligence() {
   const salaryMax = Math.max(...(salaryByPath.length > 0 ? salaryByPath.map((s) => s.medianMax || 0) : [0]), 1);
 
   const handleDownload = async (period: string) => {
+    track({ eventType: "mi_report_download", metadata: { period } });
     setDownloading(true);
     try {
       const response = await fetch(`/api/market-intelligence/report?period=${period}`, {

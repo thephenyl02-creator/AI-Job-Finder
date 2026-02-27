@@ -545,6 +545,9 @@ export default function JobDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/saved-jobs/ids"] });
       queryClient.invalidateQueries({ queryKey: ["/api/saved-jobs"] });
+      if (!jobIsSaved && job) {
+        trackNow({ eventType: "job_save", entityType: "job", entityId: String(job.id), metadata: { title: job.title, company: job.company } });
+      }
     },
     onError: (error: any) => {
       if (error?.message?.includes("5 jobs") || error?.message?.includes("Upgrade to Pro")) {

@@ -35,7 +35,8 @@ export function useActivityTracker() {
       await apiRequest("POST", "/api/activities", {
         events: events.map(e => ({ ...e, sessionId })),
       });
-    } catch {
+    } catch (err) {
+      console.warn("[ActivityTracker] flush failed:", err);
     }
   }, [isAuthenticated]);
 
@@ -71,7 +72,8 @@ export function useActivityTracker() {
         pagePath: event.pagePath || window.location.pathname,
         sessionId,
       });
-    } catch {
+    } catch (err) {
+      console.warn("[ActivityTracker] trackNow failed:", err);
     }
   }, [isAuthenticated]);
 

@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useCallback, useState, useMemo, useEffect, useRef, memo } from "react";
+import { useActivityTracker } from "@/hooks/use-activity-tracker";
 import { ComposableMap, Geographies, Geography } from "react-simple-maps";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -308,6 +309,10 @@ function interpolateColor(t: number, isDark: boolean): string {
 export default function OpportunityMap() {
   usePageTitle("Opportunity Map");
   const [, navigate] = useLocation();
+  const { track } = useActivityTracker();
+
+  useEffect(() => { track({ eventType: "page_view", pagePath: "/opportunity-map" }); }, []);
+
   const [hoveredCode, setHoveredCode] = useState<string | null>(null);
   const [selectedCode, setSelectedCode] = useState<string | null>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
@@ -623,6 +628,7 @@ export default function OpportunityMap() {
                               }}
                               onClick={() => {
                                 if (!hasJobs) return;
+                                track({ eventType: "map_country_click", metadata: { countryCode: code, countryName: country?.countryName } });
                                 if (isMobile) {
                                   setSelectedCode(selectedCode === code ? null : code);
                                 } else {

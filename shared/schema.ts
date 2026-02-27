@@ -79,6 +79,9 @@ export const jobs = pgTable("jobs", {
   countryCode: varchar("country_code", { length: 5 }),
   countryName: varchar("country_name", { length: 100 }),
   workMode: varchar("work_mode", { length: 10 }),
+  statusChangedAt: timestamp("status_changed_at"),
+  deactivatedAt: timestamp("deactivated_at"),
+  publishedAt: timestamp("published_at"),
 });
 
 export const jobCategories = pgTable("job_categories", {

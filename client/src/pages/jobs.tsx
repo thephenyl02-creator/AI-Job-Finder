@@ -1773,7 +1773,7 @@ export default function Jobs() {
                   <div
                     className="p-3 sm:p-4 rounded-lg border bg-card hover-elevate cursor-pointer card-elev"
                     data-testid={`card-job-${job.id}`}
-                    onClick={() => setLocation(`/jobs/${job.id}`)}
+                    onClick={() => { track({ eventType: "job_card_click", entityType: "job", entityId: String(job.id), metadata: { title: job.title, company: job.company } }); setLocation(`/jobs/${job.id}`); }}
                   >
                     <div className="flex gap-3">
                       <Avatar className="h-8 w-8 rounded-md shrink-0 mt-0.5">

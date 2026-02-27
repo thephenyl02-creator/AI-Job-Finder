@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { usePageTitle } from "@/hooks/use-page-title";
 import { Link } from "wouter";
@@ -36,6 +37,12 @@ const CAREER_PATH_LABELS: Record<string, string> = {
 export default function Landing() {
   usePageTitle();
   const { isAuthenticated } = useAuth();
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      fetch("/api/track", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ eventType: "landing_page_view" }) }).catch(() => {});
+    }
+  }, []);
 
   const { data: stats } = useQuery<Stats>({
     queryKey: ["/api/stats"],

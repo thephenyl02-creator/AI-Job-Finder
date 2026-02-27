@@ -111,7 +111,12 @@ export default function Pricing() {
   const { toast } = useToast();
   const [, navigate] = useLocation();
 
-  useEffect(() => { track({ eventType: "page_view", pagePath: "/pricing" }); }, []);
+  useEffect(() => {
+    track({ eventType: "page_view", pagePath: "/pricing" });
+    if (!isAuthenticated) {
+      fetch("/api/track", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ eventType: "pricing_page_view" }) }).catch(() => {});
+    }
+  }, []);
   const [billingInterval, setBillingInterval] = useState<"month" | "year">("month");
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
@@ -247,6 +252,7 @@ export default function Pricing() {
       window.location.href = "/auth";
       return;
     }
+    track({ eventType: "upgrade_click", metadata: { interval: billingInterval, priceId: selectedPrice?.id } });
     if (selectedPrice) {
       checkoutMutation.mutate(selectedPrice.id);
     }

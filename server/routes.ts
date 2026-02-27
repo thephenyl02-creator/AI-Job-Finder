@@ -301,6 +301,49 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/stats/historical", async (_req, res) => {
+    try {
+      const allJobs = await db.select({
+        id: jobs.id,
+        isActive: jobs.isActive,
+        isPublished: jobs.isPublished,
+        jobStatus: jobs.jobStatus,
+        roleCategory: jobs.roleCategory,
+        firstSeenAt: jobs.firstSeenAt,
+      }).from(jobs);
+
+      const totalEverScraped = allJobs.length;
+      const totalPublished = allJobs.filter(j => j.isPublished).length;
+      const totalArchived = allJobs.filter(j => j.jobStatus === 'archived' || j.jobStatus === 'closed').length;
+
+      const jobsByMonth: Record<string, number> = {};
+      for (const job of allJobs) {
+        if (!job.firstSeenAt) continue;
+        const key = `${job.firstSeenAt.getFullYear()}-${String(job.firstSeenAt.getMonth() + 1).padStart(2, '0')}`;
+        jobsByMonth[key] = (jobsByMonth[key] || 0) + 1;
+      }
+
+      const categoryByMonth: Record<string, Record<string, number>> = {};
+      for (const job of allJobs) {
+        if (!job.roleCategory || !job.firstSeenAt) continue;
+        const key = `${job.firstSeenAt.getFullYear()}-${String(job.firstSeenAt.getMonth() + 1).padStart(2, '0')}`;
+        if (!categoryByMonth[key]) categoryByMonth[key] = {};
+        categoryByMonth[key][job.roleCategory] = (categoryByMonth[key][job.roleCategory] || 0) + 1;
+      }
+
+      res.json({
+        totalEverScraped,
+        totalPublished,
+        totalArchived,
+        jobsByMonth,
+        categoryByMonth,
+      });
+    } catch (error) {
+      console.error("Error fetching historical stats:", error);
+      res.status(500).json({ error: "Failed to fetch historical stats" });
+    }
+  });
+
   app.get("/api/market-pulse", optionalAuth, async (req: any, res) => {
     try {
       let topCategory: string | undefined;
@@ -325,7 +368,7 @@ export async function registerRoutes(
     }
   });
 
-  const VALID_ANON_EVENTS = ["landing_cta_click", "quiz_completion", "anon_diagnostic_upload"];
+  const VALID_ANON_EVENTS = ["landing_cta_click", "quiz_completion", "anon_diagnostic_upload", "landing_page_view", "pricing_page_view"];
   app.post("/api/track", async (req, res) => {
     try {
       const { eventType, metadata } = req.body;
@@ -4461,11 +4504,19 @@ Rules:
       const id = parseInt(req.params.id as string);
       if (isNaN(id)) return res.status(400).json({ error: "Invalid job ID" });
 
-      await storage.deleteJob(id);
+      const now = new Date();
+      await storage.updateJobWorkerFields(id, {
+        isActive: false,
+        isPublished: false,
+        jobStatus: 'archived',
+        deactivatedAt: now,
+        closedAt: now,
+        statusChangedAt: now,
+      });
       res.json({ success: true });
     } catch (error: any) {
-      console.error("Error deleting job:", error);
-      res.status(500).json({ error: "Failed to delete job" });
+      console.error("Error archiving job:", error);
+      res.status(500).json({ error: "Failed to archive job" });
     }
   });
 

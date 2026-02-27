@@ -1,7 +1,8 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { usePageTitle } from "@/hooks/use-page-title";
+import { useActivityTracker } from "@/hooks/use-activity-tracker";
 import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -130,6 +131,9 @@ function DifficultyBadge({ difficulty }: { difficulty: string }) {
 
 export default function QuizPage() {
   usePageTitle("Career Quiz");
+  const { track } = useActivityTracker();
+
+  useEffect(() => { track({ eventType: "page_view", pagePath: "/quiz" }); }, []);
 
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<Partial<QuizAnswers>>({});
@@ -142,6 +146,7 @@ export default function QuizPage() {
     },
     onSuccess: (data) => {
       setResult(data);
+      track({ eventType: "quiz_complete", metadata: { topPath: data?.topPaths?.[0]?.name } });
       fetch("/api/track", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ eventType: "quiz_completion" }) }).catch(() => {});
     },
   });
