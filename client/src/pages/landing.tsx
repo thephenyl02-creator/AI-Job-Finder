@@ -9,7 +9,15 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LogoMark } from "@/components/logo";
 import { ArrowRight, Search, Target, Globe, Wifi, Clock, BarChart3, Lock, Upload, Check } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Footer } from "@/components/footer";
+
+interface SocialProof {
+  diagnosticsRun: number;
+  totalUsers: number;
+  jobsCurated: number;
+  companiesTracked: number;
+}
 
 interface Stats {
   totalJobs: number;
@@ -54,6 +62,10 @@ export default function Landing() {
   });
 
   const hasDiagnostic = !!latestDiag?.report;
+
+  const { data: socialProof, isLoading: socialProofLoading } = useQuery<SocialProof>({
+    queryKey: ["/api/stats/social-proof"],
+  });
 
   const { data: density } = useQuery<{ totalJobs: number; countriesCount: number; remoteShare: number; byCountry: { countryCode: string; countryName: string; jobCount: number; topCategories: string[] }[] }>({
     queryKey: ["/api/job-density"],
@@ -217,6 +229,30 @@ export default function Landing() {
                   </div>
                 </CardContent>
               </Card>
+            </div>
+          </div>
+        </section>
+
+        <section className="border-t border-border/30" data-testid="section-social-proof">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-3">
+            <div className="flex items-center justify-center gap-3 text-xs text-muted-foreground flex-wrap">
+              {socialProofLoading ? (
+                <>
+                  <Skeleton className="h-3 w-32 inline-block" />
+                  <span className="text-border">·</span>
+                  <Skeleton className="h-3 w-28 inline-block" />
+                  <span className="text-border">·</span>
+                  <Skeleton className="h-3 w-32 inline-block" />
+                </>
+              ) : socialProof ? (
+                <>
+                  <span><span className="font-semibold text-foreground">{socialProof.diagnosticsRun}</span> career diagnostics run</span>
+                  <span className="text-border">·</span>
+                  <span><span className="font-semibold text-foreground">{socialProof.jobsCurated}</span> jobs curated</span>
+                  <span className="text-border">·</span>
+                  <span><span className="font-semibold text-foreground">{socialProof.companiesTracked}</span> companies tracked</span>
+                </>
+              ) : null}
             </div>
           </div>
         </section>

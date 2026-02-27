@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
@@ -168,6 +169,7 @@ export default function Jobs() {
   const [intelligenceResumeChanged, setIntelligenceResumeChanged] = useState(false);
   const [gearOpen, setGearOpen] = useState(false);
   const autoOpenedRef = useRef(false);
+  const [showViewLimitDialog, setShowViewLimitDialog] = useState(false);
 
   const { data: userResumes = [] } = useQuery<any[]>({
     queryKey: ["/api/resumes"],
@@ -1777,7 +1779,18 @@ export default function Jobs() {
                   <div
                     className="p-3 sm:p-4 rounded-lg border bg-card hover-elevate cursor-pointer card-elev"
                     data-testid={`card-job-${job.id}`}
-                    onClick={() => { track({ eventType: "job_card_click", entityType: "job", entityId: String(job.id), metadata: { title: job.title, company: job.company } }); setLocation(`/jobs/${job.id}`); }}
+                    onClick={() => {
+                      track({ eventType: "job_card_click", entityType: "job", entityId: String(job.id), metadata: { title: job.title, company: job.company } });
+                      if (!isAuthenticated) {
+                        const currentCount = parseInt(sessionStorage.getItem("jobViewCount") || "0", 10);
+                        const newCount = currentCount + 1;
+                        sessionStorage.setItem("jobViewCount", String(newCount));
+                        if (newCount >= 5) {
+                          setShowViewLimitDialog(true);
+                        }
+                      }
+                      setLocation(`/jobs/${job.id}`);
+                    }}
                   >
                     <div className="flex gap-3">
                       <Avatar className="h-8 w-8 rounded-md shrink-0 mt-0.5">
@@ -1918,6 +1931,32 @@ export default function Jobs() {
           jobTitle={pickerJobTitle}
         />
       )}
+
+      <Dialog open={showViewLimitDialog} onOpenChange={setShowViewLimitDialog}>
+        <DialogContent data-testid="dialog-view-limit">
+          <DialogHeader>
+            <DialogTitle>You've viewed 5 jobs</DialogTitle>
+            <DialogDescription>
+              Create a free account to keep browsing, save favorites, and get personalized career matches.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex gap-2 sm:gap-0">
+            <Button
+              variant="ghost"
+              onClick={() => setShowViewLimitDialog(false)}
+              data-testid="button-dismiss-limit"
+            >
+              Maybe Later
+            </Button>
+            <Button
+              onClick={() => setLocation("/auth")}
+              data-testid="button-signup-limit"
+            >
+              Sign Up Free
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

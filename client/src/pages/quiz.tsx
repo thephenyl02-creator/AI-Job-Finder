@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { usePageTitle } from "@/hooks/use-page-title";
 import { useActivityTracker } from "@/hooks/use-activity-tracker";
@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { LogoMark } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   ArrowLeft,
   ArrowRight,
@@ -111,6 +112,15 @@ export default function QuizPage() {
   const { track } = useActivityTracker();
 
   useEffect(() => { track({ eventType: "page_view", pagePath: "/quiz" }); }, []);
+
+  const { data: socialProof, isLoading: socialProofLoading } = useQuery<{
+    diagnosticsRun: number;
+    totalUsers: number;
+    jobsCurated: number;
+    companiesTracked: number;
+  }>({
+    queryKey: ["/api/stats/social-proof"],
+  });
 
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<Partial<QuizAnswers>>({});
@@ -287,6 +297,13 @@ export default function QuizPage() {
                 </p>
                 <p className="text-sm text-muted-foreground mt-2">
                   Based on your answers, this is where you'd thrive in legal tech.
+                </p>
+                <p className="text-xs text-muted-foreground mt-3" data-testid="text-social-proof-quiz">
+                  {socialProofLoading ? (
+                    <Skeleton className="h-3 w-52 mx-auto inline-block" />
+                  ) : socialProof ? (
+                    <>{socialProof.diagnosticsRun} lawyers have mapped their career path</>
+                  ) : null}
                 </p>
               </div>
 

@@ -81,6 +81,23 @@ Legal Tech Careers is a career intelligence platform designed for legal professi
 - **Transition Intelligence API**: Computes lawyer-specific career data including track summaries, entry corridors, skill bridge, and regional intelligence.
 - **Pro Feature Gates**: Backend and frontend checks to gate premium features for Pro users.
 
+### Data Moat & API Security
+- **Rate Limiting**: `express-rate-limit` with tiered limits — Global: 100/min unauth, 300/min auth. Intelligence: 10/min unauth, 60/min auth. Jobs: 30/min unauth, 120/min auth.
+- **API Key Guard**: Blocks programmatic/bot access to `/api/` without admin-issued API key. Browser users pass freely. Admin manages keys via `/api/admin/api-keys`.
+- **API Keys Table**: `api_keys` (key, label, createdBy, createdAt, isActive, lastUsedAt) for external API consumers.
+- **Intelligence Data Restriction**: `/api/market-intelligence` returns only aggregate counts for non-Pro users. `/api/market-intelligence/transition` requires Pro authentication.
+- **Job Detail Truncation**: Unauthenticated users get title, company, location, work mode + first 150 chars of description. Full details require login.
+- **Attribution Watermarking**: All intelligence API responses include `_attribution` field with source, license, and user email. PDF reports have proprietary footer watermarks.
+- **Anti-Indexing**: `X-Robots-Tag: noindex, nofollow` on all `/api/` responses.
+
+### Conversion Engine
+- **Job Signup Gate**: Unauthenticated job detail page shows truncated info + Card with "Sign up free to see full details" CTA.
+- **View-Count Soft Gate**: After 5 job views without auth, Dialog prompts signup. Dismissable but re-triggers on subsequent views.
+- **Pro Upgrade Banner**: Slim persistent banner for free authenticated users in header. Dismissable via localStorage, reappears after 3 days.
+- **Post-Diagnostic Pro Upsell**: Blurred preview section showing mock skill clusters, career paths, transition plan, and market demand with "Unlock Full Report — $5/mo" CTA.
+- **Social Proof Counters**: Real data from `/api/stats/social-proof` displayed on landing, pricing, quiz, and MI pages.
+- **LinkedIn Share Cards**: `/share/readiness` endpoint generates branded HTML with OG meta tags for LinkedIn preview cards showing readiness score and career path.
+
 ## External Dependencies
 
 - **Database**: PostgreSQL

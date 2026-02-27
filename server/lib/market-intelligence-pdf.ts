@@ -132,11 +132,11 @@ function pageHeader(doc: PDFKit.PDFDocument, pageNum: number) {
 
 function pageFooter(doc: PDFKit.PDFDocument, siteUrl: string = "lawjobs.co") {
   doc.save();
-  doc.moveTo(MARGIN, PAGE_HEIGHT - 40).lineTo(PAGE_WIDTH - MARGIN, PAGE_HEIGHT - 40).strokeColor(GRAY_300).lineWidth(0.3).stroke();
-  doc.fontSize(6).fillColor(GRAY_400).font("Helvetica")
-    .text(siteUrl, MARGIN, PAGE_HEIGHT - 32, { width: CONTENT_WIDTH / 2 });
-  doc.fontSize(6).fillColor(GRAY_400).font("Helvetica")
-    .text(`© ${new Date().getFullYear()} Legal Tech Careers`, MARGIN, PAGE_HEIGHT - 32, { width: CONTENT_WIDTH, align: "right" });
+  doc.moveTo(MARGIN, PAGE_HEIGHT - 45).lineTo(PAGE_WIDTH - MARGIN, PAGE_HEIGHT - 45).strokeColor(GRAY_300).lineWidth(0.3).stroke();
+  doc.fontSize(5.5).fillColor(GRAY_400).font("Helvetica")
+    .text(`Source: ${siteUrl} — Proprietary data. Do not redistribute without permission.`, MARGIN, PAGE_HEIGHT - 38, { width: CONTENT_WIDTH / 2 });
+  doc.fontSize(5.5).fillColor(GRAY_400).font("Helvetica")
+    .text(`© ${new Date().getFullYear()} Legal Tech Careers. All rights reserved.`, MARGIN, PAGE_HEIGHT - 38, { width: CONTENT_WIDTH, align: "right" });
   doc.restore();
 }
 

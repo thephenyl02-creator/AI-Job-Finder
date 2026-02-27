@@ -1420,15 +1420,12 @@ export default function DiagnosticPage() {
                 size="sm"
                 onClick={() => {
                   const topPath = report.topPaths?.[0];
-                  const shareText = encodeURIComponent(
-                    `I scored ${report.overallReadinessScore}/100 on my Legal Tech Career Readiness assessment.${topPath ? ` Top path: ${topPath.name}.` : ""} Check yours at Legal Tech Careers.`
-                  );
-                  const shareUrl = encodeURIComponent(`${window.location.origin}/diagnostic`);
+                  const pathParam = topPath ? topPath.name : "";
+                  const shareUrl = `https://lawjobs.co/share/readiness?score=${report.overallReadinessScore}&path=${encodeURIComponent(pathParam)}`;
                   trackNow({ eventType: "diagnostic_share", metadata: { score: report.overallReadinessScore, platform: "linkedin" } });
                   window.open(
-                    `https://www.linkedin.com/sharing/share-offsite/?url=${shareUrl}`,
-                    "_blank",
-                    "noopener,noreferrer,width=600,height=600"
+                    "https://www.linkedin.com/sharing/share-offsite/?url=" + encodeURIComponent(shareUrl),
+                    "_blank"
                   );
                 }}
                 data-testid="button-share-linkedin"
@@ -1566,6 +1563,84 @@ export default function DiagnosticPage() {
                 "Fit score breakdown by category",
               ]}
             />
+          )}
+
+          {!isPro && report && (
+            <Card className="border-dashed border-2 border-border/60" data-testid="card-pro-preview">
+              <CardContent className="p-4 sm:p-6 space-y-4">
+                <p className="text-sm font-semibold text-foreground">See what Pro unlocks</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <Card className="p-3 border border-border/40">
+                    <p className="text-xs font-medium text-foreground mb-2">Skill Clusters</p>
+                    <div className="blur-sm pointer-events-none select-none">
+                      <div className="relative w-full h-[80px] flex items-center justify-center">
+                        <div className="w-16 h-16 rounded-full border-2 border-primary/20" />
+                        <div className="absolute w-10 h-10 rounded-full border-2 border-primary/20" />
+                        <div className="absolute w-2 h-2 rounded-full bg-primary/20" style={{ top: "8px", left: "50%" }} />
+                        <div className="absolute w-2 h-2 rounded-full bg-primary/20" style={{ bottom: "8px", right: "20%" }} />
+                        <div className="absolute w-2 h-2 rounded-full bg-primary/20" style={{ top: "30%", left: "15%" }} />
+                        <div className="absolute w-2 h-2 rounded-full bg-primary/20" style={{ top: "30%", right: "15%" }} />
+                        <div className="absolute w-2 h-2 rounded-full bg-primary/20" style={{ bottom: "12px", left: "25%" }} />
+                      </div>
+                    </div>
+                  </Card>
+                  <Card className="p-3 border border-border/40">
+                    <p className="text-xs font-medium text-foreground mb-2">Career Paths Ranked</p>
+                    <div className="blur-sm pointer-events-none select-none space-y-2">
+                      <div className="h-3 rounded bg-primary/20" style={{ width: "90%" }} />
+                      <div className="h-3 rounded bg-primary/20" style={{ width: "72%" }} />
+                      <div className="h-3 rounded bg-muted/30" style={{ width: "58%" }} />
+                      <div className="h-3 rounded bg-muted/30" style={{ width: "40%" }} />
+                    </div>
+                  </Card>
+                  <Card className="p-3 border border-border/40">
+                    <p className="text-xs font-medium text-foreground mb-2">30-Day Transition Plan</p>
+                    <div className="blur-sm pointer-events-none select-none space-y-1.5">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-muted-foreground shrink-0">1.</span>
+                        <div className="h-2.5 rounded bg-primary/20 w-full" />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-muted-foreground shrink-0">2.</span>
+                        <div className="h-2.5 rounded bg-muted/30 w-4/5" />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-muted-foreground shrink-0">3.</span>
+                        <div className="h-2.5 rounded bg-primary/20 w-3/4" />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-muted-foreground shrink-0">4.</span>
+                        <div className="h-2.5 rounded bg-muted/30 w-2/3" />
+                      </div>
+                    </div>
+                  </Card>
+                  <Card className="p-3 border border-border/40">
+                    <p className="text-xs font-medium text-foreground mb-2">Market Demand</p>
+                    <div className="blur-sm pointer-events-none select-none">
+                      <div className="flex items-end gap-1.5 h-[60px]">
+                        <div className="flex-1 rounded-t bg-primary/20" style={{ height: "85%" }} />
+                        <div className="flex-1 rounded-t bg-muted/30" style={{ height: "60%" }} />
+                        <div className="flex-1 rounded-t bg-primary/20" style={{ height: "95%" }} />
+                        <div className="flex-1 rounded-t bg-muted/30" style={{ height: "45%" }} />
+                        <div className="flex-1 rounded-t bg-primary/20" style={{ height: "70%" }} />
+                        <div className="flex-1 rounded-t bg-muted/30" style={{ height: "35%" }} />
+                      </div>
+                    </div>
+                  </Card>
+                </div>
+                <p className="text-xs text-muted-foreground text-center">
+                  Your full report includes: 6 skill clusters analyzed, 12+ career paths ranked, 4-week transition plan, strengths vs. blockers for each role
+                </p>
+                <div className="text-center">
+                  <Link href="/pricing">
+                    <Button data-testid="button-unlock-full-report">
+                      <Lock className="h-4 w-4 mr-2" />
+                      Unlock Full Report — $5/mo
+                    </Button>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
           )}
 
           {isPro && (

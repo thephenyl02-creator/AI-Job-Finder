@@ -1107,3 +1107,13 @@ export interface EditorPayload {
     requirements?: string;
   };
 }
+
+export const apiKeys = pgTable("api_keys", {
+  id: serial("id").primaryKey(),
+  key: varchar("key", { length: 64 }).notNull().unique(),
+  label: varchar("label", { length: 255 }).notNull(),
+  createdBy: varchar("created_by", { length: 255 }).notNull(),
+  isActive: boolean("is_active").default(true),
+  lastUsedAt: timestamp("last_used_at"),
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`),
+});

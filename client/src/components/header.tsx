@@ -1,3 +1,4 @@
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
@@ -14,7 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   LogOut, BarChart3, Bell, FileText, Globe,
-  Bookmark, LayoutDashboard, Menu, Calendar, Settings, Activity, Search, CreditCard, Brain, TrendingUp,
+  Bookmark, LayoutDashboard, Menu, Calendar, Settings, Activity, Search, CreditCard, Brain, TrendingUp, X,
 } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { Link, useLocation } from "wouter";
@@ -52,9 +53,41 @@ function NavLink({ href, icon: Icon, label, isActive, testId }: {
   );
 }
 
+const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
+const NUDGE_KEY = "proNudgeDismissed";
+
+function useProNudgeBanner(isAuthenticated: boolean, isPro: boolean, isAdmin: boolean) {
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    if (!isAuthenticated || isPro || isAdmin) {
+      setVisible(false);
+      return;
+    }
+    const stored = localStorage.getItem(NUDGE_KEY);
+    if (stored) {
+      const elapsed = Date.now() - Number(stored);
+      if (elapsed < THREE_DAYS_MS) {
+        setVisible(false);
+        return;
+      }
+      localStorage.removeItem(NUDGE_KEY);
+    }
+    setVisible(true);
+  }, [isAuthenticated, isPro, isAdmin]);
+
+  const dismiss = useCallback(() => {
+    localStorage.setItem(NUDGE_KEY, String(Date.now()));
+    setVisible(false);
+  }, []);
+
+  return { visible, dismiss };
+}
+
 export function Header() {
-  const { user, isAuthenticated, isAdmin, logout } = useAuth();
+  const { user, isAuthenticated, isPro, isAdmin, logout } = useAuth();
   const [location] = useLocation();
+  const nudge = useProNudgeBanner(isAuthenticated, isPro, isAdmin);
 
   const getInitials = () => {
     if (user?.firstName && user?.lastName) {
@@ -73,6 +106,7 @@ export function Header() {
   const isDiagnosticActive = isActive("/diagnostic");
 
   return (
+    <>
     <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border/40 header-elev">
       <Container className="h-14 flex items-center justify-between gap-2">
         <div className="flex items-center gap-4 lg:gap-6">
@@ -289,6 +323,30 @@ export function Header() {
         </div>
       </Container>
     </header>
+    {nudge.visible && (
+      <div
+        data-testid="banner-pro-nudge"
+        className="sticky top-14 z-50 bg-primary/5 border-b border-primary/10 py-1.5 px-4 text-xs text-muted-foreground text-center"
+      >
+        <div className="flex items-center justify-center gap-2">
+          <span>
+            You're on Free — Upgrade to Pro for full career intelligence, unlimited searches, and AI tools.{" "}
+            <Link href="/pricing" data-testid="link-nudge-pricing" className="font-medium text-foreground underline underline-offset-2">
+              View Plans &rarr;
+            </Link>
+          </span>
+          <button
+            onClick={nudge.dismiss}
+            data-testid="button-dismiss-nudge"
+            className="ml-2 p-0.5 rounded hover-elevate text-muted-foreground"
+            aria-label="Dismiss"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </div>
+    )}
+    </>
   );
 }
 

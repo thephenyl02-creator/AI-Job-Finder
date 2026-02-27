@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation, Link } from "wouter";
 import { queryClient } from "@/lib/queryClient";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Check,
   X,
@@ -199,6 +200,15 @@ export default function Pricing() {
     staleTime: 1000 * 60 * 5,
   });
 
+  const { data: socialProof, isLoading: socialProofLoading } = useQuery<{
+    diagnosticsRun: number;
+    totalUsers: number;
+    jobsCurated: number;
+    companiesTracked: number;
+  }>({
+    queryKey: ["/api/stats/social-proof"],
+  });
+
   const checkoutMutation = useMutation({
     mutationFn: async (priceId: string) => {
       const res = await fetch("/api/stripe/create-checkout-session", {
@@ -359,6 +369,9 @@ export default function Pricing() {
             <Badge variant="secondary" className="text-[10px]">
               Save 50%
             </Badge>
+            <Badge variant="secondary" className="text-[10px]" data-testid="badge-most-popular">
+              Most popular
+            </Badge>
           </button>
         </div>
 
@@ -471,18 +484,27 @@ export default function Pricing() {
                   </Button>
                 </div>
               ) : (
-                <Button
-                  className="w-full mb-4"
-                  onClick={handleUpgrade}
-                  disabled={checkoutMutation.isPending || pricesLoading}
-                  data-testid="button-upgrade-pro"
-                >
-                  {checkoutMutation.isPending ? (
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  ) : null}
-                  {isAuthenticated ? "Upgrade to Pro" : "Sign In to Upgrade"}
-                  <ArrowRight className="h-4 w-4 ml-2" />
-                </Button>
+                <>
+                  <Button
+                    className="w-full mb-2"
+                    onClick={handleUpgrade}
+                    disabled={checkoutMutation.isPending || pricesLoading}
+                    data-testid="button-upgrade-pro"
+                  >
+                    {checkoutMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : null}
+                    {isAuthenticated ? "Upgrade to Pro" : "Sign In to Upgrade"}
+                    <ArrowRight className="h-4 w-4 ml-2" />
+                  </Button>
+                  <p className="text-xs text-muted-foreground text-center mb-4" data-testid="text-social-proof-pricing">
+                    {socialProofLoading ? (
+                      <Skeleton className="h-3 w-48 mx-auto inline-block" />
+                    ) : socialProof ? (
+                      <>Join {socialProof.totalUsers} professionals already on the platform</>
+                    ) : null}
+                  </p>
+                </>
               )}
               <ul className="space-y-3">
                 {PRO_FEATURES.map((feature, i) => (

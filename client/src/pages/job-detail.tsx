@@ -425,6 +425,7 @@ export default function JobDetail() {
 
   const job = isAuthenticated ? authJob : publicJob;
   const isLoading = isAuthenticated ? authJobLoading : publicLoading;
+  const isRestricted = !isAuthenticated && !!(job as any)?.restricted;
 
   useJobSEO(job);
 
@@ -750,7 +751,7 @@ export default function JobDetail() {
               size="md"
               testIdPrefix="job-detail"
             />
-            {salary && (
+            {salary && !isRestricted && (
               <span className="flex items-center gap-1.5 text-green-600 dark:text-green-400">
                 <DollarSign className="h-3.5 w-3.5 shrink-0" />
                 <span data-testid="text-salary">{salary}</span>
@@ -808,7 +809,7 @@ export default function JobDetail() {
             </div>
           )}
 
-          {job.keySkills && job.keySkills.length > 0 && (
+          {job.keySkills && job.keySkills.length > 0 && !isRestricted && (
             <div className="flex flex-wrap gap-1.5 mt-2" data-testid="section-key-skills">
               {job.keySkills.map((skill, i) => (
                 <Badge
@@ -869,6 +870,7 @@ export default function JobDetail() {
             </Button>
           </div>
 
+          {!isRestricted && (
           <div className="flex items-center gap-2 mt-4 flex-wrap">
             {isAuthenticated ? (
               <Button
@@ -927,6 +929,7 @@ export default function JobDetail() {
               </Link>
             )}
           </div>
+          )}
 
           {showApplyNudge && (
             <div className="mt-3 flex items-center gap-2" data-testid="section-apply-nudge">
@@ -943,6 +946,39 @@ export default function JobDetail() {
             </div>
           )}
         </div>
+
+        {isRestricted && (
+          <div className="mb-6">
+            {job.description && (
+              <div className="mb-4">
+                <DescriptionContent text={job.description} testId="text-truncated-description" compact />
+              </div>
+            )}
+            <Card className="border-dashed" data-testid="card-signup-gate">
+              <CardContent className="p-6 sm:p-8 text-center">
+                <Lock className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
+                <h3 className="text-lg font-semibold text-foreground mb-2">
+                  Sign up free to see full details
+                </h3>
+                <p className="text-sm text-muted-foreground mb-5 max-w-sm mx-auto">
+                  Create a free account to see the full job description, required skills, salary range, and apply link.
+                </p>
+                <div className="flex items-center justify-center gap-3 flex-wrap">
+                  <Link href="/auth">
+                    <Button data-testid="button-signup-free">
+                      Sign Up Free
+                    </Button>
+                  </Link>
+                  <Link href="/auth">
+                    <Button variant="ghost" data-testid="button-login-gate">
+                      Log In
+                    </Button>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {/* === CAREER CONTEXT + READINESS === */}
         {isAuthenticated && careerMatch && (
@@ -1005,6 +1041,7 @@ export default function JobDetail() {
         })()}
 
         {/* === UNIFIED JOB DETAILS CARD === */}
+        {!isRestricted && (
         <Card className="mb-6" data-testid="section-job-details">
           <CardContent className="p-3.5 sm:p-6">
             {job.aiSummary && (
@@ -1120,9 +1157,10 @@ export default function JobDetail() {
 
           </CardContent>
         </Card>
+        )}
 
         {/* === ATS RESUME KEYWORDS === */}
-        {job.keySkills && job.keySkills.length >= 3 && (
+        {!isRestricted && job.keySkills && job.keySkills.length >= 3 && (
           <Card className="mb-6" data-testid="card-ats-keywords">
             <CardContent className="p-3.5 sm:p-6">
               <div className="flex items-center gap-2 mb-3">
@@ -1329,7 +1367,7 @@ export default function JobDetail() {
       </main>
 
       <div
-        className={`fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-background/95 backdrop-blur-lg transition-transform duration-300 ${showStickyBar ? "translate-y-0" : "translate-y-full"}`}
+        className={`fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-background/95 backdrop-blur-lg transition-transform duration-300 ${showStickyBar && !isRestricted ? "translate-y-0" : "translate-y-full"}`}
         data-testid="sticky-apply-bar"
       >
         <div className="max-w-3xl mx-auto px-3 sm:px-6 py-2.5 sm:py-3 flex items-center justify-between gap-2 sm:gap-3">

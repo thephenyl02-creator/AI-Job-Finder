@@ -368,9 +368,12 @@ export default function MarketIntelligence() {
               <h1 className="text-2xl sm:text-[2.25rem] font-serif font-medium text-foreground leading-[1.2] mb-3" data-testid="text-mi-title">
                 State of Legal Tech Careers
               </h1>
-              <p className="text-sm text-muted-foreground max-w-xl" data-testid="text-mi-subtitle">
-                {overview.totalJobs.toLocaleString()} roles · {overview.totalCompanies.toLocaleString()} companies · {overview.countriesCount} countries · Updated daily
-              </p>
+              <div className="flex items-center gap-2 flex-wrap">
+                <p className="text-sm text-muted-foreground max-w-xl" data-testid="text-mi-subtitle">
+                  {overview.totalJobs.toLocaleString()} roles · {overview.totalCompanies.toLocaleString()} companies · {overview.countriesCount} countries · Updated daily
+                </p>
+                <Badge variant="secondary" className="text-[10px]" data-testid="badge-live-data">Live data</Badge>
+              </div>
               {transitionData && (
                 <p className="text-xs text-muted-foreground mt-1.5" data-testid="text-mi-transition-stats">
                   {transitionData.totalTransitionFriendly} roles welcome career changers · {lawyerLedPct}% are Lawyer-Led · {transitionData.avgExperience} yrs avg experience
@@ -557,6 +560,7 @@ export default function MarketIntelligence() {
                   );
                 })}
               </div>
+              <p className="text-[10px] text-muted-foreground/50 select-none text-right mt-2" data-testid="text-attribution">Source: lawjobs.co</p>
             </div>
           </section>
         )}
@@ -606,6 +610,7 @@ export default function MarketIntelligence() {
                   );
                 })}
               </div>
+              <p className="text-[10px] text-muted-foreground/50 select-none text-right mt-2" data-testid="text-attribution">Source: lawjobs.co</p>
             </div>
           </section>
         )}
@@ -687,6 +692,7 @@ export default function MarketIntelligence() {
                   );
                 })}
               </div>
+              <p className="text-[10px] text-muted-foreground/50 select-none text-right mt-2" data-testid="text-attribution">Source: lawjobs.co</p>
             </div>
           </section>
         )}
@@ -755,6 +761,7 @@ export default function MarketIntelligence() {
                   </div>
                 </div>
               )}
+              <p className="text-[10px] text-muted-foreground/50 select-none text-right mt-2" data-testid="text-attribution">Source: lawjobs.co</p>
             </div>
           </section>
         )}
@@ -852,6 +859,7 @@ export default function MarketIntelligence() {
                 </div>
               </div>
             </div>
+            <p className="text-[10px] text-muted-foreground/50 select-none text-right mt-2" data-testid="text-attribution">Source: lawjobs.co</p>
           </div>
         </section>
 
@@ -880,6 +888,7 @@ export default function MarketIntelligence() {
                   </ResponsiveContainer>
                 </div>
               </div>
+              <p className="text-[10px] text-muted-foreground/50 select-none text-right mt-2" data-testid="text-attribution">Source: lawjobs.co</p>
             </div>
           </section>
         )}
@@ -922,6 +931,7 @@ export default function MarketIntelligence() {
                 </div>
               )}
             </div>
+            <p className="text-[10px] text-muted-foreground/50 select-none text-right mt-2" data-testid="text-attribution">Source: lawjobs.co</p>
           </div>
         </section>
 
@@ -953,6 +963,7 @@ export default function MarketIntelligence() {
                   </div>
                 ))}
               </div>
+              <p className="text-[10px] text-muted-foreground/50 select-none text-right mt-2" data-testid="text-attribution">Source: lawjobs.co</p>
             </div>
           </section>
         )}
@@ -1013,6 +1024,7 @@ export default function MarketIntelligence() {
                   )}
                 </div>
               </div>
+              <p className="text-[10px] text-muted-foreground/50 select-none text-right mt-2" data-testid="text-attribution">Source: lawjobs.co</p>
             </div>
           </section>
         )}
@@ -1035,6 +1047,7 @@ export default function MarketIntelligence() {
                       {historicalData.totalEverScraped.toLocaleString()} jobs tracked so far
                     </p>
                   </div>
+                  <p className="text-[10px] text-muted-foreground/50 select-none text-right mt-2" data-testid="text-attribution">Source: lawjobs.co</p>
                 </div>
               </section>
             );
@@ -1124,6 +1137,7 @@ export default function MarketIntelligence() {
                   {historicalData.totalPublished > 0 && ` · ${historicalData.totalPublished.toLocaleString()} published`}
                   {historicalData.totalArchived > 0 && ` · ${historicalData.totalArchived.toLocaleString()} archived`}
                 </p>
+                <p className="text-[10px] text-muted-foreground/50 select-none text-right mt-2" data-testid="text-attribution">Source: lawjobs.co</p>
               </div>
             </section>
           );

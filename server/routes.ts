@@ -3,6 +3,8 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, registerAuthRoutes, isAuthenticated, optionalAuth } from "./replit_integrations/auth";
 import { SKILLS_SYNONYM_MAP, toTitleCase, normalizeSkill } from "./lib/skills-normalization";
+import rateLimit from "express-rate-limit";
+import { apiKeys } from "@shared/schema";
 
 
 declare global {
@@ -143,6 +145,17 @@ async function requirePro(req: any, res: any, next: any) {
 import { clearMarketIntelligenceCache, getMarketIntelligenceCache, setMarketIntelligenceCache } from "./lib/mi-cache";
 export { clearMarketIntelligenceCache } from "./lib/mi-cache";
 
+function addAttribution(data: any, userEmail?: string) {
+  return {
+    ...data,
+    _attribution: {
+      source: "lawjobs.co",
+      license: "Proprietary — citation required",
+      generatedFor: userEmail || "public-preview",
+    },
+  };
+}
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
@@ -150,6 +163,90 @@ export async function registerRoutes(
 
   await setupAuth(app);
   registerAuthRoutes(app);
+
+  app.use("/api/", (req, res, next) => {
+    res.setHeader("X-Robots-Tag", "noindex, nofollow");
+    next();
+  });
+
+  const globalLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: (req: any) => req.user ? 300 : 100,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: "Too many requests. Please slow down.", retryAfter: 60 },
+    keyGenerator: (req: any) => req.user?.id || req.ip || "unknown",
+    validate: false,
+  });
+  app.use("/api/", globalLimiter);
+
+  const intelligenceLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: (req: any) => req.user ? 60 : 10,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: "Rate limit exceeded for intelligence endpoints.", retryAfter: 60 },
+    keyGenerator: (req: any) => req.user?.id || req.ip || "unknown",
+    validate: false,
+  });
+
+  const jobsLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: (req: any) => req.user ? 120 : 30,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: "Rate limit exceeded. Please slow down.", retryAfter: 60 },
+    keyGenerator: (req: any) => req.user?.id || req.ip || "unknown",
+    validate: false,
+  });
+
+  const publicApiPaths = new Set([
+    "/api/stats", "/api/stats/social-proof", "/api/market-pulse",
+    "/api/job-density", "/api/track", "/api/events",
+  ]);
+  const publicApiPrefixes = ["/api/auth/", "/api/stats/", "/api/jobs"];
+
+  async function apiKeyGuard(req: any, res: any, next: any) {
+    if (req.user) return next();
+    if (publicApiPaths.has(req.path)) return next();
+    if (publicApiPrefixes.some(p => req.path.startsWith(p))) return next();
+    if (req.path === "/api/market-intelligence") return next();
+
+    const apiKey = req.headers["x-api-key"];
+    if (apiKey) {
+      const [keyRow] = await db.select().from(apiKeys).where(and(eq(apiKeys.key, apiKey), eq(apiKeys.isActive, true))).limit(1);
+      if (keyRow) {
+        await db.update(apiKeys).set({ lastUsedAt: new Date() }).where(eq(apiKeys.id, keyRow.id));
+        return next();
+      }
+      return res.status(403).json({ error: "Invalid API key. Contact admin@lawjobs.co for API access." });
+    }
+
+    const origin = req.headers.origin || "";
+    const referer = req.headers.referer || "";
+    const isFromApp = origin.includes("lawjobs.co") || origin.includes("localhost") || origin.includes("replit") ||
+                      referer.includes("lawjobs.co") || referer.includes("localhost") || referer.includes("replit");
+    const hasCookie = req.headers.cookie && req.headers.cookie.includes("connect.sid");
+    const acceptsHtml = (req.headers.accept || "").includes("text/html");
+
+    if (isFromApp || hasCookie || acceptsHtml) return next();
+
+    const ua = (req.headers["user-agent"] || "").toLowerCase();
+    const isBotLike = !ua || ua.includes("curl") || ua.includes("wget") || ua.includes("python") ||
+                      ua.includes("httpie") || ua.includes("postman") || ua.includes("insomnia") ||
+                      ua.includes("bot") || ua.includes("spider") || ua.includes("scraper");
+
+    if (isBotLike) {
+      return res.status(403).json({
+        error: "API access requires authorization. Contact admin@lawjobs.co for API access.",
+        docs: "https://lawjobs.co/api-access",
+      });
+    }
+
+    next();
+  }
+
+  app.use("/api/", apiKeyGuard);
 
   await storage.seedJobs();
   await storage.seedJobCategories();
@@ -301,6 +398,58 @@ export async function registerRoutes(
       console.error("Error fetching stats:", error);
       res.status(500).json({ error: "Failed to fetch stats" });
     }
+  });
+
+  app.get("/api/stats/social-proof", async (_req, res) => {
+    try {
+      const [{ total: totalUsersCount }] = await db.select({ total: count() }).from(users);
+      const [{ total: diagnosticsCount }] = await db.select({ total: count() }).from(diagnosticReports);
+      const activeJobs = await storage.getActiveJobs();
+      const uniqueCompanies = new Set(activeJobs.map(j => j.company)).size;
+      res.json({
+        diagnosticsRun: Number(diagnosticsCount),
+        totalUsers: Number(totalUsersCount),
+        jobsCurated: activeJobs.length,
+        companiesTracked: uniqueCompanies,
+      });
+    } catch (error) {
+      console.error("Error fetching social proof:", error);
+      res.status(500).json({ error: "Failed to fetch social proof" });
+    }
+  });
+
+  app.post("/api/admin/api-keys", isAuthenticated, async (req: any, res) => {
+    const user = req.user as any;
+    if (!user?.isAdmin) return res.status(403).json({ error: "Admin access required" });
+    const { label } = req.body;
+    if (!label) return res.status(400).json({ error: "Label is required" });
+    const key = crypto.randomBytes(32).toString("hex");
+    await db.insert(apiKeys).values({ key, label, createdBy: user.email });
+    res.json({ key, label, message: "API key created. Store it securely — it won't be shown again." });
+  });
+
+  app.get("/api/admin/api-keys", isAuthenticated, async (req: any, res) => {
+    const user = req.user as any;
+    if (!user?.isAdmin) return res.status(403).json({ error: "Admin access required" });
+    const keys = await db.select({
+      id: apiKeys.id,
+      label: apiKeys.label,
+      createdBy: apiKeys.createdBy,
+      isActive: apiKeys.isActive,
+      lastUsedAt: apiKeys.lastUsedAt,
+      createdAt: apiKeys.createdAt,
+      keyPreview: sql<string>`'...' || RIGHT(${apiKeys.key}, 8)`,
+    }).from(apiKeys).orderBy(desc(apiKeys.createdAt));
+    res.json(keys);
+  });
+
+  app.patch("/api/admin/api-keys/:id", isAuthenticated, async (req: any, res) => {
+    const user = req.user as any;
+    if (!user?.isAdmin) return res.status(403).json({ error: "Admin access required" });
+    const id = parseInt(req.params.id);
+    const { isActive } = req.body;
+    await db.update(apiKeys).set({ isActive }).where(eq(apiKeys.id, id));
+    res.json({ success: true });
   });
 
   app.get("/api/stats/historical", optionalAuth, async (_req: any, res) => {
@@ -648,7 +797,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/jobs", async (req, res) => {
+  app.get("/api/jobs", jobsLimiter, async (req, res) => {
     try {
       const page = Math.max(1, parseInt(String(req.query.page || '1')));
       const limit = Math.min(100, Math.max(1, parseInt(String(req.query.limit || '20'))));
@@ -775,7 +924,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/jobs/:id", async (req, res) => {
+  app.get("/api/jobs/:id", optionalAuth, async (req: any, res) => {
     try {
       const id = parseInt(req.params.id as string);
       if (isNaN(id)) {
@@ -784,6 +933,28 @@ export async function registerRoutes(
       const job = await storage.getPublicJob(id);
       if (!job) {
         return res.status(404).json({ error: "Job not found" });
+      }
+      const user = req.user as any;
+      if (!user) {
+        const truncatedDesc = job.description
+          ? job.description.substring(0, 150) + (job.description.length > 150 ? "..." : "")
+          : "";
+        return res.json({
+          id: job.id,
+          title: job.title,
+          company: job.company,
+          companyLogo: job.companyLogo,
+          location: job.location,
+          locationType: job.locationType,
+          isRemote: job.isRemote,
+          workMode: (job as any).workMode,
+          roleCategory: job.roleCategory,
+          seniorityLevel: job.seniorityLevel,
+          postedDate: job.postedDate,
+          careerTrack: (job as any).careerTrack,
+          description: truncatedDesc,
+          restricted: true,
+        });
       }
       res.json(job);
     } catch (error) {
@@ -8165,11 +8336,31 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
     }
   });
 
-  app.get("/api/market-intelligence", async (_req, res) => {
+  app.get("/api/market-intelligence", intelligenceLimiter, optionalAuth, async (_req: any, res) => {
     try {
+      const user = _req.user as any;
+      const userId = user?.id;
+      let isPro = false;
+      if (userId) {
+        const isAdmin = await storage.isUserAdmin(userId);
+        if (isAdmin) isPro = true;
+        else {
+          const subData = await storage.getUserSubscription(userId);
+          isPro = subData?.subscriptionTier === "pro" && subData?.subscriptionStatus === "active";
+        }
+      }
+
       const cachedData = getMarketIntelligenceCache();
       if (cachedData) {
-        return res.json(cachedData);
+        if (!isPro) {
+          return res.json(addAttribution({
+            overview: cachedData.overview,
+            careerPaths: cachedData.careerPaths?.map((p: any) => ({ name: p.name, jobCount: p.jobCount })),
+            generatedAt: cachedData.generatedAt,
+            restricted: true,
+          }, user?.email));
+        }
+        return res.json(addAttribution(cachedData, user?.email));
       }
 
       const allJobs = await storage.getPublishedJobs();
@@ -8387,7 +8578,16 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
       };
 
       setMarketIntelligenceCache(result);
-      res.json(result);
+
+      if (!isPro) {
+        return res.json(addAttribution({
+          overview: result.overview,
+          careerPaths: result.careerPaths?.map((p: any) => ({ name: p.name, jobCount: p.jobCount })),
+          generatedAt: result.generatedAt,
+          restricted: true,
+        }, user?.email));
+      }
+      res.json(addAttribution(result, user?.email));
     } catch (error: any) {
       console.error("Error computing market intelligence:", error);
       res.status(500).json({ error: "Failed to compute market intelligence" });
@@ -8435,7 +8635,7 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
     return false;
   }
 
-  app.get("/api/market-intelligence/transition", async (_req, res) => {
+  app.get("/api/market-intelligence/transition", intelligenceLimiter, isAuthenticated, requirePro, async (_req: any, res) => {
     try {
       if (transitionCache && Date.now() - transitionCache.timestamp < TRANSITION_CACHE_TTL) {
         return res.json(transitionCache.data);
@@ -8677,7 +8877,8 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
       };
 
       transitionCache = { data: result, timestamp: Date.now() };
-      res.json(result);
+      const user = _req.user as any;
+      res.json(addAttribution(result, user?.email));
     } catch (error: any) {
       console.error("Error computing transition intelligence:", error);
       res.status(500).json({ error: "Failed to compute transition intelligence" });
@@ -9138,6 +9339,52 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
       console.error("Error processing quiz:", error);
       res.status(500).json({ error: "Failed to process quiz" });
     }
+  });
+
+  app.get("/share/readiness", async (req, res) => {
+    const score = parseInt(String(req.query.score || "0"));
+    const path = String(req.query.path || "Legal Tech");
+    const clampedScore = Math.min(100, Math.max(0, score));
+    const fitLabel = clampedScore >= 75 ? "Strong Fit" : clampedScore >= 50 ? "Good Fit" : clampedScore >= 25 ? "Emerging Fit" : "Early Explorer";
+    const ogUrl = `https://lawjobs.co/share/readiness?score=${clampedScore}&path=${encodeURIComponent(path)}`;
+
+    res.setHeader("Content-Type", "text/html");
+    res.send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>My Legal Tech Readiness: ${clampedScore}/100 — ${fitLabel} | lawjobs.co</title>
+<meta name="description" content="I scored ${clampedScore}/100 on the Legal Tech Career Readiness Assessment. My top path: ${path}. Check yours free at lawjobs.co">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Legal Tech Readiness: ${clampedScore}/100 — ${fitLabel}">
+<meta property="og:description" content="Top career path: ${path}. Assessed by lawjobs.co — the career intelligence platform for lawyers moving into legal tech. Check your fit free.">
+<meta property="og:url" content="${ogUrl}">
+<meta property="og:site_name" content="lawjobs.co">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Legal Tech Readiness: ${clampedScore}/100 — ${fitLabel}">
+<meta name="twitter:description" content="Top career path: ${path}. Check yours free at lawjobs.co">
+<style>
+body{margin:0;font-family:'DM Sans',system-ui,sans-serif;background:#0f172a;color:#fff;display:flex;align-items:center;justify-content:center;min-height:100vh}
+.card{background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%);border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:48px;text-align:center;max-width:480px;width:90%}
+.score{font-size:72px;font-weight:700;background:linear-gradient(135deg,#60a5fa,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;line-height:1}
+.label{font-size:18px;color:#94a3b8;margin:8px 0 24px}
+.path{font-size:14px;color:#cbd5e1;margin:4px 0}
+.path strong{color:#fff}
+.brand{margin-top:32px;font-size:13px;color:#64748b}
+.brand a{color:#60a5fa;text-decoration:none}
+.cta{display:inline-block;margin-top:20px;padding:12px 28px;background:#3b82f6;color:#fff;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px}
+</style>
+</head>
+<body>
+<div class="card">
+<div class="score">${clampedScore}</div>
+<div class="label">${fitLabel}</div>
+<p class="path">Top career path: <strong>${path}</strong></p>
+<a class="cta" href="https://lawjobs.co/quiz">Check Your Fit Free</a>
+<p class="brand">Assessed by <a href="https://lawjobs.co">lawjobs.co</a> — Career intelligence for legal tech</p>
+</div>
+</body>
+</html>`);
   });
 
   runStartupCleanup();
