@@ -305,12 +305,12 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string):
     size: "LETTER",
     margin: MARGIN,
     info: {
-      Title: `Legal Tech Careers — ${getQuarterLabel()} Hiring Report`,
+      Title: `Legal Tech Careers - ${getQuarterLabel()} Hiring Report`,
       Author: "Legal Tech Careers",
       Creator: "Legal Tech Careers Platform",
       Producer: "Legal Tech Careers",
     },
-    pdfVersion: "1.7",
+    pdfVersion: "1.4",
     autoFirstPage: true,
   });
 
@@ -387,8 +387,8 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string):
   }
 
   // ── EXECUTIVE SUMMARY ──
+  ensureSpace(doc, 150, pn);
   sectionTitle(doc, "01", "Executive Summary", pn);
-  ensureSpace(doc, 110, pn);
 
   const boxW = (CONTENT_WIDTH - 16) / 3;
   const boxH = 48;
@@ -516,7 +516,6 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string):
 
   if (wmTotal > 0 || aiTotal > 0) {
     sectionTitle(doc, "05", "Work Mode & AI Intensity", pn);
-    ensureSpace(doc, 80, pn);
 
     if (wmTotal > 0) {
       const wmBoxW = (CONTENT_WIDTH / 2 - 20) / 3;
@@ -604,7 +603,6 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string):
   // ── TOP COMPANIES & GEOGRAPHY ──
   if (data.topCompanies.length > 0 || data.geography.length > 0) {
     sectionTitle(doc, "07", "Top Companies & Geography", pn);
-    ensureSpace(doc, 170, pn);
 
     const halfW = (CONTENT_WIDTH - 24) / 2;
     const startY = doc.y;

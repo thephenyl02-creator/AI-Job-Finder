@@ -302,36 +302,22 @@ export default function MarketIntelligence() {
   const salaryBlurred = !isPro && salaryByPath.length > 3;
   const salaryMax = Math.max(...(salaryByPath.length > 0 ? salaryByPath.map((s) => s.medianMax || 0) : [0]), 1);
 
-  const downloadPdf = async (url: string, period: string) => {
-    const response = await fetch(url, {
-      credentials: "include",
-      headers: { "Accept": "application/pdf" },
-    });
-    if (!response.ok) {
-      const body = await response.json().catch(() => ({}));
-      throw new Error(body.error || "Failed to download report");
-    }
-    const contentType = response.headers.get("content-type") || "";
-    if (!contentType.includes("application/pdf")) {
-      throw new Error("Unexpected response — expected a PDF file");
-    }
-    const blob = await response.blob();
-    const blobUrl = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = blobUrl;
-    a.download = `legal-tech-careers-${period}-report.pdf`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(blobUrl);
+  const triggerDownload = (url: string) => {
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", "");
+    link.setAttribute("target", "_self");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const handleDownload = async (period: string) => {
     track({ eventType: "mi_report_download", metadata: { period } });
     setDownloading(true);
     try {
-      await downloadPdf(`/api/market-intelligence/report?period=${period}`, period);
-      toast({ title: "Report downloaded", description: `Your ${period} report has been saved.` });
+      triggerDownload(`/api/market-intelligence/report?period=${period}`);
+      toast({ title: "Report downloading", description: `Your ${period} report is being prepared.` });
     } catch (err: any) {
       console.error("Download failed:", err);
       toast({ title: "Download failed", description: err.message || "Something went wrong. Please try again.", variant: "destructive" });
@@ -360,8 +346,8 @@ export default function MarketIntelligence() {
         throw new Error(body.error || "Failed to request download.");
       }
       const { token } = await tokenRes.json();
-      await downloadPdf(`/api/market-intelligence/report?token=${token}`, period);
-      toast({ title: "Report downloaded", description: "Your free report has been saved." });
+      triggerDownload(`/api/market-intelligence/report?token=${token}`);
+      toast({ title: "Report downloading", description: "Your free report is being prepared." });
     } catch (err: any) {
       console.error("Download failed:", err);
       toast({ title: "Download failed", description: err.message || "Something went wrong. Please try again.", variant: "destructive" });
