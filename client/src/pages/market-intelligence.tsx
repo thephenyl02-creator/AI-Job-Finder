@@ -10,7 +10,6 @@ import { Footer } from "@/components/footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   DropdownMenu,
@@ -200,7 +199,7 @@ function WorkModeCenterLabel({ viewBox, total }: { viewBox?: { cx: number; cy: n
 
 export default function MarketIntelligence() {
   usePageTitle("Market Intelligence");
-  const { isAuthenticated, isAdmin } = useAuth();
+  const { isAdmin } = useAuth();
   const { isPro } = useSubscription();
   const { track } = useActivityTracker();
 
@@ -208,8 +207,6 @@ export default function MarketIntelligence() {
 
   const { toast } = useToast();
   const [downloading, setDownloading] = useState(false);
-  const [leadEmail, setLeadEmail] = useState("");
-  const [emailError, setEmailError] = useState("");
 
   const { data, isLoading, isError, refetch } = useQuery<MarketIntelligenceData>({
     queryKey: ["/api/market-intelligence"],
@@ -326,35 +323,6 @@ export default function MarketIntelligence() {
     }
   };
 
-  const handleAnonDownload = async (period: string) => {
-    setEmailError("");
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!leadEmail.trim() || !emailRegex.test(leadEmail.trim())) {
-      setEmailError("Please enter a valid email address.");
-      return;
-    }
-    setDownloading(true);
-    try {
-      track({ eventType: "mi_report_download", metadata: { period } });
-      const tokenRes = await fetch("/api/report/request-download", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: leadEmail.trim(), period }),
-      });
-      if (!tokenRes.ok) {
-        const body = await tokenRes.json().catch(() => ({}));
-        throw new Error(body.error || "Failed to request download.");
-      }
-      const { token } = await tokenRes.json();
-      triggerDownload(`/api/market-intelligence/report?token=${token}`);
-      toast({ title: "Report downloading", description: "Your free report is being prepared." });
-    } catch (err: any) {
-      console.error("Download failed:", err);
-      toast({ title: "Download failed", description: err.message || "Something went wrong. Please try again.", variant: "destructive" });
-    } finally {
-      setDownloading(false);
-    }
-  };
 
   return (
     <div className="min-h-screen bg-background flex flex-col overflow-x-hidden">
@@ -372,7 +340,7 @@ export default function MarketIntelligence() {
                 Live data from {overview.totalJobs} roles across {overview.totalCompanies} companies, updated daily.
               </p>
             </div>
-            {isAuthenticated ? (
+            {isPro || isAdmin ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" className="gap-2 shrink-0" disabled={downloading} data-testid="button-download-report">
@@ -397,30 +365,13 @@ export default function MarketIntelligence() {
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <div className="flex flex-col gap-2 shrink-0 w-full sm:w-auto" data-testid="section-email-download">
-                <div className="flex gap-2">
-                  <Input
-                    type="email"
-                    placeholder="Your email"
-                    value={leadEmail}
-                    onChange={(e) => { setLeadEmail(e.target.value); setEmailError(""); }}
-                    className="w-48 sm:w-56 h-9 text-sm"
-                    data-testid="input-lead-email"
-                  />
-                  <Button
-                    variant="default"
-                    className="gap-2 h-9 whitespace-nowrap"
-                    disabled={downloading}
-                    onClick={() => handleAnonDownload("monthly")}
-                    data-testid="button-download-free"
-                  >
-                    {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-                    {downloading ? "Downloading..." : "Download Free Report"}
-                  </Button>
-                </div>
-                {emailError && <p className="text-xs text-destructive" data-testid="text-email-error">{emailError}</p>}
-                <p className="text-[11px] text-muted-foreground">PDF report with skills, salaries, and career paths.</p>
-              </div>
+              <Link href="/pricing">
+                <Button variant="outline" className="gap-2 shrink-0" data-testid="button-upgrade-download">
+                  <Lock className="h-4 w-4" />
+                  Pro Feature
+                  <Crown className="h-3.5 w-3.5 text-amber-500" />
+                </Button>
+              </Link>
             )}
           </div>
         </section>

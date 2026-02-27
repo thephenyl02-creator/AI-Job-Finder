@@ -80,7 +80,7 @@ Legal Tech Careers is a career intelligence platform designed for legal professi
 - **Events**: A curated listing of real, verified legal tech events.
 - **Opportunity Map**: An interactive global map displaying job density by country.
 - **SEO**: Dynamic meta tags, `JobPosting` JSON-LD, and an XML sitemap.
-- **Market Intelligence Page**: A public, Bloomberg-style data report aggregating published job data, with various metrics, charts, and downloadable PDF reports. PDF is free for all users — logged-in users download directly, anonymous visitors provide an email (captured in `report_leads` table). OG meta tags set dynamically for LinkedIn sharing.
+- **Market Intelligence Page**: A public, Bloomberg-style data report aggregating published job data, with various metrics, charts, and downloadable PDF reports. PDF download is a Pro-only feature — Pro users get a download dropdown (Weekly/Monthly/Annual), while free and anonymous users see an upgrade prompt linking to `/pricing`. The page data itself remains publicly viewable. OG meta tags set dynamically for LinkedIn sharing.
 - **Pro Feature Gates**: Backend and frontend checks to gate premium features, with upgrade prompts for Free users.
 
 ## External Dependencies
