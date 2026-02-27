@@ -10,7 +10,7 @@ import { clearMarketIntelligenceCache } from '../lib/mi-cache';
 import type { Job } from '@shared/schema';
 import { jobs, getTrackForCategory } from '@shared/schema';
 import { db } from '../db';
-import { eq, and, sql } from 'drizzle-orm';
+import { eq, ne, and, sql } from 'drizzle-orm';
 import axios from 'axios';
 
 function normalizeCompanyName(name: string): string {
@@ -1167,7 +1167,9 @@ export async function recoverStuckReadyJobs(): Promise<{ promoted: number; total
   const candidates = await db.select().from(jobs).where(
     and(
       eq(jobs.pipelineStatus, 'ready'),
-      eq(jobs.isPublished, false)
+      eq(jobs.isPublished, false),
+      ne(jobs.jobStatus, 'archived'),
+      ne(jobs.jobStatus, 'closed')
     )
   );
 

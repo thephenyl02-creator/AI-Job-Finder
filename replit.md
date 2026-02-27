@@ -54,9 +54,11 @@ Legal Tech Careers is a career intelligence platform designed for legal professi
 - **Coverage**: All user-facing pages fire `page_view` on mount. Key conversion events: `upgrade_click`, `job_save`, `job_card_click`, `diagnostic_complete`, `diagnostic_share`, `quiz_complete`, `mi_report_download`, `resume_export`, `map_country_click`.
 
 ### Job Archiving & Historical Data
-- **Soft Archive**: Admin "delete" sets `jobStatus='archived'`, `isActive=false`, `isPublished=false` with timestamps — no data destruction.
+- **Soft Archive**: Admin "delete" sets `jobStatus='archived'`, `isActive=false`, `isPublished=false`, `pipelineStatus='archived'` with timestamps — no data destruction. The `pipelineStatus='archived'` ensures the recovery worker does not re-publish deleted jobs.
 - **Timestamps**: `statusChangedAt` (any state change), `deactivatedAt` (when deactivated), `publishedAt` (when published), `closedAt` (when closed/archived). Set automatically by storage layer, reliability worker, and deactivation logic.
-- **Historical API**: `GET /api/stats/historical` returns `totalEverScraped`, `totalPublished`, `totalArchived`, `jobsByMonth`, `categoryByMonth`.
+- **Historical API**: `GET /api/stats/historical` returns `totalEverScraped`, `totalPublished`, `totalArchived`, `jobsByMonth`, `publishedByMonth`, `archivedByMonth`, `categoryByMonth`, `workModeByMonth`, `seniorityByMonth`, `companyTrends`, `skillTrends`, `geographyTrends`. All monthly breakdowns keyed by `YYYY-MM`.
+- **Market Evolution UI**: The Market Intelligence page includes a "Market Evolution" section with interactive Recharts visualizations: job volume over time (bar), category mix (stacked area), work mode shift (stacked bar), skills trajectory (multi-line), top companies (horizontal bars), and geographic distribution. Data sourced from `/api/stats/historical`.
+- **PDF Historical Section**: The downloadable PDF report includes a "Market Evolution" section (section 08) with monthly job volume tables, category distribution by month, top skills across all months, and work mode trends.
 
 ### Job Curation Pipeline
 - **Process**: A two-layer pipeline (raw ingestion → AI enrichment → trust gate → published inventory) ensures job quality, deduplication, and link validation.

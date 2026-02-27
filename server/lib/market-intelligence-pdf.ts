@@ -29,6 +29,14 @@ interface MarketData {
   seniorityDistribution: { level: string; count: number }[];
   topCompanies: { company: string; jobCount: number }[];
   geography: { countryCode: string; countryName: string; jobCount: number }[];
+  historicalTrends?: {
+    totalEverScraped: number;
+    jobsByMonth: Record<string, number>;
+    publishedByMonth: Record<string, number>;
+    categoryByMonth: Record<string, Record<string, number>>;
+    workModeByMonth: Record<string, Record<string, number>>;
+    skillTrends: Record<string, { name: string; count: number }[]>;
+  };
 }
 
 function getQuarterLabel(): string {
@@ -694,6 +702,195 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string, 
 
     const companiesInsight = generateSectionInsight("companies", data);
     if (companiesInsight) insightBlock(doc, companiesInsight, pn);
+  }
+
+  // ── MARKET EVOLUTION / HISTORICAL TRENDS ──
+  if (data.historicalTrends && Object.keys(data.historicalTrends.jobsByMonth).length > 0) {
+    const ht = data.historicalTrends;
+    const months = Object.keys(ht.jobsByMonth).sort();
+    const formatMo = (m: string) => {
+      const [y, mo] = m.split('-');
+      const names = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      return `${names[parseInt(mo) - 1]} '${y.slice(2)}`;
+    };
+
+    sectionTitle(doc, "08", "Market Evolution", pn);
+
+    ensureSpace(doc, 40, pn);
+    doc.save();
+    doc.fontSize(9).fillColor(NAVY).font("Helvetica-Bold")
+      .text("Monthly Job Volume", MARGIN, doc.y, { width: CONTENT_WIDTH });
+    doc.restore();
+    doc.y += 14;
+
+    const volHeaderY = doc.y;
+    const volCols = [MARGIN, MARGIN + 80, MARGIN + 180, MARGIN + 280, MARGIN + 380];
+    const volHeaders = ["Month", "Discovered", "Published", "Net Change", "Cumulative"];
+    doc.save();
+    doc.fontSize(7).fillColor(GRAY_500).font("Helvetica-Bold");
+    volHeaders.forEach((h, i) => doc.text(h, volCols[i], volHeaderY, { width: 90 }));
+    doc.restore();
+    doc.y = volHeaderY + 14;
+
+    let cumulative = 0;
+    let prevDiscovered = 0;
+    for (const m of months) {
+      ensureSpace(doc, 14, pn);
+      const discovered = ht.jobsByMonth[m] || 0;
+      const published = ht.publishedByMonth?.[m] || 0;
+      cumulative += discovered;
+      const change = discovered - prevDiscovered;
+      const changeStr = prevDiscovered === 0 ? '—' : (change >= 0 ? `+${change}` : `${change}`);
+      prevDiscovered = discovered;
+
+      const rowY = doc.y;
+      doc.save();
+      doc.fontSize(7.5).fillColor(NAVY).font("Helvetica")
+        .text(formatMo(m), volCols[0], rowY, { width: 80 });
+      doc.fillColor(GRAY_600).font("Helvetica")
+        .text(String(discovered), volCols[1], rowY, { width: 90 })
+        .text(String(published), volCols[2], rowY, { width: 90 })
+        .text(changeStr, volCols[3], rowY, { width: 90 })
+        .text(cumulative.toLocaleString(), volCols[4], rowY, { width: 90 });
+      doc.restore();
+      doc.y = rowY + 13;
+    }
+    doc.y += 6;
+
+    const allCats = new Set<string>();
+    for (const cats of Object.values(ht.categoryByMonth)) {
+      for (const cat of Object.keys(cats)) allCats.add(cat);
+    }
+    const topCats = [...allCats]
+      .map(cat => ({
+        name: cat,
+        total: Object.values(ht.categoryByMonth).reduce((s, m) => s + (m[cat] || 0), 0),
+      }))
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 8);
+
+    if (topCats.length > 0) {
+      ensureSpace(doc, 40, pn);
+      doc.save();
+      doc.fontSize(9).fillColor(NAVY).font("Helvetica-Bold")
+        .text("Category Distribution by Month", MARGIN, doc.y, { width: CONTENT_WIDTH });
+      doc.restore();
+      doc.y += 14;
+
+      const catHeaderY = doc.y;
+      doc.save();
+      doc.fontSize(7).fillColor(GRAY_500).font("Helvetica-Bold")
+        .text("Category", MARGIN, catHeaderY, { width: 140 });
+      let cx = MARGIN + 150;
+      for (const m of months) {
+        doc.text(formatMo(m), cx, catHeaderY, { width: 60 });
+        cx += 60;
+      }
+      doc.text("Total", cx, catHeaderY, { width: 50 });
+      doc.restore();
+      doc.y = catHeaderY + 14;
+
+      for (const cat of topCats) {
+        ensureSpace(doc, 14, pn);
+        const rowY = doc.y;
+        doc.save();
+        doc.fontSize(7.5).fillColor(NAVY).font("Helvetica")
+          .text(cat.name.length > 24 ? cat.name.slice(0, 22) + '..' : cat.name, MARGIN, rowY, { width: 140 });
+        let rx = MARGIN + 150;
+        for (const m of months) {
+          const val = ht.categoryByMonth[m]?.[cat.name] || 0;
+          doc.fillColor(val > 0 ? GRAY_600 : GRAY_300).font("Helvetica")
+            .text(val > 0 ? String(val) : '—', rx, rowY, { width: 60 });
+          rx += 60;
+        }
+        doc.fillColor(NAVY).font("Helvetica-Bold")
+          .text(String(cat.total), rx, rowY, { width: 50 });
+        doc.restore();
+        doc.y = rowY + 13;
+      }
+      doc.y += 6;
+    }
+
+    const allSkills = new Map<string, number>();
+    for (const skills of Object.values(ht.skillTrends || {})) {
+      for (const s of skills) allSkills.set(s.name, (allSkills.get(s.name) || 0) + s.count);
+    }
+    const topPdfSkills = [...allSkills.entries()].sort(([,a],[,b]) => b - a).slice(0, 8);
+
+    if (topPdfSkills.length > 0) {
+      ensureSpace(doc, 40, pn);
+      doc.save();
+      doc.fontSize(9).fillColor(NAVY).font("Helvetica-Bold")
+        .text("Top Skills Across All Months", MARGIN, doc.y, { width: CONTENT_WIDTH });
+      doc.restore();
+      doc.y += 14;
+
+      const skillMax = topPdfSkills[0]?.[1] || 1;
+      for (const [skill, count] of topPdfSkills) {
+        ensureSpace(doc, 16, pn);
+        const rowY = doc.y;
+        doc.save();
+        doc.fontSize(7.5).fillColor(NAVY).font("Helvetica")
+          .text(skill.length > 30 ? skill.slice(0, 28) + '..' : skill, MARGIN, rowY, { width: 160 });
+        doc.restore();
+        drawBar(doc, MARGIN + 170, rowY + 1, 200, count / skillMax, 7, ACCENT);
+        doc.save();
+        doc.fontSize(7.5).fillColor(GRAY_500).font("Helvetica-Bold")
+          .text(String(count), MARGIN + 380, rowY, { width: 40 });
+        doc.restore();
+        doc.y = rowY + 14;
+      }
+      doc.y += 6;
+    }
+
+    ensureSpace(doc, 40, pn);
+    const wm = ht.workModeByMonth || {};
+    const wmMonths = Object.keys(wm).sort();
+    if (wmMonths.length > 0) {
+      doc.save();
+      doc.fontSize(9).fillColor(NAVY).font("Helvetica-Bold")
+        .text("Work Mode Trends", MARGIN, doc.y, { width: CONTENT_WIDTH });
+      doc.restore();
+      doc.y += 14;
+
+      const wmHeaderY = doc.y;
+      doc.save();
+      doc.fontSize(7).fillColor(GRAY_500).font("Helvetica-Bold")
+        .text("Month", MARGIN, wmHeaderY, { width: 80 })
+        .text("Remote", MARGIN + 100, wmHeaderY, { width: 70 })
+        .text("Hybrid", MARGIN + 180, wmHeaderY, { width: 70 })
+        .text("On-site", MARGIN + 260, wmHeaderY, { width: 70 })
+        .text("Total", MARGIN + 340, wmHeaderY, { width: 60 });
+      doc.restore();
+      doc.y = wmHeaderY + 14;
+
+      for (const m of wmMonths) {
+        ensureSpace(doc, 14, pn);
+        const remote = wm[m]?.['remote'] || 0;
+        const hybrid = wm[m]?.['hybrid'] || 0;
+        const onsite = wm[m]?.['onsite'] || 0;
+        const total = remote + hybrid + onsite;
+        const rowY = doc.y;
+        doc.save();
+        doc.fontSize(7.5).fillColor(NAVY).font("Helvetica")
+          .text(formatMo(m), MARGIN, rowY, { width: 80 });
+        doc.fillColor(GRAY_600).font("Helvetica")
+          .text(`${remote} (${total ? Math.round(remote/total*100) : 0}%)`, MARGIN + 100, rowY, { width: 70 })
+          .text(`${hybrid} (${total ? Math.round(hybrid/total*100) : 0}%)`, MARGIN + 180, rowY, { width: 70 })
+          .text(`${onsite} (${total ? Math.round(onsite/total*100) : 0}%)`, MARGIN + 260, rowY, { width: 70 })
+          .text(String(total), MARGIN + 340, rowY, { width: 60 });
+        doc.restore();
+        doc.y = rowY + 13;
+      }
+      doc.y += 6;
+    }
+
+    ensureSpace(doc, 30, pn);
+    doc.save();
+    doc.fontSize(7.5).fillColor(GRAY_500).font("Helvetica")
+      .text(`Based on ${ht.totalEverScraped.toLocaleString()} jobs tracked across ${months.length} month(s).`, MARGIN, doc.y, { width: CONTENT_WIDTH, align: "center" });
+    doc.restore();
+    doc.y += 16;
   }
 
   // ── WHAT THIS MEANS FOR LAWYERS ──

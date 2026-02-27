@@ -30,6 +30,11 @@ import {
   Pie,
   Cell,
   Label,
+  LineChart,
+  Line,
+  AreaChart,
+  Area,
+  Legend,
 } from "recharts";
 import {
   Briefcase,
@@ -50,6 +55,7 @@ import {
   MapPin,
   FileText,
   Loader2,
+  Activity,
 } from "lucide-react";
 
 interface MarketIntelligenceData {
@@ -212,6 +218,23 @@ export default function MarketIntelligence() {
 
   const { data, isLoading, isError, refetch } = useQuery<MarketIntelligenceData>({
     queryKey: ["/api/market-intelligence"],
+  });
+
+  const { data: historicalData } = useQuery<{
+    totalEverScraped: number;
+    totalPublished: number;
+    totalArchived: number;
+    jobsByMonth: Record<string, number>;
+    publishedByMonth: Record<string, number>;
+    archivedByMonth: Record<string, number>;
+    categoryByMonth: Record<string, Record<string, number>>;
+    workModeByMonth: Record<string, Record<string, number>>;
+    seniorityByMonth: Record<string, Record<string, number>>;
+    companyTrends: Record<string, { name: string; count: number }[]>;
+    skillTrends: Record<string, { name: string; count: number }[]>;
+    geographyTrends: Record<string, { name: string; count: number }[]>;
+  }>({
+    queryKey: ["/api/stats/historical"],
   });
 
   useEffect(() => {
@@ -910,6 +933,306 @@ export default function MarketIntelligence() {
                   </div>
                 </div>
               )}
+            </div>
+          </section>
+        )}
+
+        {historicalData && Object.keys(historicalData.jobsByMonth).length > 0 && (
+          <section className="border-t border-border/30" data-testid="section-market-evolution">
+            <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-14 sm:pt-24">
+              <SectionLabel>Market Evolution</SectionLabel>
+              <h2 className="text-xl sm:text-3xl font-serif font-medium text-foreground mb-2" data-testid="text-evolution-title">
+                How the market is changing
+              </h2>
+              <p className="text-sm text-muted-foreground mb-10 max-w-xl">
+                Month-by-month patterns showing how legal tech hiring is evolving — volume, categories, skills, and geography.
+              </p>
+
+              {(() => {
+                const months = Object.keys(historicalData.jobsByMonth).sort();
+                const formatMonth = (m: string) => {
+                  const [y, mo] = m.split('-');
+                  const names = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+                  return `${names[parseInt(mo) - 1]} ${y.slice(2)}`;
+                };
+
+                const volumeData = months.map(m => ({
+                  month: formatMonth(m),
+                  discovered: historicalData.jobsByMonth[m] || 0,
+                  published: historicalData.publishedByMonth?.[m] || 0,
+                  archived: historicalData.archivedByMonth?.[m] || 0,
+                }));
+
+                const allCategories = new Set<string>();
+                for (const cats of Object.values(historicalData.categoryByMonth)) {
+                  for (const cat of Object.keys(cats)) allCategories.add(cat);
+                }
+                const topCategories = [...allCategories]
+                  .map(cat => ({
+                    name: cat,
+                    total: Object.values(historicalData.categoryByMonth).reduce((s, m) => s + (m[cat] || 0), 0),
+                  }))
+                  .sort((a, b) => b.total - a.total)
+                  .slice(0, 6)
+                  .map(c => c.name);
+
+                const categoryData = months.map(m => {
+                  const row: Record<string, any> = { month: formatMonth(m) };
+                  for (const cat of topCategories) {
+                    row[cat] = historicalData.categoryByMonth[m]?.[cat] || 0;
+                  }
+                  return row;
+                });
+
+                const workModeData = months.map(m => ({
+                  month: formatMonth(m),
+                  remote: historicalData.workModeByMonth?.[m]?.['remote'] || 0,
+                  hybrid: historicalData.workModeByMonth?.[m]?.['hybrid'] || 0,
+                  onsite: historicalData.workModeByMonth?.[m]?.['onsite'] || 0,
+                }));
+
+                const allSkills = new Map<string, number>();
+                for (const skills of Object.values(historicalData.skillTrends || {})) {
+                  for (const s of skills) {
+                    allSkills.set(s.name, (allSkills.get(s.name) || 0) + s.count);
+                  }
+                }
+                const topSkills = [...allSkills.entries()]
+                  .sort(([,a], [,b]) => b - a)
+                  .slice(0, 6)
+                  .map(([name]) => name);
+
+                const skillsData = months.map(m => {
+                  const row: Record<string, any> = { month: formatMonth(m) };
+                  const monthSkills = historicalData.skillTrends?.[m] || [];
+                  for (const skill of topSkills) {
+                    const found = monthSkills.find(s => s.name === skill);
+                    row[skill] = found?.count || 0;
+                  }
+                  return row;
+                });
+
+                const latestMonth = months[months.length - 1];
+                const topGeo = historicalData.geographyTrends?.[latestMonth] || [];
+
+                const topCompanies = historicalData.companyTrends?.[latestMonth] || [];
+
+                const EVOLUTION_COLORS = [
+                  "hsl(var(--chart-1))",
+                  "hsl(var(--chart-2))",
+                  "hsl(var(--chart-3))",
+                  "hsl(var(--chart-4))",
+                  "hsl(var(--chart-5))",
+                  "hsl(220, 70%, 50%)",
+                ];
+
+                return (
+                  <div className="space-y-12">
+                    <div data-testid="chart-job-volume">
+                      <h3 className="text-base font-medium text-foreground mb-1 flex items-center gap-2">
+                        <Activity className="h-4 w-4 text-primary" />
+                        Job Volume Over Time
+                      </h3>
+                      <p className="text-xs text-muted-foreground mb-4">
+                        Total jobs discovered vs. published each month
+                      </p>
+                      <Card>
+                        <CardContent className="p-4 sm:p-6">
+                          <ResponsiveContainer width="100%" height={280}>
+                            <BarChart data={volumeData} barGap={2}>
+                              <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                              <YAxis tick={{ fontSize: 11 }} />
+                              <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} />
+                              <Legend wrapperStyle={{ fontSize: 11 }} />
+                              <Bar dataKey="discovered" name="Discovered" fill="hsl(var(--chart-1))" radius={[3, 3, 0, 0]} />
+                              <Bar dataKey="published" name="Published" fill="hsl(var(--chart-3))" radius={[3, 3, 0, 0]} />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </CardContent>
+                      </Card>
+                    </div>
+
+                    <div data-testid="chart-category-evolution">
+                      <h3 className="text-base font-medium text-foreground mb-1 flex items-center gap-2">
+                        <Briefcase className="h-4 w-4 text-primary" />
+                        Category Mix Over Time
+                      </h3>
+                      <p className="text-xs text-muted-foreground mb-4">
+                        How the share of different career paths is shifting
+                      </p>
+                      <Card>
+                        <CardContent className="p-4 sm:p-6">
+                          <ResponsiveContainer width="100%" height={320}>
+                            <AreaChart data={categoryData}>
+                              <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                              <YAxis tick={{ fontSize: 11 }} />
+                              <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} />
+                              <Legend wrapperStyle={{ fontSize: 11 }} />
+                              {topCategories.map((cat, i) => (
+                                <Area
+                                  key={cat}
+                                  type="monotone"
+                                  dataKey={cat}
+                                  stackId="1"
+                                  fill={EVOLUTION_COLORS[i % EVOLUTION_COLORS.length]}
+                                  stroke={EVOLUTION_COLORS[i % EVOLUTION_COLORS.length]}
+                                  fillOpacity={0.6}
+                                />
+                              ))}
+                            </AreaChart>
+                          </ResponsiveContainer>
+                        </CardContent>
+                      </Card>
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-8">
+                      <div data-testid="chart-work-mode-trends">
+                        <h3 className="text-base font-medium text-foreground mb-1 flex items-center gap-2">
+                          <Wifi className="h-4 w-4 text-primary" />
+                          Work Mode Shift
+                        </h3>
+                        <p className="text-xs text-muted-foreground mb-4">
+                          Remote vs. hybrid vs. on-site over time
+                        </p>
+                        <Card>
+                          <CardContent className="p-4 sm:p-6">
+                            <ResponsiveContainer width="100%" height={260}>
+                              <BarChart data={workModeData}>
+                                <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                                <YAxis tick={{ fontSize: 11 }} />
+                                <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} />
+                                <Legend wrapperStyle={{ fontSize: 11 }} />
+                                <Bar dataKey="remote" name="Remote" stackId="wm" fill="hsl(var(--chart-1))" />
+                                <Bar dataKey="hybrid" name="Hybrid" stackId="wm" fill="hsl(var(--chart-3))" />
+                                <Bar dataKey="onsite" name="On-site" stackId="wm" fill="hsl(var(--chart-4))" radius={[3, 3, 0, 0]} />
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </CardContent>
+                        </Card>
+                      </div>
+
+                      <div data-testid="chart-skills-trajectory">
+                        <h3 className="text-base font-medium text-foreground mb-1 flex items-center gap-2">
+                          <TrendingUp className="h-4 w-4 text-primary" />
+                          Skills Trajectory
+                        </h3>
+                        <p className="text-xs text-muted-foreground mb-4">
+                          Top skills demand over time
+                        </p>
+                        <Card>
+                          <CardContent className="p-4 sm:p-6">
+                            <ResponsiveContainer width="100%" height={260}>
+                              <LineChart data={skillsData}>
+                                <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                                <YAxis tick={{ fontSize: 11 }} />
+                                <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} />
+                                <Legend wrapperStyle={{ fontSize: 11 }} />
+                                {topSkills.map((skill, i) => (
+                                  <Line
+                                    key={skill}
+                                    type="monotone"
+                                    dataKey={skill}
+                                    stroke={EVOLUTION_COLORS[i % EVOLUTION_COLORS.length]}
+                                    strokeWidth={2}
+                                    dot={{ r: 3 }}
+                                    name={skill.length > 20 ? skill.slice(0, 18) + '...' : skill}
+                                  />
+                                ))}
+                              </LineChart>
+                            </ResponsiveContainer>
+                          </CardContent>
+                        </Card>
+                      </div>
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-8">
+                      <div data-testid="chart-top-companies">
+                        <h3 className="text-base font-medium text-foreground mb-1 flex items-center gap-2">
+                          <Building2 className="h-4 w-4 text-primary" />
+                          Top Hiring Companies
+                        </h3>
+                        <p className="text-xs text-muted-foreground mb-4">
+                          Most active employers this month
+                        </p>
+                        <Card>
+                          <CardContent className="p-4 sm:p-6">
+                            {topCompanies.length > 0 ? (
+                              <div className="space-y-2.5">
+                                {topCompanies.slice(0, 8).map((c, i) => {
+                                  const maxCount = topCompanies[0]?.count || 1;
+                                  const pct = Math.round((c.count / maxCount) * 100);
+                                  return (
+                                    <div key={c.name} data-testid={`company-trend-${i}`}>
+                                      <div className="flex items-center justify-between mb-0.5">
+                                        <span className="text-sm font-medium truncate max-w-[200px]">{c.name}</span>
+                                        <span className="text-xs text-muted-foreground">{c.count} jobs</span>
+                                      </div>
+                                      <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+                                        <div
+                                          className="h-full rounded-full bg-primary/60"
+                                          style={{ width: `${pct}%` }}
+                                        />
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            ) : (
+                              <p className="text-sm text-muted-foreground text-center py-8">No company data available yet</p>
+                            )}
+                          </CardContent>
+                        </Card>
+                      </div>
+
+                      <div data-testid="chart-geography-evolution">
+                        <h3 className="text-base font-medium text-foreground mb-1 flex items-center gap-2">
+                          <Globe className="h-4 w-4 text-primary" />
+                          Geographic Distribution
+                        </h3>
+                        <p className="text-xs text-muted-foreground mb-4">
+                          Where legal tech jobs are concentrated
+                        </p>
+                        <Card>
+                          <CardContent className="p-4 sm:p-6">
+                            {topGeo.length > 0 ? (
+                              <div className="space-y-2.5">
+                                {topGeo.slice(0, 8).map((g, i) => {
+                                  const maxCount = topGeo[0]?.count || 1;
+                                  const pct = Math.round((g.count / maxCount) * 100);
+                                  return (
+                                    <div key={g.name} data-testid={`geo-trend-${i}`}>
+                                      <div className="flex items-center justify-between mb-0.5">
+                                        <span className="text-sm font-medium">{g.name}</span>
+                                        <span className="text-xs text-muted-foreground">{g.count} jobs</span>
+                                      </div>
+                                      <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+                                        <div
+                                          className="h-full rounded-full bg-primary/40"
+                                          style={{ width: `${pct}%` }}
+                                        />
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            ) : (
+                              <p className="text-sm text-muted-foreground text-center py-8">No geography data available yet</p>
+                            )}
+                          </CardContent>
+                        </Card>
+                      </div>
+                    </div>
+
+                    <div className="text-center pt-4 pb-6" data-testid="text-evolution-note">
+                      <p className="text-xs text-muted-foreground">
+                        Based on {historicalData.totalEverScraped.toLocaleString()} jobs tracked since inception.
+                        {historicalData.totalPublished > 0 && ` ${historicalData.totalPublished.toLocaleString()} currently published.`}
+                        {historicalData.totalArchived > 0 && ` ${historicalData.totalArchived.toLocaleString()} archived.`}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           </section>
         )}

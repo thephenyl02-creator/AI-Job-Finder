@@ -311,25 +311,108 @@ export async function registerRoutes(
         jobStatus: jobs.jobStatus,
         roleCategory: jobs.roleCategory,
         firstSeenAt: jobs.firstSeenAt,
+        publishedAt: jobs.publishedAt,
+        closedAt: jobs.closedAt,
+        company: jobs.company,
+        workMode: jobs.workMode,
+        keySkills: jobs.keySkills,
+        seniorityLevel: jobs.seniorityLevel,
+        countryCode: jobs.countryCode,
+        countryName: jobs.countryName,
       }).from(jobs);
 
       const totalEverScraped = allJobs.length;
       const totalPublished = allJobs.filter(j => j.isPublished).length;
       const totalArchived = allJobs.filter(j => j.jobStatus === 'archived' || j.jobStatus === 'closed').length;
 
+      const monthKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+
       const jobsByMonth: Record<string, number> = {};
+      const publishedByMonth: Record<string, number> = {};
+      const archivedByMonth: Record<string, number> = {};
+      const categoryByMonth: Record<string, Record<string, number>> = {};
+      const companyByMonth: Record<string, Record<string, number>> = {};
+      const workModeByMonth: Record<string, Record<string, number>> = {};
+      const skillsByMonth: Record<string, Record<string, number>> = {};
+      const seniorityByMonth: Record<string, Record<string, number>> = {};
+      const geographyByMonth: Record<string, Record<string, number>> = {};
+
       for (const job of allJobs) {
-        if (!job.firstSeenAt) continue;
-        const key = `${job.firstSeenAt.getFullYear()}-${String(job.firstSeenAt.getMonth() + 1).padStart(2, '0')}`;
+        const seen = job.firstSeenAt;
+        if (!seen) continue;
+        const key = monthKey(seen);
+
         jobsByMonth[key] = (jobsByMonth[key] || 0) + 1;
+
+        if (job.roleCategory) {
+          if (!categoryByMonth[key]) categoryByMonth[key] = {};
+          categoryByMonth[key][job.roleCategory] = (categoryByMonth[key][job.roleCategory] || 0) + 1;
+        }
+
+        if (job.company) {
+          if (!companyByMonth[key]) companyByMonth[key] = {};
+          companyByMonth[key][job.company] = (companyByMonth[key][job.company] || 0) + 1;
+        }
+
+        if (job.workMode) {
+          if (!workModeByMonth[key]) workModeByMonth[key] = {};
+          workModeByMonth[key][job.workMode] = (workModeByMonth[key][job.workMode] || 0) + 1;
+        }
+
+        if (job.keySkills && Array.isArray(job.keySkills)) {
+          if (!skillsByMonth[key]) skillsByMonth[key] = {};
+          for (const skill of job.keySkills.slice(0, 5)) {
+            const normalized = skill.trim();
+            if (normalized) {
+              skillsByMonth[key][normalized] = (skillsByMonth[key][normalized] || 0) + 1;
+            }
+          }
+        }
+
+        if (job.seniorityLevel) {
+          if (!seniorityByMonth[key]) seniorityByMonth[key] = {};
+          seniorityByMonth[key][job.seniorityLevel] = (seniorityByMonth[key][job.seniorityLevel] || 0) + 1;
+        }
+
+        if (job.countryName) {
+          if (!geographyByMonth[key]) geographyByMonth[key] = {};
+          geographyByMonth[key][job.countryName] = (geographyByMonth[key][job.countryName] || 0) + 1;
+        }
       }
 
-      const categoryByMonth: Record<string, Record<string, number>> = {};
       for (const job of allJobs) {
-        if (!job.roleCategory || !job.firstSeenAt) continue;
-        const key = `${job.firstSeenAt.getFullYear()}-${String(job.firstSeenAt.getMonth() + 1).padStart(2, '0')}`;
-        if (!categoryByMonth[key]) categoryByMonth[key] = {};
-        categoryByMonth[key][job.roleCategory] = (categoryByMonth[key][job.roleCategory] || 0) + 1;
+        if (job.publishedAt) {
+          const key = monthKey(job.publishedAt);
+          publishedByMonth[key] = (publishedByMonth[key] || 0) + 1;
+        }
+        if (job.closedAt) {
+          const key = monthKey(job.closedAt);
+          archivedByMonth[key] = (archivedByMonth[key] || 0) + 1;
+        }
+      }
+
+      const topCompanyByMonth: Record<string, { name: string; count: number }[]> = {};
+      for (const [month, companies] of Object.entries(companyByMonth)) {
+        topCompanyByMonth[month] = Object.entries(companies)
+          .sort(([, a], [, b]) => b - a)
+          .slice(0, 10)
+          .map(([name, count]) => ({ name, count }));
+      }
+
+      const topSkillsByMonth: Record<string, { name: string; count: number }[]> = {};
+      for (const [month, skills] of Object.entries(skillsByMonth)) {
+        topSkillsByMonth[month] = Object.entries(skills)
+          .sort(([, a], [, b]) => b - a)
+          .slice(0, 10)
+          .map(([name, count]) => ({ name, count }));
+      }
+
+      const topGeographyByMonth: Record<string, { name: string; count: number }[]> = {};
+      for (const [month, countries] of Object.entries(geographyByMonth)) {
+        topGeographyByMonth[month] = Object.entries(countries)
+          .sort(([, a], [, b]) => b - a)
+          .slice(0, 10)
+          .map(([name, count]) => ({ name, count }));
       }
 
       res.json({
@@ -337,7 +420,14 @@ export async function registerRoutes(
         totalPublished,
         totalArchived,
         jobsByMonth,
+        publishedByMonth,
+        archivedByMonth,
         categoryByMonth,
+        workModeByMonth,
+        seniorityByMonth,
+        companyTrends: topCompanyByMonth,
+        skillTrends: topSkillsByMonth,
+        geographyTrends: topGeographyByMonth,
       });
     } catch (error) {
       console.error("Error fetching historical stats:", error);
@@ -4510,6 +4600,7 @@ Rules:
         isActive: false,
         isPublished: false,
         jobStatus: 'archived',
+        pipelineStatus: 'archived',
         deactivatedAt: now,
         closedAt: now,
         statusChangedAt: now,
@@ -8302,6 +8393,49 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
 
       const pdfData = await getMarketDataForReport();
       if (!pdfData) return res.status(500).json({ error: "Could not load market data" });
+
+      const allJobsForHistory = await db.select({
+        firstSeenAt: jobs.firstSeenAt,
+        publishedAt: jobs.publishedAt,
+        roleCategory: jobs.roleCategory,
+        workMode: jobs.workMode,
+        keySkills: jobs.keySkills,
+      }).from(jobs);
+
+      const monthKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const jbm: Record<string, number> = {};
+      const pbm: Record<string, number> = {};
+      const cbm: Record<string, Record<string, number>> = {};
+      const wmbm: Record<string, Record<string, number>> = {};
+      const sbm: Record<string, Record<string, number>> = {};
+
+      for (const j of allJobsForHistory) {
+        if (!j.firstSeenAt) continue;
+        const k = monthKey(j.firstSeenAt);
+        jbm[k] = (jbm[k] || 0) + 1;
+        if (j.roleCategory) { cbm[k] = cbm[k] || {}; cbm[k][j.roleCategory] = (cbm[k][j.roleCategory] || 0) + 1; }
+        if (j.workMode) { wmbm[k] = wmbm[k] || {}; wmbm[k][j.workMode] = (wmbm[k][j.workMode] || 0) + 1; }
+        if (j.keySkills && Array.isArray(j.keySkills)) {
+          sbm[k] = sbm[k] || {};
+          for (const s of j.keySkills.slice(0, 5)) { const n = s.trim(); if (n) sbm[k][n] = (sbm[k][n] || 0) + 1; }
+        }
+      }
+      for (const j of allJobsForHistory) {
+        if (j.publishedAt) { const k = monthKey(j.publishedAt); pbm[k] = (pbm[k] || 0) + 1; }
+      }
+      const st: Record<string, { name: string; count: number }[]> = {};
+      for (const [m, skills] of Object.entries(sbm)) {
+        st[m] = Object.entries(skills).sort(([,a],[,b]) => b - a).slice(0, 10).map(([name, count]) => ({ name, count }));
+      }
+
+      (pdfData as any).historicalTrends = {
+        totalEverScraped: allJobsForHistory.length,
+        jobsByMonth: jbm,
+        publishedByMonth: pbm,
+        categoryByMonth: cbm,
+        workModeByMonth: wmbm,
+        skillTrends: st,
+      };
 
       const periodLabels: Record<string, string> = { weekly: "Weekly_Briefing", monthly: "Monthly_Report", annual: "Annual_Report" };
       const filename = `LegalTechCareers_${periodLabels[period]}_${new Date().toISOString().split("T")[0]}.pdf`;
