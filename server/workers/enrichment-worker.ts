@@ -820,6 +820,8 @@ async function enrichJob(job: Job): Promise<void> {
       enrichedData.roleSubcategory = catResult.subcategory;
       enrichedData.careerTrack = getTrackForCategory(catResult.category);
       enrichedData.keySkills = catResult.keySkills;
+      enrichedData.hardSkills = catResult.hardSkills;
+      enrichedData.softSkills = catResult.softSkills;
       enrichedData.aiSummary = catResult.aiSummary;
       enrichedData.matchKeywords = catResult.matchKeywords;
       enrichedData.aiResponsibilities = catResult.aiResponsibilities || null;

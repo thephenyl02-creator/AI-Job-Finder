@@ -42,6 +42,8 @@ export const jobs = pgTable("jobs", {
   source: varchar("source", { length: 50 }),
   aiSummary: text("ai_summary"),
   keySkills: text("key_skills").array(),
+  hardSkills: text("hard_skills").array(),
+  softSkills: text("soft_skills").array(),
   roleCategory: varchar("role_category", { length: 100 }),
   roleSubcategory: varchar("role_subcategory", { length: 100 }),
   seniorityLevel: varchar("seniority_level", { length: 50 }),

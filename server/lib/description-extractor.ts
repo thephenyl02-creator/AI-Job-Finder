@@ -27,7 +27,14 @@ QUALITY STANDARDS — every section must be substantive:
 
 5. "preferredQualifications" — Extract 3-6 nice-to-have qualifications. Include "preferred", "bonus", "plus" items. If none are explicitly stated, separate softer requirements from minimumQualifications.
 
-6. "skillsRequired" — List 6-12 specific, named skills as short keywords. Include tools (e.g., "Relativity", "iManage"), technologies (e.g., "Python", "SQL"), domains (e.g., "eDiscovery", "contract lifecycle management"), and certifications (e.g., "CIPP", "PMP"). NO generic traits.
+6. "skillsRequired" — Return an object with four arrays categorizing the skills:
+  {
+    "tools": ["Relativity", "iManage", "Ironclad"] — specific named software platforms and tools,
+    "technical": ["Python", "SQL", "API integrations", "Data modeling"] — programming languages, technologies, technical methodologies,
+    "domain": ["eDiscovery", "Contract lifecycle management", "Legal hold procedures", "Regulatory compliance"] — domain expertise areas,
+    "certifications": ["CIPP/US", "PMP", "ACEDS"] — professional certifications
+  }
+  Rules: Name SPECIFIC tools, not categories. Include 6-12 skills total across all arrays. NO generic traits like "communication" or "problem solving".
 
 7. "lawyerTransitionNotes" — 3-5 detailed bullets aimed at lawyers considering this role. Address: (a) which legal skills transfer directly, (b) what new skills they'd need to develop, (c) realistic assessment of the transition difficulty, (d) how JD/bar admission helps or doesn't. Be honest and specific, not promotional.
 
@@ -49,7 +56,7 @@ Return ONLY valid JSON with this exact structure:
   "responsibilities": ["Action verb responsibility 1", ...],
   "minimumQualifications": ["Firm requirement 1", ...],
   "preferredQualifications": ["Nice-to-have 1", ...],
-  "skillsRequired": ["Specific skill keyword 1", ...],
+  "skillsRequired": { "tools": ["Relativity"], "technical": ["Python", "SQL"], "domain": ["eDiscovery"], "certifications": ["ACEDS"] },
   "seniority": "Level",
   "legalTechCategory": "Category",
   "aiRelevanceScore": "Low | Medium | High",
@@ -86,7 +93,7 @@ ${rawDescription.substring(0, 14000)}`
       responsibilities: ensureArray(parsed.responsibilities),
       minimumQualifications: ensureArray(parsed.minimumQualifications),
       preferredQualifications: ensureArray(parsed.preferredQualifications),
-      skillsRequired: ensureArray(parsed.skillsRequired),
+      skillsRequired: normalizeSkillsRequired(parsed.skillsRequired),
       seniority: typeof parsed.seniority === "string" ? parsed.seniority : "",
       legalTechCategory: typeof parsed.legalTechCategory === "string" ? parsed.legalTechCategory : "",
       aiRelevanceScore: typeof parsed.aiRelevanceScore === "string" ? parsed.aiRelevanceScore : "",
@@ -109,6 +116,21 @@ export function validateStructuredDescription(sd: StructuredDescription): { vali
   if (!sd.seniority) issues.push("Missing seniority level");
   if (!sd.legalTechCategory) issues.push("Missing legal tech category");
   return { valid: issues.length === 0, issues };
+}
+
+function normalizeSkillsRequired(val: unknown): string[] {
+  if (Array.isArray(val)) return val.filter((v): v is string => typeof v === "string" && v.trim().length > 0);
+  if (val && typeof val === "object") {
+    const obj = val as Record<string, unknown>;
+    const all: string[] = [];
+    for (const key of ["tools", "technical", "domain", "certifications"]) {
+      if (Array.isArray(obj[key])) {
+        all.push(...(obj[key] as string[]).filter((v): v is string => typeof v === "string" && v.trim().length > 0));
+      }
+    }
+    return all;
+  }
+  return [];
 }
 
 function ensureArray(val: unknown): string[] {

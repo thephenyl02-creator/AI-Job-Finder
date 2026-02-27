@@ -8131,10 +8131,77 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
 
   const SKILLS_SYNONYM_MAP: Record<string, string> = {
     "legal tech": "legal technology",
-    "customer engagement": "client engagement",
+    "legal knowledge": "legal technology",
+    "customer engagement": "client management",
+    "client engagement": "client management",
+    "client relations": "client management",
+    "client relationship management": "client management",
+    "customer relationship management": "client management",
+    "customer success": "client management",
     "collaboration": "cross-functional collaboration",
+    "cross-department collaboration": "cross-functional collaboration",
     "ai integration": "ai solutions",
-    "customer success": "client relationship management",
+    "ai implementation": "ai solutions",
+    "ai utilization": "ai solutions",
+    "process improvement": "process optimization",
+    "process intelligence": "process optimization",
+    "workflow optimization": "process optimization",
+    "workflow design": "process optimization",
+    "stakeholder engagement": "stakeholder management",
+    "stakeholder collaboration": "stakeholder management",
+    "communication": "stakeholder communication",
+    "problem solving": "analytical problem solving",
+    "critical thinking": "analytical problem solving",
+    "analytical skills": "analytical problem solving",
+    "leadership": "team leadership",
+    "team development": "team leadership",
+    "sales management": "sales leadership",
+    "pipeline generation": "business development",
+    "lead generation": "business development",
+    "account management": "client account management",
+    "relationship building": "client account management",
+    "sales": "sales strategy",
+    "consulting": "strategic consulting",
+    "strategic advisory": "strategic consulting",
+    "user experience": "ux design",
+    "customer support": "technical support",
+    "data analysis": "data analytics",
+    "data management": "data governance",
+    "information governance": "data governance",
+    "data reporting": "data analytics",
+    "product development": "product management",
+    "product strategy": "product management",
+    "project tracking": "project management",
+    "agile methodologies": "agile/scrum",
+    "documentation": "technical documentation",
+    "investigative research": "legal research",
+    "client communication": "stakeholder communication",
+    "negotiation": "contract negotiation",
+    "legal compliance": "regulatory compliance",
+    "compliance": "regulatory compliance",
+    "regulation": "regulatory compliance",
+    "regulatory": "regulatory compliance",
+    "ip law": "intellectual property",
+    "software development": "software engineering",
+    "technical consulting": "strategic consulting",
+    "technical advisory": "strategic consulting",
+    "b2b saas": "saas platforms",
+    "web-based applications": "saas platforms",
+    "legal content management": "knowledge management",
+    "consultative selling": "solution selling",
+    "revenue operations": "sales operations",
+    "sales forecasting": "sales operations",
+    "data protection": "data privacy",
+    "privacy law": "data privacy",
+    "global ip laws": "intellectual property",
+    "brand protection": "intellectual property",
+    "integration management": "api integrations",
+    "technical architecture": "systems architecture",
+    "bpm": "business process management",
+    "legal pricing strategies": "legal pricing",
+    "incident response": "security incident response",
+    "ai governance": "ai compliance",
+    "data infrastructure": "data engineering",
   };
 
   const UPPERCASE_WORDS = new Set(["ai", "ml", "api", "it", "crm", "erp", "saas", "nlp", "llm", "sql", "ui", "ux"]);
@@ -8188,12 +8255,32 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
 
       const newThisWeekIds = new Set(newThisWeek.map(j => j.id));
 
+      const hardSkillMap: Record<string, number> = {};
+      const softSkillMap: Record<string, number> = {};
+
       for (const job of allJobs) {
-        for (const skill of (job.keySkills || [])) {
+        const skillsForMap = (job.hardSkills && job.hardSkills.length > 0)
+          ? [...(job.hardSkills || []), ...(job.softSkills || [])]
+          : (job.keySkills || []);
+        for (const skill of skillsForMap) {
           let s = skill.toLowerCase().trim();
           if (!s) continue;
           s = SKILLS_SYNONYM_MAP[s] || s;
           skillMap[s] = (skillMap[s] || 0) + 1;
+        }
+        if (job.hardSkills && job.hardSkills.length > 0) {
+          for (const skill of job.hardSkills) {
+            let s = skill.toLowerCase().trim();
+            if (!s) continue;
+            s = SKILLS_SYNONYM_MAP[s] || s;
+            hardSkillMap[s] = (hardSkillMap[s] || 0) + 1;
+          }
+          for (const skill of (job.softSkills || [])) {
+            let s = skill.toLowerCase().trim();
+            if (!s) continue;
+            s = SKILLS_SYNONYM_MAP[s] || s;
+            softSkillMap[s] = (softSkillMap[s] || 0) + 1;
+          }
         }
         if (job.roleCategory) {
           categoryMap[job.roleCategory] = (categoryMap[job.roleCategory] || 0) + 1;
@@ -8322,6 +8409,14 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
           jobsWithSalary: jobsWithSalMin.length,
         },
         skillsDemand,
+        hardSkillsDemand: Object.entries(hardSkillMap)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 15)
+          .map(([skill, count]) => ({ skill: toTitleCase(skill), count })),
+        softSkillsDemand: Object.entries(softSkillMap)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 15)
+          .map(([skill, count]) => ({ skill: toTitleCase(skill), count })),
         careerPaths,
         salaryByPath,
         workMode: {
@@ -8354,17 +8449,31 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
 
   const LEGAL_SKILLS = new Set([
     "legal technology", "legal tech", "legal research", "contract drafting",
-    "contract management", "compliance", "regulatory", "due diligence",
+    "contract management", "regulatory compliance", "due diligence",
     "litigation", "ediscovery", "e-discovery", "legal writing", "legal analysis",
     "risk management", "intellectual property", "ip management", "privacy",
     "data privacy", "gdpr", "legal operations", "matter management",
     "legal billing", "outside counsel", "corporate governance", "mergers",
     "acquisitions", "legal counsel", "legal advice", "law", "legal",
-    "policy", "regulation", "dispute resolution", "arbitration", "mediation",
-    "negotiation", "stakeholder engagement", "client engagement",
-    "client relationship management", "client management", "legal project management",
+    "policy", "dispute resolution", "arbitration", "mediation",
+    "contract negotiation", "stakeholder management", "client management",
+    "legal project management",
     "knowledge management", "document review", "contract review",
     "legal strategy", "corporate law", "employment law", "commercial law",
+    "stakeholder communication", "project management", "requirements gathering",
+    "process documentation", "vendor management", "vendor evaluation and selection",
+    "cross-functional collaboration", "presentation skills",
+    "analytical writing", "regulatory analysis", "policy analysis",
+    "case management", "investigation", "audit",
+    "training delivery", "training program development", "change management",
+    "rfp writing and evaluation", "executive briefing and reporting",
+    "legal-to-technical requirements translation", "client-facing presentations",
+    "analytical problem solving", "legal pricing",
+    "contract lifecycle management", "legal hold procedures",
+    "regulatory change management", "legal design",
+    "legal workflow automation", "legal spend management",
+    "outside counsel management", "legal risk assessment",
+    "cross-functional stakeholder management",
   ]);
 
   function isLegalSkill(skill: string): boolean {
@@ -8391,6 +8500,8 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
         transitionFriendly: number;
         experienceMins: number[];
         skillMap: Record<string, number>;
+        hardSkillMap: Record<string, number>;
+        softSkillMap: Record<string, number>;
         countryMap: Record<string, number>;
         categories: Record<string, {
           jobCount: number;
@@ -8400,9 +8511,9 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
           relevanceScores: number[];
         }>;
       }> = {
-        "Lawyer-Led": { jobCount: 0, relevanceScores: [], transitionFriendly: 0, experienceMins: [], skillMap: {}, countryMap: {}, categories: {} },
-        "Technical": { jobCount: 0, relevanceScores: [], transitionFriendly: 0, experienceMins: [], skillMap: {}, countryMap: {}, categories: {} },
-        "Ecosystem": { jobCount: 0, relevanceScores: [], transitionFriendly: 0, experienceMins: [], skillMap: {}, countryMap: {}, categories: {} },
+        "Lawyer-Led": { jobCount: 0, relevanceScores: [], transitionFriendly: 0, experienceMins: [], skillMap: {}, hardSkillMap: {}, softSkillMap: {}, countryMap: {}, categories: {} },
+        "Technical": { jobCount: 0, relevanceScores: [], transitionFriendly: 0, experienceMins: [], skillMap: {}, hardSkillMap: {}, softSkillMap: {}, countryMap: {}, categories: {} },
+        "Ecosystem": { jobCount: 0, relevanceScores: [], transitionFriendly: 0, experienceMins: [], skillMap: {}, hardSkillMap: {}, softSkillMap: {}, countryMap: {}, categories: {} },
       };
 
       const companyTransitionMap: Record<string, { count: number; tracks: Set<string> }> = {};
@@ -8439,11 +8550,29 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
           totalExperienceCount++;
         }
 
-        for (const skill of (job.keySkills || [])) {
+        const skillsToUse = (job.hardSkills && job.hardSkills.length > 0)
+          ? [...(job.hardSkills || []), ...(job.softSkills || [])]
+          : (job.keySkills || []);
+        for (const skill of skillsToUse) {
           const s = skill.toLowerCase().trim();
           if (!s) continue;
           const normalized = SKILLS_SYNONYM_MAP[s] || s;
           td.skillMap[normalized] = (td.skillMap[normalized] || 0) + 1;
+        }
+
+        if (job.hardSkills && job.hardSkills.length > 0) {
+          for (const skill of job.hardSkills) {
+            const s = skill.toLowerCase().trim();
+            if (!s) continue;
+            const normalized = SKILLS_SYNONYM_MAP[s] || s;
+            td.hardSkillMap[normalized] = (td.hardSkillMap[normalized] || 0) + 1;
+          }
+          for (const skill of (job.softSkills || [])) {
+            const s = skill.toLowerCase().trim();
+            if (!s) continue;
+            const normalized = SKILLS_SYNONYM_MAP[s] || s;
+            td.softSkillMap[normalized] = (td.softSkillMap[normalized] || 0) + 1;
+          }
         }
 
         if (job.countryCode && job.countryCode !== 'UN') {
@@ -8602,6 +8731,63 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
     } catch (error: any) {
       console.error("Error computing transition intelligence:", error);
       res.status(500).json({ error: "Failed to compute transition intelligence" });
+    }
+  });
+
+  app.post("/api/admin/backfill-skills", async (req, res) => {
+    if (!req.isAuthenticated() || !(req.user as any)?.isAdmin) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+
+    const batchSize = 10;
+    const delayMs = 2000;
+    let processed = 0;
+    let failed = 0;
+    let total = 0;
+
+    try {
+      const allJobs = await storage.getPublishedJobs();
+      const jobsToBackfill = allJobs.filter(j => !j.hardSkills || j.hardSkills.length === 0);
+      total = jobsToBackfill.length;
+
+      res.json({
+        message: `Backfill started for ${total} jobs. Processing in batches of ${batchSize}.`,
+        total,
+      });
+
+      (async () => {
+        for (let i = 0; i < jobsToBackfill.length; i += batchSize) {
+          const batch = jobsToBackfill.slice(i, i + batchSize);
+          for (const job of batch) {
+            try {
+              const { categorizeJob } = await import("./lib/job-categorizer");
+              const result = await categorizeJob(job.title, job.description || "", job.company);
+              await db.update(jobs)
+                .set({
+                  hardSkills: result.hardSkills,
+                  softSkills: result.softSkills,
+                  keySkills: result.keySkills,
+                })
+                .where(eq(jobs.id, job.id));
+              processed++;
+              console.log(`[Backfill] ${processed}/${total} — ${job.title} at ${job.company}: ${result.hardSkills.length} hard, ${result.softSkills.length} soft`);
+            } catch (err: any) {
+              failed++;
+              console.error(`[Backfill] Failed for job ${job.id}: ${err.message?.slice(0, 80)}`);
+            }
+          }
+          if (i + batchSize < jobsToBackfill.length) {
+            await new Promise(resolve => setTimeout(resolve, delayMs));
+          }
+        }
+        console.log(`[Backfill] Complete: ${processed} processed, ${failed} failed out of ${total}`);
+        transitionCache = null;
+      })();
+    } catch (error: any) {
+      console.error("Backfill error:", error);
+      if (!res.headersSent) {
+        res.status(500).json({ error: "Failed to start backfill" });
+      }
     }
   });
 

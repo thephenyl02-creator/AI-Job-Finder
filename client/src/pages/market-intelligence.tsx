@@ -53,6 +53,7 @@ import {
   Target,
   GraduationCap,
   ArrowUpRight,
+  Wrench,
 } from "lucide-react";
 import {
   TRACK_COLORS,
@@ -79,6 +80,8 @@ interface MarketIntelligenceData {
     jobsWithSalary: number;
   };
   skillsDemand: { skill: string; count: number }[];
+  hardSkillsDemand?: { skill: string; count: number }[];
+  softSkillsDemand?: { skill: string; count: number }[];
   careerPaths: { name: string; jobCount: number; percentage: number; newThisWeek: number }[];
   salaryByPath: { name: string; medianMin: number; medianMax: number; sampleSize?: number }[];
   workMode: { remote: { count: number; percentage: number }; hybrid: { count: number; percentage: number }; onsite: { count: number; percentage: number } };
@@ -264,7 +267,7 @@ export default function MarketIntelligence() {
     );
   }
 
-  const { overview, skillsDemand = [], careerPaths = [], salaryByPath = [], workMode, topCompanies = [], geography = [], seniorityDistribution = [], aiIntensity, communityBenchmarks } = data;
+  const { overview, skillsDemand = [], hardSkillsDemand = [], softSkillsDemand = [], careerPaths = [], salaryByPath = [], workMode, topCompanies = [], geography = [], seniorityDistribution = [], aiIntensity, communityBenchmarks } = data;
 
   const safeRemote = workMode?.remote || { count: 0, percentage: 0 };
   const safeHybrid = workMode?.hybrid || { count: 0, percentage: 0 };
@@ -319,7 +322,18 @@ export default function MarketIntelligence() {
   const entryAccessible = seniorityDistribution.filter(s => ["Intern", "Fellowship", "Entry", "Junior", "Mid"].includes(s.level)).reduce((a, b) => a + b.count, 0);
   const entryAccessiblePct = overview.totalJobs ? Math.round((entryAccessible / overview.totalJobs) * 100) : 0;
 
+  const hasHardSoftSplit = hardSkillsDemand.length > 0 && softSkillsDemand.length > 0;
   const skillsChartData = skillsDemand.slice(0, 10).map((s) => ({
+    name: s.skill.length > 22 ? s.skill.slice(0, 20) + "\u2026" : s.skill,
+    fullName: s.skill,
+    count: s.count,
+  }));
+  const hardSkillsChartData = hardSkillsDemand.slice(0, 10).map((s) => ({
+    name: s.skill.length > 22 ? s.skill.slice(0, 20) + "\u2026" : s.skill,
+    fullName: s.skill,
+    count: s.count,
+  }));
+  const softSkillsChartData = softSkillsDemand.slice(0, 10).map((s) => ({
     name: s.skill.length > 22 ? s.skill.slice(0, 20) + "\u2026" : s.skill,
     fullName: s.skill,
     count: s.count,
@@ -646,27 +660,66 @@ export default function MarketIntelligence() {
         {skillsChartData.length > 0 && (
           <section className="border-t border-border/40" data-testid="section-skills">
             <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
-              <p className="mi-section-title mb-4">Most Requested Skills</p>
-              <div className="mi-panel">
-                <div className="h-[300px] w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={skillsChartData} layout="vertical" margin={{ top: 0, right: 30, left: 0, bottom: 0 }}>
-                      <XAxis type="number" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
-                      <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: "hsl(var(--foreground))" }} axisLine={false} tickLine={false} width={160} />
-                      <Tooltip
-                        {...SHARED_TOOLTIP_STYLE}
-                        cursor={{ fill: "hsl(var(--muted) / 0.2)" }}
-                        formatter={(value: number) => [`${value} jobs`, "Demand"]}
-                      />
-                      <Bar dataKey="count" radius={[0, 3, 3, 0]} barSize={18} name="Jobs">
-                        {skillsChartData.map((_, index) => (
-                          <Cell key={`skill-cell-${index}`} fill={GENERIC_PALETTE[index % GENERIC_PALETTE.length]} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
+              <p className="mi-section-title mb-4">Skills in Demand</p>
+              {hasHardSoftSplit ? (
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="mi-panel" data-testid="hard-skills-chart">
+                    <p className="mi-label mb-3 flex items-center gap-1.5">
+                      <Wrench className="h-3 w-3" /> Tools & Technical Skills
+                    </p>
+                    <div className="h-[300px] w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={hardSkillsChartData} layout="vertical" margin={{ top: 0, right: 30, left: 0, bottom: 0 }}>
+                          <XAxis type="number" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+                          <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: "hsl(var(--foreground))" }} axisLine={false} tickLine={false} width={160} />
+                          <Tooltip {...SHARED_TOOLTIP_STYLE} cursor={{ fill: "hsl(var(--muted) / 0.2)" }} formatter={(value: number) => [`${value} jobs`, "Demand"]} />
+                          <Bar dataKey="count" radius={[0, 3, 3, 0]} barSize={18} name="Jobs">
+                            {hardSkillsChartData.map((_, index) => (
+                              <Cell key={`hard-cell-${index}`} fill={GENERIC_PALETTE[index % GENERIC_PALETTE.length]} />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                  <div className="mi-panel" data-testid="soft-skills-chart">
+                    <p className="mi-label mb-3 flex items-center gap-1.5">
+                      <Users className="h-3 w-3" /> Professional Skills
+                    </p>
+                    <div className="h-[300px] w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={softSkillsChartData} layout="vertical" margin={{ top: 0, right: 30, left: 0, bottom: 0 }}>
+                          <XAxis type="number" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+                          <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: "hsl(var(--foreground))" }} axisLine={false} tickLine={false} width={160} />
+                          <Tooltip {...SHARED_TOOLTIP_STYLE} cursor={{ fill: "hsl(var(--muted) / 0.2)" }} formatter={(value: number) => [`${value} jobs`, "Demand"]} />
+                          <Bar dataKey="count" radius={[0, 3, 3, 0]} barSize={18} name="Jobs">
+                            {softSkillsChartData.map((_, index) => (
+                              <Cell key={`soft-cell-${index}`} fill={GENERIC_PALETTE[index % GENERIC_PALETTE.length]} />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="mi-panel">
+                  <div className="h-[300px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={skillsChartData} layout="vertical" margin={{ top: 0, right: 30, left: 0, bottom: 0 }}>
+                        <XAxis type="number" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+                        <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: "hsl(var(--foreground))" }} axisLine={false} tickLine={false} width={160} />
+                        <Tooltip {...SHARED_TOOLTIP_STYLE} cursor={{ fill: "hsl(var(--muted) / 0.2)" }} formatter={(value: number) => [`${value} jobs`, "Demand"]} />
+                        <Bar dataKey="count" radius={[0, 3, 3, 0]} barSize={18} name="Jobs">
+                          {skillsChartData.map((_, index) => (
+                            <Cell key={`skill-cell-${index}`} fill={GENERIC_PALETTE[index % GENERIC_PALETTE.length]} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              )}
             </div>
           </section>
         )}

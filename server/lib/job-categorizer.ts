@@ -6,6 +6,8 @@ export interface JobCategorizationResult {
   subcategory: string;
   seniorityLevel: string;
   keySkills: string[];
+  hardSkills: string[];
+  softSkills: string[];
   aiSummary: string;
   matchKeywords: string[];
   aiResponsibilities?: string[];
@@ -94,27 +96,84 @@ Categorize into ONE of these categories and subcategories:
 
 ${taxonomyText}
 
-CATEGORIZATION GUIDANCE:
+CATEGORIZATION GUIDANCE — READ CAREFULLY, EACH CATEGORY HAS BOUNDARY RULES:
+
 - "Legal Engineering": For Legal Engineers who build/configure legal tech products using legal expertise. The role title typically contains "Legal Engineer" or involves designing legal workflows/automation.
-- "Legal Operations": For legal ops managers, legal project managers, process improvement, legal spend management, legal vendor management, legal tech implementation. Must involve TECHNOLOGY — not just managing a legal team.
+  - YES: Legal Engineer, Solutions Engineer building legal workflows, Legal Automation Engineer
+  - NO: Generic Software Engineer at a legal tech company → score 1-3
+
+- "Legal Operations": For roles that MANAGE or OPTIMIZE legal processes using technology at LAW FIRMS or CORPORATE LEGAL DEPARTMENTS. The person works IN a legal team implementing tools.
+  - YES: Legal Ops Manager at a law firm implementing tech tools, Legal Project Manager running matter management, Legal Spend Analyst using e-billing platforms
+  - NO: Customer Success Manager at a legal tech VENDOR helping clients → that's "Legal Consulting & Advisory"
+  - NO: Implementation Consultant at a legal tech company → that's "Legal Consulting & Advisory"
+  - NO: Solutions Consultant selling legal tech → that's "Legal Sales & Client Solutions"
+
 - "Compliance & Privacy": For compliance counsel, privacy counsel, GRC analysts, trade compliance, regulatory TECHNOLOGY roles, data privacy officers. Must involve compliance/privacy TECHNOLOGY or tech company context.
-- "Contract Management": For contracts counsel, contracts managers, CLM specialists, contract analysts, ISDA negotiators working with CONTRACT TECHNOLOGY or at legal tech companies.
-- "Litigation & eDiscovery": For eDiscovery project managers, litigation TECHNOLOGY specialists, case management TECHNOLOGY, litigation analytics.
+  - YES: Privacy Engineer, Compliance Technology Lead, GRC Analyst implementing compliance software, Data Protection Officer at a tech company
+  - NO: Employment compliance specialist at a non-tech company → score 1-3
+
+- "Contract Management": For ANY role managing, implementing, or improving contract workflows, CLM platforms, or contract AI. This includes roles at CLM vendors AND at companies implementing CLM tools.
+  - YES: CLM Implementation Specialist, Contract Operations Manager, Contract Automation Lead, Contracts Manager using Ironclad/Agiloft/Icertis, Contract Analyst at a CLM vendor
+  - NO: Contracts Counsel doing only traditional drafting without tech → "In-House Counsel"
+
+- "Litigation & eDiscovery": For ANY role involving eDiscovery tools (Relativity, Nuix, DISCO, Reveal), litigation technology, case management platforms, forensic data collection, or litigation analytics.
+  - YES: eDiscovery Project Manager, Litigation Support Analyst, Review Manager using Relativity, Legal Hold Specialist, Forensic Technology Consultant
+  - NO: Litigator at a law firm → score 1-3
+
 - "Legal AI & Analytics": For AI product managers focused on LEGAL AI specifically, AI solutions engineers with legal domain, legal data scientists. General AI roles at non-legal companies do NOT qualify.
+  - YES: Legal AI Product Manager, AI Solutions Engineer at a legal tech company, Legal Data Scientist, NLP Engineer for contract analysis
+  - NO: Generic ML Engineer at a non-legal company → score 1-3
+
 - "Legal Product Management": For product managers/directors/leads at LEGAL TECH companies where the role requires understanding legal workflows and legal user needs.
-- "In-House Counsel": ONLY for attorneys/counsel working at LEGAL TECH or TECH companies where the role involves advising on the company's technology products. Traditional practice attorneys at law firms, nonprofits, or advocacy orgs do NOT qualify.
-- "Legal Consulting & Advisory": For consultants helping firms adopt LEGAL TECHNOLOGY, legal innovation consultants, client-facing advisory roles at legal tech companies.
-- "Knowledge Management": For legal knowledge managers, knowledge counsel, legal research engineers, legal taxonomy/ontology specialists, editorial managers in legal publishing.
-- "Policy & Access to Justice": For legal policy advisors working on TECHNOLOGY policy, court TECHNOLOGY advisors, digital justice, legal aid TECHNOLOGY roles. Traditional policy/advocacy roles do NOT qualify.
-- "Intellectual Property & Innovation": For IP specialists working at the intersection of IP law and TECHNOLOGY. Traditional trademark/patent attorneys at law firms do NOT qualify.
-- "Legal Sales & Client Solutions": ONLY for business development roles that EXPLICITLY require a JD, legal background, or deep legal expertise AND involve selling LEGAL TECHNOLOGY. Generic sales roles do NOT qualify.
+  - YES: Product Manager at a CLM company, Product Lead for a legal research platform, Product Director at a compliance tech firm
+  - NO: Product Manager at a general tech company → score 1-3
+
+- "In-House Counsel": ONLY for attorneys/counsel working at LEGAL TECH or TECH companies where the role involves advising on the company's technology products.
+  - YES: Commercial Counsel at a legal tech company, Product Counsel at a SaaS company, Privacy Counsel at a tech firm
+  - NO: Staff Attorney at a nonprofit → score 1-3
+  - NO: Associate at a law firm → score 1-3
+
+- "Legal Consulting & Advisory": For consultants helping firms ADOPT legal technology, implementation specialists at legal tech VENDORS, customer success managers who help law firms use legal tech products, and legal innovation consultants.
+  - YES: Implementation Consultant at a CLM vendor, Customer Success Manager at a legal tech company helping law firms adopt the product, Legal Technology Consultant, Engagement Manager designing legal tech workflows for clients
+  - NO: Legal Ops Manager at a law firm → that's "Legal Operations"
+  - NO: Solutions Consultant whose primary role is SELLING → that's "Legal Sales & Client Solutions"
+
+- "Knowledge Management": For legal knowledge managers, knowledge counsel, legal research engineers, legal taxonomy/ontology specialists, editorial managers in legal publishing, AND roles involving legal content curation, legal information systems, or legal research platforms.
+  - YES: Knowledge Management Counsel, Legal Taxonomy Specialist, Editorial Manager at a legal publisher (Westlaw, LexisNexis, Wolters Kluwer), Legal Research Platform Lead, Content Strategist for legal databases
+  - NO: Generic content marketing at a legal tech company → score 1-3
+
+- "Policy & Access to Justice": For legal policy advisors working on TECHNOLOGY policy, court TECHNOLOGY advisors, digital justice, legal aid TECHNOLOGY roles.
+  - YES: Court Technology Advisor, Digital Justice Program Manager, Legal Aid Technology Director, Policy Analyst for AI regulation
+  - NO: Traditional policy/advocacy roles → score 1-3
+
+- "Intellectual Property & Innovation": For IP specialists working at the intersection of IP law and TECHNOLOGY.
+  - YES: IP Technology Manager, Patent Analytics Specialist, IP Portfolio Platform Manager
+  - NO: Traditional trademark/patent attorneys at law firms → score 1-3
+
+- "Legal Sales & Client Solutions": For business development roles that EXPLICITLY require a JD, legal background, or deep legal expertise AND involve SELLING legal technology. The role's PRIMARY function must be revenue-generating (sales, account management, business development).
+  - YES: Enterprise Account Executive selling legal tech who must understand legal workflows, Solutions Consultant with quota/revenue targets, Business Development Manager with legal industry expertise requirement
+  - NO: Generic Account Executive or SDR at a legal tech company without legal expertise requirement → score 1-3
+  - NO: Customer Success Manager focused on adoption/retention → that's "Legal Consulting & Advisory"
 
 === STEP 3: EXTRACTION ===
 
 Extract:
 - Seniority level: Exactly one of: Intern, Fellowship, Entry, Mid, Senior, Lead, Director, VP
   Priority rules: Intern/Fellowship from title -> VP -> Director -> Lead/Principal -> Senior/Sr./Staff -> Associate/Junior/Entry -> check description for years -> default Mid
-- Key skills (5-8 most important)
+- hardSkills: 4-6 SPECIFIC, ACTIONABLE technical skills. These must be concrete and learnable:
+  * Name SPECIFIC tools and platforms, not categories: "Relativity" not "eDiscovery tool", "Ironclad" not "CLM platform", "ServiceNow" not "ITSM"
+  * Name SPECIFIC technologies: "Python", "SQL", "Power BI", "Tableau", not "data analysis" or "programming"
+  * Name SPECIFIC methodologies: "Agile/Scrum", "Six Sigma", "ITIL", not "project management"
+  * Name SPECIFIC certifications: "CIPP/US", "PMP", "CISA", not "privacy certification"
+  * Name SPECIFIC domains when tools aren't mentioned: "Contract lifecycle management", "Legal hold procedures", "Regulatory change management"
+  * CANONICAL NAMES — always use these standard names:
+    Tools: Relativity, Nuix, DISCO, Reveal, Ironclad, Agiloft, Icertis, DocuSign CLM, iManage, NetDocuments, HighQ, Kira Systems, Luminance, Westlaw, LexisNexis, Thomson Reuters, Wolters Kluwer, Cornerstone, Clio, PracticePanther, SimpleLegal, CounselLink, Brightflag, Onit, Mitratech, Exterro, Logikcull, Everlaw, Onna, Epiq, ACEDS, Jira, Salesforce, HubSpot, Workday, SAP, ServiceNow
+    Technologies: Python, SQL, JavaScript, R, Power BI, Tableau, Excel/VBA, APIs/REST, AWS, Azure, Snowflake, dbt
+    Methodologies: Agile/Scrum, Six Sigma, ITIL, Design Thinking, Legal Design, Lean
+    Certifications: CIPP/US, CIPP/E, CIPM, PMP, CISA, CCPA, SOC 2, ISO 27001, ACEDS
+- softSkills: 3-4 SPECIFIC professional skills. Describe the APPLICATION, not the abstract trait:
+  * GOOD: "Cross-functional stakeholder management", "Legal-to-technical requirements translation", "Client-facing product demonstrations", "Executive briefing and reporting", "Change management for legal teams", "Training program development", "Vendor evaluation and selection", "RFP writing and evaluation"
+  * BAD (too generic, NEVER use these): "Communication", "Collaboration", "Problem Solving", "Leadership", "Critical Thinking", "Teamwork", "Analytical Skills", "Detail-oriented", "Organization"
 - Experience range: experienceMin/experienceMax from posting. null if not stated.
 - Salary: salaryMin/salaryMax in annual USD. null if not stated.
 - Remote: isRemote true if remote/hybrid mentioned.
@@ -131,7 +190,8 @@ Return ONLY valid JSON:
   "category": "Legal Engineering",
   "subcategory": "Legal Engineer",
   "seniorityLevel": "Senior",
-  "keySkills": ["Legal Tech", "Contract Automation", "Legal Workflows"],
+  "hardSkills": ["Ironclad", "Python", "Contract lifecycle management", "API integrations"],
+  "softSkills": ["Legal-to-technical requirements translation", "Cross-functional stakeholder management", "Training program development"],
   "experienceMin": 5,
   "experienceMax": 8,
   "salaryMin": null,
@@ -152,7 +212,9 @@ CRITICAL RULES:
 - Generic business roles at legal tech companies MUST score 3 or below.
 - When in doubt, score LOWER. Platform credibility depends on showing ONLY legal tech jobs.
 - experienceMin/experienceMax: null if not stated.
-- salaryMin/salaryMax: null if not stated.`;
+- salaryMin/salaryMax: null if not stated.
+- hardSkills MUST be specific and actionable — a lawyer reading them should know EXACTLY what tool or skill to learn.
+- softSkills MUST describe the specific application, NEVER use generic trait words.`;
 
   try {
     const completion = await getOpenAIClient().chat.completions.create({
@@ -187,11 +249,17 @@ CRITICAL RULES:
       reviewStatus = "rejected";
     }
 
+    const hardSkills = Array.isArray(result.hardSkills) ? result.hardSkills.slice(0, 6) : [];
+    const softSkills = Array.isArray(result.softSkills) ? result.softSkills.slice(0, 4) : [];
+    const keySkills = Array.isArray(result.keySkills) ? result.keySkills.slice(0, 8) : [...hardSkills, ...softSkills].slice(0, 8);
+
     return {
       category: validCategory,
       subcategory: validSubcategory,
       seniorityLevel: validatedSeniority,
-      keySkills: Array.isArray(result.keySkills) ? result.keySkills.slice(0, 8) : [],
+      keySkills,
+      hardSkills,
+      softSkills,
       aiSummary: result.aiSummary || `${title} position at ${company}.`,
       matchKeywords: Array.isArray(result.matchKeywords) ? result.matchKeywords.slice(0, 10) : [],
       aiResponsibilities: Array.isArray(result.aiResponsibilities) ? result.aiResponsibilities.slice(0, 8) : undefined,
@@ -460,6 +528,8 @@ function fallbackCategorization(
     subcategory,
     seniorityLevel,
     keySkills,
+    hardSkills: keySkills,
+    softSkills: [],
     aiSummary: `${title} position at ${company}. Review the full description for detailed requirements and responsibilities.`,
     matchKeywords,
     isRemote: detectRemote(title, description),
