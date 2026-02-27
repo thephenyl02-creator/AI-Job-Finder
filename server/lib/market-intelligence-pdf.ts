@@ -387,8 +387,6 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string):
   }
 
   // ── EXECUTIVE SUMMARY ──
-  newContentPage(doc, pn);
-  doc.y = 56;
   sectionTitle(doc, "01", "Executive Summary", pn);
 
   const boxW = (CONTENT_WIDTH - 16) / 3;
@@ -664,8 +662,7 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string):
   }
 
   // ── WHAT THIS MEANS FOR LAWYERS ──
-  newContentPage(doc, pn);
-  doc.y = 56;
+  ensureSpace(doc, 80, pn);
 
   doc.save();
   doc.fontSize(7).fillColor(ACCENT).font("Helvetica-Bold").text("ANALYSIS", MARGIN, doc.y, { characterSpacing: 1.5 });
