@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { usePageTitle } from "@/hooks/use-page-title";
+import { getCategoryColor } from "@/lib/chart-theme";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -77,22 +78,6 @@ interface InsightMessage {
 
 const SENIORITY_ORDER = ["Intern", "Fellowship", "Entry", "Mid", "Senior", "Lead", "Director", "VP"];
 
-const BAR_COLORS: Record<string, string> = {
-  "Legal Engineering": "bg-blue-500 dark:bg-blue-400",
-  "Legal Operations": "bg-emerald-500 dark:bg-emerald-400",
-  "Compliance & Privacy": "bg-rose-500 dark:bg-rose-400",
-  "Contract Management": "bg-amber-500 dark:bg-amber-400",
-  "Litigation & eDiscovery": "bg-slate-500 dark:bg-slate-400",
-  "Legal AI & Analytics": "bg-violet-500 dark:bg-violet-400",
-  "Legal Product Management": "bg-indigo-500 dark:bg-indigo-400",
-  "In-House Counsel": "bg-sky-500 dark:bg-sky-400",
-  "Legal Consulting & Advisory": "bg-orange-500 dark:bg-orange-400",
-  "Knowledge Management": "bg-lime-500 dark:bg-lime-400",
-  "Policy & Access to Justice": "bg-indigo-500 dark:bg-indigo-400",
-  "Intellectual Property & Innovation": "bg-fuchsia-500 dark:bg-fuchsia-400",
-  "Legal Sales & Client Solutions": "bg-pink-500 dark:bg-pink-400",
-};
-
 const SUGGESTED_QUESTIONS = [
   "Which legal tech categories have the most open roles right now?",
   "What are the top-paying areas in legal tech?",
@@ -145,6 +130,7 @@ function HorizontalBar({
   maxValue,
   percentage,
   colorClass,
+  color,
   testId,
 }: {
   label: string;
@@ -152,6 +138,7 @@ function HorizontalBar({
   maxValue: number;
   percentage?: number;
   colorClass?: string;
+  color?: string;
   testId?: string;
 }) {
   const widthPct = Math.max(4, (value / maxValue) * 100);
@@ -172,8 +159,8 @@ function HorizontalBar({
       </div>
       <div className="h-2 rounded-full bg-muted/60 overflow-hidden">
         <div
-          className={`h-full rounded-full transition-all duration-700 ease-out ${colorClass || "bg-primary/70"}`}
-          style={{ width: `${widthPct}%` }}
+          className={`h-full rounded-full transition-all duration-700 ease-out ${!color ? (colorClass || "bg-primary/70") : ""}`}
+          style={{ width: `${widthPct}%`, ...(color ? { backgroundColor: color } : {}) }}
         />
       </div>
     </div>
@@ -615,7 +602,7 @@ export default function Insights() {
                   value={cat.count}
                   maxValue={maxCategoryCount}
                   percentage={cat.percentage}
-                  colorClass={BAR_COLORS[cat.name] || "bg-primary/70"}
+                  color={getCategoryColor(cat.name)}
                 />
               ))}
             </CardContent>

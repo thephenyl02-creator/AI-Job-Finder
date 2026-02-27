@@ -8349,6 +8349,262 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
     }
   });
 
+  let transitionCache: { data: any; timestamp: number } | null = null;
+  const TRANSITION_CACHE_TTL = 300000;
+
+  const LEGAL_SKILLS = new Set([
+    "legal technology", "legal tech", "legal research", "contract drafting",
+    "contract management", "compliance", "regulatory", "due diligence",
+    "litigation", "ediscovery", "e-discovery", "legal writing", "legal analysis",
+    "risk management", "intellectual property", "ip management", "privacy",
+    "data privacy", "gdpr", "legal operations", "matter management",
+    "legal billing", "outside counsel", "corporate governance", "mergers",
+    "acquisitions", "legal counsel", "legal advice", "law", "legal",
+    "policy", "regulation", "dispute resolution", "arbitration", "mediation",
+    "negotiation", "stakeholder engagement", "client engagement",
+    "client relationship management", "client management", "legal project management",
+    "knowledge management", "document review", "contract review",
+    "legal strategy", "corporate law", "employment law", "commercial law",
+  ]);
+
+  function isLegalSkill(skill: string): boolean {
+    const lower = skill.toLowerCase().trim();
+    if (LEGAL_SKILLS.has(lower)) return true;
+    for (const ls of LEGAL_SKILLS) {
+      if (lower.includes(ls) || ls.includes(lower)) return true;
+    }
+    return false;
+  }
+
+  app.get("/api/market-intelligence/transition", async (_req, res) => {
+    try {
+      if (transitionCache && Date.now() - transitionCache.timestamp < TRANSITION_CACHE_TTL) {
+        return res.json(transitionCache.data);
+      }
+
+      const allJobs = await storage.getPublishedJobs();
+      const totalJobs = allJobs.length;
+
+      const trackData: Record<string, {
+        jobCount: number;
+        relevanceScores: number[];
+        transitionFriendly: number;
+        experienceMins: number[];
+        skillMap: Record<string, number>;
+        countryMap: Record<string, number>;
+        categories: Record<string, {
+          jobCount: number;
+          transitionFriendly: number;
+          entryMidCount: number;
+          experienceMins: number[];
+          relevanceScores: number[];
+        }>;
+      }> = {
+        "Lawyer-Led": { jobCount: 0, relevanceScores: [], transitionFriendly: 0, experienceMins: [], skillMap: {}, countryMap: {}, categories: {} },
+        "Technical": { jobCount: 0, relevanceScores: [], transitionFriendly: 0, experienceMins: [], skillMap: {}, countryMap: {}, categories: {} },
+        "Ecosystem": { jobCount: 0, relevanceScores: [], transitionFriendly: 0, experienceMins: [], skillMap: {}, countryMap: {}, categories: {} },
+      };
+
+      const companyTransitionMap: Record<string, { count: number; tracks: Set<string> }> = {};
+      const countryTrackMap: Record<string, { name: string; tracks: Record<string, number>; transitionFriendly: number; total: number }> = {};
+
+      let totalTransitionFriendly = 0;
+      let totalExperienceSum = 0;
+      let totalExperienceCount = 0;
+
+      for (const job of allJobs) {
+        const track = job.careerTrack || "Lawyer-Led";
+        const td = trackData[track];
+        if (!td) continue;
+
+        td.jobCount++;
+
+        if (job.legalRelevanceScore) td.relevanceScores.push(job.legalRelevanceScore);
+
+        let isTF = false;
+        try {
+          const sd = typeof job.structuredDescription === 'string'
+            ? JSON.parse(job.structuredDescription)
+            : job.structuredDescription;
+          if (sd?.lawyerTransitionFriendly === true) isTF = true;
+        } catch {}
+        if (isTF) {
+          td.transitionFriendly++;
+          totalTransitionFriendly++;
+        }
+
+        if (job.experienceMin && job.experienceMin > 0) {
+          td.experienceMins.push(job.experienceMin);
+          totalExperienceSum += job.experienceMin;
+          totalExperienceCount++;
+        }
+
+        for (const skill of (job.keySkills || [])) {
+          const s = skill.toLowerCase().trim();
+          if (!s) continue;
+          const normalized = SKILLS_SYNONYM_MAP[s] || s;
+          td.skillMap[normalized] = (td.skillMap[normalized] || 0) + 1;
+        }
+
+        if (job.countryCode && job.countryCode !== 'UN') {
+          td.countryMap[job.countryCode] = (td.countryMap[job.countryCode] || 0) + 1;
+
+          if (!countryTrackMap[job.countryCode]) {
+            countryTrackMap[job.countryCode] = {
+              name: job.countryName || job.countryCode,
+              tracks: {},
+              transitionFriendly: 0,
+              total: 0,
+            };
+          }
+          countryTrackMap[job.countryCode].total++;
+          countryTrackMap[job.countryCode].tracks[track] = (countryTrackMap[job.countryCode].tracks[track] || 0) + 1;
+          if (isTF) countryTrackMap[job.countryCode].transitionFriendly++;
+        }
+
+        if (job.roleCategory) {
+          if (!td.categories[job.roleCategory]) {
+            td.categories[job.roleCategory] = { jobCount: 0, transitionFriendly: 0, entryMidCount: 0, experienceMins: [], relevanceScores: [] };
+          }
+          const cat = td.categories[job.roleCategory];
+          cat.jobCount++;
+          if (isTF) cat.transitionFriendly++;
+          const seniority = (job.seniorityLevel || '').toLowerCase();
+          if (['entry', 'junior', 'mid', 'intern', 'associate', 'fellowship'].includes(seniority)) {
+            cat.entryMidCount++;
+          }
+          if (job.experienceMin && job.experienceMin > 0) cat.experienceMins.push(job.experienceMin);
+          if (job.legalRelevanceScore) cat.relevanceScores.push(job.legalRelevanceScore);
+        }
+
+        if (isTF) {
+          if (!companyTransitionMap[job.company]) {
+            companyTransitionMap[job.company] = { count: 0, tracks: new Set() };
+          }
+          companyTransitionMap[job.company].count++;
+          companyTransitionMap[job.company].tracks.add(track);
+        }
+      }
+
+      const avg = (arr: number[]) => arr.length ? Math.round((arr.reduce((a, b) => a + b, 0) / arr.length) * 10) / 10 : 0;
+
+      const trackSummary = Object.entries(trackData).map(([name, td]) => {
+        const topSkills = Object.entries(td.skillMap)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 5)
+          .map(([skill, count]) => ({ skill: toTitleCase(skill), count }));
+
+        const topCountries = Object.entries(td.countryMap)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 3)
+          .map(([code, count]) => ({ code, count }));
+
+        return {
+          track: name,
+          jobCount: td.jobCount,
+          percentage: totalJobs ? Math.round((td.jobCount / totalJobs) * 100) : 0,
+          avgRelevance: avg(td.relevanceScores),
+          transitionFriendly: td.transitionFriendly,
+          transitionFriendlyPct: td.jobCount ? Math.round((td.transitionFriendly / td.jobCount) * 100) : 0,
+          avgExperience: avg(td.experienceMins),
+          topSkills,
+          topCountries,
+        };
+      });
+
+      const entryCorridor = Object.entries(
+        Object.entries(trackData).reduce<Record<string, { track: string; jobCount: number; transitionFriendly: number; entryMidCount: number; experienceMins: number[]; relevanceScores: number[] }>>((acc, [trackName, td]) => {
+          for (const [catName, cat] of Object.entries(td.categories)) {
+            if (!acc[catName]) {
+              acc[catName] = { track: trackName, jobCount: 0, transitionFriendly: 0, entryMidCount: 0, experienceMins: [], relevanceScores: [] };
+            }
+            acc[catName].jobCount += cat.jobCount;
+            acc[catName].transitionFriendly += cat.transitionFriendly;
+            acc[catName].entryMidCount += cat.entryMidCount;
+            acc[catName].experienceMins.push(...cat.experienceMins);
+            acc[catName].relevanceScores.push(...cat.relevanceScores);
+          }
+          return acc;
+        }, {})
+      ).map(([name, cat]) => {
+        const entryMidPct = cat.jobCount ? (cat.entryMidCount / cat.jobCount) * 100 : 0;
+        const tfPct = cat.jobCount ? (cat.transitionFriendly / cat.jobCount) * 100 : 0;
+        const avgExp = avg(cat.experienceMins);
+        const avgRel = avg(cat.relevanceScores);
+
+        const expScore = Math.max(0, 100 - (avgExp * 10));
+        const accessibilityScore = Math.round(
+          (entryMidPct * 0.25) + (tfPct * 0.30) + (expScore * 0.20) + (avgRel * 2.5)
+        );
+
+        return {
+          category: name,
+          track: cat.track,
+          jobCount: cat.jobCount,
+          accessibilityScore: Math.min(100, Math.max(0, accessibilityScore)),
+          transitionFriendly: cat.transitionFriendly,
+          avgExperience: avgExp,
+          entryMidPct: Math.round(entryMidPct),
+        };
+      }).sort((a, b) => b.accessibilityScore - a.accessibilityScore);
+
+      const skillBridge: Record<string, { youHave: { skill: string; count: number }[]; toBuild: { skill: string; count: number }[] }> = {};
+      for (const [trackName, td] of Object.entries(trackData)) {
+        const sorted = Object.entries(td.skillMap).sort((a, b) => b[1] - a[1]);
+        const youHave = sorted
+          .filter(([s]) => isLegalSkill(s))
+          .slice(0, 8)
+          .map(([skill, count]) => ({ skill: toTitleCase(skill), count }));
+        const toBuild = sorted
+          .filter(([s]) => !isLegalSkill(s))
+          .slice(0, 8)
+          .map(([skill, count]) => ({ skill: toTitleCase(skill), count }));
+        skillBridge[trackName] = { youHave, toBuild };
+      }
+
+      const transitionEmployers = Object.entries(companyTransitionMap)
+        .sort((a, b) => b[1].count - a[1].count)
+        .slice(0, 10)
+        .map(([company, data]) => ({
+          company,
+          transitionFriendlyCount: data.count,
+          tracks: Array.from(data.tracks),
+        }));
+
+      const regionalIntelligence = Object.entries(countryTrackMap)
+        .sort((a, b) => b[1].total - a[1].total)
+        .slice(0, 15)
+        .map(([code, data]) => ({
+          countryCode: code,
+          countryName: data.name,
+          total: data.total,
+          tracks: data.tracks,
+          dominantTrack: Object.entries(data.tracks).sort((a, b) => b[1] - a[1])[0]?.[0] || "Lawyer-Led",
+          transitionFriendly: data.transitionFriendly,
+          transitionFriendlyPct: data.total ? Math.round((data.transitionFriendly / data.total) * 100) : 0,
+        }));
+
+      const result = {
+        totalJobs,
+        totalTransitionFriendly,
+        transitionFriendlyPct: totalJobs ? Math.round((totalTransitionFriendly / totalJobs) * 100) : 0,
+        avgExperience: totalExperienceCount ? Math.round((totalExperienceSum / totalExperienceCount) * 10) / 10 : 0,
+        trackSummary,
+        entryCorridor,
+        skillBridge,
+        transitionEmployers,
+        regionalIntelligence,
+        generatedAt: new Date().toISOString(),
+      };
+
+      transitionCache = { data: result, timestamp: Date.now() };
+      res.json(result);
+    } catch (error: any) {
+      console.error("Error computing transition intelligence:", error);
+      res.status(500).json({ error: "Failed to compute transition intelligence" });
+    }
+  });
+
   async function getMarketDataForReport() {
     let miData: any = getMarketIntelligenceCache();
     if (!miData) {
@@ -8436,6 +8692,24 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
         workModeByMonth: wmbm,
         skillTrends: st,
       };
+
+      try {
+        const transitionRes = await fetch(`http://localhost:${process.env.PORT || 5000}/api/market-intelligence/transition`);
+        if (transitionRes.ok) {
+          const transitionData = await transitionRes.json();
+          (pdfData as any).transitionIntelligence = {
+            totalTransitionFriendly: transitionData.totalTransitionFriendly,
+            transitionFriendlyPct: transitionData.transitionFriendlyPct,
+            avgExperience: transitionData.avgExperience,
+            trackSummary: transitionData.trackSummary,
+            entryCorridor: transitionData.entryCorridor,
+            skillBridge: transitionData.skillBridge,
+            transitionEmployers: transitionData.transitionEmployers,
+          };
+        }
+      } catch (e) {
+        console.error("Failed to fetch transition data for PDF:", e);
+      }
 
       const periodLabels: Record<string, string> = { weekly: "Weekly_Briefing", monthly: "Monthly_Report", annual: "Annual_Report" };
       const filename = `LegalTechCareers_${periodLabels[period]}_${new Date().toISOString().split("T")[0]}.pdf`;

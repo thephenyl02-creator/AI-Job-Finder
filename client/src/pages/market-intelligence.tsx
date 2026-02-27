@@ -8,7 +8,6 @@ import { useToast } from "@/hooks/use-toast";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -26,15 +25,11 @@ import {
   YAxis,
   Tooltip,
   ResponsiveContainer,
-  PieChart,
-  Pie,
   Cell,
-  Label,
   LineChart,
   Line,
-  AreaChart,
-  Area,
   Legend,
+  CartesianGrid,
 } from "recharts";
 import {
   Briefcase,
@@ -50,13 +45,25 @@ import {
   AlertCircle,
   RefreshCw,
   Download,
-  DollarSign,
   ChevronDown,
   MapPin,
   FileText,
   Loader2,
-  Activity,
+  Shield,
+  Target,
+  GraduationCap,
+  ArrowUpRight,
 } from "lucide-react";
+import {
+  TRACK_COLORS,
+  getCategoryColor,
+  getTrackForCategory,
+  GENERIC_PALETTE,
+  WORK_MODE_PALETTE,
+  SHARED_TOOLTIP_STYLE,
+  accessibilityLabel,
+} from "@/lib/chart-theme";
+import { ROLE_TRACKS } from "@shared/schema";
 
 interface MarketIntelligenceData {
   overview: {
@@ -87,44 +94,54 @@ interface MarketIntelligenceData {
   };
 }
 
-const CHART_COLORS = [
-  "hsl(var(--chart-1))",
-  "hsl(var(--chart-2))",
-  "hsl(var(--chart-3))",
-  "hsl(var(--chart-4))",
-  "hsl(var(--chart-5))",
-];
-
-const WORK_MODE_COLORS = [
-  "hsl(var(--chart-1))",
-  "hsl(var(--chart-3))",
-  "hsl(var(--chart-4))",
-];
-
-const PATH_COLORS = [
-  "hsl(var(--chart-1))",
-  "hsl(var(--chart-2))",
-  "hsl(var(--chart-3))",
-  "hsl(var(--chart-4))",
-  "hsl(var(--chart-5))",
-  "hsl(var(--chart-1))",
-  "hsl(var(--chart-2))",
-  "hsl(var(--chart-3))",
-  "hsl(var(--chart-4))",
-  "hsl(var(--chart-5))",
-];
+interface TransitionData {
+  totalJobs: number;
+  totalTransitionFriendly: number;
+  transitionFriendlyPct: number;
+  avgExperience: number;
+  trackSummary: {
+    track: string;
+    jobCount: number;
+    percentage: number;
+    avgRelevance: number;
+    transitionFriendly: number;
+    transitionFriendlyPct: number;
+    avgExperience: number;
+    topSkills: { skill: string; count: number }[];
+    topCountries: { code: string; count: number }[];
+  }[];
+  entryCorridor: {
+    category: string;
+    track: string;
+    jobCount: number;
+    accessibilityScore: number;
+    transitionFriendly: number;
+    avgExperience: number;
+    entryMidPct: number;
+  }[];
+  skillBridge: Record<string, {
+    youHave: { skill: string; count: number }[];
+    toBuild: { skill: string; count: number }[];
+  }>;
+  transitionEmployers: {
+    company: string;
+    transitionFriendlyCount: number;
+    tracks: string[];
+  }[];
+  regionalIntelligence: {
+    countryCode: string;
+    countryName: string;
+    total: number;
+    tracks: Record<string, number>;
+    dominantTrack: string;
+    transitionFriendly: number;
+    transitionFriendlyPct: number;
+  }[];
+}
 
 function formatSalary(val: number | null): string {
   if (!val) return "N/A";
   return `$${Math.round(val / 1000)}K`;
-}
-
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <p className="text-sm font-semibold text-primary tracking-[0.2em] uppercase border-l-2 border-primary pl-3 -ml-3 mb-4">
-      {children}
-    </p>
-  );
 }
 
 function SkeletonPage() {
@@ -132,56 +149,23 @@ function SkeletonPage() {
     <div className="min-h-screen bg-background flex flex-col overflow-x-hidden">
       <Header />
       <main className="flex-1">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-14 sm:pt-24 pb-14 sm:pb-24">
-          <Skeleton className="h-4 w-48 mb-4" />
-          <Skeleton className="h-12 w-full max-w-md mb-4" />
-          <Skeleton className="h-5 w-full max-w-lg" />
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-10 sm:pt-16 pb-8">
+          <Skeleton className="h-4 w-48 mb-3" />
+          <Skeleton className="h-10 w-full max-w-md mb-3" />
+          <Skeleton className="h-4 w-full max-w-lg" />
         </div>
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-5">
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
             {[1, 2, 3, 4, 5, 6].map((i) => (
-              <Card key={i}>
-                <CardContent className="p-4">
-                  <Skeleton className="h-4 w-4 mb-2" />
-                  <Skeleton className="h-7 w-16 mb-1" />
-                  <Skeleton className="h-3 w-20" />
-                </CardContent>
-              </Card>
+              <div key={i} className="mi-panel"><Skeleton className="h-16 w-full" /></div>
             ))}
           </div>
         </div>
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-14">
-          <Skeleton className="h-4 w-40 mb-4" />
-          <Skeleton className="h-7 w-56 mb-8" />
-          <Skeleton className="h-[300px] w-full rounded-md" />
-        </div>
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-14">
-          <Skeleton className="h-4 w-40 mb-4" />
-          <Skeleton className="h-7 w-48 mb-8" />
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-              <Card key={i}>
-                <CardContent className="p-4">
-                  <Skeleton className="h-5 w-full mb-2" />
-                  <Skeleton className="h-8 w-16 mb-1" />
-                  <Skeleton className="h-3 w-12" />
-                </CardContent>
-              </Card>
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="mi-panel"><Skeleton className="h-40 w-full" /></div>
             ))}
-          </div>
-        </div>
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-14">
-          <div className="grid md:grid-cols-2 gap-6">
-            <Card>
-              <CardContent className="p-6">
-                <Skeleton className="h-[250px] w-full" />
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-6">
-                <Skeleton className="h-[250px] w-full" />
-              </CardContent>
-            </Card>
           </div>
         </div>
       </main>
@@ -190,20 +174,11 @@ function SkeletonPage() {
   );
 }
 
-function WorkModeCenterLabel({ viewBox, total }: { viewBox?: { cx: number; cy: number }; total: number }) {
-  if (!viewBox) return null;
-  const { cx, cy } = viewBox;
-  return (
-    <g>
-      <text x={cx} y={cy - 6} textAnchor="middle" dominantBaseline="central" className="fill-foreground text-2xl font-bold">
-        {total}
-      </text>
-      <text x={cx} y={cy + 16} textAnchor="middle" dominantBaseline="central" className="fill-muted-foreground text-[10px]">
-        total jobs
-      </text>
-    </g>
-  );
-}
+const TRACK_ICONS: Record<string, typeof Briefcase> = {
+  "Lawyer-Led": Shield,
+  "Technical": Target,
+  "Ecosystem": Globe,
+};
 
 export default function MarketIntelligence() {
   usePageTitle("Market Intelligence");
@@ -218,6 +193,10 @@ export default function MarketIntelligence() {
 
   const { data, isLoading, isError, refetch } = useQuery<MarketIntelligenceData>({
     queryKey: ["/api/market-intelligence"],
+  });
+
+  const { data: transitionData } = useQuery<TransitionData>({
+    queryKey: ["/api/market-intelligence/transition"],
   });
 
   const { data: historicalData } = useQuery<{
@@ -243,11 +222,8 @@ export default function MarketIntelligence() {
       let el = document.querySelector(`meta[name="${name}"]`) || document.querySelector(`meta[property="${name}"]`);
       if (!el) {
         el = document.createElement("meta");
-        if (name.startsWith("og:") || name.startsWith("twitter:")) {
-          el.setAttribute("property", name);
-        } else {
-          el.setAttribute("name", name);
-        }
+        if (name.startsWith("og:") || name.startsWith("twitter:")) el.setAttribute("property", name);
+        else el.setAttribute("name", name);
         document.head.appendChild(el);
       }
       el.setAttribute("content", content);
@@ -266,9 +242,7 @@ export default function MarketIntelligence() {
     setMeta("twitter:description", desc);
   }, [data]);
 
-  if (isLoading) {
-    return <SkeletonPage />;
-  }
+  if (isLoading) return <SkeletonPage />;
 
   if (isError || !data) {
     return (
@@ -301,25 +275,7 @@ export default function MarketIntelligence() {
     high: aiIntensity?.high || { count: 0, percentage: 0 },
   };
 
-  const skillsChartData = skillsDemand.slice(0, 10).map((s) => ({
-    name: s.skill.length > 22 ? s.skill.slice(0, 20) + "\u2026" : s.skill,
-    count: s.count,
-  }));
-
   const workModeTotal = safeRemote.count + safeHybrid.count + safeOnsite.count;
-  const workModeData = [
-    { name: "Remote", value: safeRemote.count, pct: safeRemote.percentage },
-    { name: "Hybrid", value: safeHybrid.count, pct: safeHybrid.percentage },
-    { name: "On-site", value: safeOnsite.count, pct: safeOnsite.percentage },
-  ];
-
-  const seniorityChartData = seniorityDistribution.map((s) => ({
-    name: s.level,
-    count: s.count,
-  }));
-
-  const aiMax = Math.max(safeAI.low.count, safeAI.medium.count, safeAI.high.count, 1);
-
   const salaryVisible = isPro ? salaryByPath : salaryByPath.slice(0, 3);
   const salaryBlurred = !isPro && salaryByPath.length > 3;
   const salaryMax = Math.max(...(salaryByPath.length > 0 ? salaryByPath.map((s) => s.medianMax || 0) : [0]), 1);
@@ -341,7 +297,6 @@ export default function MarketIntelligence() {
       triggerDownload(`/api/market-intelligence/report?period=${period}`);
       toast({ title: "Report downloading", description: `Your ${period} report is being prepared.` });
     } catch (err: any) {
-      console.error("Download failed:", err);
       toast({ title: "Download failed", description: err.message || "Something went wrong. Please try again.", variant: "destructive" });
     } finally {
       setDownloading(false);
@@ -360,573 +315,650 @@ export default function MarketIntelligence() {
     }
   };
 
+  const lawyerLedPct = transitionData?.trackSummary.find(t => t.track === "Lawyer-Led")?.percentage || 0;
+  const entryAccessible = seniorityDistribution.filter(s => ["Intern", "Fellowship", "Entry", "Junior", "Mid"].includes(s.level)).reduce((a, b) => a + b.count, 0);
+  const entryAccessiblePct = overview.totalJobs ? Math.round((entryAccessible / overview.totalJobs) * 100) : 0;
+
+  const skillsChartData = skillsDemand.slice(0, 10).map((s) => ({
+    name: s.skill.length > 22 ? s.skill.slice(0, 20) + "\u2026" : s.skill,
+    fullName: s.skill,
+    count: s.count,
+  }));
+
+  const seniorityChartData = seniorityDistribution.map((s) => ({
+    name: s.level,
+    count: s.count,
+  }));
+
+  const companyChartData = topCompanies.slice(0, 10).map((c) => ({
+    name: c.company.length > 20 ? c.company.slice(0, 18) + "\u2026" : c.company,
+    fullName: c.company,
+    count: c.jobCount,
+  }));
+
+  const geoChartData = geography.slice(0, 10).map((g) => ({
+    name: g.countryName,
+    count: g.jobCount,
+  }));
+
   return (
     <div className="min-h-screen bg-background flex flex-col overflow-x-hidden">
       <Header />
 
       <main className="flex-1">
-        <section className="max-w-5xl mx-auto px-4 sm:px-6 pt-14 sm:pt-24 pb-10 sm:pb-14" data-testid="section-hero">
-          <SectionLabel>Market Intelligence</SectionLabel>
-          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 sm:gap-6">
+        {/* HERO */}
+        <section className="max-w-6xl mx-auto px-4 sm:px-6 pt-10 sm:pt-16 pb-6" data-testid="section-hero">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
             <div>
-              <h1 className="text-3xl sm:text-[2.75rem] font-serif font-medium text-foreground leading-[1.3] mb-4" data-testid="text-mi-title">
+              <p className="mi-label mb-2" data-testid="text-mi-label">Market Intelligence</p>
+              <h1 className="text-2xl sm:text-[2.25rem] font-serif font-medium text-foreground leading-[1.2] mb-3" data-testid="text-mi-title">
                 State of Legal Tech Careers
               </h1>
-              <p className="text-base text-muted-foreground max-w-2xl leading-relaxed" data-testid="text-mi-subtitle">
-                Live data from {overview.totalJobs} roles across {overview.totalCompanies} companies, updated daily.
+              <p className="text-sm text-muted-foreground max-w-xl" data-testid="text-mi-subtitle">
+                {overview.totalJobs.toLocaleString()} roles · {overview.totalCompanies.toLocaleString()} companies · {overview.countriesCount} countries · Updated daily
               </p>
+              {transitionData && (
+                <p className="text-xs text-muted-foreground mt-1.5" data-testid="text-mi-transition-stats">
+                  {transitionData.totalTransitionFriendly} roles welcome career changers · {lawyerLedPct}% are Lawyer-Led · {transitionData.avgExperience} yrs avg experience
+                </p>
+              )}
             </div>
             {isAdmin ? (
               <div className="flex gap-2 shrink-0">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="gap-2" disabled={downloading} data-testid="button-download-report">
-                      {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-                      Download Report
-                      <ChevronDown className="h-3.5 w-3.5" />
+                    <Button variant="outline" size="sm" className="gap-1.5" disabled={downloading} data-testid="button-download-report">
+                      {downloading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+                      PDF
+                      <ChevronDown className="h-3 w-3" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuLabel>PDF Report</DropdownMenuLabel>
                     {(["weekly", "monthly", "annual"] as const).map(p => (
-                      <DropdownMenuItem
-                        key={p}
-                        onClick={() => handleDownload(p)}
-                        data-testid={`menu-download-${p}`}
-                      >
-                        <Download className="h-4 w-4 mr-2" />
-                        {p.charAt(0).toUpperCase() + p.slice(1)} Report
+                      <DropdownMenuItem key={p} onClick={() => handleDownload(p)} data-testid={`menu-download-${p}`}>
+                        <Download className="h-3.5 w-3.5 mr-2" />{p.charAt(0).toUpperCase() + p.slice(1)}
                       </DropdownMenuItem>
                     ))}
                   </DropdownMenuContent>
                 </DropdownMenu>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="gap-2" disabled={downloading} data-testid="button-admin-actions">
-                      {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
-                      Word Draft
-                      <ChevronDown className="h-3.5 w-3.5" />
+                    <Button variant="outline" size="sm" className="gap-1.5" disabled={downloading} data-testid="button-admin-actions">
+                      <FileText className="h-3.5 w-3.5" />
+                      DOCX
+                      <ChevronDown className="h-3 w-3" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => handleDocxDownload("weekly")} data-testid="menu-docx-weekly">
-                      <FileText className="h-4 w-4 mr-2" />
-                      Weekly Briefing (.docx)
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleDocxDownload("monthly")} data-testid="menu-docx-monthly">
-                      <FileText className="h-4 w-4 mr-2" />
-                      Monthly Report (.docx)
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleDocxDownload("annual")} data-testid="menu-docx-annual">
-                      <FileText className="h-4 w-4 mr-2" />
-                      Annual Report (.docx)
-                    </DropdownMenuItem>
+                    {(["weekly", "monthly", "annual"] as const).map(p => (
+                      <DropdownMenuItem key={p} onClick={() => handleDocxDownload(p)} data-testid={`menu-docx-${p}`}>
+                        <FileText className="h-3.5 w-3.5 mr-2" />{p.charAt(0).toUpperCase() + p.slice(1)} (.docx)
+                      </DropdownMenuItem>
+                    ))}
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
             ) : isPro ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="gap-2 shrink-0" disabled={downloading} data-testid="button-download-report">
-                    {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-                    {downloading ? "Downloading..." : "Download Report"}
-                    {!downloading && <ChevronDown className="h-3.5 w-3.5" />}
+                  <Button variant="outline" size="sm" className="gap-1.5 shrink-0" disabled={downloading} data-testid="button-download-report">
+                    {downloading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+                    Download Report
+                    <ChevronDown className="h-3 w-3" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   {(["weekly", "monthly", "annual"] as const).map(p => (
-                    <DropdownMenuItem
-                      key={p}
-                      onClick={() => handleDownload(p)}
-                      data-testid={`menu-download-${p}`}
-                    >
-                      <Download className="h-4 w-4 mr-2" />
-                      {p.charAt(0).toUpperCase() + p.slice(1)} Report
+                    <DropdownMenuItem key={p} onClick={() => handleDownload(p)} data-testid={`menu-download-${p}`}>
+                      <Download className="h-3.5 w-3.5 mr-2" />{p.charAt(0).toUpperCase() + p.slice(1)} Report
                     </DropdownMenuItem>
                   ))}
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
               <Link href="/pricing">
-                <Button variant="outline" className="gap-2 shrink-0" data-testid="button-upgrade-download">
-                  <Lock className="h-4 w-4" />
-                  Pro Feature
-                  <Crown className="h-3.5 w-3.5 text-amber-500" />
+                <Button variant="outline" size="sm" className="gap-1.5 shrink-0" data-testid="button-upgrade-download">
+                  <Lock className="h-3.5 w-3.5" />
+                  Download Report
+                  <Crown className="h-3 w-3 text-amber-500" />
                 </Button>
               </Link>
             )}
           </div>
         </section>
 
-        <section className="border-t border-border/30" data-testid="section-key-stats">
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-              <Card className="bg-primary/5 dark:bg-primary/10 border-primary/10" data-testid="stat-total-jobs">
-                <CardContent className="p-4">
-                  <Briefcase className="h-4 w-4 text-primary mb-2" />
-                  <p className="text-2xl font-bold text-foreground tabular-nums">{overview.totalJobs}</p>
-                  <p className="text-xs text-muted-foreground">Total jobs</p>
-                </CardContent>
-              </Card>
-              <Card className="bg-chart-2/5 dark:bg-chart-2/10 border-chart-2/10" data-testid="stat-companies">
-                <CardContent className="p-4">
-                  <Building2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400 mb-2" />
-                  <p className="text-2xl font-bold text-foreground tabular-nums">{overview.totalCompanies}</p>
-                  <p className="text-xs text-muted-foreground">Companies</p>
-                </CardContent>
-              </Card>
-              <Card className="bg-chart-3/5 dark:bg-chart-3/10 border-chart-3/10" data-testid="stat-countries">
-                <CardContent className="p-4">
-                  <Globe className="h-4 w-4 text-amber-600 dark:text-amber-400 mb-2" />
-                  <p className="text-2xl font-bold text-foreground tabular-nums">{overview.countriesCount}</p>
-                  <p className="text-xs text-muted-foreground">Countries</p>
-                </CardContent>
-              </Card>
-              <Card className="bg-chart-4/5 dark:bg-chart-4/10 border-chart-4/10" data-testid="stat-remote">
-                <CardContent className="p-4">
-                  <Wifi className="h-4 w-4 text-violet-600 dark:text-violet-400 mb-2" />
-                  <p className="text-2xl font-bold text-foreground tabular-nums">{overview.remotePercentage}%</p>
-                  <p className="text-xs text-muted-foreground">Remote</p>
-                </CardContent>
-              </Card>
-              <Card className="bg-chart-5/5 dark:bg-chart-5/10 border-chart-5/10" data-testid="stat-new-this-week">
-                <CardContent className="p-4">
-                  <TrendingUp className="h-4 w-4 text-rose-600 dark:text-rose-400 mb-2" />
-                  <p className="text-2xl font-bold text-foreground tabular-nums">{overview.newJobsThisWeek}</p>
-                  <p className="text-xs text-muted-foreground">New this week</p>
-                </CardContent>
-              </Card>
-              <Card className="bg-chart-1/5 dark:bg-chart-1/10 border-chart-1/10" data-testid="stat-salary-data">
-                <CardContent className="p-4">
-                  <DollarSign className="h-4 w-4 text-sky-600 dark:text-sky-400 mb-2" />
-                  <p className="text-2xl font-bold text-foreground tabular-nums">{overview.jobsWithSalary}</p>
-                  <p className="text-xs text-muted-foreground">With salary</p>
-                </CardContent>
-              </Card>
+        {/* MARKET PULSE GRID */}
+        <section className="border-t border-border/40" data-testid="section-key-stats">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+              {[
+                { label: "Active Roles", value: overview.totalJobs.toLocaleString(), sub: `+${overview.newJobsThisWeek} this week`, icon: Briefcase },
+                { label: "Career Changers", value: transitionData ? `${transitionData.transitionFriendlyPct}%` : `${overview.totalCompanies}`, sub: transitionData ? `${transitionData.totalTransitionFriendly} roles` : "companies", icon: Users },
+                { label: "Lawyer-Led", value: `${lawyerLedPct}%`, sub: `${transitionData?.trackSummary.find(t => t.track === "Lawyer-Led")?.jobCount || 0} roles`, icon: Shield },
+                { label: "Avg Experience", value: transitionData ? `${transitionData.avgExperience}y` : "—", sub: `${entryAccessiblePct}% entry-accessible`, icon: GraduationCap },
+                { label: "Remote", value: `${overview.remotePercentage}%`, sub: `${safeRemote.count} roles`, icon: Wifi },
+                { label: "Salary Data", value: `${overview.jobsWithSalary}`, sub: `${overview.totalJobs ? Math.round((overview.jobsWithSalary / overview.totalJobs) * 100) : 0}% transparent`, icon: TrendingUp },
+              ].map((stat, i) => (
+                <div key={i} className="mi-panel flex flex-col gap-1" data-testid={`stat-${stat.label.toLowerCase().replace(/\s+/g, "-")}`}>
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    <stat.icon className="h-3 w-3 text-muted-foreground" />
+                    <span className="mi-label">{stat.label}</span>
+                  </div>
+                  <span className="mi-metric">{stat.value}</span>
+                  <span className="text-[11px] text-muted-foreground">{stat.sub}</span>
+                </div>
+              ))}
             </div>
           </div>
         </section>
 
-        <section className="border-t border-border/30" data-testid="section-skills">
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-14 sm:pt-24 pb-14 sm:pb-24">
-            <SectionLabel>Skills in Demand</SectionLabel>
-            <h2 className="text-xl sm:text-2xl font-serif font-medium text-foreground mb-8 sm:mb-10" data-testid="text-skills-title">
-              Most requested skills
-            </h2>
-            {skillsChartData.length > 0 ? (
-              <div className="h-[360px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={skillsChartData} layout="vertical" margin={{ top: 0, right: 30, left: 10, bottom: 0 }}>
-                    <XAxis type="number" tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
-                    <YAxis type="category" dataKey="name" tick={{ fontSize: 12, fill: "hsl(var(--foreground))" }} axisLine={false} tickLine={false} width={200} tickFormatter={(value: string) => value.length > 28 ? value.slice(0, 26) + '…' : value} />
-                    <Tooltip
-                      contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "6px", fontSize: 13 }}
-                      labelStyle={{ color: "hsl(var(--foreground))" }}
-                      itemStyle={{ color: "hsl(var(--foreground))" }}
-                      cursor={{ fill: "hsl(var(--muted) / 0.3)" }}
-                    />
-                    <Bar dataKey="count" radius={[0, 4, 4, 0]} barSize={22} name="Job count">
-                      {skillsChartData.map((_, index) => (
-                        <Cell key={`skill-cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">No skills data available.</p>
-            )}
-          </div>
-        </section>
-
-        {careerPaths.length > 0 && (
-          <section className="border-t border-border/30 bg-muted/20" data-testid="section-career-paths">
-            <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-14 sm:pt-24 pb-14 sm:pb-24">
-              <SectionLabel>Career Paths</SectionLabel>
-              <h2 className="text-xl sm:text-2xl font-serif font-medium text-foreground mb-8 sm:mb-10" data-testid="text-career-paths-title">
-                Where the roles are
-              </h2>
-              <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-                {careerPaths.map((cp, i) => (
-                  <Card key={cp.name} className="hover-elevate overflow-visible relative" data-testid={`card-path-${cp.name.toLowerCase().replace(/\s+/g, "-")}`}>
-                    <div className="absolute left-0 top-3 bottom-3 w-1 rounded-r-full" style={{ backgroundColor: PATH_COLORS[i % PATH_COLORS.length] }} />
-                    <CardContent className="p-4 sm:p-5 pl-5 sm:pl-6">
-                      <h3 className="text-sm font-semibold text-foreground mb-2 leading-snug">{cp.name}</h3>
-                      <p className="text-2xl font-semibold text-foreground tabular-nums" data-testid={`text-path-count-${cp.name.toLowerCase().replace(/\s+/g, "-")}`}>
-                        {cp.jobCount}
+        {/* THREE PATHS */}
+        {transitionData && transitionData.trackSummary.length > 0 && (
+          <section className="border-t border-border/40" data-testid="section-three-paths">
+            <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
+              <p className="mi-section-title mb-4">Three Paths Into Legal Tech</p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                {transitionData.trackSummary.map((ts) => {
+                  const trackKey = ts.track as keyof typeof ROLE_TRACKS;
+                  const colors = TRACK_COLORS[trackKey];
+                  const Icon = TRACK_ICONS[ts.track] || Briefcase;
+                  const trackCorridors = transitionData.entryCorridor.filter(c => c.track === ts.track);
+                  const avgAccess = trackCorridors.length > 0
+                    ? trackCorridors.reduce((sum, c) => sum + c.accessibilityScore, 0) / trackCorridors.length
+                    : 50;
+                  const acc = accessibilityLabel(isNaN(avgAccess) ? 50 : avgAccess);
+                  return (
+                    <div
+                      key={ts.track}
+                      className="mi-panel relative pl-4"
+                      style={{ borderLeftWidth: "3px", borderLeftColor: colors.primary }}
+                      data-testid={`path-${ts.track.toLowerCase().replace(/\s+/g, "-")}`}
+                    >
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="w-6 h-6 rounded flex items-center justify-center" style={{ backgroundColor: colors.bg }}>
+                          <Icon className="h-3.5 w-3.5" style={{ color: colors.primary }} />
+                        </div>
+                        <span className="text-sm font-semibold text-foreground">{ts.track}</span>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground mb-3 leading-relaxed">
+                        {ROLE_TRACKS[trackKey]?.description}
                       </p>
-                      <p className="text-xs text-muted-foreground">{cp.percentage}% of all roles</p>
-                      {cp.newThisWeek > 0 && (
-                        <Badge variant="secondary" className="mt-2 text-[10px] no-default-active-elevate bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20">
-                          +{cp.newThisWeek} new this week
-                        </Badge>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))}
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-2 mb-3">
+                        <div>
+                          <span className="mi-label">Jobs</span>
+                          <p className="mi-metric-sm">{ts.jobCount}</p>
+                          <span className="text-[10px] text-muted-foreground">{ts.percentage}% of market</span>
+                        </div>
+                        <div>
+                          <span className="mi-label">Accessibility</span>
+                          <p className={`mi-metric-sm ${acc.className}`}>{acc.label}</p>
+                          <span className="text-[10px] text-muted-foreground">{ts.avgExperience}y avg exp</span>
+                        </div>
+                        <div>
+                          <span className="mi-label">Transition-Friendly</span>
+                          <p className="mi-metric-sm">{ts.transitionFriendlyPct}%</p>
+                          <span className="text-[10px] text-muted-foreground">{ts.transitionFriendly} of {ts.jobCount}</span>
+                        </div>
+                        <div>
+                          <span className="mi-label">Relevance</span>
+                          <p className="mi-metric-sm">{ts.avgRelevance}<span className="text-[10px] text-muted-foreground">/10</span></p>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-1 mb-3">
+                        {ts.topSkills.slice(0, 3).map(s => (
+                          <Badge key={s.skill} variant="outline" className="text-[10px] no-default-active-elevate">{s.skill}</Badge>
+                        ))}
+                      </div>
+                      <Link href={`/jobs?track=${encodeURIComponent(ts.track)}`}>
+                        <span className="text-xs font-medium flex items-center gap-1 hover:underline" style={{ color: colors.primary }} data-testid={`link-browse-${ts.track.toLowerCase().replace(/\s+/g, "-")}`}>
+                          Browse roles <ArrowUpRight className="h-3 w-3" />
+                        </span>
+                      </Link>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </section>
         )}
 
-        {salaryByPath.length > 0 && (
-          <section className="border-t border-border/30" data-testid="section-salary">
-            <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-14 sm:pt-24 pb-14 sm:pb-24">
-              <SectionLabel>Salary Insights</SectionLabel>
-              <h2 className="text-xl sm:text-2xl font-serif font-medium text-foreground mb-2" data-testid="text-salary-title">
-                Compensation by career path
-              </h2>
-              <p className="text-sm text-muted-foreground mb-8 sm:mb-10">
-                Median salary ranges based on {overview.jobsWithSalary} listings with disclosed compensation.
-              </p>
-              <div className="space-y-5">
-                {salaryVisible.map((sp) => {
-                  const minPct = salaryMax > 0 ? ((sp.medianMin || 0) / salaryMax) * 100 : 0;
-                  const maxPct = salaryMax > 0 ? ((sp.medianMax || 0) / salaryMax) * 100 : 0;
-                  const rangePct = maxPct - minPct;
+        {/* SKILL BRIDGE */}
+        {transitionData && transitionData.skillBridge && (
+          <section className="border-t border-border/40" data-testid="section-skill-bridge">
+            <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
+              <p className="mi-section-title mb-1">Skill Bridge</p>
+              <p className="mi-insight mb-4">What legal skills transfer — and what you'll need to learn</p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                {Object.entries(transitionData.skillBridge).map(([trackName, bridge]) => {
+                  const colors = TRACK_COLORS[trackName as keyof typeof TRACK_COLORS];
+                  const youHaveVisible = isPro ? bridge.youHave : bridge.youHave.slice(0, 3);
+                  const toBuildVisible = isPro ? bridge.toBuild : bridge.toBuild.slice(0, 3);
                   return (
-                    <div key={sp.name} data-testid={`salary-path-${sp.name.toLowerCase().replace(/\s+/g, "-")}`}>
-                      <div className="flex items-center justify-between gap-4 mb-1.5">
-                        <span className="text-sm text-foreground font-medium">{sp.name}</span>
-                        <span className="text-sm font-semibold text-foreground tabular-nums shrink-0">
-                          {formatSalary(sp.medianMin)} – {formatSalary(sp.medianMax)}
-                        </span>
+                    <div key={trackName} className="mi-panel" data-testid={`skill-bridge-${trackName.toLowerCase().replace(/\s+/g, "-")}`}>
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: colors.primary }} />
+                        <span className="text-xs font-semibold text-foreground">{trackName}</span>
                       </div>
-                      <div className="h-2.5 rounded-full bg-muted/60 overflow-hidden relative">
-                        <div
-                          className="absolute h-full rounded-full bg-primary/30"
-                          style={{ left: `${minPct}%`, width: `${Math.max(rangePct, 2)}%` }}
-                        />
-                        <div
-                          className="absolute h-full rounded-full bg-primary"
-                          style={{ left: `${minPct}%`, width: `${Math.max(rangePct * 0.6, 1)}%` }}
-                        />
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <p className="mi-label text-emerald-600 dark:text-emerald-400 mb-2">You Likely Have</p>
+                          <div className="space-y-1.5">
+                            {youHaveVisible.map(s => (
+                              <div key={s.skill} className="flex items-center justify-between gap-1">
+                                <span className="text-[11px] text-foreground truncate">{s.skill}</span>
+                                <span className="text-[10px] text-muted-foreground tabular-nums shrink-0">{s.count}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                        <div>
+                          <p className="mi-label text-amber-600 dark:text-amber-400 mb-2">To Build</p>
+                          <div className="space-y-1.5">
+                            {toBuildVisible.map(s => (
+                              <div key={s.skill} className="flex items-center justify-between gap-1">
+                                <span className="text-[11px] text-foreground truncate">{s.skill}</span>
+                                <span className="text-[10px] text-muted-foreground tabular-nums shrink-0">{s.count}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
                       </div>
+                      {!isPro && (bridge.youHave.length > 3 || bridge.toBuild.length > 3) && (
+                        <Link href="/pricing">
+                          <p className="text-[10px] text-muted-foreground mt-3 flex items-center gap-1 hover:underline cursor-pointer" data-testid={`link-skill-upgrade-${trackName.toLowerCase().replace(/\s+/g, "-")}`}>
+                            <Lock className="h-2.5 w-2.5" /> See all skills for this track
+                            <Crown className="h-2.5 w-2.5 text-amber-500" />
+                          </p>
+                        </Link>
+                      )}
                     </div>
                   );
                 })}
               </div>
-              {salaryBlurred && (
-                <div className="relative mt-6">
-                  <div className="space-y-5 blur-sm select-none pointer-events-none opacity-50">
-                    {salaryByPath.slice(3, 6).map((sp) => {
+            </div>
+          </section>
+        )}
+
+        {/* ENTRY CORRIDORS */}
+        {transitionData && transitionData.entryCorridor.length > 0 && (
+          <section className="border-t border-border/40" data-testid="section-entry-corridors">
+            <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
+              <p className="mi-section-title mb-1">Entry Corridors</p>
+              <p className="mi-insight mb-4">Categories ranked by how accessible they are for lawyers making the switch</p>
+              <div className="mi-panel overflow-hidden">
+                <div className="hidden sm:grid grid-cols-[1fr_80px_90px_60px_70px_80px] gap-2 px-3 py-2 border-b border-border/40">
+                  <span className="mi-label">Category</span>
+                  <span className="mi-label text-right">Jobs</span>
+                  <span className="mi-label text-right">Access</span>
+                  <span className="mi-label text-right">TF</span>
+                  <span className="mi-label text-right">Exp</span>
+                  <span className="mi-label text-right">Entry %</span>
+                </div>
+                {(isPro ? transitionData.entryCorridor : transitionData.entryCorridor.slice(0, 5)).map((c, i) => {
+                  const acc = accessibilityLabel(c.accessibilityScore);
+                  const trackColors = TRACK_COLORS[c.track as keyof typeof TRACK_COLORS];
+                  return (
+                    <div
+                      key={c.category}
+                      className={`grid grid-cols-2 sm:grid-cols-[1fr_80px_90px_60px_70px_80px] gap-1 sm:gap-2 px-3 py-2.5 ${i % 2 === 0 ? "" : "bg-muted/30"}`}
+                      data-testid={`corridor-${c.category.toLowerCase().replace(/\s+/g, "-")}`}
+                    >
+                      <div className="flex items-center gap-2 col-span-2 sm:col-span-1">
+                        <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: trackColors?.primary }} />
+                        <span className="text-xs font-medium text-foreground truncate">{c.category}</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-xs text-foreground tabular-nums font-medium">{c.jobCount}</span>
+                        <span className="text-[10px] text-muted-foreground sm:hidden ml-1">jobs</span>
+                      </div>
+                      <div className="text-right">
+                        <span className={`text-xs font-semibold ${acc.className}`}>{acc.label}</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-xs text-foreground tabular-nums">{c.transitionFriendly}</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-xs text-foreground tabular-nums">{c.avgExperience}y</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-xs text-foreground tabular-nums">{c.entryMidPct}%</span>
+                      </div>
+                    </div>
+                  );
+                })}
+                {!isPro && transitionData.entryCorridor.length > 5 && (
+                  <div className="px-3 py-3 border-t border-border/40 text-center">
+                    <Link href="/pricing">
+                      <span className="text-xs text-muted-foreground flex items-center justify-center gap-1 hover:underline cursor-pointer" data-testid="link-corridor-upgrade">
+                        <Lock className="h-3 w-3" /> See all {transitionData.entryCorridor.length} entry points
+                        <Crown className="h-3 w-3 text-amber-500" />
+                      </span>
+                    </Link>
+                  </div>
+                )}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* SKILLS IN DEMAND */}
+        {skillsChartData.length > 0 && (
+          <section className="border-t border-border/40" data-testid="section-skills">
+            <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
+              <p className="mi-section-title mb-4">Most Requested Skills</p>
+              <div className="mi-panel">
+                <div className="h-[300px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={skillsChartData} layout="vertical" margin={{ top: 0, right: 30, left: 0, bottom: 0 }}>
+                      <XAxis type="number" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+                      <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: "hsl(var(--foreground))" }} axisLine={false} tickLine={false} width={160} />
+                      <Tooltip
+                        {...SHARED_TOOLTIP_STYLE}
+                        cursor={{ fill: "hsl(var(--muted) / 0.2)" }}
+                        formatter={(value: number) => [`${value} jobs`, "Demand"]}
+                      />
+                      <Bar dataKey="count" radius={[0, 3, 3, 0]} barSize={18} name="Jobs">
+                        {skillsChartData.map((_, index) => (
+                          <Cell key={`skill-cell-${index}`} fill={GENERIC_PALETTE[index % GENERIC_PALETTE.length]} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* SALARY + WORK MODE + AI (2-col grid) */}
+        <section className="border-t border-border/40" data-testid="section-salary-work">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
+            <div className="grid md:grid-cols-2 gap-4">
+              {/* Salary */}
+              {salaryByPath.length > 0 && (
+                <div className="mi-panel" data-testid="section-salary">
+                  <p className="mi-section-title mb-4">Salary by Career Path</p>
+                  <p className="mi-insight mb-3">Median ranges from {overview.jobsWithSalary} listings with disclosed pay</p>
+                  <div className="space-y-3">
+                    {salaryVisible.map((sp) => {
                       const minPct = salaryMax > 0 ? ((sp.medianMin || 0) / salaryMax) * 100 : 0;
                       const maxPct = salaryMax > 0 ? ((sp.medianMax || 0) / salaryMax) * 100 : 0;
                       const rangePct = maxPct - minPct;
+                      const trackColor = getCategoryColor(sp.name);
                       return (
-                        <div key={sp.name}>
-                          <div className="flex items-center justify-between gap-4 mb-1.5">
-                            <span className="text-sm text-foreground font-medium">{sp.name}</span>
-                            <span className="text-sm font-semibold text-foreground tabular-nums shrink-0">
+                        <div key={sp.name} data-testid={`salary-path-${sp.name.toLowerCase().replace(/\s+/g, "-")}`}>
+                          <div className="flex items-center justify-between gap-2 mb-1">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: trackColor }} />
+                              <span className="text-[11px] text-foreground font-medium truncate">{sp.name}</span>
+                            </div>
+                            <span className="text-[11px] font-semibold text-foreground tabular-nums shrink-0">
                               {formatSalary(sp.medianMin)} – {formatSalary(sp.medianMax)}
                             </span>
                           </div>
-                          <div className="h-2.5 rounded-full bg-muted/60 overflow-hidden relative">
-                            <div
-                              className="absolute h-full rounded-full bg-primary/30"
-                              style={{ left: `${minPct}%`, width: `${Math.max(rangePct, 2)}%` }}
-                            />
+                          <div className="h-2 rounded-full bg-muted/60 overflow-hidden relative">
+                            <div className="absolute h-full rounded-full" style={{ left: `${minPct}%`, width: `${Math.max(rangePct, 2)}%`, backgroundColor: `${trackColor}40` }} />
+                            <div className="absolute h-full rounded-full" style={{ left: `${minPct}%`, width: `${Math.max(rangePct * 0.6, 1)}%`, backgroundColor: trackColor }} />
                           </div>
                         </div>
                       );
                     })}
                   </div>
-                  <div className="absolute inset-0 flex items-center justify-center bg-background/60 backdrop-blur-[2px] rounded-md">
-                    <div className="text-center">
-                      <Lock className="h-5 w-5 text-muted-foreground mx-auto mb-2" />
-                      <p className="text-sm font-medium text-foreground mb-1">Full salary data</p>
-                      <p className="text-xs text-muted-foreground mb-3 max-w-xs">
-                        Upgrade to Pro to see salary ranges for all career paths.
-                      </p>
+                  {salaryBlurred && (
+                    <div className="mt-3 pt-3 border-t border-border/40 text-center">
                       <Link href="/pricing">
-                        <Button size="sm" className="gap-1.5" data-testid="button-salary-upgrade">
-                          <Crown className="h-3.5 w-3.5" />
-                          Upgrade to Pro
-                        </Button>
+                        <span className="text-[11px] text-muted-foreground flex items-center justify-center gap-1 hover:underline cursor-pointer" data-testid="button-salary-upgrade">
+                          <Lock className="h-3 w-3" /> Full salary data for all paths <Crown className="h-3 w-3 text-amber-500" />
+                        </span>
                       </Link>
                     </div>
+                  )}
+                </div>
+              )}
+
+              {/* Work Mode + AI Intensity */}
+              <div className="space-y-4">
+                <div className="mi-panel" data-testid="section-work-mode">
+                  <p className="mi-section-title mb-3">Work Mode</p>
+                  <div className="h-7 rounded-md overflow-hidden flex" data-testid="chart-work-mode-bar">
+                    {workModeTotal > 0 && [
+                      { label: "Remote", count: safeRemote.count, pct: safeRemote.percentage, color: WORK_MODE_PALETTE.remote },
+                      { label: "Hybrid", count: safeHybrid.count, pct: safeHybrid.percentage, color: WORK_MODE_PALETTE.hybrid },
+                      { label: "On-site", count: safeOnsite.count, pct: safeOnsite.percentage, color: WORK_MODE_PALETTE.onsite },
+                    ].map((wm) => (
+                      <div
+                        key={wm.label}
+                        className="h-full flex items-center justify-center relative group"
+                        style={{ width: `${Math.max(wm.pct, 3)}%`, backgroundColor: wm.color }}
+                        data-testid={`work-mode-${wm.label.toLowerCase().replace(/\s+/g, "-")}`}
+                      >
+                        {wm.pct >= 12 && (
+                          <span className="text-[10px] font-semibold text-white drop-shadow-sm">{wm.label} {wm.pct}%</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-4 mt-2">
+                    {[
+                      { label: "Remote", pct: safeRemote.percentage, color: WORK_MODE_PALETTE.remote },
+                      { label: "Hybrid", pct: safeHybrid.percentage, color: WORK_MODE_PALETTE.hybrid },
+                      { label: "On-site", pct: safeOnsite.percentage, color: WORK_MODE_PALETTE.onsite },
+                    ].map(wm => (
+                      <div key={wm.label} className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-sm" style={{ backgroundColor: wm.color }} />
+                        <span className="text-[10px] text-muted-foreground">{wm.label}</span>
+                        <span className="text-[10px] text-foreground font-medium tabular-nums">{wm.pct}%</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="mi-panel" data-testid="section-ai-intensity">
+                  <p className="mi-section-title mb-3">AI Intensity</p>
+                  <div className="grid grid-cols-3 gap-3">
+                    {[
+                      { label: "Low", data: safeAI.low, color: "text-emerald-600 dark:text-emerald-400" },
+                      { label: "Medium", data: safeAI.medium, color: "text-amber-600 dark:text-amber-400" },
+                      { label: "High", data: safeAI.high, color: "text-rose-600 dark:text-rose-400" },
+                    ].map(({ label, data: d, color }) => (
+                      <div key={label} className="text-center" data-testid={`ai-intensity-${label.toLowerCase()}`}>
+                        <span className="mi-label">{label}</span>
+                        <p className={`mi-metric-sm ${color}`}>{d.percentage}%</p>
+                        <span className="text-[10px] text-muted-foreground">{d.count} roles</span>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-muted-foreground mt-2">Based on AI-related keywords in job descriptions</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* SENIORITY */}
+        {seniorityDistribution.length > 0 && (
+          <section className="border-t border-border/40" data-testid="section-seniority">
+            <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
+              <div className="flex items-center justify-between mb-4">
+                <p className="mi-section-title">Seniority Landscape</p>
+                <span className="mi-insight">{entryAccessiblePct}% are entry-to-mid level</span>
+              </div>
+              <div className="mi-panel">
+                <div className="h-[220px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={seniorityChartData} layout="vertical" margin={{ top: 0, right: 30, left: 0, bottom: 0 }}>
+                      <XAxis type="number" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+                      <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: "hsl(var(--foreground))" }} axisLine={false} tickLine={false} width={70} />
+                      <Tooltip {...SHARED_TOOLTIP_STYLE} cursor={{ fill: "hsl(var(--muted) / 0.2)" }} />
+                      <Bar dataKey="count" radius={[0, 3, 3, 0]} barSize={16} name="Jobs">
+                        {seniorityChartData.map((entry, index) => {
+                          const isEntry = ["Intern", "Fellowship", "Entry", "Junior", "Mid"].includes(entry.name);
+                          return <Cell key={`cell-${index}`} fill={isEntry ? "hsl(var(--chart-2))" : "hsl(var(--chart-1))"} />;
+                        })}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* COMPANIES + GEOGRAPHY */}
+        <section className="border-t border-border/40" data-testid="section-companies-geography">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
+            <div className="grid md:grid-cols-2 gap-4">
+              {/* Companies */}
+              {companyChartData.length > 0 && (
+                <div className="mi-panel" data-testid="section-companies">
+                  <p className="mi-section-title mb-3">Top Hiring Companies</p>
+                  <div className="h-[280px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={companyChartData} layout="vertical" margin={{ top: 0, right: 30, left: 0, bottom: 0 }}>
+                        <XAxis type="number" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+                        <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: "hsl(var(--foreground))" }} axisLine={false} tickLine={false} width={130} />
+                        <Tooltip {...SHARED_TOOLTIP_STYLE} cursor={{ fill: "hsl(var(--muted) / 0.2)" }} formatter={(value: number) => [`${value} jobs`, "Open Roles"]} />
+                        <Bar dataKey="count" radius={[0, 3, 3, 0]} barSize={16} fill="hsl(var(--chart-1))" name="Jobs" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              )}
+
+              {/* Geography */}
+              {geoChartData.length > 0 && (
+                <div className="mi-panel" data-testid="section-geography">
+                  <p className="mi-section-title mb-3">Where They're Hiring</p>
+                  <div className="h-[280px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={geoChartData} layout="vertical" margin={{ top: 0, right: 30, left: 0, bottom: 0 }}>
+                        <XAxis type="number" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+                        <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: "hsl(var(--foreground))" }} axisLine={false} tickLine={false} width={110} />
+                        <Tooltip {...SHARED_TOOLTIP_STYLE} cursor={{ fill: "hsl(var(--muted) / 0.2)" }} formatter={(value: number) => [`${value} jobs`, "Open Roles"]} />
+                        <Bar dataKey="count" radius={[0, 3, 3, 0]} barSize={16} fill="hsl(var(--chart-5))" name="Jobs" />
+                      </BarChart>
+                    </ResponsiveContainer>
                   </div>
                 </div>
               )}
             </div>
-          </section>
-        )}
-
-        <section className="border-t border-border/30 bg-muted/20" data-testid="section-work-mode-ai">
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-14 sm:pt-24 pb-14 sm:pb-24">
-            <div className="grid md:grid-cols-2 gap-8 sm:gap-12">
-              <div>
-                <SectionLabel>Work Mode</SectionLabel>
-                <h2 className="text-xl sm:text-2xl font-serif font-medium text-foreground mb-8 sm:mb-10" data-testid="text-work-mode-title">
-                  How teams work
-                </h2>
-                <div className="h-[260px] w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={workModeData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={95}
-                        dataKey="value"
-                        paddingAngle={2}
-                        stroke="none"
-                      >
-                        {workModeData.map((_, index) => (
-                          <Cell key={`cell-${index}`} fill={WORK_MODE_COLORS[index]} />
-                        ))}
-                        <Label content={<WorkModeCenterLabel total={workModeTotal} />} position="center" />
-                      </Pie>
-                      <Tooltip
-                        contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "6px", fontSize: 13 }}
-                        formatter={(value: number, name: string) => [`${value} jobs`, name]}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="flex items-center justify-center gap-6 mt-2 flex-wrap">
-                  {workModeData.map((wm, i) => (
-                    <div key={wm.name} className="flex items-center gap-2" data-testid={`work-mode-${wm.name.toLowerCase().replace(/\s+/g, "-")}`}>
-                      <span className="w-3 h-3 rounded-sm shrink-0" style={{ backgroundColor: WORK_MODE_COLORS[i] }} />
-                      <span className="text-sm text-foreground">{wm.name}</span>
-                      <span className="text-xs text-muted-foreground tabular-nums">{wm.pct}%</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <SectionLabel>AI Intensity</SectionLabel>
-                <h2 className="text-xl sm:text-2xl font-serif font-medium text-foreground mb-8 sm:mb-10" data-testid="text-ai-title">
-                  AI in job requirements
-                </h2>
-                <div className="space-y-6">
-                  {[
-                    { label: "Low", data: safeAI.low, color: "bg-emerald-500 dark:bg-emerald-400" },
-                    { label: "Medium", data: safeAI.medium, color: "bg-amber-500 dark:bg-amber-400" },
-                    { label: "High", data: safeAI.high, color: "bg-rose-500 dark:bg-rose-400" },
-                  ].map(({ label, data: d, color }) => (
-                    <div key={label} data-testid={`ai-intensity-${label.toLowerCase()}`}>
-                      <div className="flex items-center justify-between gap-2 mb-1.5">
-                        <span className="text-sm text-foreground font-medium">{label}</span>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <span className="text-sm font-semibold text-foreground tabular-nums">{d.count}</span>
-                          <span className="text-xs text-muted-foreground tabular-nums w-10 text-right">{d.percentage}%</span>
-                        </div>
-                      </div>
-                      <div className="h-2.5 rounded-full bg-muted/60 overflow-hidden">
-                        <div
-                          className={`h-full rounded-full transition-all duration-700 ease-out ${color}`}
-                          style={{ width: `${Math.max(4, (d.count / aiMax) * 100)}%` }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <p className="text-xs text-muted-foreground mt-4">
-                  Based on AI-related keywords in job descriptions.
-                </p>
-              </div>
-            </div>
           </div>
         </section>
 
-        {seniorityDistribution.length > 0 && (
-          <section className="border-t border-border/30" data-testid="section-seniority">
-            <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-14 sm:pt-24 pb-14 sm:pb-24">
-              <SectionLabel>Seniority Landscape</SectionLabel>
-              <h2 className="text-xl sm:text-2xl font-serif font-medium text-foreground mb-8 sm:mb-10" data-testid="text-seniority-title">
-                Experience levels in demand
-              </h2>
-              <div className="h-[300px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={seniorityChartData} margin={{ top: 0, right: 20, left: 0, bottom: 0 }}>
-                    <XAxis dataKey="name" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
-                    <Tooltip
-                      contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "6px", fontSize: 13 }}
-                      labelStyle={{ color: "hsl(var(--foreground))" }}
-                      itemStyle={{ color: "hsl(var(--foreground))" }}
-                      cursor={{ fill: "hsl(var(--muted) / 0.3)" }}
-                    />
-                    <Bar dataKey="count" radius={[4, 4, 0, 0]} barSize={36} name="Jobs">
-                      {seniorityChartData.map((entry, index) => {
-                        const isEntry = ["Intern", "Fellowship", "Entry", "Junior"].includes(entry.name);
-                        return <Cell key={`cell-${index}`} fill={isEntry ? "hsl(var(--chart-2))" : "hsl(var(--chart-1))"} />;
-                      })}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
+        {/* TRANSITION-FRIENDLY EMPLOYERS */}
+        {transitionData && transitionData.transitionEmployers.length > 0 && (
+          <section className="border-t border-border/40" data-testid="section-transition-employers">
+            <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
+              <p className="mi-section-title mb-1">Transition-Friendly Employers</p>
+              <p className="mi-insight mb-4">Companies with the most roles that explicitly welcome career changers</p>
+              <div className="mi-panel overflow-hidden">
+                <div className="hidden sm:grid grid-cols-[1fr_100px_120px] gap-2 px-3 py-2 border-b border-border/40">
+                  <span className="mi-label">Company</span>
+                  <span className="mi-label text-right">TF Roles</span>
+                  <span className="mi-label text-right">Tracks</span>
+                </div>
+                {(isPro ? transitionData.transitionEmployers : transitionData.transitionEmployers.slice(0, 3)).map((e, i) => (
+                  <div
+                    key={e.company}
+                    className={`grid grid-cols-[1fr_auto] sm:grid-cols-[1fr_100px_120px] gap-2 px-3 py-2.5 ${i % 2 === 0 ? "" : "bg-muted/30"}`}
+                    data-testid={`employer-${i}`}
+                  >
+                    <span className="text-xs font-medium text-foreground truncate">{e.company}</span>
+                    <span className="text-xs text-foreground tabular-nums text-right font-medium">{e.transitionFriendlyCount}</span>
+                    <div className="hidden sm:flex items-center justify-end gap-1">
+                      {e.tracks.map(t => (
+                        <span key={t} className="w-2 h-2 rounded-full" style={{ backgroundColor: TRACK_COLORS[t as keyof typeof TRACK_COLORS]?.primary }} title={t} />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+                {!isPro && transitionData.transitionEmployers.length > 3 && (
+                  <div className="px-3 py-3 border-t border-border/40 text-center">
+                    <Link href="/pricing">
+                      <span className="text-[11px] text-muted-foreground flex items-center justify-center gap-1 hover:underline cursor-pointer" data-testid="link-employer-upgrade">
+                        <Lock className="h-3 w-3" /> See all {transitionData.transitionEmployers.length} transition-friendly employers
+                        <Crown className="h-3 w-3 text-amber-500" />
+                      </span>
+                    </Link>
+                  </div>
+                )}
               </div>
-              <p className="text-xs text-muted-foreground mt-3 text-center">
-                Entry-level bands highlighted.
-              </p>
             </div>
           </section>
         )}
 
-        <section className="border-t border-border/30 bg-muted/20" data-testid="section-companies-geography">
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-14 sm:pt-24 pb-14 sm:pb-24">
-            <div className="grid md:grid-cols-2 gap-8 sm:gap-12">
-              <div>
-                <SectionLabel>Top Hiring Companies</SectionLabel>
-                <h2 className="text-xl sm:text-2xl font-serif font-medium text-foreground mb-8 sm:mb-10" data-testid="text-companies-title">
-                  Who's hiring the most
-                </h2>
-                <div className="space-y-2.5">
-                  {topCompanies.slice(0, 10).map((c, i) => (
-                    <Card key={c.company} className="overflow-visible" data-testid={`company-row-${i}`}>
-                      <CardContent className="p-3 flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className="flex items-center justify-center w-7 h-7 rounded-md bg-primary/10 text-primary shrink-0">
-                            <span className="text-xs font-bold tabular-nums">{i + 1}</span>
-                          </div>
-                          <span className="text-sm text-foreground truncate">{c.company}</span>
-                        </div>
-                        <Badge variant="secondary" className="text-xs tabular-nums shrink-0 no-default-active-elevate">{c.jobCount}</Badge>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <SectionLabel>Where They're Hiring</SectionLabel>
-                <h2 className="text-xl sm:text-2xl font-serif font-medium text-foreground mb-8 sm:mb-10" data-testid="text-geography-title">
-                  Top hiring countries
-                </h2>
-                <div className="space-y-2.5">
-                  {geography.slice(0, 10).map((g, i) => (
-                    <Card key={g.countryCode} className="overflow-visible" data-testid={`geography-row-${i}`}>
-                      <CardContent className="p-3 flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className="flex items-center justify-center w-7 h-7 rounded-md bg-amber-500/10 dark:bg-amber-400/10 shrink-0">
-                            {g.countryCode === "WW" ? (
-                              <Wifi className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
-                            ) : (
-                              <MapPin className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
-                            )}
-                          </div>
-                          <span className="text-sm text-foreground truncate">{g.countryName}</span>
-                        </div>
-                        <span className="text-sm font-semibold text-foreground tabular-nums shrink-0">{g.jobCount}</span>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-
+        {/* COMMUNITY PULSE */}
         {communityBenchmarks && (
-          <section className="border-t border-border/30 bg-muted/20" data-testid="section-community">
-            <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-14 sm:pt-24 pb-14 sm:pb-24">
-              <SectionLabel>Community Pulse</SectionLabel>
-              <h2 className="text-xl sm:text-2xl font-serif font-medium text-foreground mb-2" data-testid="text-community-title">
-                How the community stacks up
-              </h2>
-              <p className="text-sm text-muted-foreground mb-8 sm:mb-10">
-                Aggregated insights from career diagnostic assessments.
-              </p>
-
+          <section className="border-t border-border/40" data-testid="section-community">
+            <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
+              <p className="mi-section-title mb-1">Community Pulse</p>
+              <p className="mi-insight mb-4">Aggregated insights from career diagnostic assessments</p>
               {isPro ? (
-                <div className="grid sm:grid-cols-2 gap-6">
-                  <Card>
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm font-medium flex items-center gap-2">
-                        <Users className="h-4 w-4 text-muted-foreground" />
-                        Average Readiness
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex items-center gap-6">
-                        <div className="relative flex items-center justify-center shrink-0">
-                          <svg className="w-[80px] h-[80px] -rotate-90" viewBox="0 0 100 100">
-                            <circle cx="50" cy="50" r="42" fill="none" stroke="hsl(var(--muted))" strokeWidth="6" />
-                            <circle
-                              cx="50" cy="50" r="42" fill="none"
-                              stroke={communityBenchmarks.avgReadiness >= 60 ? "hsl(var(--status-success))" : communityBenchmarks.avgReadiness >= 40 ? "hsl(var(--status-warning))" : "hsl(var(--status-danger))"}
-                              strokeWidth="6" strokeLinecap="round"
-                              strokeDasharray={`${2 * Math.PI * 42}`}
-                              strokeDashoffset={`${2 * Math.PI * 42 - (communityBenchmarks.avgReadiness / 100) * 2 * Math.PI * 42}`}
-                            />
-                          </svg>
-                          <div className="absolute flex flex-col items-center">
-                            <span className="text-xl font-bold text-foreground" data-testid="text-avg-readiness">{Math.round(communityBenchmarks.avgReadiness)}</span>
-                            <span className="text-[8px] text-muted-foreground">/ 100</span>
+                <div className="grid sm:grid-cols-2 gap-3">
+                  <div className="mi-panel" data-testid="panel-avg-readiness">
+                    <p className="mi-label mb-2">Average Readiness</p>
+                    <div className="flex items-center gap-4">
+                      <div className="relative flex items-center justify-center shrink-0">
+                        <svg className="w-[64px] h-[64px] -rotate-90" viewBox="0 0 100 100">
+                          <circle cx="50" cy="50" r="42" fill="none" stroke="hsl(var(--muted))" strokeWidth="6" />
+                          <circle cx="50" cy="50" r="42" fill="none"
+                            stroke={communityBenchmarks.avgReadiness >= 60 ? "hsl(var(--status-success))" : communityBenchmarks.avgReadiness >= 40 ? "hsl(var(--status-warning))" : "hsl(var(--status-danger))"}
+                            strokeWidth="6" strokeLinecap="round"
+                            strokeDasharray={`${2 * Math.PI * 42}`}
+                            strokeDashoffset={`${2 * Math.PI * 42 - (communityBenchmarks.avgReadiness / 100) * 2 * Math.PI * 42}`}
+                          />
+                        </svg>
+                        <span className="absolute mi-metric-sm" data-testid="text-avg-readiness">{Math.round(communityBenchmarks.avgReadiness)}</span>
+                      </div>
+                      <div className="space-y-1">
+                        {communityBenchmarks.readinessDistribution.map((b) => (
+                          <div key={b.bucket} className="flex items-center justify-between gap-3 text-[11px]" data-testid={`readiness-bucket-${b.bucket}`}>
+                            <span className="text-muted-foreground">{b.bucket}</span>
+                            <span className="text-foreground font-medium tabular-nums">{b.count}</span>
                           </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mi-panel" data-testid="panel-skill-gaps">
+                    <p className="mi-label mb-2">Top Skill Gaps</p>
+                    <div className="space-y-1.5">
+                      {communityBenchmarks.topSkillGaps.slice(0, 6).map((sg) => (
+                        <div key={sg.skill} className="flex items-center justify-between gap-2 text-[11px]" data-testid={`skill-gap-${sg.skill.toLowerCase().replace(/\s+/g, "-")}`}>
+                          <span className="text-foreground truncate">{sg.skill}</span>
+                          <span className="text-muted-foreground tabular-nums shrink-0">{sg.count}</span>
                         </div>
-                        <div className="space-y-1.5">
-                          {communityBenchmarks.readinessDistribution.map((b) => (
-                            <div key={b.bucket} className="flex items-center justify-between gap-3 text-xs" data-testid={`readiness-bucket-${b.bucket}`}>
-                              <span className="text-muted-foreground">{b.bucket}</span>
-                              <span className="text-foreground font-medium tabular-nums">{b.count}</span>
-                            </div>
+                      ))}
+                    </div>
+                    {communityBenchmarks.topCareerPaths.length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-border/40">
+                        <p className="mi-label mb-1.5">Popular Paths</p>
+                        <div className="flex flex-wrap gap-1">
+                          {communityBenchmarks.topCareerPaths.slice(0, 4).map((cp) => (
+                            <Badge key={cp.path} variant="outline" className="text-[10px] no-default-active-elevate" data-testid={`popular-path-${cp.path.toLowerCase().replace(/\s+/g, "-")}`}>
+                              {cp.path}
+                            </Badge>
                           ))}
                         </div>
                       </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm font-medium flex items-center gap-2">
-                        <Sparkles className="h-4 w-4 text-muted-foreground" />
-                        Top Skill Gaps
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-2">
-                        {communityBenchmarks.topSkillGaps.slice(0, 6).map((sg) => (
-                          <div key={sg.skill} className="flex items-center justify-between gap-3 text-sm" data-testid={`skill-gap-${sg.skill.toLowerCase().replace(/\s+/g, "-")}`}>
-                            <span className="text-foreground truncate">{sg.skill}</span>
-                            <span className="text-xs text-muted-foreground tabular-nums shrink-0">{sg.count} users</span>
-                          </div>
-                        ))}
-                      </div>
-                      {communityBenchmarks.topCareerPaths.length > 0 && (
-                        <div className="mt-4 pt-4 border-t border-border/30">
-                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Most popular paths</p>
-                          <div className="flex flex-wrap gap-1.5">
-                            {communityBenchmarks.topCareerPaths.slice(0, 4).map((cp) => (
-                              <Badge key={cp.path} variant="outline" className="text-xs no-default-active-elevate" data-testid={`popular-path-${cp.path.toLowerCase().replace(/\s+/g, "-")}`}>
-                                {cp.path}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
+                    )}
+                  </div>
                 </div>
               ) : (
                 <div className="relative">
-                  <div className="grid sm:grid-cols-2 gap-6 blur-sm select-none pointer-events-none opacity-50">
-                    <Card>
-                      <CardContent className="p-6">
-                        <Skeleton className="h-[120px] w-full" />
-                      </CardContent>
-                    </Card>
-                    <Card>
-                      <CardContent className="p-6">
-                        <Skeleton className="h-[120px] w-full" />
-                      </CardContent>
-                    </Card>
+                  <div className="grid sm:grid-cols-2 gap-3 blur-sm select-none pointer-events-none opacity-50">
+                    <div className="mi-panel"><Skeleton className="h-[100px] w-full" /></div>
+                    <div className="mi-panel"><Skeleton className="h-[100px] w-full" /></div>
                   </div>
                   <div className="absolute inset-0 flex items-center justify-center bg-background/60 backdrop-blur-[2px] rounded-md">
                     <div className="text-center">
-                      <Lock className="h-5 w-5 text-muted-foreground mx-auto mb-2" />
-                      <p className="text-sm font-medium text-foreground mb-1">Community benchmarks</p>
-                      <p className="text-xs text-muted-foreground mb-3 max-w-xs">
-                        See how your readiness compares to the community, top skill gaps, and popular career paths.
-                      </p>
+                      <Lock className="h-4 w-4 text-muted-foreground mx-auto mb-1.5" />
+                      <p className="text-xs font-medium text-foreground mb-0.5">Community benchmarks</p>
+                      <p className="text-[11px] text-muted-foreground mb-2 max-w-xs">See how your readiness compares</p>
                       <Link href="/pricing">
-                        <Button size="sm" className="gap-1.5" data-testid="button-community-upgrade">
-                          <Crown className="h-3.5 w-3.5" />
-                          Upgrade to Pro
+                        <Button size="sm" className="gap-1 h-7 text-xs" data-testid="button-community-upgrade">
+                          <Crown className="h-3 w-3" /> Upgrade
                         </Button>
                       </Link>
                     </div>
@@ -937,318 +969,131 @@ export default function MarketIntelligence() {
           </section>
         )}
 
-        {historicalData && Object.keys(historicalData.jobsByMonth).length > 0 && (
-          <section className="border-t border-border/30" data-testid="section-market-evolution">
-            <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-14 sm:pt-24">
-              <SectionLabel>Market Evolution</SectionLabel>
-              <h2 className="text-xl sm:text-3xl font-serif font-medium text-foreground mb-2" data-testid="text-evolution-title">
-                How the market is changing
-              </h2>
-              <p className="text-sm text-muted-foreground mb-10 max-w-xl">
-                Month-by-month patterns showing how legal tech hiring is evolving — volume, categories, skills, and geography.
-              </p>
+        {/* MARKET EVOLUTION */}
+        {historicalData && (() => {
+          const months = Object.keys(historicalData.jobsByMonth).sort();
+          if (months.length < 2) {
+            return (
+              <section className="border-t border-border/40" data-testid="section-market-evolution">
+                <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
+                  <p className="mi-section-title mb-2">Market Evolution</p>
+                  <div className="mi-panel text-center py-6">
+                    <TrendingUp className="h-5 w-5 text-muted-foreground mx-auto mb-2" />
+                    <p className="text-xs text-muted-foreground" data-testid="text-evolution-note">
+                      Tracking since {months[0] ? new Date(months[0] + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'now'}.
+                      Trend charts will appear as more months of data accumulate.
+                    </p>
+                    <p className="text-[10px] text-muted-foreground mt-1">
+                      {historicalData.totalEverScraped.toLocaleString()} jobs tracked so far
+                    </p>
+                  </div>
+                </div>
+              </section>
+            );
+          }
 
-              {(() => {
-                const months = Object.keys(historicalData.jobsByMonth).sort();
-                const formatMonth = (m: string) => {
-                  const [y, mo] = m.split('-');
-                  const names = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-                  return `${names[parseInt(mo) - 1]} ${y.slice(2)}`;
-                };
+          const formatMonth = (m: string) => {
+            const [y, mo] = m.split('-');
+            const names = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            return `${names[parseInt(mo) - 1]} ${y.slice(2)}`;
+          };
 
-                const volumeData = months.map(m => ({
-                  month: formatMonth(m),
-                  discovered: historicalData.jobsByMonth[m] || 0,
-                  published: historicalData.publishedByMonth?.[m] || 0,
-                  archived: historicalData.archivedByMonth?.[m] || 0,
-                }));
+          const volumeData = months.map(m => ({
+            month: formatMonth(m),
+            discovered: historicalData.jobsByMonth[m] || 0,
+            published: historicalData.publishedByMonth?.[m] || 0,
+          }));
 
-                const allCategories = new Set<string>();
-                for (const cats of Object.values(historicalData.categoryByMonth)) {
-                  for (const cat of Object.keys(cats)) allCategories.add(cat);
-                }
-                const topCategories = [...allCategories]
-                  .map(cat => ({
-                    name: cat,
-                    total: Object.values(historicalData.categoryByMonth).reduce((s, m) => s + (m[cat] || 0), 0),
-                  }))
-                  .sort((a, b) => b.total - a.total)
-                  .slice(0, 6)
-                  .map(c => c.name);
+          const allSkills = new Map<string, number>();
+          for (const skills of Object.values(historicalData.skillTrends || {})) {
+            for (const s of skills) allSkills.set(s.name, (allSkills.get(s.name) || 0) + s.count);
+          }
+          const topSkills = [...allSkills.entries()].sort(([,a], [,b]) => b - a).slice(0, 5).map(([name]) => name);
 
-                const categoryData = months.map(m => {
-                  const row: Record<string, any> = { month: formatMonth(m) };
-                  for (const cat of topCategories) {
-                    row[cat] = historicalData.categoryByMonth[m]?.[cat] || 0;
-                  }
-                  return row;
-                });
+          const skillsData = months.map(m => {
+            const row: Record<string, any> = { month: formatMonth(m) };
+            const monthSkills = historicalData.skillTrends?.[m] || [];
+            for (const skill of topSkills) {
+              const found = monthSkills.find(s => s.name === skill);
+              row[skill] = found?.count || 0;
+            }
+            return row;
+          });
 
-                const workModeData = months.map(m => ({
-                  month: formatMonth(m),
-                  remote: historicalData.workModeByMonth?.[m]?.['remote'] || 0,
-                  hybrid: historicalData.workModeByMonth?.[m]?.['hybrid'] || 0,
-                  onsite: historicalData.workModeByMonth?.[m]?.['onsite'] || 0,
-                }));
+          const workModeEvolution = months.map(m => {
+            const wm = historicalData.workModeByMonth?.[m] || {};
+            const total = (wm['remote'] || 0) + (wm['hybrid'] || 0) + (wm['onsite'] || 0);
+            return {
+              month: formatMonth(m),
+              remote: total ? Math.round(((wm['remote'] || 0) / total) * 100) : 0,
+              hybrid: total ? Math.round(((wm['hybrid'] || 0) / total) * 100) : 0,
+              onsite: total ? Math.round(((wm['onsite'] || 0) / total) * 100) : 0,
+            };
+          });
 
-                const allSkills = new Map<string, number>();
-                for (const skills of Object.values(historicalData.skillTrends || {})) {
-                  for (const s of skills) {
-                    allSkills.set(s.name, (allSkills.get(s.name) || 0) + s.count);
-                  }
-                }
-                const topSkills = [...allSkills.entries()]
-                  .sort(([,a], [,b]) => b - a)
-                  .slice(0, 6)
-                  .map(([name]) => name);
-
-                const skillsData = months.map(m => {
-                  const row: Record<string, any> = { month: formatMonth(m) };
-                  const monthSkills = historicalData.skillTrends?.[m] || [];
-                  for (const skill of topSkills) {
-                    const found = monthSkills.find(s => s.name === skill);
-                    row[skill] = found?.count || 0;
-                  }
-                  return row;
-                });
-
-                const latestMonth = months[months.length - 1];
-                const topGeo = historicalData.geographyTrends?.[latestMonth] || [];
-
-                const topCompanies = historicalData.companyTrends?.[latestMonth] || [];
-
-                const EVOLUTION_COLORS = [
-                  "hsl(var(--chart-1))",
-                  "hsl(var(--chart-2))",
-                  "hsl(var(--chart-3))",
-                  "hsl(var(--chart-4))",
-                  "hsl(var(--chart-5))",
-                  "hsl(220, 70%, 50%)",
-                ];
-
-                return (
-                  <div className="space-y-12">
-                    <div data-testid="chart-job-volume">
-                      <h3 className="text-base font-medium text-foreground mb-1 flex items-center gap-2">
-                        <Activity className="h-4 w-4 text-primary" />
-                        Job Volume Over Time
-                      </h3>
-                      <p className="text-xs text-muted-foreground mb-4">
-                        Total jobs discovered vs. published each month
-                      </p>
-                      <Card>
-                        <CardContent className="p-4 sm:p-6">
-                          <ResponsiveContainer width="100%" height={280}>
-                            <BarChart data={volumeData} barGap={2}>
-                              <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-                              <YAxis tick={{ fontSize: 11 }} />
-                              <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} />
-                              <Legend wrapperStyle={{ fontSize: 11 }} />
-                              <Bar dataKey="discovered" name="Discovered" fill="hsl(var(--chart-1))" radius={[3, 3, 0, 0]} />
-                              <Bar dataKey="published" name="Published" fill="hsl(var(--chart-3))" radius={[3, 3, 0, 0]} />
-                            </BarChart>
-                          </ResponsiveContainer>
-                        </CardContent>
-                      </Card>
-                    </div>
-
-                    <div data-testid="chart-category-evolution">
-                      <h3 className="text-base font-medium text-foreground mb-1 flex items-center gap-2">
-                        <Briefcase className="h-4 w-4 text-primary" />
-                        Category Mix Over Time
-                      </h3>
-                      <p className="text-xs text-muted-foreground mb-4">
-                        How the share of different career paths is shifting
-                      </p>
-                      <Card>
-                        <CardContent className="p-4 sm:p-6">
-                          <ResponsiveContainer width="100%" height={320}>
-                            <AreaChart data={categoryData}>
-                              <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-                              <YAxis tick={{ fontSize: 11 }} />
-                              <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} />
-                              <Legend wrapperStyle={{ fontSize: 11 }} />
-                              {topCategories.map((cat, i) => (
-                                <Area
-                                  key={cat}
-                                  type="monotone"
-                                  dataKey={cat}
-                                  stackId="1"
-                                  fill={EVOLUTION_COLORS[i % EVOLUTION_COLORS.length]}
-                                  stroke={EVOLUTION_COLORS[i % EVOLUTION_COLORS.length]}
-                                  fillOpacity={0.6}
-                                />
-                              ))}
-                            </AreaChart>
-                          </ResponsiveContainer>
-                        </CardContent>
-                      </Card>
-                    </div>
-
-                    <div className="grid md:grid-cols-2 gap-8">
-                      <div data-testid="chart-work-mode-trends">
-                        <h3 className="text-base font-medium text-foreground mb-1 flex items-center gap-2">
-                          <Wifi className="h-4 w-4 text-primary" />
-                          Work Mode Shift
-                        </h3>
-                        <p className="text-xs text-muted-foreground mb-4">
-                          Remote vs. hybrid vs. on-site over time
-                        </p>
-                        <Card>
-                          <CardContent className="p-4 sm:p-6">
-                            <ResponsiveContainer width="100%" height={260}>
-                              <BarChart data={workModeData}>
-                                <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-                                <YAxis tick={{ fontSize: 11 }} />
-                                <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} />
-                                <Legend wrapperStyle={{ fontSize: 11 }} />
-                                <Bar dataKey="remote" name="Remote" stackId="wm" fill="hsl(var(--chart-1))" />
-                                <Bar dataKey="hybrid" name="Hybrid" stackId="wm" fill="hsl(var(--chart-3))" />
-                                <Bar dataKey="onsite" name="On-site" stackId="wm" fill="hsl(var(--chart-4))" radius={[3, 3, 0, 0]} />
-                              </BarChart>
-                            </ResponsiveContainer>
-                          </CardContent>
-                        </Card>
-                      </div>
-
-                      <div data-testid="chart-skills-trajectory">
-                        <h3 className="text-base font-medium text-foreground mb-1 flex items-center gap-2">
-                          <TrendingUp className="h-4 w-4 text-primary" />
-                          Skills Trajectory
-                        </h3>
-                        <p className="text-xs text-muted-foreground mb-4">
-                          Top skills demand over time
-                        </p>
-                        <Card>
-                          <CardContent className="p-4 sm:p-6">
-                            <ResponsiveContainer width="100%" height={260}>
-                              <LineChart data={skillsData}>
-                                <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-                                <YAxis tick={{ fontSize: 11 }} />
-                                <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} />
-                                <Legend wrapperStyle={{ fontSize: 11 }} />
-                                {topSkills.map((skill, i) => (
-                                  <Line
-                                    key={skill}
-                                    type="monotone"
-                                    dataKey={skill}
-                                    stroke={EVOLUTION_COLORS[i % EVOLUTION_COLORS.length]}
-                                    strokeWidth={2}
-                                    dot={{ r: 3 }}
-                                    name={skill.length > 20 ? skill.slice(0, 18) + '...' : skill}
-                                  />
-                                ))}
-                              </LineChart>
-                            </ResponsiveContainer>
-                          </CardContent>
-                        </Card>
-                      </div>
-                    </div>
-
-                    <div className="grid md:grid-cols-2 gap-8">
-                      <div data-testid="chart-top-companies">
-                        <h3 className="text-base font-medium text-foreground mb-1 flex items-center gap-2">
-                          <Building2 className="h-4 w-4 text-primary" />
-                          Top Hiring Companies
-                        </h3>
-                        <p className="text-xs text-muted-foreground mb-4">
-                          Most active employers this month
-                        </p>
-                        <Card>
-                          <CardContent className="p-4 sm:p-6">
-                            {topCompanies.length > 0 ? (
-                              <div className="space-y-2.5">
-                                {topCompanies.slice(0, 8).map((c, i) => {
-                                  const maxCount = topCompanies[0]?.count || 1;
-                                  const pct = Math.round((c.count / maxCount) * 100);
-                                  return (
-                                    <div key={c.name} data-testid={`company-trend-${i}`}>
-                                      <div className="flex items-center justify-between mb-0.5">
-                                        <span className="text-sm font-medium truncate max-w-[200px]">{c.name}</span>
-                                        <span className="text-xs text-muted-foreground">{c.count} jobs</span>
-                                      </div>
-                                      <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
-                                        <div
-                                          className="h-full rounded-full bg-primary/60"
-                                          style={{ width: `${pct}%` }}
-                                        />
-                                      </div>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            ) : (
-                              <p className="text-sm text-muted-foreground text-center py-8">No company data available yet</p>
-                            )}
-                          </CardContent>
-                        </Card>
-                      </div>
-
-                      <div data-testid="chart-geography-evolution">
-                        <h3 className="text-base font-medium text-foreground mb-1 flex items-center gap-2">
-                          <Globe className="h-4 w-4 text-primary" />
-                          Geographic Distribution
-                        </h3>
-                        <p className="text-xs text-muted-foreground mb-4">
-                          Where legal tech jobs are concentrated
-                        </p>
-                        <Card>
-                          <CardContent className="p-4 sm:p-6">
-                            {topGeo.length > 0 ? (
-                              <div className="space-y-2.5">
-                                {topGeo.slice(0, 8).map((g, i) => {
-                                  const maxCount = topGeo[0]?.count || 1;
-                                  const pct = Math.round((g.count / maxCount) * 100);
-                                  return (
-                                    <div key={g.name} data-testid={`geo-trend-${i}`}>
-                                      <div className="flex items-center justify-between mb-0.5">
-                                        <span className="text-sm font-medium">{g.name}</span>
-                                        <span className="text-xs text-muted-foreground">{g.count} jobs</span>
-                                      </div>
-                                      <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
-                                        <div
-                                          className="h-full rounded-full bg-primary/40"
-                                          style={{ width: `${pct}%` }}
-                                        />
-                                      </div>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            ) : (
-                              <p className="text-sm text-muted-foreground text-center py-8">No geography data available yet</p>
-                            )}
-                          </CardContent>
-                        </Card>
-                      </div>
-                    </div>
-
-                    <div className="text-center pt-4 pb-6" data-testid="text-evolution-note">
-                      <p className="text-xs text-muted-foreground">
-                        Based on {historicalData.totalEverScraped.toLocaleString()} jobs tracked since inception.
-                        {historicalData.totalPublished > 0 && ` ${historicalData.totalPublished.toLocaleString()} currently published.`}
-                        {historicalData.totalArchived > 0 && ` ${historicalData.totalArchived.toLocaleString()} archived.`}
-                      </p>
+          return (
+            <section className="border-t border-border/40" data-testid="section-market-evolution">
+              <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
+                <p className="mi-section-title mb-4">Market Evolution</p>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="mi-panel" data-testid="chart-job-volume">
+                    <p className="mi-label mb-3">Job Volume Over Time</p>
+                    <div className="h-[200px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={volumeData} barGap={2}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.4} />
+                          <XAxis dataKey="month" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
+                          <YAxis tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
+                          <Tooltip {...SHARED_TOOLTIP_STYLE} />
+                          <Legend wrapperStyle={{ fontSize: 10 }} />
+                          <Bar dataKey="discovered" name="Discovered" fill="hsl(var(--chart-1))" radius={[2, 2, 0, 0]} />
+                          <Bar dataKey="published" name="Published" fill="hsl(var(--chart-5))" radius={[2, 2, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
                     </div>
                   </div>
-                );
-              })()}
-            </div>
-          </section>
-        )}
 
-        <section className="border-t border-border/30" data-testid="section-cta">
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-14 sm:pt-24 pb-14 sm:pb-24 text-center">
-            <h2 className="text-xl sm:text-3xl font-serif font-medium text-foreground mb-4" data-testid="text-cta-title">
+                  <div className="mi-panel" data-testid="chart-skills-trajectory">
+                    <p className="mi-label mb-3">Skills Trajectory</p>
+                    <div className="h-[200px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={skillsData}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.4} />
+                          <XAxis dataKey="month" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
+                          <YAxis tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
+                          <Tooltip {...SHARED_TOOLTIP_STYLE} />
+                          <Legend wrapperStyle={{ fontSize: 10 }} />
+                          {topSkills.map((skill, i) => (
+                            <Line key={skill} type="monotone" dataKey={skill} stroke={GENERIC_PALETTE[i % GENERIC_PALETTE.length]} strokeWidth={2} dot={{ r: 2 }} name={skill.length > 18 ? skill.slice(0, 16) + '…' : skill} />
+                          ))}
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                </div>
+                <p className="text-[10px] text-muted-foreground text-center mt-3" data-testid="text-evolution-note">
+                  Based on {historicalData.totalEverScraped.toLocaleString()} jobs tracked
+                  {historicalData.totalPublished > 0 && ` · ${historicalData.totalPublished.toLocaleString()} published`}
+                  {historicalData.totalArchived > 0 && ` · ${historicalData.totalArchived.toLocaleString()} archived`}
+                </p>
+              </div>
+            </section>
+          );
+        })()}
+
+        {/* CTA */}
+        <section className="border-t border-border/40" data-testid="section-cta">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10 text-center">
+            <h2 className="text-lg sm:text-xl font-serif font-medium text-foreground mb-2" data-testid="text-cta-title">
               Ready to find out where you fit?
             </h2>
-            <p className="text-sm text-muted-foreground mb-8 max-w-md mx-auto">
-              Upload your resume and get a personalized career readiness report in under 90 seconds.
+            <p className="text-xs text-muted-foreground mb-5 max-w-sm mx-auto">
+              Upload your resume for a personalized career readiness report in under 90 seconds.
             </p>
-            <Button size="lg" asChild data-testid="button-cta-diagnostic">
+            <Button size="default" asChild data-testid="button-cta-diagnostic">
               <Link href="/diagnostic">
                 Check Your Fit
-                <ArrowRight className="ml-2 h-4 w-4" />
+                <ArrowRight className="ml-2 h-3.5 w-3.5" />
               </Link>
             </Button>
           </div>

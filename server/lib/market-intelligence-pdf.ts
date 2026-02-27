@@ -37,6 +37,37 @@ interface MarketData {
     workModeByMonth: Record<string, Record<string, number>>;
     skillTrends: Record<string, { name: string; count: number }[]>;
   };
+  transitionIntelligence?: {
+    totalTransitionFriendly: number;
+    transitionFriendlyPct: number;
+    avgExperience: number;
+    trackSummary: {
+      track: string;
+      jobCount: number;
+      percentage: number;
+      transitionFriendlyPct: number;
+      avgExperience: number;
+      topSkills: { skill: string; count: number }[];
+    }[];
+    entryCorridor: {
+      category: string;
+      track: string;
+      jobCount: number;
+      accessibilityScore: number;
+      transitionFriendly: number;
+      avgExperience: number;
+      entryMidPct: number;
+    }[];
+    skillBridge: Record<string, {
+      youHave: { skill: string; count: number }[];
+      toBuild: { skill: string; count: number }[];
+    }>;
+    transitionEmployers: {
+      company: string;
+      transitionFriendlyCount: number;
+      tracks: string[];
+    }[];
+  };
 }
 
 function getQuarterLabel(): string {
@@ -488,9 +519,179 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string, 
     if (skillsInsight) insightBlock(doc, skillsInsight, pn);
   }
 
+  // ── TRANSITION INTELLIGENCE ──
+  if (data.transitionIntelligence) {
+    const ti = data.transitionIntelligence;
+    sectionTitle(doc, "03", "Transition Intelligence", pn);
+
+    narrativeParagraph(doc, `${ti.transitionFriendlyPct}% of all roles (${fmtNum(ti.totalTransitionFriendly)} positions) explicitly welcome career changers — professionals transitioning from traditional legal practice into legal technology. The average experience requirement is ${ti.avgExperience} years, making many roles accessible to mid-career lawyers.`, pn);
+
+    if (ti.trackSummary.length > 0) {
+      ensureSpace(doc, 20, pn);
+      doc.y += 4;
+      const trackCols = [
+        { x: MARGIN, w: 95 },
+        { x: MARGIN + 100, w: 45 },
+        { x: MARGIN + 150, w: 50 },
+        { x: MARGIN + 205, w: 55 },
+        { x: MARGIN + 265, w: 50 },
+        { x: MARGIN + 320, w: 180 },
+      ];
+      tableHeaderRow(doc, [
+        { text: "TRACK", ...trackCols[0] },
+        { text: "JOBS", ...trackCols[1], align: "right" },
+        { text: "SHARE", ...trackCols[2], align: "right" },
+        { text: "TF RATE", ...trackCols[3], align: "right" },
+        { text: "AVG EXP", ...trackCols[4], align: "right" },
+        { text: "TOP SKILLS", ...trackCols[5] },
+      ]);
+      for (let i = 0; i < ti.trackSummary.length; i++) {
+        ensureSpace(doc, 18, pn);
+        const ts = ti.trackSummary[i];
+        const topSkillsStr = ts.topSkills.slice(0, 3).map(s => s.skill).join(", ");
+        tableDataRow(doc, [
+          { text: ts.track, ...trackCols[0], color: NAVY },
+          { text: fmtNum(ts.jobCount), ...trackCols[1], align: "right" },
+          { text: `${ts.percentage}%`, ...trackCols[2], align: "right" },
+          { text: `${ts.transitionFriendlyPct}%`, ...trackCols[3], align: "right" },
+          { text: `${ts.avgExperience}y`, ...trackCols[4], align: "right" },
+          { text: topSkillsStr, ...trackCols[5], color: GRAY_500 },
+        ], i % 2 === 0);
+      }
+      doc.y += 8;
+    }
+
+    if (ti.entryCorridor.length > 0) {
+      ensureSpace(doc, 30, pn);
+      doc.save();
+      doc.fontSize(9).fillColor(NAVY).font("Helvetica-Bold")
+        .text("Entry Corridors", MARGIN, doc.y);
+      doc.restore();
+      doc.y += 14;
+      narrativeParagraph(doc, "Categories ranked by accessibility — factoring in transition-friendly ratio, entry-level availability, experience requirements, and legal relevance.", pn);
+
+      const ecCols = [
+        { x: MARGIN, w: 170 },
+        { x: MARGIN + 175, w: 60 },
+        { x: MARGIN + 240, w: 70 },
+        { x: MARGIN + 315, w: 40 },
+        { x: MARGIN + 360, w: 55 },
+        { x: MARGIN + 420, w: 55 },
+      ];
+      tableHeaderRow(doc, [
+        { text: "CATEGORY", ...ecCols[0] },
+        { text: "TRACK", ...ecCols[1] },
+        { text: "ACCESS", ...ecCols[2], align: "right" },
+        { text: "JOBS", ...ecCols[3], align: "right" },
+        { text: "TF", ...ecCols[4], align: "right" },
+        { text: "AVG EXP", ...ecCols[5], align: "right" },
+      ]);
+      for (let i = 0; i < Math.min(ti.entryCorridor.length, 12); i++) {
+        ensureSpace(doc, 18, pn);
+        const ec = ti.entryCorridor[i];
+        const accLabel = ec.accessibilityScore >= 65 ? "High" : ec.accessibilityScore >= 35 ? "Moderate" : "Selective";
+        tableDataRow(doc, [
+          { text: ec.category, ...ecCols[0] },
+          { text: ec.track, ...ecCols[1], color: GRAY_500 },
+          { text: `${accLabel} (${ec.accessibilityScore})`, ...ecCols[2], align: "right" },
+          { text: fmtNum(ec.jobCount), ...ecCols[3], align: "right" },
+          { text: fmtNum(ec.transitionFriendly), ...ecCols[4], align: "right" },
+          { text: `${ec.avgExperience}y`, ...ecCols[5], align: "right" },
+        ], i % 2 === 0);
+      }
+      doc.y += 8;
+    }
+
+    if (ti.skillBridge && Object.keys(ti.skillBridge).length > 0) {
+      ensureSpace(doc, 30, pn);
+      doc.save();
+      doc.fontSize(9).fillColor(NAVY).font("Helvetica-Bold")
+        .text("Skill Bridge", MARGIN, doc.y);
+      doc.restore();
+      doc.y += 14;
+      narrativeParagraph(doc, "Legal skills you already have vs. new skills to build — by career track.", pn);
+
+      for (const [trackName, bridge] of Object.entries(ti.skillBridge)) {
+        ensureSpace(doc, 100, pn);
+        doc.save();
+        doc.fontSize(8).fillColor(ACCENT).font("Helvetica-Bold")
+          .text(trackName.toUpperCase(), MARGIN, doc.y, { characterSpacing: 1 });
+        doc.restore();
+        doc.y += 14;
+
+        const colW = (CONTENT_WIDTH - 20) / 2;
+        const startY = doc.y;
+
+        doc.save();
+        doc.fontSize(7).fillColor(TEAL).font("Helvetica-Bold")
+          .text("YOU LIKELY HAVE", MARGIN, startY, { characterSpacing: 0.5 });
+        doc.restore();
+        let leftY = startY + 12;
+        for (const s of bridge.youHave.slice(0, 5)) {
+          doc.save();
+          doc.fontSize(8).fillColor(NAVY).font("Helvetica")
+            .text(`${s.skill}`, MARGIN + 8, leftY, { width: colW - 50 });
+          doc.fontSize(7.5).fillColor(GRAY_400).font("Helvetica")
+            .text(fmtNum(s.count), MARGIN + colW - 40, leftY, { width: 40, align: "right" });
+          doc.restore();
+          leftY += 13;
+        }
+
+        doc.save();
+        doc.fontSize(7).fillColor(GRAY_500).font("Helvetica-Bold")
+          .text("TO BUILD", MARGIN + colW + 20, startY, { characterSpacing: 0.5 });
+        doc.restore();
+        let rightY = startY + 12;
+        for (const s of bridge.toBuild.slice(0, 5)) {
+          doc.save();
+          doc.fontSize(8).fillColor(NAVY).font("Helvetica")
+            .text(`${s.skill}`, MARGIN + colW + 28, rightY, { width: colW - 50 });
+          doc.fontSize(7.5).fillColor(GRAY_400).font("Helvetica")
+            .text(fmtNum(s.count), MARGIN + CONTENT_WIDTH - 40, rightY, { width: 40, align: "right" });
+          doc.restore();
+          rightY += 13;
+        }
+
+        doc.y = Math.max(leftY, rightY) + 6;
+      }
+    }
+
+    if (ti.transitionEmployers.length > 0) {
+      ensureSpace(doc, 30, pn);
+      doc.save();
+      doc.fontSize(9).fillColor(NAVY).font("Helvetica-Bold")
+        .text("Transition-Friendly Employers", MARGIN, doc.y);
+      doc.restore();
+      doc.y += 14;
+
+      const teCols = [
+        { x: MARGIN, w: 200 },
+        { x: MARGIN + 205, w: 80 },
+        { x: MARGIN + 290, w: 210 },
+      ];
+      tableHeaderRow(doc, [
+        { text: "COMPANY", ...teCols[0] },
+        { text: "TF ROLES", ...teCols[1], align: "right" },
+        { text: "TRACKS", ...teCols[2] },
+      ]);
+      for (let i = 0; i < Math.min(ti.transitionEmployers.length, 10); i++) {
+        ensureSpace(doc, 18, pn);
+        const te = ti.transitionEmployers[i];
+        tableDataRow(doc, [
+          { text: te.company, ...teCols[0] },
+          { text: fmtNum(te.transitionFriendlyCount), ...teCols[1], align: "right" },
+          { text: te.tracks.join(", "), ...teCols[2], color: GRAY_500 },
+        ], i % 2 === 0);
+      }
+      doc.y += 6;
+    }
+
+    insightBlock(doc, `The transition-friendly designation identifies roles where employers explicitly value legal background, transferable skills, or welcome career changers. These roles often emphasize domain expertise over specific technical credentials — making them natural entry points for lawyers exploring legal technology.`, pn);
+  }
+
   // ── CAREER PATHS ──
   if (data.careerPaths.length > 0) {
-    sectionTitle(doc, "03", "Career Paths", pn);
+    sectionTitle(doc, "04", "Career Paths", pn);
     const cpCols = [
       { x: MARGIN, w: 180 },
       { x: MARGIN + 185, w: 55 },
@@ -521,7 +722,7 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string, 
 
   // ── SALARY INSIGHTS ──
   if (data.salaryByPath.length > 0) {
-    sectionTitle(doc, "04", "Salary Insights", pn);
+    sectionTitle(doc, "05", "Salary Insights", pn);
     const salCols = [
       { x: MARGIN, w: 175 },
       { x: MARGIN + 180, w: 140 },
@@ -552,7 +753,7 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string, 
   const aiTotal = (data.aiIntensity.low || 0) + (data.aiIntensity.medium || 0) + (data.aiIntensity.high || 0);
 
   if (wmTotal > 0 || aiTotal > 0) {
-    sectionTitle(doc, "05", "Work Mode & AI Intensity", pn);
+    sectionTitle(doc, "06", "Work Mode & AI Intensity", pn);
     ensureSpace(doc, 70, pn);
 
     if (wmTotal > 0) {
@@ -616,7 +817,7 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string, 
 
   // ── SENIORITY DISTRIBUTION ──
   if (data.seniorityDistribution.length > 0) {
-    sectionTitle(doc, "06", "Seniority Distribution", pn);
+    sectionTitle(doc, "07", "Seniority Distribution", pn);
     const maxSen = Math.max(...data.seniorityDistribution.map(s => s.count), 1);
     for (const s of data.seniorityDistribution) {
       ensureSpace(doc, 18, pn);
@@ -640,7 +841,7 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string, 
 
   // ── TOP COMPANIES & GEOGRAPHY ──
   if (data.topCompanies.length > 0 || data.geography.length > 0) {
-    sectionTitle(doc, "07", "Top Companies & Geography", pn);
+    sectionTitle(doc, "08", "Top Companies & Geography", pn);
 
     const halfW = (CONTENT_WIDTH - 24) / 2;
     const companyRows = Math.min(data.topCompanies.length, 10);
@@ -714,7 +915,7 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string, 
       return `${names[parseInt(mo) - 1]} '${y.slice(2)}`;
     };
 
-    sectionTitle(doc, "08", "Market Evolution", pn);
+    sectionTitle(doc, "09", "Market Evolution", pn);
 
     ensureSpace(doc, 40, pn);
     doc.save();
