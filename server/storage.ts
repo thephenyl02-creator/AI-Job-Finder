@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { jobs, users, userPreferences, jobCategories, jobSubmissions, jobAlerts, notifications, resumes, builtResumes, userActivities, userPersonas, savedJobs, jobApplications, events, scrapeRuns, jobReports, anonymousEvents, reportLeads, publishedReports, type Job, type InsertJob, type User, type UserPreferences, type InsertUserPreferences, type ResumeExtractedData, type JobCategory, type JobSubmission, type InsertJobSubmission, type JobAlert, type InsertJobAlert, type Notification, type InsertNotification, type Resume, type InsertResume, type BuiltResume, type InsertBuiltResume, type UserActivity, type InsertUserActivity, type UserPersona, type InsertUserPersona, type SavedJob, type InsertSavedJob, type JobApplication, type InsertJobApplication, type JobApplicationWithJob, type Event, type InsertEvent, type ScrapeRun, type InsertScrapeRun, type JobReport, type InsertJobReport, JOB_TAXONOMY } from "@shared/schema";
+import { jobs, users, userPreferences, jobCategories, jobSubmissions, jobAlerts, notifications, resumes, builtResumes, userActivities, userPersonas, savedJobs, jobApplications, events, scrapeRuns, scrapeRunSources, jobRejections, jobReports, anonymousEvents, reportLeads, publishedReports, type Job, type InsertJob, type User, type UserPreferences, type InsertUserPreferences, type ResumeExtractedData, type JobCategory, type JobSubmission, type InsertJobSubmission, type JobAlert, type InsertJobAlert, type Notification, type InsertNotification, type Resume, type InsertResume, type BuiltResume, type InsertBuiltResume, type UserActivity, type InsertUserActivity, type UserPersona, type InsertUserPersona, type SavedJob, type InsertSavedJob, type JobApplication, type InsertJobApplication, type JobApplicationWithJob, type Event, type InsertEvent, type ScrapeRun, type InsertScrapeRun, type ScrapeRunSource, type InsertScrapeRunSource, type JobRejection, type InsertJobRejection, type JobReport, type InsertJobReport, JOB_TAXONOMY } from "@shared/schema";
 import { eq, desc, asc, and, sql, inArray, lt, gte, count } from "drizzle-orm";
 import { cleanJobDescription } from "./lib/description-cleaner";
 import { deriveSourceInfo } from "./lib/url-utils";
@@ -146,6 +146,14 @@ export interface IStorage {
   updateScrapeRun(id: number, data: Partial<InsertScrapeRun>): Promise<ScrapeRun | undefined>;
   getScrapeRuns(limit?: number): Promise<ScrapeRun[]>;
   getLatestScrapeRun(): Promise<ScrapeRun | undefined>;
+  // Scrape Run Sources
+  createRunSource(source: InsertScrapeRunSource): Promise<ScrapeRunSource>;
+  getRunSourcesByRunId(runId: number): Promise<ScrapeRunSource[]>;
+  getSourceSuccessRates(lastNRuns?: number): Promise<{ sourceName: string; sourceType: string; totalRuns: number; successes: number; failures: number; successRate: number; lastError: string | null }[]>;
+  // Job Rejections
+  createJobRejection(rejection: InsertJobRejection): Promise<JobRejection>;
+  getRecentRejections(limit?: number): Promise<JobRejection[]>;
+  getTopRejectionReasons(days?: number): Promise<{ reasonCode: string; phase: string; count: number }[]>;
   // Pipeline / Enrichment
   getJobsForEnrichment(limit?: number): Promise<Job[]>;
   findLiveJobDuplicate(title: string, company: string, location: string | null, excludeId: number): Promise<Job | undefined>;
@@ -2828,6 +2836,59 @@ class DatabaseStorage implements IStorage {
   async getLatestScrapeRun(): Promise<ScrapeRun | undefined> {
     const [run] = await db.select().from(scrapeRuns).orderBy(desc(scrapeRuns.startedAt)).limit(1);
     return run;
+  }
+
+  async createRunSource(source: InsertScrapeRunSource): Promise<ScrapeRunSource> {
+    const [created] = await db.insert(scrapeRunSources).values(source).returning();
+    return created;
+  }
+
+  async getRunSourcesByRunId(runId: number): Promise<ScrapeRunSource[]> {
+    return db.select().from(scrapeRunSources)
+      .where(eq(scrapeRunSources.runId, runId))
+      .orderBy(asc(scrapeRunSources.sourceName));
+  }
+
+  async getSourceSuccessRates(lastNRuns: number = 30): Promise<{ sourceName: string; sourceType: string; totalRuns: number; successes: number; failures: number; successRate: number; lastError: string | null }[]> {
+    const recentRunIds = db.select({ id: scrapeRuns.id }).from(scrapeRuns).orderBy(desc(scrapeRuns.startedAt)).limit(lastNRuns);
+    const rows = await db.select({
+      sourceName: scrapeRunSources.sourceName,
+      sourceType: scrapeRunSources.sourceType,
+      totalRuns: sql<number>`count(*)::int`,
+      successes: sql<number>`count(*) filter (where ${scrapeRunSources.status} = 'success')::int`,
+      failures: sql<number>`count(*) filter (where ${scrapeRunSources.status} = 'failed')::int`,
+      lastError: sql<string>`(array_agg(${scrapeRunSources.errorMessage} order by ${scrapeRunSources.createdAt} desc) filter (where ${scrapeRunSources.status} = 'failed'))[1]`,
+    }).from(scrapeRunSources)
+      .where(inArray(scrapeRunSources.runId, recentRunIds))
+      .groupBy(scrapeRunSources.sourceName, scrapeRunSources.sourceType)
+      .orderBy(sql`count(*) filter (where ${scrapeRunSources.status} = 'failed') desc`);
+    return rows.map(r => ({
+      ...r,
+      successRate: r.totalRuns > 0 ? Math.round((r.successes / r.totalRuns) * 100) : 0,
+    }));
+  }
+
+  async createJobRejection(rejection: InsertJobRejection): Promise<JobRejection> {
+    const [created] = await db.insert(jobRejections).values(rejection).returning();
+    return created;
+  }
+
+  async getRecentRejections(limit: number = 100): Promise<JobRejection[]> {
+    return db.select().from(jobRejections)
+      .orderBy(desc(jobRejections.createdAt))
+      .limit(limit);
+  }
+
+  async getTopRejectionReasons(days: number = 7): Promise<{ reasonCode: string; phase: string; count: number }[]> {
+    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+    return db.select({
+      reasonCode: jobRejections.reasonCode,
+      phase: jobRejections.phase,
+      count: sql<number>`count(*)::int`,
+    }).from(jobRejections)
+      .where(gte(jobRejections.createdAt, since))
+      .groupBy(jobRejections.reasonCode, jobRejections.phase)
+      .orderBy(sql`count(*) desc`);
   }
 
   async createJobReport(report: InsertJobReport): Promise<JobReport> {

@@ -3,7 +3,7 @@ import { storage } from '../storage';
 import type { InsertJob, Job } from '../../shared/schema';
 import { logInfo, logWarn, logError, logSuccess, cleanupOldLogs } from './logger';
 import { matchNewJobsAgainstAlerts } from './alert-matcher';
-import { scrapeAllLawFirms, isLegalTechRole, transformToJobSchema } from './law-firm-scraper';
+import { scrapeAllLawFirms, isLegalTechRole, transformToJobSchema, type SourceResult } from './law-firm-scraper';
 import { LAW_FIRMS_AND_COMPANIES } from './law-firms-list';
 
 const SCRAPE_INTERVAL_MS = 12 * 60 * 60 * 1000; // 12 hours
@@ -306,7 +306,7 @@ export async function runScheduledScrape(triggeredBy: string = 'scheduler'): Pro
   try {
     logInfo('PHASE', `--- Phase 1: Scraping ${LAW_FIRMS_AND_COMPANIES.length} companies ---`);
 
-    const { jobs: scrapedJobs, stats: scrapeStats, funnel } = await scrapeAllLawFirms();
+    const { jobs: scrapedJobs, stats: scrapeStats, sourceResults, funnel } = await scrapeAllLawFirms();
 
     const companiesAttempted = new Set(scrapeStats.map(s => s.company));
     for (const stat of scrapeStats) {
@@ -331,6 +331,27 @@ export async function runScheduledScrape(triggeredBy: string = 'scheduler'): Pro
       }
     }
 
+    if (scrapeRunId) {
+      for (const sr of sourceResults) {
+        try {
+          await storage.createRunSource({
+            runId: scrapeRunId,
+            sourceName: sr.company,
+            sourceType: sr.atsType,
+            status: sr.status,
+            jobsFound: sr.found,
+            jobsFiltered: sr.filtered,
+            durationMs: sr.durationMs,
+            errorCode: sr.errorCode || null,
+            errorMessage: sr.errorMessage || null,
+          });
+        } catch (e: any) {
+          logWarn('SOURCE_TRACK', `Failed to record source result for ${sr.company}: ${e.message}`);
+        }
+      }
+      logInfo('SOURCE_TRACK', `Recorded ${sourceResults.length} per-source results`);
+    }
+
     logInfo('PHASE', '--- Phase 2: Validation & Save ---');
 
     const validJobs: InsertJob[] = [];
@@ -339,6 +360,25 @@ export async function runScheduledScrape(triggeredBy: string = 'scheduler'): Pro
         validJobs.push(job);
       } else {
         jobsRejectedValidation++;
+        const reasons: string[] = [];
+        if (!job.title || job.title.trim().length < 3) reasons.push('MISSING_TITLE');
+        if (!job.company || job.company.trim().length < 2) reasons.push('MISSING_COMPANY');
+        if (!job.applyUrl || (!job.applyUrl.startsWith('http') && job.applyUrl !== '#')) reasons.push('INVALID_URL');
+        if (!job.externalId) reasons.push('MISSING_EXTERNAL_ID');
+        for (const code of reasons) {
+          try {
+            await storage.createJobRejection({
+              runId: scrapeRunId,
+              sourceName: job.company || 'unknown',
+              externalId: job.externalId || null,
+              title: job.title?.substring(0, 500) || null,
+              company: job.company?.substring(0, 255) || null,
+              reasonCode: code,
+              reasonMessage: `Validation failed: ${code}`,
+              phase: 'validation',
+            });
+          } catch (_) {}
+        }
       }
     }
     jobsValidated = validJobs.length;

@@ -1632,13 +1632,26 @@ export function transformToJobSchema(job: ScrapedJob, categorization?: JobCatego
   };
 }
 
+export interface SourceResult {
+  company: string;
+  atsType: string;
+  status: 'success' | 'failed' | 'skipped' | 'circuit_broken';
+  found: number;
+  filtered: number;
+  durationMs: number;
+  errorCode?: string;
+  errorMessage?: string;
+}
+
 export async function scrapeAllLawFirms(): Promise<{
   jobs: InsertJob[];
   stats: { company: string; found: number; filtered: number }[];
+  sourceResults: SourceResult[];
   funnel: { totalScraped: number; titleFiltered: number; companiesAttempted: number; companiesWithJobs: number };
 }> {
   const allJobs: InsertJob[] = [];
   const stats: { company: string; found: number; filtered: number }[] = [];
+  const sourceResults: SourceResult[] = [];
   let totalScraped = 0;
   let totalFiltered = 0;
   let companiesWithJobs = 0;
@@ -1659,9 +1672,15 @@ export async function scrapeAllLawFirms(): Promise<{
       batch.map(async (firm) => {
         const atsType = firm.greenhouseId ? `greenhouse` : firm.leverPostingsUrl ? `lever` : firm.ashbyUrl ? `ashby` : firm.workday ? `workday` : firm.rippling ? `rippling` : firm.icims ? `icims` : firm.workableId ? `workable` : firm.smartrecruitersId ? `smartrecruiters` : firm.bamboohrId ? `bamboohr` : `generic`;
         const circuitKey = `${atsType}:${firm.name}`;
+        const companyStart = Date.now();
 
         if (isCircuitOpen(circuitKey)) {
           skippedCircuitOpen++;
+          sourceResults.push({
+            company: firm.name, atsType, status: 'circuit_broken',
+            found: 0, filtered: 0, durationMs: 0,
+            errorCode: 'CIRCUIT_BROKEN', errorMessage: `Circuit breaker open (${CIRCUIT_BREAKER_THRESHOLD}+ consecutive failures)`,
+          });
           return { firm, found: 0, filtered: 0, jobs: [] as InsertJob[], skipped: true };
         }
 
@@ -1708,10 +1727,23 @@ export async function scrapeAllLawFirms(): Promise<{
 
           logInfo('SCRAPE', `Found ${scrapedJobs.length} jobs, ${legalTechJobs.length} legal tech roles at ${firm.name} (${firm.type})`);
 
+          sourceResults.push({
+            company: firm.name, atsType, status: 'success',
+            found: scrapedJobs.length, filtered: legalTechJobs.length,
+            durationMs: Date.now() - companyStart,
+          });
+
           return { firm, found: scrapedJobs.length, filtered: legalTechJobs.length, jobs: transformedJobs, skipped: false };
         } catch (error: any) {
           recordFailure(circuitKey);
+          const isTimeout = error.message?.includes('timed out');
           logError('SCRAPE', `Error scraping ${firm.name}`, { error: error.message });
+          sourceResults.push({
+            company: firm.name, atsType, status: 'failed',
+            found: 0, filtered: 0, durationMs: Date.now() - companyStart,
+            errorCode: isTimeout ? 'TIMEOUT' : 'SCRAPE_ERROR',
+            errorMessage: error.message?.substring(0, 500),
+          });
           return { firm, found: 0, filtered: 0, jobs: [] as InsertJob[], skipped: false };
         }
       })
@@ -1749,7 +1781,7 @@ export async function scrapeAllLawFirms(): Promise<{
   };
   logInfo('FUNNEL', `${funnel.companiesAttempted} companies attempted → ${funnel.totalScraped} total jobs scraped → ${funnel.titleFiltered} passed title filter → ${funnel.companiesWithJobs} companies with relevant jobs`);
   
-  return { jobs: allJobs, stats, funnel };
+  return { jobs: allJobs, stats, sourceResults, funnel };
 }
 
 export async function scrapeSingleCompany(companyName: string): Promise<InsertJob[]> {

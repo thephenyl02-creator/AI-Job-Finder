@@ -658,6 +658,21 @@ async function recoverStuckJobs(): Promise<number> {
   }
 }
 
+async function recordEnrichmentRejection(job: Job, reasonCode: string, reasonMessage: string): Promise<void> {
+  try {
+    await storage.createJobRejection({
+      runId: null,
+      sourceName: job.source || job.company,
+      externalId: job.externalId || null,
+      title: job.title?.substring(0, 500) || null,
+      company: job.company?.substring(0, 255) || null,
+      reasonCode,
+      reasonMessage,
+      phase: 'enrichment',
+    });
+  } catch (_) {}
+}
+
 async function enrichJob(job: Job): Promise<void> {
   if (shouldHardReject(job.title, job.company)) {
     console.log(`[Enrichment] Hard-rejecting "${job.title}" at ${job.company} - irrelevant title pattern`);
@@ -667,6 +682,7 @@ async function enrichJob(job: Job): Promise<void> {
       reviewReasonCode: 'IRRELEVANT_TITLE',
       lastEnrichedAt: new Date(),
     });
+    await recordEnrichmentRejection(job, 'ENGINEERING_ONLY', 'Irrelevant title pattern detected');
     return;
   }
 
@@ -678,6 +694,7 @@ async function enrichJob(job: Job): Promise<void> {
       reviewReasonCode: 'NON_LEGAL_TECH_COMPANY',
       lastEnrichedAt: new Date(),
     });
+    await recordEnrichmentRejection(job, 'LOW_RELEVANCE', 'Non-legal-tech company without legal signal');
     return;
   }
 
@@ -689,6 +706,7 @@ async function enrichJob(job: Job): Promise<void> {
       reviewReasonCode: 'NON_ENGLISH',
       lastEnrichedAt: new Date(),
     });
+    await recordEnrichmentRejection(job, 'PARSE_ERROR', 'Non-English title detected');
     return;
   }
 
@@ -700,6 +718,7 @@ async function enrichJob(job: Job): Promise<void> {
       reviewReasonCode: 'ARTICLE_TITLE',
       lastEnrichedAt: new Date(),
     });
+    await recordEnrichmentRejection(job, 'PARSE_ERROR', 'Article title detected instead of job posting');
     return;
   }
 
@@ -711,6 +730,7 @@ async function enrichJob(job: Job): Promise<void> {
       reviewReasonCode: 'GARBAGE_DESCRIPTION',
       lastEnrichedAt: new Date(),
     });
+    await recordEnrichmentRejection(job, 'PARSE_ERROR', 'Garbage or unreadable description');
     return;
   }
 
@@ -722,6 +742,7 @@ async function enrichJob(job: Job): Promise<void> {
       reviewReasonCode: 'LOW_QUALITY_SCRAPE',
       lastEnrichedAt: new Date(),
     });
+    await recordEnrichmentRejection(job, 'PARSE_ERROR', 'Low quality generic scrape - insufficient content');
     return;
   }
 

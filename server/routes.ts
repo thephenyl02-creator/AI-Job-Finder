@@ -5236,6 +5236,63 @@ Rules:
     }
   });
 
+  app.get("/api/admin/scraper/runs/:runId/sources", isAuthenticated, async (req, res) => {
+    if (!(await isAdminCheck(req))) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    try {
+      const runId = parseInt(req.params.runId);
+      if (isNaN(runId)) return res.status(400).json({ error: "Invalid run ID" });
+      const sources = await storage.getRunSourcesByRunId(runId);
+      res.json(sources);
+    } catch (error) {
+      console.error("Error getting run sources:", error);
+      res.status(500).json({ error: "Failed to get run sources" });
+    }
+  });
+
+  app.get("/api/admin/scraper/source-health", isAuthenticated, async (req, res) => {
+    if (!(await isAdminCheck(req))) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    try {
+      const lastNRuns = parseInt(req.query.runs as string) || 30;
+      const rates = await storage.getSourceSuccessRates(lastNRuns);
+      res.json(rates);
+    } catch (error) {
+      console.error("Error getting source health:", error);
+      res.status(500).json({ error: "Failed to get source health" });
+    }
+  });
+
+  app.get("/api/admin/scraper/rejections", isAuthenticated, async (req, res) => {
+    if (!(await isAdminCheck(req))) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    try {
+      const limit = parseInt(req.query.limit as string) || 100;
+      const rejections = await storage.getRecentRejections(limit);
+      res.json(rejections);
+    } catch (error) {
+      console.error("Error getting rejections:", error);
+      res.status(500).json({ error: "Failed to get rejections" });
+    }
+  });
+
+  app.get("/api/admin/scraper/rejection-reasons", isAuthenticated, async (req, res) => {
+    if (!(await isAdminCheck(req))) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    try {
+      const days = parseInt(req.query.days as string) || 7;
+      const reasons = await storage.getTopRejectionReasons(days);
+      res.json(reasons);
+    } catch (error) {
+      console.error("Error getting rejection reasons:", error);
+      res.status(500).json({ error: "Failed to get rejection reasons" });
+    }
+  });
+
   // Start/stop scheduler
   app.post("/api/admin/scheduler/:action", isAuthenticated, async (req, res) => {
     if (!(await isAdminCheck(req))) {

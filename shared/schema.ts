@@ -128,6 +128,44 @@ export const scrapeRuns = pgTable("scrape_runs", {
 export type ScrapeRun = typeof scrapeRuns.$inferSelect;
 export type InsertScrapeRun = typeof scrapeRuns.$inferInsert;
 
+export const scrapeRunSources = pgTable("scrape_run_sources", {
+  id: serial("id").primaryKey(),
+  runId: integer("run_id").notNull(),
+  sourceName: varchar("source_name", { length: 255 }).notNull(),
+  sourceType: varchar("source_type", { length: 50 }).notNull(),
+  status: varchar("status", { length: 30 }).notNull().default("success"),
+  jobsFound: integer("jobs_found").default(0),
+  jobsFiltered: integer("jobs_filtered").default(0),
+  jobsInserted: integer("jobs_inserted").default(0),
+  jobsUpdated: integer("jobs_updated").default(0),
+  jobsRejected: integer("jobs_rejected").default(0),
+  durationMs: integer("duration_ms").default(0),
+  errorCode: varchar("error_code", { length: 100 }),
+  errorMessage: text("error_message"),
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
+export const insertScrapeRunSourceSchema = createInsertSchema(scrapeRunSources).omit({ id: true, createdAt: true });
+export type ScrapeRunSource = typeof scrapeRunSources.$inferSelect;
+export type InsertScrapeRunSource = z.infer<typeof insertScrapeRunSourceSchema>;
+
+export const jobRejections = pgTable("job_rejections", {
+  id: serial("id").primaryKey(),
+  runId: integer("run_id"),
+  sourceName: varchar("source_name", { length: 255 }),
+  externalId: varchar("external_id", { length: 500 }),
+  title: varchar("title", { length: 500 }),
+  company: varchar("company", { length: 255 }),
+  reasonCode: varchar("reason_code", { length: 50 }).notNull(),
+  reasonMessage: text("reason_message"),
+  phase: varchar("phase", { length: 30 }).notNull(),
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
+export const insertJobRejectionSchema = createInsertSchema(jobRejections).omit({ id: true, createdAt: true });
+export type JobRejection = typeof jobRejections.$inferSelect;
+export type InsertJobRejection = z.infer<typeof insertJobRejectionSchema>;
+
 export const companyIntel = pgTable("company_intel", {
   id: serial("id").primaryKey(),
   companyName: varchar("company_name", { length: 255 }).notNull().unique(),

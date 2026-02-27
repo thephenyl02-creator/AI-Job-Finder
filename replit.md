@@ -63,6 +63,9 @@ Legal Tech Careers is a career intelligence platform designed for legal professi
 - **Scrapers**: Utilizes various APIs (Greenhouse, Lever, Ashby, Workday CXS) and generic HTML scrapers for broad job coverage across global regions.
 - **Automation**: Scheduled scrapers, enrichment workers, and reliability workers manage job ingestion, quality scoring, deduplication, and link validation.
 - **Quality Assurance**: A comprehensive QA validation system with persisted results and an admin review queue ensures high data integrity.
+- **Per-Source Tracking**: `scrape_run_sources` table records per-company metrics for each scrape run (status, jobs found/filtered/inserted/updated, duration, errors). API: `GET /api/admin/scraper/runs/:runId/sources`, `GET /api/admin/scraper/source-health`.
+- **Rejection Tracking**: `job_rejections` table records every rejected job with structured reason codes (`MISSING_TITLE`, `MISSING_COMPANY`, `INVALID_URL`, `ENGINEERING_ONLY`, `LOW_RELEVANCE`, `PARSE_ERROR`, etc.) and pipeline phase (`validation`, `enrichment`, `qa`, `scrape`). API: `GET /api/admin/scraper/rejections`, `GET /api/admin/scraper/rejection-reasons`.
+- **Admin Dashboard**: Scraper Autopilot dashboard (`/admin/scraper`) has three tabs: Overview (run history with expandable per-source drill-down), Source Health (success rates across last 30 runs, color-coded), and Rejections (top reasons, phase breakdown, filterable recent rejections).
 
 ### Core Features
 - **Landing Page**: Focused on career intelligence positioning, featuring a diagnostic preview and "Check Your Fit" as the primary call to action.
