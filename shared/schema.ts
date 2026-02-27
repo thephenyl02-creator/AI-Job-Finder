@@ -925,6 +925,22 @@ export const insertAnonymousEventSchema = createInsertSchema(anonymousEvents).om
 export type AnonymousEvent = typeof anonymousEvents.$inferSelect;
 export type InsertAnonymousEvent = z.infer<typeof insertAnonymousEventSchema>;
 
+export const reportLeads = pgTable("report_leads", {
+  id: serial("id").primaryKey(),
+  email: varchar("email", { length: 255 }).notNull(),
+  reportSlug: varchar("report_slug", { length: 100 }).notNull(),
+  downloadedAt: timestamp("downloaded_at").default(sql`CURRENT_TIMESTAMP`),
+  source: varchar("source", { length: 50 }),
+});
+
+export const insertReportLeadSchema = createInsertSchema(reportLeads).omit({
+  id: true,
+  downloadedAt: true,
+});
+
+export type ReportLead = typeof reportLeads.$inferSelect;
+export type InsertReportLead = z.infer<typeof insertReportLeadSchema>;
+
 export interface SkillCluster {
   name: string;
   score: number;

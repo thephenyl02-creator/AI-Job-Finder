@@ -368,7 +368,7 @@ export async function registerRoutes(
     }
   });
 
-  const VALID_ANON_EVENTS = ["landing_cta_click", "quiz_completion", "anon_diagnostic_upload", "landing_page_view", "pricing_page_view"];
+  const VALID_ANON_EVENTS = ["landing_cta_click", "quiz_completion", "anon_diagnostic_upload", "landing_page_view", "pricing_page_view", "report_download"];
   app.post("/api/track", async (req, res) => {
     try {
       const { eventType, metadata } = req.body;
@@ -8200,30 +8200,56 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
     }
   });
 
+  const reportDownloadTokens = new Map<string, { period: string; expiresAt: number }>();
+
+  app.post("/api/report/request-download", async (req, res) => {
+    try {
+      const { email, period = "monthly" } = req.body;
+      if (!email || typeof email !== "string") {
+        return res.status(400).json({ error: "Email is required." });
+      }
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email.trim())) {
+        return res.status(400).json({ error: "Please provide a valid email address." });
+      }
+      if (!["weekly", "monthly", "annual"].includes(period)) {
+        return res.status(400).json({ error: "Invalid period." });
+      }
+      try {
+        await storage.insertReportLead(email.trim(), `${period}-report`, "market-intelligence-page");
+      } catch (e) {
+        console.warn("[Report] Failed to save lead:", e);
+      }
+      const token = crypto.randomBytes(24).toString("hex");
+      reportDownloadTokens.set(token, { period, expiresAt: Date.now() + 10 * 60 * 1000 });
+      for (const [k, v] of reportDownloadTokens) {
+        if (v.expiresAt < Date.now()) reportDownloadTokens.delete(k);
+      }
+      res.json({ token });
+    } catch (error: any) {
+      console.error("Error creating report download token:", error);
+      res.status(500).json({ error: "Failed to process request." });
+    }
+  });
+
   app.get("/api/market-intelligence/report", optionalAuth, async (req, res) => {
     try {
-      console.log(`[Report] req.user present: ${!!req.user}, id: ${req.user?.id}, session: ${!!req.session}`);
-      const wantsPdf = req.headers.accept?.includes("application/pdf") || req.query.format === "pdf" || (req.headers['sec-fetch-dest'] === 'document');
-      if (!req.user) {
-        if (wantsPdf || req.headers['x-requested-with']) {
-          return res.status(401).json({ error: "Authentication required to download reports." });
-        }
-        return res.redirect("/pricing");
-      }
-      const userIsAdmin = await storage.isUserAdmin(req.user.id);
-      const subData = await storage.getUserSubscription(req.user.id);
-      const isPro = userIsAdmin || (subData?.subscriptionTier === "pro" && subData?.subscriptionStatus === "active");
-      console.log(`[Report] userId: ${req.user.id}, isAdmin: ${userIsAdmin}, subTier: ${subData?.subscriptionTier}, isPro: ${isPro}`);
-      if (!isPro) {
-        if (wantsPdf || req.headers['x-requested-with']) {
-          return res.status(403).json({ error: "Pro subscription required to download reports." });
-        }
-        return res.redirect("/pricing");
-      }
-
-      const period = (req.query.period as string) || "weekly";
+      let period = (req.query.period as string) || "monthly";
       if (!["weekly", "monthly", "annual"].includes(period)) {
         return res.status(400).json({ error: "Invalid period. Use weekly, monthly, or annual." });
+      }
+
+      const downloadToken = req.query.token as string;
+      if (!req.user && !downloadToken) {
+        return res.status(400).json({ error: "Authentication or download token required." });
+      }
+      if (!req.user && downloadToken) {
+        const tokenData = reportDownloadTokens.get(downloadToken);
+        if (!tokenData || tokenData.expiresAt < Date.now()) {
+          return res.status(403).json({ error: "Download link expired. Please request a new one." });
+        }
+        period = tokenData.period;
+        reportDownloadTokens.delete(downloadToken);
       }
 
       let miData: any = getMarketIntelligenceCache();

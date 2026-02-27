@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { jobs, users, userPreferences, jobCategories, jobSubmissions, jobAlerts, notifications, resumes, builtResumes, userActivities, userPersonas, savedJobs, jobApplications, events, scrapeRuns, jobReports, anonymousEvents, type Job, type InsertJob, type User, type UserPreferences, type InsertUserPreferences, type ResumeExtractedData, type JobCategory, type JobSubmission, type InsertJobSubmission, type JobAlert, type InsertJobAlert, type Notification, type InsertNotification, type Resume, type InsertResume, type BuiltResume, type InsertBuiltResume, type UserActivity, type InsertUserActivity, type UserPersona, type InsertUserPersona, type SavedJob, type InsertSavedJob, type JobApplication, type InsertJobApplication, type JobApplicationWithJob, type Event, type InsertEvent, type ScrapeRun, type InsertScrapeRun, type JobReport, type InsertJobReport, JOB_TAXONOMY } from "@shared/schema";
+import { jobs, users, userPreferences, jobCategories, jobSubmissions, jobAlerts, notifications, resumes, builtResumes, userActivities, userPersonas, savedJobs, jobApplications, events, scrapeRuns, jobReports, anonymousEvents, reportLeads, type Job, type InsertJob, type User, type UserPreferences, type InsertUserPreferences, type ResumeExtractedData, type JobCategory, type JobSubmission, type InsertJobSubmission, type JobAlert, type InsertJobAlert, type Notification, type InsertNotification, type Resume, type InsertResume, type BuiltResume, type InsertBuiltResume, type UserActivity, type InsertUserActivity, type UserPersona, type InsertUserPersona, type SavedJob, type InsertSavedJob, type JobApplication, type InsertJobApplication, type JobApplicationWithJob, type Event, type InsertEvent, type ScrapeRun, type InsertScrapeRun, type JobReport, type InsertJobReport, JOB_TAXONOMY } from "@shared/schema";
 import { eq, desc, asc, and, sql, inArray, lt, gte, count } from "drizzle-orm";
 import { cleanJobDescription } from "./lib/description-cleaner";
 import { deriveSourceInfo } from "./lib/url-utils";
@@ -113,6 +113,7 @@ export interface IStorage {
   getAnalyticsFunnel(): Promise<any>;
   trackAnonymousEvent(eventType: string, hashedIp: string, metadata?: any): Promise<void>;
   getAnonymousFunnel(days?: number): Promise<any>;
+  insertReportLead(email: string, reportSlug: string, source?: string): Promise<void>;
   // User Dashboard
   getUserDashboard(userId: string, days?: number): Promise<any>;
   // Saved Jobs
@@ -1935,6 +1936,10 @@ class DatabaseStorage implements IStorage {
       hashedIp,
       metadata: metadata || null,
     });
+  }
+
+  async insertReportLead(email: string, reportSlug: string, source?: string): Promise<void> {
+    await db.insert(reportLeads).values({ email, reportSlug, source: source || null });
   }
 
   async getAnonymousFunnel(days: number = 30): Promise<{

@@ -10,6 +10,7 @@ import { Footer } from "@/components/footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   DropdownMenu,
@@ -201,17 +202,47 @@ export default function MarketIntelligence() {
   usePageTitle("Market Intelligence");
   const { isAuthenticated, isAdmin } = useAuth();
   const { isPro } = useSubscription();
-  const canDownload = isPro || isAdmin;
   const { track } = useActivityTracker();
 
   useEffect(() => { track({ eventType: "page_view", pagePath: "/market-intelligence" }); }, []);
 
   const { toast } = useToast();
   const [downloading, setDownloading] = useState(false);
+  const [leadEmail, setLeadEmail] = useState("");
+  const [emailError, setEmailError] = useState("");
 
   const { data, isLoading, isError, refetch } = useQuery<MarketIntelligenceData>({
     queryKey: ["/api/market-intelligence"],
   });
+
+  useEffect(() => {
+    if (!data) return;
+    const setMeta = (name: string, content: string) => {
+      let el = document.querySelector(`meta[name="${name}"]`) || document.querySelector(`meta[property="${name}"]`);
+      if (!el) {
+        el = document.createElement("meta");
+        if (name.startsWith("og:") || name.startsWith("twitter:")) {
+          el.setAttribute("property", name);
+        } else {
+          el.setAttribute("name", name);
+        }
+        document.head.appendChild(el);
+      }
+      el.setAttribute("content", content);
+    };
+    const now = new Date();
+    const q = Math.ceil((now.getMonth() + 1) / 3);
+    const quarter = `Q${q} ${now.getFullYear()}`;
+    const desc = `${data.overview.totalJobs.toLocaleString()} active roles across ${data.overview.totalCompanies.toLocaleString()} companies in ${data.overview.countriesCount} countries. Skills, salaries, career paths, and what it means for lawyers.`;
+    setMeta("description", desc);
+    setMeta("og:title", `State of Legal Tech Careers — ${quarter} Hiring Report`);
+    setMeta("og:description", desc);
+    setMeta("og:type", "article");
+    setMeta("og:url", `${window.location.origin}/market-intelligence`);
+    setMeta("twitter:card", "summary_large_image");
+    setMeta("twitter:title", `State of Legal Tech Careers — ${quarter} Hiring Report`);
+    setMeta("twitter:description", desc);
+  }, [data]);
 
   if (isLoading) {
     return <SkeletonPage />;
@@ -271,38 +302,69 @@ export default function MarketIntelligence() {
   const salaryBlurred = !isPro && salaryByPath.length > 3;
   const salaryMax = Math.max(...(salaryByPath.length > 0 ? salaryByPath.map((s) => s.medianMax || 0) : [0]), 1);
 
+  const downloadPdf = async (url: string, period: string) => {
+    const response = await fetch(url, {
+      credentials: "include",
+      headers: { "Accept": "application/pdf" },
+    });
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      throw new Error(body.error || "Failed to download report");
+    }
+    const contentType = response.headers.get("content-type") || "";
+    if (!contentType.includes("application/pdf")) {
+      throw new Error("Unexpected response — expected a PDF file");
+    }
+    const blob = await response.blob();
+    const blobUrl = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = blobUrl;
+    a.download = `legal-tech-careers-${period}-report.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(blobUrl);
+  };
+
   const handleDownload = async (period: string) => {
     track({ eventType: "mi_report_download", metadata: { period } });
     setDownloading(true);
     try {
-      const response = await fetch(`/api/market-intelligence/report?period=${period}`, {
-        credentials: "include",
-        headers: { "Accept": "application/pdf" },
-      });
-      if (!response.ok) {
-        if (response.status === 401 || response.status === 403) {
-          toast({ title: "Upgrade required", description: "Pro subscription is needed to download reports.", variant: "destructive" });
-          return;
-        }
-        throw new Error("Failed to download report");
-      }
-      const contentType = response.headers.get("content-type") || "";
-      if (!contentType.includes("application/pdf")) {
-        throw new Error("Unexpected response — expected a PDF file");
-      }
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `legal-tech-careers-${period}-report.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
+      await downloadPdf(`/api/market-intelligence/report?period=${period}`, period);
       toast({ title: "Report downloaded", description: `Your ${period} report has been saved.` });
-    } catch (err) {
+    } catch (err: any) {
       console.error("Download failed:", err);
-      toast({ title: "Download failed", description: "Something went wrong generating the report. Please try again.", variant: "destructive" });
+      toast({ title: "Download failed", description: err.message || "Something went wrong. Please try again.", variant: "destructive" });
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  const handleAnonDownload = async (period: string) => {
+    setEmailError("");
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!leadEmail.trim() || !emailRegex.test(leadEmail.trim())) {
+      setEmailError("Please enter a valid email address.");
+      return;
+    }
+    setDownloading(true);
+    try {
+      track({ eventType: "mi_report_download", metadata: { period } });
+      const tokenRes = await fetch("/api/report/request-download", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: leadEmail.trim(), period }),
+      });
+      if (!tokenRes.ok) {
+        const body = await tokenRes.json().catch(() => ({}));
+        throw new Error(body.error || "Failed to request download.");
+      }
+      const { token } = await tokenRes.json();
+      await downloadPdf(`/api/market-intelligence/report?token=${token}`, period);
+      toast({ title: "Report downloaded", description: "Your free report has been saved." });
+    } catch (err: any) {
+      console.error("Download failed:", err);
+      toast({ title: "Download failed", description: err.message || "Something went wrong. Please try again.", variant: "destructive" });
     } finally {
       setDownloading(false);
     }
@@ -324,7 +386,7 @@ export default function MarketIntelligence() {
                 Live data from {overview.totalJobs} roles across {overview.totalCompanies} companies, updated daily.
               </p>
             </div>
-            {canDownload ? (
+            {isAuthenticated ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" className="gap-2 shrink-0" disabled={downloading} data-testid="button-download-report">
@@ -349,15 +411,30 @@ export default function MarketIntelligence() {
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <Link href="/pricing">
-                <Button variant="outline" className="gap-2 shrink-0 border-primary/20 hover:border-primary/40" data-testid="button-download-report-upgrade">
-                  <Lock className="h-4 w-4 text-primary" />
-                  Download Report
-                  <Badge variant="secondary" className="ml-1 text-[10px] px-1.5 py-0 bg-primary/10 text-primary border-0">
-                    Pro
-                  </Badge>
-                </Button>
-              </Link>
+              <div className="flex flex-col gap-2 shrink-0 w-full sm:w-auto" data-testid="section-email-download">
+                <div className="flex gap-2">
+                  <Input
+                    type="email"
+                    placeholder="Your email"
+                    value={leadEmail}
+                    onChange={(e) => { setLeadEmail(e.target.value); setEmailError(""); }}
+                    className="w-48 sm:w-56 h-9 text-sm"
+                    data-testid="input-lead-email"
+                  />
+                  <Button
+                    variant="default"
+                    className="gap-2 h-9 whitespace-nowrap"
+                    disabled={downloading}
+                    onClick={() => handleAnonDownload("monthly")}
+                    data-testid="button-download-free"
+                  >
+                    {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                    {downloading ? "Downloading..." : "Download Free Report"}
+                  </Button>
+                </div>
+                {emailError && <p className="text-xs text-destructive" data-testid="text-email-error">{emailError}</p>}
+                <p className="text-[11px] text-muted-foreground">PDF report with skills, salaries, and career paths.</p>
+              </div>
             )}
           </div>
         </section>
