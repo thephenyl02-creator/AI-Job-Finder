@@ -91,7 +91,7 @@ function pageHeader(doc: PDFKit.PDFDocument, pageNum: number) {
   doc.restore();
 }
 
-function pageFooter(doc: PDFKit.PDFDocument, siteUrl: string = "legaltechcareers.com") {
+function pageFooter(doc: PDFKit.PDFDocument, siteUrl: string = "lawjobs.co") {
   doc.save();
   doc.moveTo(MARGIN, PAGE_HEIGHT - 40).lineTo(PAGE_WIDTH - MARGIN, PAGE_HEIGHT - 40).strokeColor(GRAY_300).lineWidth(0.3).stroke();
   doc.fontSize(6).fillColor(GRAY_400).font("Helvetica")
@@ -112,7 +112,7 @@ function newContentPage(doc: PDFKit.PDFDocument, pn: { val: number }) {
   doc.addPage({ size: "LETTER", margin: MARGIN });
   pn.val++;
   pageHeader(doc, pn.val);
-  pageFooter(doc, (doc as any)._siteUrl || "legaltechcareers.com");
+  pageFooter(doc, (doc as any)._siteUrl || "lawjobs.co");
   doc.y = 56;
 }
 
@@ -309,7 +309,7 @@ function generateSectionInsight(section: string, data: MarketData): string {
 }
 
 export function generateMarketIntelligencePDF(data: MarketData, period: string, siteUrl?: string): PDFKit.PDFDocument {
-  const baseUrl = siteUrl || "legaltechcareers.com";
+  const baseUrl = siteUrl || "lawjobs.co";
 
   const doc = new PDFDocument({
     size: "LETTER",

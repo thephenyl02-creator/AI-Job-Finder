@@ -332,7 +332,7 @@ function makePageFooter(): Footer {
 }
 
 export async function generateMarketIntelligenceDocx(data: MarketData, period: string, siteUrl?: string): Promise<Buffer> {
-  const baseUrl = siteUrl || "legaltechcareers.com";
+  const baseUrl = siteUrl || "lawjobs.co";
   const coverChildren: any[] = [];
 
   coverChildren.push(spacer(600));
