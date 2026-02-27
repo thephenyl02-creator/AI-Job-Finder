@@ -1,0 +1,144 @@
+You are a senior backend engineer + data engineer. Build a production-grade (early-stage) scraping pipeline for “Legal Tech Careers” with the goal: CLEAN, RELIABLE, FOCUSED legal tech intelligence.
+
+NON-NEGOTIABLE GOALS
+1) Reliability: overall daily run success ≥ 95% (measured as “completed run without fatal error”).
+2) Isolation: one failing source must NOT fail the full run.
+3) Observability: every run must produce a clear run report (JSON + DB) showing per-source success/failure, counts, timings, top error reasons.
+4) Idempotency: safe to re-run the same job multiple times without duplicates.
+5) Focus: ONLY scrape legal tech companies + ALSPs + a small curated law firm innovation list. Do NOT attempt “whole world”.
+
+STACK (choose defaults if not provided)
+- Language: Python 3.11
+- DB: PostgreSQL (preferred). If unavailable, use SQLite but keep schema compatible.
+- Scheduler: cron-like (simple) + manual trigger endpoint.
+- HTTP: requests + retry/backoff.
+- Dynamic pages: Playwright ONLY as fallback per-source when static fetch fails; never use Playwright for all sources.
+- Parsing: BeautifulSoup for HTML; JSON parsing for ATS endpoints.
+- Logging: structured JSON logs.
+
+DATA SOURCES (PRIORITY ORDER)
+Build adapters for these ATS types FIRST:
+1) Greenhouse
+2) Lever
+3) Ashby
+4) Workday (harder; do best effort; isolate failures)
+
+DATA MODEL (MUST IMPLEMENT)
+Create tables:
+- sources(id, name, type, base_url, is_enabled, priority, last_success_at, last_error_at, consecutive_failures, metadata_json)
+- runs(id, started_at, ended_at, status, total_sources, ok_sources, failed_sources, total_found, total_new, total_updated, total_rejected, duration_sec, notes)
+- run_sources(id, run_id, source_id, status, found, new, updated, rejected, duration_sec, error_code, error_message, error_detail_json)
+- jobs(id, source_id, external_id, company, title, location_raw, location_norm, country, region, employment_type, remote_type, department, seniority, salary_min, salary_max, salary_currency, apply_url, job_url, description_text, posted_at, scraped_at, status, hash_key, ai_category, ai_subcategory, skills_json, ai_intensity_score)
+- job_events(id, job_id, event_type, created_at, meta_json)  // e.g. “created”, “updated”, “stale”, “rejected”
+- rejects(id, run_id, source_id, external_id, reason_code, reason_message, raw_payload_json)
+
+CORE PIPELINE (MUST IMPLEMENT)
+A) Scheduler / runner
+- Implement a single-run lock so two runs cannot overlap (use DB advisory lock or a lock table).
+- Implement a run orchestrator that iterates enabled sources by priority.
+- For each source:
+  - fetch listings
+  - parse into normalized Job objects
+  - validate + normalize fields
+  - upsert into jobs table
+  - mark stale jobs not seen in N days as “stale” (source-specific thresholds)
+  - record run_sources metrics
+- The run must complete even if some sources fail.
+- If a source fails 5 consecutive times, trip a circuit breaker: disable it for 24h and record it.
+
+B) Retries & rate-limits
+- Implement retry with exponential backoff + jitter for network calls.
+- Respect polite rate limiting per host.
+- Add user-agent rotation (basic).
+- Detect 429/403; downgrade the source and pause.
+
+C) Deduping (CRITICAL)
+- Create a stable hash_key: normalize(company)+normalize(title)+normalize(location_norm)+normalize(apply_url or job_url)
+- Upsert based on (source_id, external_id) if available; else based on hash_key.
+- No duplicates.
+
+D) Rejection reasons dashboard data
+- Every rejected job MUST record a reason_code. At minimum:
+  - MISSING_TITLE
+  - MISSING_COMPANY
+  - INVALID_URL
+  - PARSE_ERROR
+  - DUPLICATE
+  - STALE_OR_EXPIRED
+  - LOCATION_PARSE_FAILED
+  - SALARY_PARSE_FAILED (still ingest job; don’t reject unless critical)
+
+E) Simple “Scraper Dashboard” endpoints (API)
+Create a minimal FastAPI app with endpoints:
+- GET /health
+- POST /runs/start  (manual start)
+- GET /runs/latest
+- GET /runs/{run_id}
+- GET /sources
+- POST /sources/{source_id}/toggle
+- GET /metrics/rejections (top reasons last 7 days)
+- GET /metrics/sources (success rate per source)
+
+F) AI categorization placeholder (DON’T call paid APIs unless I provide keys)
+- Implement ai_category field as “unclassified” by default.
+- Provide a stub function classify_job(job) that uses simple keyword rules now (legal ops, product, sales, engineering, compliance).
+- It must run automatically after ingest.
+- Keep it replaceable later with LLM.
+
+G) Alerts placeholder (optional if time)
+- Create alerts table schema but do not implement sending unless easy.
+- Record “alerts_triggered” metric as 0 for now.
+
+FOLDER STRUCTURE (MUST PRODUCE)
+- app/
+  - main.py (FastAPI)
+  - db.py (connection)
+  - models.py (pydantic)
+  - schema.sql
+  - runner.py (orchestrator)
+  - adapters/
+    - greenhouse.py
+    - lever.py
+    - ashby.py
+    - workday.py
+  - normalize/
+    - location.py
+    - salary.py
+    - text.py
+  - utils/
+    - retry.py
+    - logging.py
+    - locks.py
+- scripts/
+  - seed_sources.py  (seed a list of sources from a JSON file)
+  - run_once.py
+
+SEED DATA (MUST INCLUDE)
+- Provide a sources.json format and seed_sources.py that loads 50–100 curated legal tech companies (placeholder URLs allowed if real ones not available). Include fields type, base_url, is_enabled, priority.
+- I will replace the placeholders later.
+
+ACCEPTANCE TESTS (MUST PASS)
+1) A run can be started manually and completes with status “completed” even if one source fails.
+2) run record + run_sources records are created for all attempted sources.
+3) jobs are upserted; duplicates are not created across re-runs.
+4) Rejections are recorded with reason codes.
+5) /runs/latest returns a JSON report including: totals, per-source breakdown, top rejection reasons.
+6) If a source fails 5 consecutive times it gets disabled for 24h (circuit breaker) and is shown in /sources.
+
+DELIVERABLES
+- Provide all code files.
+- Provide schema.sql and migration notes.
+- Provide a README with:
+  - setup steps
+  - how to seed sources
+  - how to run once
+  - how to start API server
+  - how to schedule daily runs (cron instructions)
+
+IMPORTANT BEHAVIOR
+- Do not hand-wave. Implement working code.
+- If Workday is difficult, implement best-effort parsing + robust failure isolation.
+- Prefer correctness and reliability over scraping more sites.
+- Keep the design modular so new adapters can be added later.
+
+Start by printing a plan, then generate the full project structure and code.
