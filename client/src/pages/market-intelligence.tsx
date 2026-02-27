@@ -31,6 +31,7 @@ import {
   Legend,
   CartesianGrid,
 } from "recharts";
+import { ProGate } from "@/components/pro-gate";
 import {
   Briefcase,
   Building2,
@@ -279,8 +280,7 @@ export default function MarketIntelligence() {
   };
 
   const workModeTotal = safeRemote.count + safeHybrid.count + safeOnsite.count;
-  const salaryVisible = isPro ? salaryByPath : salaryByPath.slice(0, 3);
-  const salaryBlurred = !isPro && salaryByPath.length > 3;
+  const canAccessFull = isPro || isAdmin;
   const salaryMax = Math.max(...(salaryByPath.length > 0 ? salaryByPath.map((s) => s.medianMax || 0) : [0]), 1);
 
   const triggerDownload = (url: string) => {
@@ -467,6 +467,30 @@ export default function MarketIntelligence() {
           </div>
         </section>
 
+        {!canAccessFull && (
+          <section className="max-w-6xl mx-auto px-4 sm:px-6 py-4" data-testid="section-mi-progate">
+            <ProGate
+              feature="Unlock Full Market Intelligence"
+              description="Get the complete picture of legal tech hiring — career paths, salary data, skills analysis, and strategic insights to guide your transition."
+              highlights={[
+                "Three Paths analysis — Lawyer-Led, Technical, Ecosystem",
+                "Skill Bridge — what transfers and what to build",
+                "Entry Corridors — accessibility rankings by category",
+                "Salary data by career path",
+                "Skills demand charts (hard & soft)",
+                "Work mode & AI intensity breakdown",
+                "Seniority landscape",
+                "Top hiring companies & geography",
+                "Transition-friendly employer rankings",
+                "Community benchmarks & readiness data",
+                "Market evolution & trend charts",
+                "Downloadable PDF reports",
+              ]}
+            />
+          </section>
+        )}
+
+        {canAccessFull && <>
         {/* THREE PATHS */}
         {transitionData && transitionData.trackSummary.length > 0 && (
           <section className="border-t border-border/40" data-testid="section-three-paths">
@@ -546,8 +570,8 @@ export default function MarketIntelligence() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 {Object.entries(transitionData.skillBridge).map(([trackName, bridge]) => {
                   const colors = TRACK_COLORS[trackName as keyof typeof TRACK_COLORS];
-                  const youHaveVisible = isPro ? bridge.youHave : bridge.youHave.slice(0, 3);
-                  const toBuildVisible = isPro ? bridge.toBuild : bridge.toBuild.slice(0, 3);
+                  const youHaveVisible = bridge.youHave;
+                  const toBuildVisible = bridge.toBuild;
                   return (
                     <div key={trackName} className="mi-panel" data-testid={`skill-bridge-${trackName.toLowerCase().replace(/\s+/g, "-")}`}>
                       <div className="flex items-center gap-2 mb-3">
@@ -578,14 +602,6 @@ export default function MarketIntelligence() {
                           </div>
                         </div>
                       </div>
-                      {!isPro && (bridge.youHave.length > 3 || bridge.toBuild.length > 3) && (
-                        <Link href="/pricing">
-                          <p className="text-[10px] text-muted-foreground mt-3 flex items-center gap-1 hover:underline cursor-pointer" data-testid={`link-skill-upgrade-${trackName.toLowerCase().replace(/\s+/g, "-")}`}>
-                            <Lock className="h-2.5 w-2.5" /> See all skills for this track
-                            <Crown className="h-2.5 w-2.5 text-amber-500" />
-                          </p>
-                        </Link>
-                      )}
                     </div>
                   );
                 })}
@@ -609,7 +625,7 @@ export default function MarketIntelligence() {
                   <span className="mi-label text-right">Exp</span>
                   <span className="mi-label text-right">Entry %</span>
                 </div>
-                {(isPro ? transitionData.entryCorridor : transitionData.entryCorridor.slice(0, 5)).map((c, i) => {
+                {transitionData.entryCorridor.map((c, i) => {
                   const acc = accessibilityLabel(c.accessibilityScore);
                   const trackColors = TRACK_COLORS[c.track as keyof typeof TRACK_COLORS];
                   return (
@@ -670,16 +686,6 @@ export default function MarketIntelligence() {
                     </div>
                   );
                 })}
-                {!isPro && transitionData.entryCorridor.length > 5 && (
-                  <div className="px-3 py-3 border-t border-border/40 text-center">
-                    <Link href="/pricing">
-                      <span className="text-xs text-muted-foreground flex items-center justify-center gap-1 hover:underline cursor-pointer" data-testid="link-corridor-upgrade">
-                        <Lock className="h-3 w-3" /> See all {transitionData.entryCorridor.length} entry points
-                        <Crown className="h-3 w-3 text-amber-500" />
-                      </span>
-                    </Link>
-                  </div>
-                )}
               </div>
             </div>
           </section>
@@ -763,7 +769,7 @@ export default function MarketIntelligence() {
                   <p className="mi-section-title mb-4">Salary by Career Path</p>
                   <p className="mi-insight mb-3">Median ranges from {overview.jobsWithSalary} listings with disclosed pay</p>
                   <div className="space-y-3">
-                    {salaryVisible.map((sp) => {
+                    {salaryByPath.map((sp) => {
                       const minPct = salaryMax > 0 ? ((sp.medianMin || 0) / salaryMax) * 100 : 0;
                       const maxPct = salaryMax > 0 ? ((sp.medianMax || 0) / salaryMax) * 100 : 0;
                       const rangePct = maxPct - minPct;
@@ -787,15 +793,6 @@ export default function MarketIntelligence() {
                       );
                     })}
                   </div>
-                  {salaryBlurred && (
-                    <div className="mt-3 pt-3 border-t border-border/40 text-center">
-                      <Link href="/pricing">
-                        <span className="text-[11px] text-muted-foreground flex items-center justify-center gap-1 hover:underline cursor-pointer" data-testid="button-salary-upgrade">
-                          <Lock className="h-3 w-3" /> Full salary data for all paths <Crown className="h-3 w-3 text-amber-500" />
-                        </span>
-                      </Link>
-                    </div>
-                  )}
                 </div>
               )}
 
@@ -940,7 +937,7 @@ export default function MarketIntelligence() {
                   <span className="mi-label text-right">TF Roles</span>
                   <span className="mi-label text-right">Tracks</span>
                 </div>
-                {(isPro ? transitionData.transitionEmployers : transitionData.transitionEmployers.slice(0, 3)).map((e, i) => (
+                {transitionData.transitionEmployers.map((e, i) => (
                   <div
                     key={e.company}
                     className={`grid grid-cols-[1fr_auto] sm:grid-cols-[1fr_100px_120px] gap-2 px-3 py-2.5 ${i % 2 === 0 ? "" : "bg-muted/30"}`}
@@ -955,16 +952,6 @@ export default function MarketIntelligence() {
                     </div>
                   </div>
                 ))}
-                {!isPro && transitionData.transitionEmployers.length > 3 && (
-                  <div className="px-3 py-3 border-t border-border/40 text-center">
-                    <Link href="/pricing">
-                      <span className="text-[11px] text-muted-foreground flex items-center justify-center gap-1 hover:underline cursor-pointer" data-testid="link-employer-upgrade">
-                        <Lock className="h-3 w-3" /> See all {transitionData.transitionEmployers.length} transition-friendly employers
-                        <Crown className="h-3 w-3 text-amber-500" />
-                      </span>
-                    </Link>
-                  </div>
-                )}
               </div>
             </div>
           </section>
@@ -976,77 +963,56 @@ export default function MarketIntelligence() {
             <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
               <p className="mi-section-title mb-1">Community Pulse</p>
               <p className="mi-insight mb-4">Aggregated insights from career diagnostic assessments</p>
-              {isPro ? (
-                <div className="grid sm:grid-cols-2 gap-3">
-                  <div className="mi-panel" data-testid="panel-avg-readiness">
-                    <p className="mi-label mb-2">Average Readiness</p>
-                    <div className="flex items-center gap-4">
-                      <div className="relative flex items-center justify-center shrink-0">
-                        <svg className="w-[64px] h-[64px] -rotate-90" viewBox="0 0 100 100">
-                          <circle cx="50" cy="50" r="42" fill="none" stroke="hsl(var(--muted))" strokeWidth="6" />
-                          <circle cx="50" cy="50" r="42" fill="none"
-                            stroke={communityBenchmarks.avgReadiness >= 60 ? "hsl(var(--status-success))" : communityBenchmarks.avgReadiness >= 40 ? "hsl(var(--status-warning))" : "hsl(var(--status-danger))"}
-                            strokeWidth="6" strokeLinecap="round"
-                            strokeDasharray={`${2 * Math.PI * 42}`}
-                            strokeDashoffset={`${2 * Math.PI * 42 - (communityBenchmarks.avgReadiness / 100) * 2 * Math.PI * 42}`}
-                          />
-                        </svg>
-                        <span className="absolute mi-metric-sm" data-testid="text-avg-readiness">{Math.round(communityBenchmarks.avgReadiness)}</span>
-                      </div>
-                      <div className="space-y-1">
-                        {communityBenchmarks.readinessDistribution.map((b) => (
-                          <div key={b.bucket} className="flex items-center justify-between gap-3 text-[11px]" data-testid={`readiness-bucket-${b.bucket}`}>
-                            <span className="text-muted-foreground">{b.bucket}</span>
-                            <span className="text-foreground font-medium tabular-nums">{b.count}</span>
-                          </div>
-                        ))}
-                      </div>
+              <div className="grid sm:grid-cols-2 gap-3">
+                <div className="mi-panel" data-testid="panel-avg-readiness">
+                  <p className="mi-label mb-2">Average Readiness</p>
+                  <div className="flex items-center gap-4">
+                    <div className="relative flex items-center justify-center shrink-0">
+                      <svg className="w-[64px] h-[64px] -rotate-90" viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" r="42" fill="none" stroke="hsl(var(--muted))" strokeWidth="6" />
+                        <circle cx="50" cy="50" r="42" fill="none"
+                          stroke={communityBenchmarks.avgReadiness >= 60 ? "hsl(var(--status-success))" : communityBenchmarks.avgReadiness >= 40 ? "hsl(var(--status-warning))" : "hsl(var(--status-danger))"}
+                          strokeWidth="6" strokeLinecap="round"
+                          strokeDasharray={`${2 * Math.PI * 42}`}
+                          strokeDashoffset={`${2 * Math.PI * 42 - (communityBenchmarks.avgReadiness / 100) * 2 * Math.PI * 42}`}
+                        />
+                      </svg>
+                      <span className="absolute mi-metric-sm" data-testid="text-avg-readiness">{Math.round(communityBenchmarks.avgReadiness)}</span>
                     </div>
-                  </div>
-                  <div className="mi-panel" data-testid="panel-skill-gaps">
-                    <p className="mi-label mb-2">Top Skill Gaps</p>
-                    <div className="space-y-1.5">
-                      {communityBenchmarks.topSkillGaps.slice(0, 6).map((sg) => (
-                        <div key={sg.skill} className="flex items-center justify-between gap-2 text-[11px]" data-testid={`skill-gap-${sg.skill.toLowerCase().replace(/\s+/g, "-")}`}>
-                          <span className="text-foreground truncate" title={sg.skill}>{sg.skill}</span>
-                          <span className="text-muted-foreground tabular-nums shrink-0">{sg.count}</span>
+                    <div className="space-y-1">
+                      {communityBenchmarks.readinessDistribution.map((b) => (
+                        <div key={b.bucket} className="flex items-center justify-between gap-3 text-[11px]" data-testid={`readiness-bucket-${b.bucket}`}>
+                          <span className="text-muted-foreground">{b.bucket}</span>
+                          <span className="text-foreground font-medium tabular-nums">{b.count}</span>
                         </div>
                       ))}
                     </div>
-                    {communityBenchmarks.topCareerPaths.length > 0 && (
-                      <div className="mt-3 pt-3 border-t border-border/40">
-                        <p className="mi-label mb-1.5">Popular Paths</p>
-                        <div className="flex flex-wrap gap-1">
-                          {communityBenchmarks.topCareerPaths.slice(0, 4).map((cp) => (
-                            <Badge key={cp.path} variant="outline" className="text-[10px] no-default-active-elevate" data-testid={`popular-path-${cp.path.toLowerCase().replace(/\s+/g, "-")}`}>
-                              {cp.path}
-                            </Badge>
-                          ))}
-                        </div>
+                  </div>
+                </div>
+                <div className="mi-panel" data-testid="panel-skill-gaps">
+                  <p className="mi-label mb-2">Top Skill Gaps</p>
+                  <div className="space-y-1.5">
+                    {communityBenchmarks.topSkillGaps.slice(0, 6).map((sg) => (
+                      <div key={sg.skill} className="flex items-center justify-between gap-2 text-[11px]" data-testid={`skill-gap-${sg.skill.toLowerCase().replace(/\s+/g, "-")}`}>
+                        <span className="text-foreground truncate" title={sg.skill}>{sg.skill}</span>
+                        <span className="text-muted-foreground tabular-nums shrink-0">{sg.count}</span>
                       </div>
-                    )}
+                    ))}
                   </div>
-                </div>
-              ) : (
-                <div className="relative">
-                  <div className="grid sm:grid-cols-2 gap-3 blur-sm select-none pointer-events-none opacity-50">
-                    <div className="mi-panel"><Skeleton className="h-[100px] w-full" /></div>
-                    <div className="mi-panel"><Skeleton className="h-[100px] w-full" /></div>
-                  </div>
-                  <div className="absolute inset-0 flex items-center justify-center bg-background/60 backdrop-blur-[2px] rounded-md">
-                    <div className="text-center">
-                      <Lock className="h-4 w-4 text-muted-foreground mx-auto mb-1.5" />
-                      <p className="text-xs font-medium text-foreground mb-0.5">Community benchmarks</p>
-                      <p className="text-[11px] text-muted-foreground mb-2 max-w-xs">See how your readiness compares</p>
-                      <Link href="/pricing">
-                        <Button size="sm" className="gap-1 h-7 text-xs" data-testid="button-community-upgrade">
-                          <Crown className="h-3 w-3" /> Upgrade
-                        </Button>
-                      </Link>
+                  {communityBenchmarks.topCareerPaths.length > 0 && (
+                    <div className="mt-3 pt-3 border-t border-border/40">
+                      <p className="mi-label mb-1.5">Popular Paths</p>
+                      <div className="flex flex-wrap gap-1">
+                        {communityBenchmarks.topCareerPaths.slice(0, 4).map((cp) => (
+                          <Badge key={cp.path} variant="outline" className="text-[10px] no-default-active-elevate" data-testid={`popular-path-${cp.path.toLowerCase().replace(/\s+/g, "-")}`}>
+                            {cp.path}
+                          </Badge>
+                        ))}
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
-              )}
+              </div>
             </div>
           </section>
         )}
@@ -1162,6 +1128,8 @@ export default function MarketIntelligence() {
             </section>
           );
         })()}
+
+        </>}
 
         {/* CTA */}
         <section className="border-t border-border/40" data-testid="section-cta">

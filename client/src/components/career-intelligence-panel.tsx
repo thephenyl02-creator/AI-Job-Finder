@@ -125,7 +125,7 @@ export function CareerIntelligencePanel({ onSelectPath, selectedPath }: CareerIn
   });
 
   const handlePathClick = useCallback((path: CareerPath, index: number) => {
-    if (index > 0 && !isPro) return;
+    if (!isPro) return;
     if (selectedPath === path.path) {
       onSelectPath(null);
     } else {
@@ -251,6 +251,43 @@ export function CareerIntelligencePanel({ onSelectPath, selectedPath }: CareerIn
     );
   }
 
+  if (!isPro) {
+    return (
+      <Card className="border-foreground/10" data-testid="panel-intelligence-locked">
+        <CardContent className="p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Compass className="h-4 w-4 text-primary" />
+              <h2 className="text-sm font-semibold text-foreground">Career Intelligence</h2>
+            </div>
+            <button onClick={() => setIsExpanded(false)} className="text-muted-foreground" data-testid="button-collapse-intelligence-locked">
+              <ChevronUp className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="text-center py-4">
+            <Lock className="h-5 w-5 text-muted-foreground mx-auto mb-3" />
+            <p className="text-sm text-muted-foreground mb-1">Personalized career paths require Pro</p>
+            <p className="text-xs text-muted-foreground mb-4">Run a career diagnostic to see which legal tech paths match your background, skill fit scores, and hiring data.</p>
+            <div className="flex items-center justify-center gap-2 flex-wrap">
+              <Link href="/diagnostic">
+                <Button size="sm" variant="outline" data-testid="button-run-diagnostic">
+                  <Zap className="h-3.5 w-3.5 mr-1.5" />
+                  Run Diagnostic
+                </Button>
+              </Link>
+              <Link href="/pricing">
+                <Button size="sm" data-testid="button-unlock-intelligence">
+                  <Lock className="h-3.5 w-3.5 mr-1.5" />
+                  Upgrade to Pro
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card className="border-foreground/10" data-testid="panel-intelligence-result">
       <CardContent className="p-4 sm:p-5">
@@ -291,7 +328,6 @@ export function CareerIntelligencePanel({ onSelectPath, selectedPath }: CareerIn
             <p className="text-xs text-muted-foreground mb-3 font-medium uppercase tracking-wider">Your career paths</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {result.recommendedPaths.map((path, i) => {
-                const isLocked = i > 0 && !isPro;
                 const isActive = selectedPath === path.path;
                 const colors = FIT_COLORS[path.fit] || FIT_COLORS.medium;
 
@@ -299,24 +335,13 @@ export function CareerIntelligencePanel({ onSelectPath, selectedPath }: CareerIn
                   <button
                     key={path.path}
                     onClick={() => handlePathClick(path, i)}
-                    disabled={isLocked}
                     className={`relative text-left rounded-md border p-3 transition-all ${
                       isActive
                         ? `${colors.border} ${colors.bg} ring-1 ring-offset-1 ring-primary/30`
-                        : isLocked
-                          ? "border-foreground/5 bg-muted/10 opacity-60"
-                          : `border-foreground/10 hover:border-foreground/20 hover:bg-muted/20`
+                        : `border-foreground/10 hover:border-foreground/20 hover:bg-muted/20`
                     }`}
                     data-testid={`button-path-${i}`}
                   >
-                    {isLocked && (
-                      <div className="absolute inset-0 rounded-md bg-background/40 backdrop-blur-[3px] flex flex-col items-center justify-center z-10 gap-1">
-                        <span className="flex items-center gap-1 text-[10px] font-medium text-primary">
-                          <Lock className="h-3 w-3" />
-                          Unlock with Pro
-                        </span>
-                      </div>
-                    )}
                     <div className="flex items-start justify-between gap-2 mb-1.5">
                       <span className="text-sm font-medium text-foreground leading-tight">{path.path}</span>
                       <span className={`flex items-center gap-1 text-[10px] font-medium shrink-0 ${colors.text}`}>
@@ -333,17 +358,6 @@ export function CareerIntelligencePanel({ onSelectPath, selectedPath }: CareerIn
                 );
               })}
             </div>
-
-            {!isPro && result.recommendedPaths.length > 1 && (
-              <div className="mt-3 flex items-center gap-2">
-                <Link href="/pricing" onClick={() => trackNow({ eventType: "pro_gate_click", entityType: "feature", metadata: { gate: "career_paths", pathCount: result.recommendedPaths.length } })}>
-                  <Button variant="ghost" size="sm" className="text-xs text-primary" data-testid="button-unlock-paths">
-                    <Lock className="h-3 w-3 mr-1" />
-                    Unlock all {result.recommendedPaths.length} paths
-                  </Button>
-                </Link>
-              </div>
-            )}
           </div>
         </div>
       </CardContent>

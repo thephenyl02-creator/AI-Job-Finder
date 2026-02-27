@@ -15,10 +15,11 @@ import { formatSalary } from "@/lib/format-salary";
 import {
   FileText, Bell, Bookmark, ArrowRight, TrendingUp,
   Building2, ChevronRight, Briefcase,
-  Brain, Lock, Target, Wifi, Clock, CheckCircle,
-  Circle, Upload, Search, Map, DollarSign, Sparkles,
+  Brain, Target, Wifi, Clock, CheckCircle,
+  Upload, Search, Map, DollarSign, Sparkles,
   RefreshCw, Zap, Flame, BarChart3, Globe,
 } from "lucide-react";
+import { ProGate } from "@/components/pro-gate";
 
 interface DashboardData {
   activityMetrics: {
@@ -66,25 +67,6 @@ interface DiagnosticData {
   overallReadinessScore: number;
 }
 
-function ProLockedOverlay({ children, label }: { children: React.ReactNode; label?: string }) {
-  return (
-    <div className="relative">
-      <div className="pointer-events-none select-none blur-[3px] opacity-60">
-        {children}
-      </div>
-      <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/40 backdrop-blur-[1px] rounded-md">
-        <div className="flex flex-col items-center gap-2 text-center px-4">
-          <Lock className="h-5 w-5 text-muted-foreground" />
-          <p className="text-sm font-medium text-foreground">{label || "Pro Feature"}</p>
-          <p className="text-xs text-muted-foreground max-w-[200px]">Upgrade to Pro for full access</p>
-          <Link href="/pricing">
-            <Button size="sm" className="gap-1.5" data-testid="button-upgrade-dashboard">Upgrade</Button>
-          </Link>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 function ReadinessRing({ score, size = "lg" }: { score: number; size?: "lg" | "sm" }) {
   const isLg = size === "lg";
@@ -333,56 +315,6 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
 
-            <Card className={`card-elev-prominent ${heroCardConfigs[1].bg} overflow-visible`} data-testid="card-hero-active-jobs">
-              <CardContent className="p-3.5 sm:p-6">
-                <div className="flex items-center gap-1.5 sm:gap-2 mb-2 sm:mb-3 flex-wrap">
-                  <div className={`p-1 sm:p-1.5 rounded-md ${heroCardConfigs[1].iconBg}`}>
-                    <Briefcase className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-                  </div>
-                  <span className="text-[10px] sm:text-xs text-muted-foreground font-medium uppercase tracking-wide">Active Jobs</span>
-                </div>
-                <p className="text-2xl sm:text-4xl font-bold text-foreground tabular-nums" data-testid="text-active-jobs-count">
-                  {marketPulse?.totalJobs ?? dashData.totalActiveJobs}
-                </p>
-                {marketPulse && marketPulse.newJobsThisWeek > 0 && (
-                  <Badge variant="secondary" className="text-[10px] mt-1.5 sm:mt-2 w-fit">
-                    +{marketPulse.newJobsThisWeek} this week
-                  </Badge>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card className={`card-elev-prominent ${heroCardConfigs[2].bg} overflow-visible`} data-testid="card-hero-top-path">
-              <CardContent className="p-3.5 sm:p-6">
-                <div className="flex items-center gap-1.5 sm:gap-2 mb-2 sm:mb-3 flex-wrap">
-                  <div className={`p-1 sm:p-1.5 rounded-md ${heroCardConfigs[2].iconBg}`}>
-                    <Target className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-                  </div>
-                  <span className="text-[10px] sm:text-xs text-muted-foreground font-medium uppercase tracking-wide">Top Path</span>
-                </div>
-                {topPathName ? (
-                  <>
-                    <p className="text-xs sm:text-sm font-semibold text-foreground leading-tight line-clamp-2" data-testid="text-top-path-name">
-                      {topPathName}
-                    </p>
-                    {topPathConfidence && (
-                      <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 sm:mt-1.5">{topPathConfidence}% match</p>
-                    )}
-                    {topAlignedCategory && (
-                      <p className="text-[10px] text-muted-foreground mt-0.5 sm:mt-1">
-                        {topAlignedCategory.availableJobs} roles available
-                      </p>
-                    )}
-                  </>
-                ) : (
-                  <>
-                    <p className="text-xs sm:text-sm text-muted-foreground">Run diagnostic</p>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">to discover your path</p>
-                  </>
-                )}
-              </CardContent>
-            </Card>
-
             <Card className={`card-elev-prominent ${heroCardConfigs[3].bg} overflow-visible`} data-testid="card-hero-streak">
               <CardContent className="p-3.5 sm:p-6">
                 <div className="flex items-center gap-1.5 sm:gap-2 mb-2 sm:mb-3 flex-wrap">
@@ -402,9 +334,139 @@ export default function DashboardPage() {
                 </p>
               </CardContent>
             </Card>
+
+            {isPro && (
+              <>
+                <Card className={`card-elev-prominent ${heroCardConfigs[1].bg} overflow-visible`} data-testid="card-hero-active-jobs">
+                  <CardContent className="p-3.5 sm:p-6">
+                    <div className="flex items-center gap-1.5 sm:gap-2 mb-2 sm:mb-3 flex-wrap">
+                      <div className={`p-1 sm:p-1.5 rounded-md ${heroCardConfigs[1].iconBg}`}>
+                        <Briefcase className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                      </div>
+                      <span className="text-[10px] sm:text-xs text-muted-foreground font-medium uppercase tracking-wide">Active Jobs</span>
+                    </div>
+                    <p className="text-2xl sm:text-4xl font-bold text-foreground tabular-nums" data-testid="text-active-jobs-count">
+                      {marketPulse?.totalJobs ?? dashData.totalActiveJobs}
+                    </p>
+                    {marketPulse && marketPulse.newJobsThisWeek > 0 && (
+                      <Badge variant="secondary" className="text-[10px] mt-1.5 sm:mt-2 w-fit">
+                        +{marketPulse.newJobsThisWeek} this week
+                      </Badge>
+                    )}
+                  </CardContent>
+                </Card>
+
+                <Card className={`card-elev-prominent ${heroCardConfigs[2].bg} overflow-visible`} data-testid="card-hero-top-path">
+                  <CardContent className="p-3.5 sm:p-6">
+                    <div className="flex items-center gap-1.5 sm:gap-2 mb-2 sm:mb-3 flex-wrap">
+                      <div className={`p-1 sm:p-1.5 rounded-md ${heroCardConfigs[2].iconBg}`}>
+                        <Target className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                      </div>
+                      <span className="text-[10px] sm:text-xs text-muted-foreground font-medium uppercase tracking-wide">Top Path</span>
+                    </div>
+                    {topPathName ? (
+                      <>
+                        <p className="text-xs sm:text-sm font-semibold text-foreground leading-tight line-clamp-2" data-testid="text-top-path-name">
+                          {topPathName}
+                        </p>
+                        {topPathConfidence && (
+                          <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 sm:mt-1.5">{topPathConfidence}% match</p>
+                        )}
+                        {topAlignedCategory && (
+                          <p className="text-[10px] text-muted-foreground mt-0.5 sm:mt-1">
+                            {topAlignedCategory.availableJobs} roles available
+                          </p>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-xs sm:text-sm text-muted-foreground">Run diagnostic</p>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">to discover your path</p>
+                      </>
+                    )}
+                  </CardContent>
+                </Card>
+              </>
+            )}
           </div>
 
-          {hasDiagnostic && (
+          {!hasDiagnostic && (
+            <Card className="mb-8 sm:mb-10 border-dashed card-elev-static" data-testid="card-diagnostic-cta">
+              <CardContent className="p-5 sm:p-9">
+                <div className="flex flex-col sm:flex-row items-center gap-5 text-center sm:text-left">
+                  <div className="p-4 rounded-md bg-primary/10 text-primary shrink-0">
+                    <Sparkles className="h-7 w-7" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h2 className="text-lg font-semibold text-foreground mb-1.5">Get your career roadmap</h2>
+                    <p className="text-sm text-muted-foreground">
+                      Upload your resume and see where you fit in 60 seconds. Get your readiness score, matching career paths, and a personalized transition plan.
+                    </p>
+                  </div>
+                  <Link href={readiness.hasResume ? "/diagnostic" : "/resumes"}>
+                    <Button className="gap-1.5 shrink-0" data-testid="button-start-diagnostic-cta">
+                      <Upload className="h-4 w-4" />
+                      {readiness.hasResume ? "Run Diagnostic" : "Upload Resume"}
+                    </Button>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {!isPro && (
+            <ProGate
+              mode="blur"
+              feature="Full Career Dashboard"
+              description="Upgrade to Pro to unlock your complete career command center with market pulse, career snapshot, weekly action plan, activity insights, and more."
+              highlights={[
+                "Market Pulse with hiring trends & salary data",
+                "Career Snapshot with skill clusters",
+                "Weekly Action Plan (all 4 weeks)",
+                "Market alignment & activity patterns",
+                "Daily activity chart & recommendations",
+                "Top hiring companies & trending skills",
+              ]}
+            >
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8 mb-8 sm:mb-10">
+                <div className="lg:col-span-2 space-y-6 sm:space-y-8">
+                  <Card className="card-elev-static">
+                    <CardContent className="p-4 sm:p-6">
+                      <div className="space-y-4">
+                        <div className="h-6 w-32 bg-muted/40 rounded" />
+                        <div className="h-14 bg-muted/20 rounded-md" />
+                        <div className="h-14 bg-muted/20 rounded-md" />
+                        <div className="h-14 bg-muted/20 rounded-md" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5">
+                    {[...Array(4)].map((_, i) => (
+                      <Card key={i} className="card-elev-static">
+                        <CardContent className="p-4 sm:p-5">
+                          <div className="h-24 bg-muted/20 rounded" />
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+                <div className="space-y-4 sm:space-y-6">
+                  <Card className="card-elev-static">
+                    <CardContent className="p-4 sm:p-5">
+                      <div className="h-28 bg-muted/20 rounded" />
+                    </CardContent>
+                  </Card>
+                  <Card className="card-elev-static">
+                    <CardContent className="p-4 sm:p-5">
+                      <div className="h-28 bg-muted/20 rounded" />
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+            </ProGate>
+          )}
+
+          {isPro && hasDiagnostic && (
             <Card className="mb-8 sm:mb-10 card-elev-prominent" data-testid="card-career-snapshot">
               <CardContent className="p-4 sm:p-7">
                 <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5">
@@ -461,30 +523,7 @@ export default function DashboardPage() {
             </Card>
           )}
 
-          {!hasDiagnostic && (
-            <Card className="mb-8 sm:mb-10 border-dashed card-elev-static" data-testid="card-diagnostic-cta">
-              <CardContent className="p-5 sm:p-9">
-                <div className="flex flex-col sm:flex-row items-center gap-5 text-center sm:text-left">
-                  <div className="p-4 rounded-md bg-primary/10 text-primary shrink-0">
-                    <Sparkles className="h-7 w-7" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h2 className="text-lg font-semibold text-foreground mb-1.5">Get your career roadmap</h2>
-                    <p className="text-sm text-muted-foreground">
-                      Upload your resume and see where you fit in 60 seconds. Get your readiness score, matching career paths, and a personalized transition plan.
-                    </p>
-                  </div>
-                  <Link href={readiness.hasResume ? "/diagnostic" : "/resumes"}>
-                    <Button className="gap-1.5 shrink-0" data-testid="button-start-diagnostic-cta">
-                      <Upload className="h-4 w-4" />
-                      {readiness.hasResume ? "Run Diagnostic" : "Upload Resume"}
-                    </Button>
-                  </Link>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
+          {isPro && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8 mb-8 sm:mb-10">
             <div className="lg:col-span-2 space-y-6 sm:space-y-8">
               <Card className="card-elev-static" data-testid="card-this-week">
@@ -576,12 +615,16 @@ export default function DashboardPage() {
                         )}
 
                         {!isPro && currentWeek > 1 && (
-                          <ProLockedOverlay label="Weeks 2-4 Action Plan">
+                          <ProGate
+                            mode="blur"
+                            feature="Weeks 2-4 Action Plan"
+                            description="Upgrade to Pro for the full transition plan."
+                          >
                             <div className="space-y-2">
                               <div className="h-14 bg-muted/20 rounded-md" />
                               <div className="h-14 bg-muted/20 rounded-md" />
                             </div>
-                          </ProLockedOverlay>
+                          </ProGate>
                         )}
 
                         {marketPulse && marketPulse.newJobsThisWeek > 0 && (
@@ -760,9 +803,9 @@ export default function DashboardPage() {
                         </CardContent>
                       ) : (
                         <CardContent className="p-5">
-                          <ProLockedOverlay label="Remote %">
+                          <ProGate mode="blur" feature="Remote %" description="Upgrade to Pro for work mode insights.">
                             <div className="h-20" />
-                          </ProLockedOverlay>
+                          </ProGate>
                         </CardContent>
                       )}
                     </Card>
@@ -808,9 +851,9 @@ export default function DashboardPage() {
                     ) : (
                       <Card className="card-elev-static">
                         <CardContent className="p-5">
-                          <ProLockedOverlay label="Salary & Total">
+                          <ProGate mode="blur" feature="Salary & Total" description="Upgrade to Pro for salary data.">
                             <div className="h-20" />
-                          </ProLockedOverlay>
+                          </ProGate>
                         </CardContent>
                       </Card>
                     )}
@@ -950,6 +993,7 @@ export default function DashboardPage() {
               </Card>
             </div>
           </div>
+          )}
         </div>
       </main>
       <Footer />

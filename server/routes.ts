@@ -303,7 +303,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/stats/historical", async (_req, res) => {
+  app.get("/api/stats/historical", optionalAuth, async (_req: any, res) => {
     try {
       const allJobs = await db.select({
         id: jobs.id,
@@ -417,19 +417,53 @@ export async function registerRoutes(
           .map(([name, count]) => ({ name, count }));
       }
 
+      let userIsPro = false;
+      const userId = (_req as any).user?.id;
+      if (userId) {
+        const isAdmin = await storage.isUserAdmin(userId);
+        if (isAdmin) {
+          userIsPro = true;
+        } else {
+          const subData = await storage.getUserSubscription(userId);
+          if (subData?.subscriptionTier === "pro" && subData?.subscriptionStatus === "active") {
+            userIsPro = true;
+          }
+        }
+      }
+
+      function limitMonths<T>(data: Record<string, T>, limit: number): Record<string, T> {
+        const keys = Object.keys(data).sort();
+        const recent = keys.slice(-limit);
+        const result: Record<string, T> = {};
+        for (const k of recent) result[k] = data[k];
+        return result;
+      }
+
+      const monthLimit = userIsPro ? Infinity : 2;
+      const jbm = monthLimit === Infinity ? jobsByMonth : limitMonths(jobsByMonth, monthLimit);
+      const pbm = monthLimit === Infinity ? publishedByMonth : limitMonths(publishedByMonth, monthLimit);
+      const abm = monthLimit === Infinity ? archivedByMonth : limitMonths(archivedByMonth, monthLimit);
+      const cbm = monthLimit === Infinity ? categoryByMonth : limitMonths(categoryByMonth, monthLimit);
+      const wbm = monthLimit === Infinity ? workModeByMonth : limitMonths(workModeByMonth, monthLimit);
+      const sbm = monthLimit === Infinity ? seniorityByMonth : limitMonths(seniorityByMonth, monthLimit);
+      const tcbm = monthLimit === Infinity ? topCompanyByMonth : limitMonths(topCompanyByMonth, monthLimit);
+      const tsbm = monthLimit === Infinity ? topSkillsByMonth : limitMonths(topSkillsByMonth, monthLimit);
+      const tgbm = monthLimit === Infinity ? topGeographyByMonth : limitMonths(topGeographyByMonth, monthLimit);
+
       res.json({
         totalEverScraped,
         totalPublished,
         totalArchived,
-        jobsByMonth,
-        publishedByMonth,
-        archivedByMonth,
-        categoryByMonth,
-        workModeByMonth,
-        seniorityByMonth,
-        companyTrends: topCompanyByMonth,
-        skillTrends: topSkillsByMonth,
-        geographyTrends: topGeographyByMonth,
+        jobsByMonth: jbm,
+        publishedByMonth: pbm,
+        archivedByMonth: abm,
+        categoryByMonth: cbm,
+        workModeByMonth: wbm,
+        seniorityByMonth: sbm,
+        companyTrends: tcbm,
+        skillTrends: tsbm,
+        geographyTrends: tgbm,
+        limited: !userIsPro,
       });
     } catch (error) {
       console.error("Error fetching historical stats:", error);

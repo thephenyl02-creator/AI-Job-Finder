@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/use-auth";
 import { useSubscription } from "@/hooks/use-subscription";
 import { useActivityTracker } from "@/hooks/use-activity-tracker";
-import { UpgradePrompt } from "@/components/upgrade-prompt";
+import { ProGate } from "@/components/pro-gate";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Link } from "wouter";
@@ -30,8 +30,6 @@ import {
   MessageSquare,
   BookOpen,
   Loader2,
-  Crown,
-  Lock,
   DollarSign,
 } from "lucide-react";
 
@@ -407,11 +405,46 @@ export default function Insights() {
 
   const { data, isLoading, dataUpdatedAt } = useQuery<MarketAnalytics>({
     queryKey: ["/api/analytics/market"],
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && isPro,
     refetchInterval: 30000,
   });
 
-  if (authLoading || subLoading || isLoading) {
+  if (authLoading || subLoading) {
+    return <SkeletonDashboard />;
+  }
+
+  if (!isPro) {
+    return (
+      <div className="min-h-screen bg-background overflow-x-hidden">
+        <Header />
+        <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
+          <div className="mb-6 sm:mb-8">
+            <h1 className="text-xl sm:text-3xl font-serif font-medium text-foreground tracking-tight mb-1 sm:mb-2" data-testid="text-insights-title">
+              Market insights
+            </h1>
+            <p className="text-sm sm:text-base text-muted-foreground max-w-xl">
+              See what's happening in legal tech hiring right now. Ask questions or explore the live data below.
+            </p>
+          </div>
+          <ProGate
+            feature="Unlock Market Insights"
+            description="Get full access to live market analytics including active positions, salary data, company hiring trends, category breakdowns, skill demand, seniority landscape, and an AI-powered market analyst chat."
+            highlights={[
+              "Active positions & company hiring trends",
+              "Salary overview with median & average ranges",
+              "Category & seniority breakdowns",
+              "Top skills demand analysis",
+              "Work mode & experience distribution",
+              "AI-powered market analyst chat",
+            ]}
+          />
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (isLoading) {
     return <SkeletonDashboard />;
   }
 
@@ -462,56 +495,7 @@ export default function Insights() {
           </div>
         </div>
 
-        {isPro ? (
-          <InsightsChat />
-        ) : (
-          <Card className="mb-10 relative" data-testid="section-insights-chat-locked">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base font-medium flex items-center gap-2">
-                <MessageSquare className="h-4 w-4 text-muted-foreground" />
-                Ask about the market
-                <Badge variant="secondary" className="text-[10px]">
-                  <Crown className="h-2.5 w-2.5 mr-0.5" />
-                  Pro
-                </Badge>
-              </CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Ask questions about the legal tech job market. Answers are backed by real data from our job listings.
-              </p>
-            </CardHeader>
-            <CardContent>
-              <div className="relative">
-                <div className="opacity-40 pointer-events-none select-none">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
-                    Try asking
-                  </p>
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    {SUGGESTED_QUESTIONS.slice(0, 4).map((q, i) => (
-                      <div key={i} className="text-xs py-2.5 px-3 rounded-md border border-border/60 text-muted-foreground">
-                        {q}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div className="absolute inset-0 flex items-center justify-center bg-background/60 backdrop-blur-[2px] rounded-md">
-                  <div className="text-center">
-                    <Lock className="h-5 w-5 text-muted-foreground mx-auto mb-2" />
-                    <p className="text-sm font-medium text-foreground mb-1">Ask data-backed questions</p>
-                    <p className="text-xs text-muted-foreground mb-3 max-w-xs">
-                      Pro members can ask natural language questions and get answers backed by real job market data.
-                    </p>
-                    <Link href="/pricing">
-                      <Button size="sm" className="gap-1.5" data-testid="button-insights-upgrade">
-                        <Crown className="h-3.5 w-3.5" />
-                        Upgrade to Pro — $5/mo
-                      </Button>
-                    </Link>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        <InsightsChat />
 
         <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 mb-8 sm:mb-10">
           <StatCard

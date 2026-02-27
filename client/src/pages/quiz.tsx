@@ -6,20 +6,14 @@ import { useActivityTracker } from "@/hooks/use-activity-tracker";
 import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { LogoMark } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import {
   ArrowLeft,
   ArrowRight,
-  Briefcase,
   Sparkles,
-  Target,
-  Search,
   Loader2,
   Lock,
-  FileText,
-  CheckCircle2,
   Upload,
 } from "lucide-react";
 
@@ -109,23 +103,6 @@ function ProgressDots({ current, total }: { current: number; total: number }) {
         />
       ))}
     </div>
-  );
-}
-
-function DifficultyBadge({ difficulty }: { difficulty: string }) {
-  const config: Record<string, string> = {
-    Easy: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20",
-    Moderate: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20",
-    Challenging: "bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/20",
-  };
-  return (
-    <Badge
-      variant="secondary"
-      className={`text-xs ${config[difficulty] || ""}`}
-      data-testid="badge-transition-difficulty"
-    >
-      {difficulty} transition
-    </Badge>
   );
 }
 
@@ -303,141 +280,31 @@ export default function QuizPage() {
                   className="text-2xl sm:text-3xl font-serif font-medium text-foreground tracking-tight"
                   data-testid="text-quiz-results-title"
                 >
-                  Your top career paths
+                  Your top match
                 </h2>
-                <p className="text-sm text-muted-foreground mt-2">
-                  Based on your answers, here's where you'd thrive in legal tech.
+                <p className="text-lg font-semibold text-foreground mt-3" data-testid="text-top-path-name">
+                  {result.paths[0]?.name}
                 </p>
-                <div className="flex items-center justify-center gap-3 mt-3 flex-wrap">
-                  <DifficultyBadge difficulty={result.transitionDifficulty} />
-                  <Badge
-                    variant="secondary"
-                    className="text-xs"
-                    data-testid="badge-total-roles"
-                  >
-                    {result.totalMatchedRoles} matching roles
-                  </Badge>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                {result.paths.map((path, i) => (
-                  <Card
-                    key={path.name}
-                    className="border-border/50"
-                    data-testid={`result-path-${i}`}
-                  >
-                    <CardContent className="p-4 sm:p-5">
-                      <div className="flex items-start justify-between gap-3 flex-wrap">
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <h3 className="text-sm sm:text-base font-semibold text-foreground">
-                              {path.name}
-                            </h3>
-                            <Badge
-                              variant="outline"
-                              className="text-[10px] no-default-active-elevate"
-                            >
-                              {path.confidence}% match
-                            </Badge>
-                          </div>
-                          <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
-                            {path.description}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between gap-2 mt-4 flex-wrap">
-                        <span className="text-xs text-muted-foreground flex items-center gap-1">
-                          <Briefcase className="h-3 w-3" />
-                          {path.jobCount} open roles
-                        </span>
-                        <Button variant="outline" size="sm" asChild data-testid={`button-browse-path-${i}`}>
-                          <Link
-                            href={`/jobs?category=${encodeURIComponent(path.name)}`}
-                          >
-                            <Search className="mr-1.5 h-3 w-3" />
-                            Browse roles
-                          </Link>
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                <p className="text-sm text-muted-foreground mt-2">
+                  Based on your answers, this is where you'd thrive in legal tech.
+                </p>
               </div>
 
               <Card className="border-primary/30 bg-primary/[0.03]" data-testid="quiz-upgrade-bridge">
-                <CardContent className="p-4 sm:p-5 space-y-3 sm:space-y-4">
+                <CardContent className="p-4 sm:p-5 space-y-4">
                   <div className="text-center">
-                    <p className="text-xs font-semibold text-muted-foreground tracking-wide uppercase mb-1">
-                      Quiz estimate vs. resume analysis
+                    <p className="text-sm font-medium text-foreground mb-1">
+                      Want the full picture?
                     </p>
-                    <p className="text-[10px] text-muted-foreground">
-                      Your quiz gives a directional estimate. A resume scan unlocks precision.
+                    <p className="text-xs text-muted-foreground">
+                      Upload your resume to unlock match percentages, all ranked paths, readiness scoring, skill gap analysis, and best job matches.
                     </p>
-                  </div>
-
-                  <div className="grid grid-cols-[1fr_auto_1fr] gap-x-1 sm:gap-x-0 text-xs">
-                    <div className="text-center pb-2 border-b border-border/50">
-                      <Badge variant="secondary" className="text-[10px]">Quiz Estimate</Badge>
-                      <p className="text-[10px] text-muted-foreground mt-1">~60% confidence</p>
-                    </div>
-                    <div className="pb-2 border-b border-border/50" />
-                    <div className="text-center pb-2 border-b border-border/50">
-                      <Badge className="text-[10px]">Resume-Verified</Badge>
-                      <p className="text-[10px] text-muted-foreground mt-1">95%+ confidence</p>
-                    </div>
-
-                    <div className="py-2 sm:py-2.5 text-center border-b border-border/30">
-                      <p className="text-muted-foreground text-[11px] sm:text-xs">Top 2 paths</p>
-                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 mx-auto mt-1" />
-                    </div>
-                    <div className="py-2 sm:py-2.5 border-b border-border/30 flex items-center justify-center">
-                      <span className="text-muted-foreground/40 text-[10px]">vs</span>
-                    </div>
-                    <div className="py-2 sm:py-2.5 text-center border-b border-border/30">
-                      <p className="text-foreground font-medium text-[11px] sm:text-xs">All paths ranked</p>
-                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 mx-auto mt-1" />
-                    </div>
-
-                    <div className="py-2 sm:py-2.5 text-center border-b border-border/30">
-                      <p className="text-muted-foreground text-[11px] sm:text-xs">Difficulty level</p>
-                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 mx-auto mt-1" />
-                    </div>
-                    <div className="py-2 sm:py-2.5 border-b border-border/30 flex items-center justify-center">
-                      <span className="text-muted-foreground/40 text-[10px]">vs</span>
-                    </div>
-                    <div className="py-2 sm:py-2.5 text-center border-b border-border/30">
-                      <p className="text-foreground font-medium text-[11px] sm:text-xs">Readiness score</p>
-                      <Lock className="h-3.5 w-3.5 text-muted-foreground/40 mx-auto mt-1" />
-                    </div>
-
-                    <div className="py-2 sm:py-2.5 text-center border-b border-border/30">
-                      <p className="text-muted-foreground/50">—</p>
-                    </div>
-                    <div className="py-2 sm:py-2.5 border-b border-border/30 flex items-center justify-center">
-                      <span className="text-muted-foreground/40 text-[10px]">vs</span>
-                    </div>
-                    <div className="py-2 sm:py-2.5 text-center border-b border-border/30">
-                      <p className="text-foreground font-medium text-[11px] sm:text-xs">Exact skill gaps</p>
-                      <Lock className="h-3.5 w-3.5 text-muted-foreground/40 mx-auto mt-1" />
-                    </div>
-
-                    <div className="py-2 sm:py-2.5 text-center">
-                      <p className="text-muted-foreground/50">—</p>
-                    </div>
-                    <div className="py-2 sm:py-2.5 flex items-center justify-center">
-                      <span className="text-muted-foreground/40 text-[10px]">vs</span>
-                    </div>
-                    <div className="py-2 sm:py-2.5 text-center">
-                      <p className="text-foreground font-medium text-[11px] sm:text-xs">Best job matches</p>
-                      <Lock className="h-3.5 w-3.5 text-muted-foreground/40 mx-auto mt-1" />
-                    </div>
                   </div>
 
                   <Button className="w-full" asChild data-testid="button-quiz-upload-cta">
                     <Link href="/diagnostic">
                       <Upload className="mr-2 h-4 w-4" />
-                      Upload resume for full results
+                      Upload resume for full diagnostic
                     </Link>
                   </Button>
                   <p className="text-[10px] text-muted-foreground text-center flex items-center justify-center gap-1.5">

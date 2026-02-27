@@ -65,6 +65,7 @@ import {
   Tooltip as RechartsTooltip,
 } from "recharts";
 import type { DiagnosticReportData, SkillCluster, CareerPath, ReadinessRole, TransitionWeek } from "@shared/schema";
+import { ProGate } from "@/components/pro-gate";
 
 function DiagPanel({ title, subtitle, accent = "green", children, className = "", info }: {
   title: string;
@@ -1473,37 +1474,39 @@ export default function DiagnosticPage() {
 
       {report && !runDiagnostic.isPending && (
         <>
-          <nav className="sticky top-0 z-50 -mx-4 px-4 py-1.5 sm:py-2.5 bg-background/80 backdrop-blur-md border-b border-border/40" data-testid="section-nav">
-            <div className="flex items-center gap-0.5 sm:gap-1 overflow-x-auto scrollbar-none">
-              {[
-                { id: "overview", label: "Overview", icon: BarChart3 },
-                { id: "skills", label: "Skills", icon: Brain },
-                { id: "career-paths", label: "Paths", icon: TrendingUp },
-                { id: "action-plan", label: "Plan", icon: FileText },
-              ].map((section) => (
-                <Button
-                  key={section.id}
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    const el = document.getElementById(`section-${section.id}`);
-                    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
-                  }}
-                  data-testid={`nav-${section.id}`}
-                >
-                  <section.icon className="h-3.5 w-3.5 mr-1 sm:mr-1.5 text-muted-foreground" />
-                  {section.label}
-                </Button>
-              ))}
-            </div>
-          </nav>
+          {isPro && (
+            <nav className="sticky top-0 z-50 -mx-4 px-4 py-1.5 sm:py-2.5 bg-background/80 backdrop-blur-md border-b border-border/40" data-testid="section-nav">
+              <div className="flex items-center gap-0.5 sm:gap-1 overflow-x-auto scrollbar-none">
+                {[
+                  { id: "overview", label: "Overview", icon: BarChart3 },
+                  { id: "skills", label: "Skills", icon: Brain },
+                  { id: "career-paths", label: "Paths", icon: TrendingUp },
+                  { id: "action-plan", label: "Plan", icon: FileText },
+                ].map((section) => (
+                  <Button
+                    key={section.id}
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      const el = document.getElementById(`section-${section.id}`);
+                      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+                    }}
+                    data-testid={`nav-${section.id}`}
+                  >
+                    <section.icon className="h-3.5 w-3.5 mr-1 sm:mr-1.5 text-muted-foreground" />
+                    {section.label}
+                  </Button>
+                ))}
+              </div>
+            </nav>
+          )}
 
           <div id="section-overview" />
           <Card className="border border-border/50 card-elev-static p-4 sm:p-6">
             <div className="grid grid-cols-1 md:grid-cols-[auto_1fr] gap-4 sm:gap-6 items-center">
               <div className="flex flex-row md:flex-col items-center gap-3 sm:gap-2">
                 <ReadinessScoreRing score={report.overallReadinessScore} />
-                {percentileData?.percentile !== null && percentileData?.percentile !== undefined && (
+                {isPro && percentileData?.percentile !== null && percentileData?.percentile !== undefined && (
                   <p className="text-[10px] text-muted-foreground text-center font-mono" data-testid="text-diagnostic-percentile">
                     Top <span className="font-bold text-foreground">{100 - percentileData.percentile}%</span> of lawyers assessed
                   </p>
@@ -1520,120 +1523,142 @@ export default function DiagnosticPage() {
                       : "There are significant skill gaps to address, but every career changer starts somewhere. Your 30-day plan below will help."}
                   </p>
                 </div>
-                <div className="diag-divider" />
-                <div className="flex items-center gap-3 sm:gap-4 text-xs flex-wrap">
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                    <span className="text-muted-foreground"><span className="diag-metric text-foreground">{report.readinessLadder.ready.length}</span> Ready</span>
+                {report.topPaths?.[0] && (
+                  <div>
+                    <p className="diag-label mb-0.5">Top Career Path</p>
+                    <p className="text-sm font-semibold text-foreground" data-testid="text-top-path-name">{report.topPaths[0].name}</p>
                   </div>
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-2 h-2 rounded-full bg-amber-500" />
-                    <span className="text-muted-foreground"><span className="diag-metric text-foreground">{report.readinessLadder.nearReady.length}</span> Near</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-2 h-2 rounded-full bg-rose-500" />
-                    <span className="text-muted-foreground"><span className="diag-metric text-foreground">{report.readinessLadder.stretch.length}</span> Stretch</span>
-                  </div>
-                </div>
+                )}
+                {isPro && (
+                  <>
+                    <div className="diag-divider" />
+                    <div className="flex items-center gap-3 sm:gap-4 text-xs flex-wrap">
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                        <span className="text-muted-foreground"><span className="diag-metric text-foreground">{report.readinessLadder.ready.length}</span> Ready</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-2 h-2 rounded-full bg-amber-500" />
+                        <span className="text-muted-foreground"><span className="diag-metric text-foreground">{report.readinessLadder.nearReady.length}</span> Near</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-2 h-2 rounded-full bg-rose-500" />
+                        <span className="text-muted-foreground"><span className="diag-metric text-foreground">{report.readinessLadder.stretch.length}</span> Stretch</span>
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </Card>
 
-          <div id="section-career-paths" />
-          <div>
-            <div className="diag-section-title mb-4">Career Paths</div>
-            <p className="text-xs text-muted-foreground mb-4 ml-3">Your top career directions based on your skills and experience, with matching roles</p>
-            <CareerPathFlow
-              topPaths={report.topPaths}
-              readinessLadder={report.readinessLadder}
-              isPro={isPro}
-              currentRole={(resumeData as any)?.[0]?.extractedData?.experience?.[0]?.title || "Your Current Role"}
-              readinessScore={report.overallReadinessScore}
+          {!isPro && (
+            <ProGate
+              feature="Unlock Your Full Career Diagnostic"
+              description="Your readiness score is just the beginning. Upgrade to Pro to see your complete career intelligence report."
+              highlights={[
+                "Skill clusters radar — see your strengths across 7 areas",
+                "Career path flow with matching roles",
+                "Market demand vs your skills analysis",
+                "Full readiness ladder with all matched roles",
+                "30-day personalized transition plan",
+                "Honest assessment & gap analysis",
+                "Fit score breakdown by category",
+              ]}
             />
-          </div>
+          )}
 
-          <div className="diag-divider" />
-
-          <div id="section-skills" />
-          <div>
-            <div className="diag-section-title mb-4">Skills & Market Analysis</div>
-            <p className="text-xs text-muted-foreground mb-4 ml-3">How your skills measure up and what the market is looking for right now</p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <SkillRadarChart clusters={report.skillClusters} />
-              <div className="space-y-4">
-                <FitBreakdownChart breakdown={report.fitBreakdown} />
-                <TransitionGauge difficulty={report.transitionDifficulty} />
+          {isPro && (
+            <>
+              <div id="section-career-paths" />
+              <div>
+                <div className="diag-section-title mb-4">Career Paths</div>
+                <p className="text-xs text-muted-foreground mb-4 ml-3">Your top career directions based on your skills and experience, with matching roles</p>
+                <CareerPathFlow
+                  topPaths={report.topPaths}
+                  readinessLadder={report.readinessLadder}
+                  isPro={isPro}
+                  currentRole={(resumeData as any)?.[0]?.extractedData?.experience?.[0]?.title || "Your Current Role"}
+                  readinessScore={report.overallReadinessScore}
+                />
               </div>
-            </div>
-          </div>
 
-          <MarketDemandChart demand={report.marketDemand} />
+              <div className="diag-divider" />
 
-          <div className="diag-divider" />
-
-          <Card className="border-2 border-rose-500/30 bg-rose-500/5 card-elev-static border-l-2 border-l-rose-500" data-testid="brutal-honesty-section">
-            <CardHeader className="pb-2 px-3 sm:px-6">
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-full bg-rose-500/10 flex items-center justify-center shrink-0">
-                  <Shield className="h-4 w-4 text-rose-500" />
-                </div>
-                <div>
-                  <CardTitle className="text-sm font-semibold text-rose-700 dark:text-rose-400">Honest Assessment</CardTitle>
-                  <p className="text-[10px] text-muted-foreground">Direct feedback on what you need to know</p>
+              <div id="section-skills" />
+              <div>
+                <div className="diag-section-title mb-4">Skills & Market Analysis</div>
+                <p className="text-xs text-muted-foreground mb-4 ml-3">How your skills measure up and what the market is looking for right now</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <SkillRadarChart clusters={report.skillClusters} />
+                  <div className="space-y-4">
+                    <FitBreakdownChart breakdown={report.fitBreakdown} />
+                    <TransitionGauge difficulty={report.transitionDifficulty} />
+                  </div>
                 </div>
               </div>
-            </CardHeader>
-            <CardContent className="space-y-2 px-3 sm:px-6">
-              {report.brutalHonesty.map((statement, i) => (
-                <p key={i} className="text-xs sm:text-sm text-foreground/90 flex items-start gap-2">
-                  <span className="text-rose-500 font-mono font-bold shrink-0">{i + 1}.</span>
-                  {statement}
+
+              <MarketDemandChart demand={report.marketDemand} />
+
+              <div className="diag-divider" />
+
+              <Card className="border-2 border-rose-500/30 bg-rose-500/5 card-elev-static border-l-2 border-l-rose-500" data-testid="brutal-honesty-section">
+                <CardHeader className="pb-2 px-3 sm:px-6">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-full bg-rose-500/10 flex items-center justify-center shrink-0">
+                      <Shield className="h-4 w-4 text-rose-500" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-sm font-semibold text-rose-700 dark:text-rose-400">Honest Assessment</CardTitle>
+                      <p className="text-[10px] text-muted-foreground">Direct feedback on what you need to know</p>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-2 px-3 sm:px-6">
+                  {report.brutalHonesty.map((statement, i) => (
+                    <p key={i} className="text-xs sm:text-sm text-foreground/90 flex items-start gap-2">
+                      <span className="text-rose-500 font-mono font-bold shrink-0">{i + 1}.</span>
+                      {statement}
+                    </p>
+                  ))}
+                </CardContent>
+              </Card>
+
+              <div className="diag-divider" />
+
+              <div id="section-action-plan" />
+              <div>
+                <div className="diag-section-title mb-2">Role Readiness Ladder</div>
+                <p className="text-xs text-muted-foreground mb-4 ml-3">Jobs matched to your profile, grouped by how ready you are to apply</p>
+                <ReadinessLadder ladder={report.readinessLadder} isPro={isPro} />
+              </div>
+
+              <div>
+                <div className="diag-section-title mb-2" style={{ borderLeftColor: "hsl(var(--chart-2))" }}>30-Day Transition Plan</div>
+                <p className="text-xs text-muted-foreground mb-4 ml-3">Week-by-week actions tied to your skill gaps and real job requirements</p>
+                <TransitionPlan plan={report.transitionPlan} isPro={isPro} />
+              </div>
+
+              <Card className="bg-primary/5 border-primary/20 p-4 sm:p-6 text-center card-elev-static" data-testid="diagnostic-bottom-cta">
+                <h3 className="text-base sm:text-lg font-bold font-serif text-foreground mb-2">Ready to take the next step?</h3>
+                <p className="text-xs sm:text-sm text-muted-foreground mb-4">
+                  {report.readinessLadder.ready.length > 0
+                    ? `You're ready for ${report.readinessLadder.ready.length} role${report.readinessLadder.ready.length === 1 ? "" : "s"} right now. Start applying today.`
+                    : report.readinessLadder.nearReady.length > 0
+                    ? `You're ${report.readinessLadder.nearReady.length > 1 ? "a few improvements" : "one step"} away from being market-ready. Browse matching roles now.`
+                    : "Your transition starts with understanding the market. Browse roles that match your background."}
                 </p>
-              ))}
-            </CardContent>
-          </Card>
-
-          <div className="diag-divider" />
-
-          <div id="section-action-plan" />
-          <div>
-            <div className="diag-section-title mb-2">Role Readiness Ladder</div>
-            <p className="text-xs text-muted-foreground mb-4 ml-3">Jobs matched to your profile, grouped by how ready you are to apply</p>
-            <ReadinessLadder ladder={report.readinessLadder} isPro={isPro} />
-          </div>
-
-          <div>
-            <div className="diag-section-title mb-2" style={{ borderLeftColor: "hsl(var(--chart-2))" }}>30-Day Transition Plan</div>
-            <p className="text-xs text-muted-foreground mb-4 ml-3">Week-by-week actions tied to your skill gaps and real job requirements</p>
-            <TransitionPlan plan={report.transitionPlan} isPro={isPro} />
-          </div>
-
-          <Card className="bg-primary/5 border-primary/20 p-4 sm:p-6 text-center card-elev-static" data-testid="diagnostic-bottom-cta">
-            <h3 className="text-base sm:text-lg font-bold font-serif text-foreground mb-2">Ready to take the next step?</h3>
-            <p className="text-xs sm:text-sm text-muted-foreground mb-4">
-              {report.readinessLadder.ready.length > 0
-                ? `You're ready for ${report.readinessLadder.ready.length} role${report.readinessLadder.ready.length === 1 ? "" : "s"} right now. Start applying today.`
-                : report.readinessLadder.nearReady.length > 0
-                ? `You're ${report.readinessLadder.nearReady.length > 1 ? "a few improvements" : "one step"} away from being market-ready. Browse matching roles now.`
-                : "Your transition starts with understanding the market. Browse roles that match your background."}
-            </p>
-            <div className="flex items-center justify-center gap-3 flex-wrap">
-              <Link href="/jobs">
-                <Button data-testid="button-browse-matches">
-                  <Briefcase className="h-4 w-4 mr-2" />
-                  Browse Matched Roles
-                </Button>
-              </Link>
-              {!isPro && (
-                <Link href="/pricing">
-                  <Button variant="outline" data-testid="button-upgrade-pro">
-                    <Zap className="h-4 w-4 mr-2" />
-                    Unlock Full Diagnostic
-                  </Button>
-                </Link>
-              )}
-            </div>
-          </Card>
+                <div className="flex items-center justify-center gap-3 flex-wrap">
+                  <Link href="/jobs">
+                    <Button data-testid="button-browse-matches">
+                      <Briefcase className="h-4 w-4 mr-2" />
+                      Browse Matched Roles
+                    </Button>
+                  </Link>
+                </div>
+              </Card>
+            </>
+          )}
         </>
       )}
     </div>
