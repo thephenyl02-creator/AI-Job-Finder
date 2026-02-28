@@ -26,8 +26,9 @@ Legal Tech Careers is a career intelligence platform designed for legal professi
 - **API Design**: RESTful
 
 ### Data Storage
-- **Database**: PostgreSQL
+- **Database**: PostgreSQL (dev and production have **separate database instances**)
 - **ORM**: Drizzle ORM
+- **Dev vs Prod**: Replit deployments use a separate PostgreSQL instance. SQL-only fixes must be applied via code (startup scripts or admin API endpoints) to affect both environments.
 
 ### Authentication
 - **Methods**: Custom email/password and Google OAuth 2.0.
@@ -73,6 +74,9 @@ Legal Tech Careers is a career intelligence platform designed for legal professi
 - **AI Negative Signal Filter**: If AI summary flags a role as "does not involve technology" or "not suitable for lawyers transitioning", it goes to review queue.
 - **HTML Entity Decoding**: `decodeHtmlEntities()` runs on job titles and company names during enrichment to prevent `&amp;` artifacts.
 - **Uniform Publishing Gate**: All paths to `isPublished=true` (enrichment, recovery, publish-all-eligible, admin PATCH, bulk QA) enforce company-type-aware thresholds via `getQualityThresholds()`. Admin PATCH requires relevance ≥ 6 and roleCategory.
+- **Storage-Level Publish Guard**: `publishJob()` and `updateJobWorkerFields()` in `server/storage.ts` enforce a hard floor: relevance ≥ 6 and roleCategory must be assigned. This is the last line of defense — no code path can bypass it.
+- **Startup Data Cleanup**: `server/lib/data-cleanup.ts` runs once per version at server startup in both dev and prod. Unpublishes low-relevance, null-quality, and negative-AI-signal jobs; re-archives resurrected jobs; decodes HTML entities. Uses `app_settings` table for version tracking.
+- **Admin Data Cleanup**: `POST /api/admin/data-cleanup` endpoint triggers on-demand cleanup (force mode, always runs regardless of version flag). Returns summary of changes.
 - **No Auto-Boost**: AI relevance scores stand as-is. Previously, legal tech company jobs were auto-boosted to score 6.
 - **Public Job Access**: `getPublicJob` enforces `jobStatus='open'` — archived/closed jobs return 404 even with direct URL.
 - **Scrapers**: Greenhouse, Lever, Ashby, Workday, iCIMS (JSON API + RSS fallback), SmartRecruiters, Workable, BambooHR, Rippling, YC auto-discovery.

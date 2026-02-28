@@ -228,6 +228,22 @@ class DatabaseStorage implements IStorage {
 
   async updateJob(id: number, job: Partial<InsertJob>): Promise<Job | undefined> {
     const cleaned = this.sanitizeJobFields(job);
+
+    if ((cleaned as any).isPublished === true) {
+      const [existing] = await db.select().from(jobs).where(eq(jobs.id, id));
+      if (existing) {
+        const relevance = (cleaned as any).legalRelevanceScore ?? existing.legalRelevanceScore ?? 0;
+        const category = (cleaned as any).roleCategory ?? existing.roleCategory;
+        if (relevance < 6) {
+          console.warn(`[PublishGuard] Blocked updateJob publish for job ${id}: relevance ${relevance} < 6`);
+          delete (cleaned as any).isPublished;
+        } else if (!category) {
+          console.warn(`[PublishGuard] Blocked updateJob publish for job ${id}: no roleCategory`);
+          delete (cleaned as any).isPublished;
+        }
+      }
+    }
+
     const [updatedJob] = await db
       .update(jobs)
       .set(cleaned)
@@ -412,6 +428,18 @@ class DatabaseStorage implements IStorage {
   }
 
   async publishJob(id: number): Promise<Job | undefined> {
+    const [existing] = await db.select().from(jobs).where(eq(jobs.id, id));
+    if (!existing) return undefined;
+
+    if ((existing.legalRelevanceScore ?? 0) < 6) {
+      console.warn(`[PublishGuard] Blocked publish for job ${id}: relevance ${existing.legalRelevanceScore} < 6`);
+      return existing;
+    }
+    if (!existing.roleCategory) {
+      console.warn(`[PublishGuard] Blocked publish for job ${id}: no roleCategory assigned`);
+      return existing;
+    }
+
     const now = new Date();
     const [updated] = await db
       .update(jobs)
@@ -3057,6 +3085,22 @@ class DatabaseStorage implements IStorage {
       }
     }
     if (Object.keys(safeData).length === 0) return undefined;
+
+    if (safeData.isPublished === true) {
+      const [existing] = await db.select().from(jobs).where(eq(jobs.id, id));
+      if (existing) {
+        const relevance = safeData.legalRelevanceScore ?? existing.legalRelevanceScore ?? 0;
+        const category = safeData.roleCategory ?? existing.roleCategory;
+        if (relevance < 6) {
+          console.warn(`[PublishGuard] Worker blocked publish for job ${id}: relevance ${relevance} < 6`);
+          delete safeData.isPublished;
+        } else if (!category) {
+          console.warn(`[PublishGuard] Worker blocked publish for job ${id}: no roleCategory`);
+          delete safeData.isPublished;
+        }
+      }
+    }
+
     const [updated] = await db
       .update(jobs)
       .set(safeData)

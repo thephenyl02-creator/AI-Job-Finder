@@ -79,6 +79,7 @@ import {
   enrichShortDescriptions,
 } from "./lib/scheduled-scraper";
 import { getLogFiles, readLogFile, getRecentLogs, runStartupCleanup } from "./lib/logger";
+import { runDataCleanup } from "./lib/data-cleanup";
 import { scrapeYCCompanies } from "./lib/yc-scraper";
 import { startEventScheduler, runEventDiscovery, getEventScraperStatus, checkUrlExists } from "./lib/event-scraper";
 
@@ -4644,6 +4645,23 @@ Rules:
     }
   });
 
+  app.post("/api/admin/data-cleanup", isAuthenticated, async (req, res) => {
+    if (!(await isAdminCheck(req))) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    try {
+      const result = await runDataCleanup(true);
+      res.json({
+        success: true,
+        message: "Data cleanup completed",
+        results: result,
+      });
+    } catch (error: any) {
+      console.error("Error running data cleanup:", error);
+      res.status(500).json({ error: "Failed to run data cleanup" });
+    }
+  });
+
   app.post("/api/admin/jobs/publish-all-eligible", isAuthenticated, async (req, res) => {
     if (!(await isAdminCheck(req))) {
       return res.status(403).json({ error: "Admin access required" });
@@ -4923,8 +4941,16 @@ Rules:
       const active = req.query.active as string;
       const seniority = req.query.seniority as string;
       const reviewStatus = req.query.reviewStatus as string;
+      const showArchived = req.query.showArchived === "true";
 
       let filtered = allJobs;
+
+      if (!showArchived) {
+        filtered = filtered.filter(j =>
+          j.jobStatus !== 'archived' && j.pipelineStatus !== 'archived'
+        );
+      }
+
       if (search) {
         filtered = filtered.filter(j =>
           j.title.toLowerCase().includes(search) ||
@@ -9628,6 +9654,17 @@ body{margin:0;font-family:'DM Sans',system-ui,sans-serif;background:#0f172a;colo
 
   runStartupCleanup();
   startScheduler();
+
+  setTimeout(async () => {
+    try {
+      const result = await runDataCleanup();
+      if (!result.skipped) {
+        console.log(`[DataCleanup] Startup cleanup results:`, JSON.stringify(result));
+      }
+    } catch (err: any) {
+      console.error('[DataCleanup] Startup cleanup failed:', err.message);
+    }
+  }, 5000);
 
   return httpServer;
 }
