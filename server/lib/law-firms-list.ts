@@ -248,12 +248,6 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
     leverPostingsUrl: 'https://jobs.lever.co/henchman',
     type: 'startup',
   },
-  {
-    name: 'Leya',
-    careerUrl: 'https://www.leya.law/careers',
-    ashbyUrl: 'https://api.ashbyhq.com/posting-api/job-board/leya',
-    type: 'startup',
-  },
 
   // ===================================================
   // LEGAL TECH COMPANIES (Established - Global)
