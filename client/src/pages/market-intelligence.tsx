@@ -420,7 +420,7 @@ export default function MarketIntelligence() {
               </div>
               {transitionData && (
                 <p className="text-xs text-muted-foreground mt-1.5" data-testid="text-mi-transition-stats">
-                  {transitionData.totalTransitionFriendly} roles welcome career changers · {lawyerLedPct}% are Lawyer-Led · {transitionData.avgExperience} yrs avg experience
+                  {transitionData.totalTransitionFriendly} roles welcome career changers · {lawyerLedPct}% are Lawyer-Led · {transitionData.avgExperience} years average experience
                 </p>
               )}
             </div>
@@ -497,7 +497,7 @@ export default function MarketIntelligence() {
                 { label: "Active Roles", value: overview.totalJobs.toLocaleString(), sub: `+${overview.newJobsThisWeek} this week`, icon: Briefcase },
                 { label: "Career Changers", value: transitionData ? `${transitionData.transitionFriendlyPct}%` : "—", sub: transitionData ? `${transitionData.totalTransitionFriendly} welcome career changers` : "Pro", icon: Users },
                 { label: "Lawyer-Led", value: `${lawyerLedPct}%`, sub: `${transitionData?.trackSummary.find(t => t.track === "Lawyer-Led")?.jobCount || (dataQuality?.market?.trackDistribution?.find((t: { name: string; count: number }) => t.name === "Lawyer-Led")?.count || 0)} roles`, icon: Shield },
-                { label: "Entry-to-Mid", value: `${entryAccessiblePct}%`, sub: transitionData ? `${transitionData.avgExperience}y avg experience` : "of roles", icon: GraduationCap },
+                { label: "Entry-to-Mid", value: `${entryAccessiblePct}%`, sub: transitionData ? `${transitionData.avgExperience} years average` : "of roles", icon: GraduationCap },
                 { label: "Remote", value: `${overview.remotePercentage}%`, sub: `${safeRemote.count} roles`, icon: Wifi },
                 { label: "Salary Transparency", value: `${overview.totalJobs ? Math.round((overview.jobsWithSalary / overview.totalJobs) * 100) : 0}%`, sub: `${overview.jobsWithSalary} roles with pay data`, icon: TrendingUp },
               ].map((stat, i) => (
@@ -531,7 +531,6 @@ export default function MarketIntelligence() {
                   <div className="mb-3">
                     <span className="mi-metric">{dataQuality.curation.activeInventory.toLocaleString()}</span>
                     <span className="text-[11px] text-muted-foreground ml-1">verified roles from {dataQuality.curation.totalScreened.toLocaleString()}+ reviewed</span>
-                    <div className="text-[10px] text-muted-foreground mt-0.5">{dataQuality.curation.totalPublished.toLocaleString()} approved overall · {dataQuality.curation.activeInventory.toLocaleString()} currently hiring</div>
                   </div>
                   <div className="mb-3">
                     <div className="flex justify-between text-[10px] text-muted-foreground mb-1">
@@ -885,7 +884,7 @@ export default function MarketIntelligence() {
                         <div>
                           <span className="mi-label">Accessibility</span>
                           <p className={`mi-metric-sm ${acc.className}`}>{acc.label}</p>
-                          <span className="text-[10px] text-muted-foreground">{ts.avgExperience}y avg exp</span>
+                          <span className="text-[10px] text-muted-foreground">{ts.avgExperience} years avg</span>
                         </div>
                         <div>
                           <span className="mi-label">Transition-Friendly</span>
@@ -1294,7 +1293,7 @@ export default function MarketIntelligence() {
               <div className="mi-panel overflow-hidden">
                 <div className="hidden sm:grid grid-cols-[1fr_100px_120px] gap-2 px-3 py-2 border-b border-border/40">
                   <span className="mi-label">Company</span>
-                  <span className="mi-label text-right">TF Roles</span>
+                  <span className="mi-label text-right">Friendly Roles</span>
                   <span className="mi-label text-right">Tracks</span>
                 </div>
                 {transitionData.transitionEmployers.map((e, i) => (
