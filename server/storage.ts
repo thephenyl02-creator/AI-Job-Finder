@@ -222,6 +222,11 @@ class DatabaseStorage implements IStorage {
       (cleaned as any).countryName = loc.countryName;
       (cleaned as any).workMode = cleaned.locationType === 'remote' || cleaned.locationType === 'hybrid' ? cleaned.locationType : loc.workMode;
     }
+    if (cleaned.locationType && !cleaned.workMode) {
+      (cleaned as any).workMode = cleaned.locationType;
+    } else if (cleaned.workMode && !cleaned.locationType) {
+      (cleaned as any).locationType = cleaned.workMode;
+    }
     const [newJob] = await db.insert(jobs).values(cleaned as InsertJob).returning();
     return newJob;
   }

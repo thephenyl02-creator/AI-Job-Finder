@@ -190,7 +190,7 @@ Return ONLY valid JSON:
   "category": "Legal Engineering",
   "subcategory": "Legal Engineer",
   "seniorityLevel": "Senior",
-  "hardSkills": ["Ironclad", "Python", "Contract lifecycle management", "API integrations"],
+  "hardSkills": ["CLM platforms", "Python", "Contract lifecycle management", "API integrations"],
   "softSkills": ["Legal-to-technical requirements translation", "Cross-functional stakeholder management", "Training program development"],
   "experienceMin": 5,
   "experienceMax": 8,

@@ -7,11 +7,53 @@ import { generateJobHash, generateFuzzyJobHash } from '../lib/job-hash';
 import { LAW_FIRMS_AND_COMPANIES } from '../lib/law-firms-list';
 import { normalizeLocation } from '../lib/location-normalizer';
 import { clearMarketIntelligenceCache } from '../lib/mi-cache';
+import { normalizeSkill, toTitleCase } from '../lib/skills-normalization';
 import type { Job } from '@shared/schema';
 import { jobs, getTrackForCategory } from '@shared/schema';
 import { db } from '../db';
 import { eq, ne, and, sql } from 'drizzle-orm';
 import axios from 'axios';
+
+function normalizeSkillArray(skills: string[] | null | undefined): string[] {
+  if (!skills || skills.length === 0) return [];
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const skill of skills) {
+    const normalized = toTitleCase(normalizeSkill(skill));
+    const key = normalized.toLowerCase();
+    if (!seen.has(key) && normalized.trim()) {
+      seen.add(key);
+      result.push(normalized);
+    }
+  }
+  return result;
+}
+
+const COUNTRY_TO_REGION: Record<string, string> = {
+  US: "North America", CA: "North America",
+  GB: "Europe", IE: "Europe", DE: "Europe", FR: "Europe", SE: "Europe",
+  ES: "Europe", PL: "Europe", PT: "Europe", BE: "Europe", BG: "Europe",
+  RO: "Europe", UA: "Europe", NL: "Europe", IT: "Europe", CH: "Europe",
+  AT: "Europe", DK: "Europe", NO: "Europe", FI: "Europe", CZ: "Europe",
+  HU: "Europe", HR: "Europe", SK: "Europe", SI: "Europe", LT: "Europe",
+  LV: "Europe", EE: "Europe", GR: "Europe", LU: "Europe",
+  EU: "Europe",
+  IN: "Asia-Pacific", AU: "Asia-Pacific", JP: "Asia-Pacific",
+  KR: "Asia-Pacific", SG: "Asia-Pacific", CN: "Asia-Pacific",
+  HK: "Asia-Pacific", TW: "Asia-Pacific", NZ: "Asia-Pacific",
+  PH: "Asia-Pacific", TH: "Asia-Pacific", MY: "Asia-Pacific",
+  ID: "Asia-Pacific", VN: "Asia-Pacific",
+  BR: "Latin America", MX: "Latin America", AR: "Latin America",
+  CL: "Latin America", CO: "Latin America", PE: "Latin America",
+  IL: "Middle East", AE: "Middle East", SA: "Middle East",
+  ZA: "Africa", NG: "Africa", KE: "Africa", EG: "Africa",
+  WW: "Global",
+};
+
+function getRegionForCountry(countryCode: string | null): string | null {
+  if (!countryCode || countryCode === 'UN') return null;
+  return COUNTRY_TO_REGION[countryCode] || null;
+}
 
 function decodeHtmlEntities(text: string): string {
   return text
@@ -955,9 +997,9 @@ async function enrichJob(job: Job): Promise<void> {
       enrichedData.roleCategory = catResult.category;
       enrichedData.roleSubcategory = catResult.subcategory;
       enrichedData.careerTrack = getTrackForCategory(catResult.category);
-      enrichedData.keySkills = catResult.keySkills;
-      enrichedData.hardSkills = catResult.hardSkills;
-      enrichedData.softSkills = catResult.softSkills;
+      enrichedData.keySkills = normalizeSkillArray(catResult.keySkills);
+      enrichedData.hardSkills = normalizeSkillArray(catResult.hardSkills);
+      enrichedData.softSkills = normalizeSkillArray(catResult.softSkills);
       enrichedData.aiSummary = catResult.aiSummary;
       enrichedData.matchKeywords = catResult.matchKeywords;
       enrichedData.aiResponsibilities = catResult.aiResponsibilities || null;
@@ -1072,6 +1114,38 @@ async function enrichJob(job: Job): Promise<void> {
     const normalizedLocation = normalizeLocation(job.location);
     if (normalizedLocation && normalizedLocation !== job.location) {
       enrichedData.location = normalizedLocation;
+    }
+
+    if (!enrichedData.locationType && !job.locationType) {
+      if (enrichedData.isRemote === true || job.isRemote === true) {
+        enrichedData.locationType = 'remote';
+      } else {
+        const loc = (enrichedData.location || job.location || '').toLowerCase();
+        if (/\bremote\b/.test(loc)) {
+          enrichedData.locationType = 'remote';
+          enrichedData.isRemote = true;
+        } else if (/\bhybrid\b/.test(loc)) {
+          enrichedData.locationType = 'hybrid';
+          enrichedData.isRemote = true;
+        } else {
+          enrichedData.locationType = 'onsite';
+        }
+      }
+    }
+
+    if (enrichedData.locationType) {
+      enrichedData.workMode = enrichedData.locationType;
+      if (enrichedData.locationType === 'remote' || enrichedData.locationType === 'hybrid') {
+        enrichedData.isRemote = true;
+      }
+    }
+
+    const effectiveCountryCode = job.countryCode;
+    if (effectiveCountryCode && (!job.locationRegion || job.locationRegion === '')) {
+      const region = getRegionForCountry(effectiveCountryCode);
+      if (region) {
+        enrichedData.locationRegion = region;
+      }
     }
 
     await storage.updateJobWorkerFields(job.id, enrichedData);

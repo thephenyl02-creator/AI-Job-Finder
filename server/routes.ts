@@ -9172,11 +9172,21 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
             try {
               const { categorizeJob } = await import("./lib/job-categorizer");
               const result = await categorizeJob(job.title, job.description || "", job.company);
+              const { normalizeSkill, toTitleCase } = await import("./lib/skills-normalization");
+              const normArr = (arr: string[]) => {
+                const seen = new Set<string>();
+                return arr.map(s => toTitleCase(normalizeSkill(s))).filter(s => {
+                  const k = s.toLowerCase();
+                  if (seen.has(k)) return false;
+                  seen.add(k);
+                  return true;
+                });
+              };
               await db.update(jobs)
                 .set({
-                  hardSkills: result.hardSkills,
-                  softSkills: result.softSkills,
-                  keySkills: result.keySkills,
+                  hardSkills: normArr(result.hardSkills),
+                  softSkills: normArr(result.softSkills),
+                  keySkills: normArr(result.keySkills),
                 })
                 .where(eq(jobs.id, job.id));
               processed++;
