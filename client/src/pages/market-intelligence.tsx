@@ -775,7 +775,7 @@ export default function MarketIntelligence() {
                           <Tooltip {...SHARED_TOOLTIP_STYLE} />
                           <Legend wrapperStyle={{ fontSize: 10 }} />
                           <Bar dataKey="discovered" name="Discovered" fill="hsl(var(--chart-1))" radius={[2, 2, 0, 0]} />
-                          <Bar dataKey="published" name="Published" fill="hsl(var(--chart-5))" radius={[2, 2, 0, 0]} />
+                          <Bar dataKey="published" name="Approved" fill="hsl(var(--chart-5))" radius={[2, 2, 0, 0]} />
                         </BarChart>
                       </ResponsiveContainer>
                     </div>

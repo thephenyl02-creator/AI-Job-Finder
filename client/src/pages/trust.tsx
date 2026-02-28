@@ -23,6 +23,7 @@ interface DataQualityStats {
   curation: {
     totalScreened: number;
     totalPublished: number;
+    activeInventory: number;
     passRate: number;
     totalRejected: number;
     rejectedPct: number;
@@ -108,17 +109,17 @@ export default function Trust() {
               </p>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
                 <StatCard
-                  label="Jobs Screened"
+                  label="Jobs Reviewed"
                   value={stats.curation.totalScreened.toLocaleString()}
                   testId="stat-total-screened"
                 />
                 <StatCard
-                  label="Published"
-                  value={stats.curation.totalPublished.toLocaleString()}
-                  testId="stat-total-published"
+                  label="Active Roles"
+                  value={stats.curation.activeInventory.toLocaleString()}
+                  testId="stat-active-roles"
                 />
                 <StatCard
-                  label="Pass Rate"
+                  label="Approval Rate"
                   value={`${stats.curation.passRate}%`}
                   testId="stat-pass-rate"
                 />
@@ -272,8 +273,8 @@ export default function Trust() {
             </p>
             {stats && (
               <p className="text-xs">
-                Average relevance score across published jobs:{" "}
-                <span className="font-medium text-foreground">{stats.quality.avgRelevanceScore}/100</span>.
+                Average relevance score across approved jobs:{" "}
+                <span className="font-medium text-foreground">{stats.quality.avgRelevanceScore}/10</span>.
                 Average quality score:{" "}
                 <span className="font-medium text-foreground">{stats.quality.avgQualityScore}/100</span>.
               </p>
