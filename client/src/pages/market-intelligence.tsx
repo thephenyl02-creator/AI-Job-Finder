@@ -495,11 +495,11 @@ export default function MarketIntelligence() {
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
               {[
                 { label: "Active Roles", value: overview.totalJobs.toLocaleString(), sub: `+${overview.newJobsThisWeek} this week`, icon: Briefcase },
-                { label: "Career Changers", value: transitionData ? `${transitionData.transitionFriendlyPct}%` : "—", sub: transitionData ? `${transitionData.totalTransitionFriendly} roles` : "Pro", icon: Users },
+                { label: "Career Changers", value: transitionData ? `${transitionData.transitionFriendlyPct}%` : "—", sub: transitionData ? `${transitionData.totalTransitionFriendly} welcome career changers` : "Pro", icon: Users },
                 { label: "Lawyer-Led", value: `${lawyerLedPct}%`, sub: `${transitionData?.trackSummary.find(t => t.track === "Lawyer-Led")?.jobCount || (dataQuality?.market?.trackDistribution?.find((t: { name: string; count: number }) => t.name === "Lawyer-Led")?.count || 0)} roles`, icon: Shield },
-                { label: "Avg Experience", value: transitionData ? `${transitionData.avgExperience}y` : "—", sub: `${entryAccessiblePct}% entry-to-mid`, icon: GraduationCap },
+                { label: "Entry-to-Mid", value: `${entryAccessiblePct}%`, sub: transitionData ? `${transitionData.avgExperience}y avg experience` : "of roles", icon: GraduationCap },
                 { label: "Remote", value: `${overview.remotePercentage}%`, sub: `${safeRemote.count} roles`, icon: Wifi },
-                { label: "Salary Data", value: `${overview.jobsWithSalary}`, sub: `${overview.totalJobs ? Math.round((overview.jobsWithSalary / overview.totalJobs) * 100) : 0}% transparent`, icon: TrendingUp },
+                { label: "Salary Transparency", value: `${overview.totalJobs ? Math.round((overview.jobsWithSalary / overview.totalJobs) * 100) : 0}%`, sub: `${overview.jobsWithSalary} roles with pay data`, icon: TrendingUp },
               ].map((stat, i) => (
                 <div key={i} className="mi-panel flex flex-col gap-1" data-testid={`stat-${stat.label.toLowerCase().replace(/\s+/g, "-")}`}>
                   <div className="flex items-center gap-1.5 mb-0.5">
@@ -517,8 +517,8 @@ export default function MarketIntelligence() {
         {dataQuality && (
           <section className="border-t border-border/40" data-testid="section-data-quality">
             <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
-              <p className="mi-section-title mb-1">Data Quality & Market Benchmarks</p>
-              <p className="mi-insight mb-4">Every listing is screened through {dataQuality.curation.filterCategories} quality filters before it reaches you</p>
+              <p className="mi-section-title mb-1">How We Curate</p>
+              <p className="mi-insight mb-4">Every listing is screened through {dataQuality.curation.filterCategories} quality checks before it reaches you</p>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div className="mi-panel" data-testid="panel-curation">
@@ -529,13 +529,13 @@ export default function MarketIntelligence() {
                     <span className="text-sm font-semibold text-foreground">Curation Pipeline</span>
                   </div>
                   <div className="mb-3">
-                    <span className="mi-metric">{dataQuality.curation.totalPublished.toLocaleString()}</span>
-                    <span className="text-[11px] text-muted-foreground ml-1">passed quality gate from {dataQuality.curation.totalScreened.toLocaleString()}+ screened</span>
-                    <div className="text-[10px] text-muted-foreground mt-0.5">{dataQuality.curation.activeInventory.toLocaleString()} currently active</div>
+                    <span className="mi-metric">{dataQuality.curation.activeInventory.toLocaleString()}</span>
+                    <span className="text-[11px] text-muted-foreground ml-1">verified roles from {dataQuality.curation.totalScreened.toLocaleString()}+ reviewed</span>
+                    <div className="text-[10px] text-muted-foreground mt-0.5">{dataQuality.curation.totalPublished.toLocaleString()} approved overall · {dataQuality.curation.activeInventory.toLocaleString()} currently hiring</div>
                   </div>
                   <div className="mb-3">
                     <div className="flex justify-between text-[10px] text-muted-foreground mb-1">
-                      <span>Published ({dataQuality.curation.passRate}%)</span>
+                      <span>Approved ({dataQuality.curation.passRate}%)</span>
                       <span>Rejected ({dataQuality.curation.rejectedPct}%)</span>
                     </div>
                     <div className="h-2 rounded-full overflow-hidden flex bg-muted" data-testid="bar-pipeline">
@@ -553,7 +553,7 @@ export default function MarketIntelligence() {
                       />
                     </div>
                     <div className="flex justify-end text-[10px] text-muted-foreground mt-0.5">
-                      <span>In Review ({dataQuality.curation.inReviewPct}%)</span>
+                      <span>Under Review ({dataQuality.curation.inReviewPct}%)</span>
                     </div>
                   </div>
                   <div className="grid grid-cols-3 gap-2">
@@ -562,11 +562,11 @@ export default function MarketIntelligence() {
                       <p className="mi-metric-sm">{dataQuality.curation.uniqueCompanies}</p>
                     </div>
                     <div data-testid="stat-sources">
-                      <span className="mi-label">Sources</span>
+                      <span className="mi-label">Job Sources</span>
                       <p className="mi-metric-sm">{dataQuality.curation.uniqueSources}</p>
                     </div>
                     <div data-testid="stat-filters">
-                      <span className="mi-label">Filters</span>
+                      <span className="mi-label">Quality Checks</span>
                       <p className="mi-metric-sm">{dataQuality.curation.filterCategories}</p>
                     </div>
                   </div>
@@ -583,10 +583,12 @@ export default function MarketIntelligence() {
                     <div data-testid="stat-quality-score">
                       <span className="mi-label">Quality Score</span>
                       <p className="mi-metric">{dataQuality.quality.avgQualityScore}<span className="text-xs text-muted-foreground">/100</span></p>
+                      <span className="text-[10px] text-muted-foreground">listing completeness</span>
                     </div>
                     <div data-testid="stat-relevance-score">
                       <span className="mi-label">Relevance</span>
                       <p className="mi-metric">{dataQuality.quality.avgRelevanceScore}<span className="text-xs text-muted-foreground">/10</span></p>
+                      <span className="text-[10px] text-muted-foreground">match to legal tech</span>
                     </div>
                   </div>
                   <div className="mb-2">
@@ -665,7 +667,15 @@ export default function MarketIntelligence() {
                 </div>
               </div>
 
-              {dataQuality.rejectionBreakdown.length > 0 && (
+              {dataQuality.rejectionBreakdown.length > 0 && (() => {
+                const friendlyLabels: Record<string, string> = {
+                  "Title Screened Out": "Unrelated Job Title",
+                  "Near Duplicate": "Duplicate Listing",
+                  "Non-Legal-Tech Title": "Not Legal Tech",
+                  "Non-Legal-Tech Company": "Outside Industry",
+                  "Poor Description Quality": "Incomplete Listing",
+                };
+                return (
                 <div className="mt-3 mi-panel" data-testid="panel-rejection-breakdown">
                   <div className="flex items-center gap-2 mb-2">
                     <span className="text-xs font-medium text-foreground">Why Jobs Don't Make the Cut</span>
@@ -674,12 +684,13 @@ export default function MarketIntelligence() {
                     {dataQuality.rejectionBreakdown.map((r) => (
                       <div key={r.reason} className="text-center" data-testid={`rejection-${r.reason.toLowerCase().replace(/\s+/g, "-")}`}>
                         <p className="text-sm font-semibold text-foreground">{r.count.toLocaleString()}</p>
-                        <span className="text-[10px] text-muted-foreground leading-tight block">{r.reason}</span>
+                        <span className="text-[10px] text-muted-foreground leading-tight block">{friendlyLabels[r.reason] || r.reason}</span>
                       </div>
                     ))}
                   </div>
                 </div>
-              )}
+                );
+              })()}
 
               <div className="flex items-center justify-between mt-2">
                 <Link href="/trust" className="text-[10px] text-primary/60 hover:text-primary transition-colors" data-testid="link-methodology-dq">
@@ -966,7 +977,7 @@ export default function MarketIntelligence() {
                   <span className="mi-label">Category</span>
                   <span className="mi-label text-right">Jobs</span>
                   <span className="mi-label text-right">Access</span>
-                  <span className="mi-label text-right">TF</span>
+                  <span className="mi-label text-right">Friendly</span>
                   <span className="mi-label text-right">Exp</span>
                   <span className="mi-label text-right">Entry %</span>
                 </div>
@@ -1015,7 +1026,7 @@ export default function MarketIntelligence() {
                             <p className={`text-xs font-semibold ${acc.className}`}>{acc.label}</p>
                           </div>
                           <div>
-                            <span className="mi-label">TF</span>
+                            <span className="mi-label">Friendly</span>
                             <p className="text-xs text-foreground tabular-nums">{c.transitionFriendly}</p>
                           </div>
                           <div>
@@ -1195,7 +1206,6 @@ export default function MarketIntelligence() {
                       </div>
                     ))}
                   </div>
-                  <p className="text-[10px] text-muted-foreground mt-2">Based on AI-related keywords in job descriptions</p>
                 </div>
               </div>
             </div>
