@@ -1,5 +1,5 @@
 import { storage } from '../storage';
-import { clearMarketIntelligenceCache } from '../lib/mi-cache';
+import { clearAllStatsCaches } from '../lib/mi-cache';
 import https from 'https';
 import http from 'http';
 import { URL } from 'url';
@@ -194,7 +194,7 @@ async function runReliabilityChecks() {
   const links = await runApplyLinkValidation();
   console.log(`[Reliability] Complete. Non-job removed: ${nonJob}. Stale closed: ${stale}. Links checked: ${links.checked}, broken: ${links.broken}`);
   if (nonJob > 0 || stale > 0 || links.broken > 0) {
-    clearMarketIntelligenceCache();
+    clearAllStatsCaches();
     console.log(`[Reliability] Market intelligence cache cleared`);
   }
 }

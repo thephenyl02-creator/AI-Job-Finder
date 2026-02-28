@@ -616,13 +616,24 @@ export async function registerRoutes(
       res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
       const [{ total: totalUsersCount }] = await db.select({ total: count() }).from(users);
       const [{ total: diagnosticsCount }] = await db.select({ total: count() }).from(diagnosticReports);
-      const activeJobs = await storage.getActiveJobs();
-      const uniqueCompanies = new Set(activeJobs.map(j => j.company)).size;
+
+      const cachedDQ = getDataQualityCache();
+      let jobsCurated: number;
+      let companiesTracked: number;
+      if (cachedDQ) {
+        jobsCurated = cachedDQ.curation.activeInventory;
+        companiesTracked = cachedDQ.curation.uniqueCompanies;
+      } else {
+        const activeJobs = await storage.getActiveJobs();
+        jobsCurated = activeJobs.length;
+        companiesTracked = new Set(activeJobs.map(j => j.company)).size;
+      }
+
       res.json({
         diagnosticsRun: Number(diagnosticsCount),
         totalUsers: Number(totalUsersCount),
-        jobsCurated: activeJobs.length,
-        companiesTracked: uniqueCompanies,
+        jobsCurated,
+        companiesTracked,
       });
     } catch (error) {
       console.error("Error fetching social proof:", error);
@@ -693,8 +704,9 @@ export async function registerRoutes(
 
       const [{ total: totalScreenedCount }] = await db.select({ total: count() }).from(jobs);
 
-      const totalTracked = allJobs.length;
-      const totalActive = allJobs.length;
+      const cachedDQ = getDataQualityCache();
+      const totalTracked = cachedDQ ? cachedDQ.curation.activeInventory : allJobs.length;
+      const totalActive = cachedDQ ? cachedDQ.curation.activeInventory : allJobs.length;
       const totalArchived = 0;
 
       const monthKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
@@ -860,6 +872,10 @@ export async function registerRoutes(
         }
       }
       const pulse = await storage.getMarketPulse(topCategory);
+      const cachedDQ = getDataQualityCache();
+      if (cachedDQ) {
+        pulse.totalJobs = cachedDQ.curation.activeInventory;
+      }
       res.json(pulse);
     } catch (error) {
       console.error("Error fetching market pulse:", error);
@@ -1133,8 +1149,10 @@ export async function registerRoutes(
         .slice(0, 5)
         .map(([name, count]) => ({ name, count }));
 
+      const cachedDQ = getDataQualityCache();
+      const totalJobsCount = cachedDQ ? cachedDQ.curation.activeInventory : allMatchingJobs.length;
       res.json({
-        totalJobs: allMatchingJobs.length,
+        totalJobs: totalJobsCount,
         countriesCount: countriesData.filter(c => c.countryCode !== 'WW' && c.countryCode !== 'UN').length,
         remoteShare: allMatchingJobs.length > 0 ? Math.round((remoteCount / allMatchingJobs.length) * 100) : 0,
         byCountry: countriesData,
@@ -5286,6 +5304,7 @@ Rules:
         closedAt: now,
         statusChangedAt: now,
       });
+      clearAllStatsCaches();
       res.json({ success: true });
     } catch (error: any) {
       console.error("Error archiving job:", error);
@@ -8798,11 +8817,12 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
         else workModeCounts.onsite++;
       }
 
+      const cachedDQ = getDataQualityCache();
       res.json({
         topSkills,
         categoryCounts: Object.entries(categoryCounts).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count),
         workModeCounts,
-        totalJobs: allJobs.length,
+        totalJobs: cachedDQ ? cachedDQ.curation.activeInventory : allJobs.length,
       });
     } catch (error: any) {
       console.error("Error computing market demand:", error);
