@@ -1,0 +1,151 @@
+You are a senior full-stack engineer working inside my Replit project for “Legal Tech Careers” (Node/TypeScript backend + DB + React/Next frontend). 
+
+Goal: Implement a 5-Layer “Trust Architecture” across the platform to build user trust at scale. This must be production-ready, consistent, and easy to maintain.
+
+DO NOT add anything related to scraping LinkedIn or bypassing Cloudflare. This work is purely product + UI + backend trust features.
+
+========================================================
+1) TRUST LAYER 1 — DATA INTEGRITY (Verified source + freshness)
+========================================================
+A) Add fields to jobs table (migration):
+- source_type (ENUM: ATS_WORKDAY, ATS_ICIMS, ATS_GREENHOUSE, ATS_LEVER, ATS_ASHBY, ATS_SMARTRECRUITERS, ATS_TALEO, ATS_SUCCESSFACTORS, COMPANY_CAREERS, JOB_BOARD, USER_SUBMISSION)
+- source_verified (BOOLEAN, default true for ATS sources; false for user submissions until validated)
+- source_host (TEXT; domain host)
+- first_seen_at (TIMESTAMP)
+- last_seen_at (TIMESTAMP)
+- last_verified_at (TIMESTAMP)
+- canonical_title (TEXT)
+- title_confidence (FLOAT 0-1)
+- legal_tech_score (INT 0-100)
+- ai_intensity (ENUM: LOW, MED, HIGH)
+- classification_confidence (FLOAT 0-1)
+
+B) Implement “Verified Source” badge UI on job cards and job detail page:
+- Show “Verified Source” + the ATS label (e.g., Workday, Greenhouse, iCIMS) when source_verified=true
+- Show “Submitted” badge for user submissions when source_verified=false
+- Show “Last updated” timestamp based on last_verified_at (fallback last_seen_at)
+- Add tooltip: “We verify jobs from employer/ATS sources; duplicates removed; titles standardized.”
+
+C) Add platform-wide “Freshness” indicator:
+- In Browse Jobs header, show “Jobs updated daily • Last data refresh: <timestamp>”
+- Create backend endpoint GET /api/meta/refresh that returns:
+  { lastScrapeRunAt, jobsVerifiedLast24h, jobsAddedLast7d }
+
+========================================================
+2) TRUST LAYER 2 — METHODOLOGY TRANSPARENCY (How we curate)
+========================================================
+A) Create a public “How We Curate” page:
+- Route: /trust or /methodology
+- Sections:
+  1. Where jobs come from (ATS/careers pages)
+  2. What “Verified Source” means
+  3. The 26 quality filters (do not list all internals; provide grouped categories)
+     - Duplicate detection
+     - Legal-tech relevance scoring
+     - Title standardization
+     - Description completeness
+     - Location/work mode normalization
+     - Basic sanity checks
+  4. How “Legal Tech Score” works (high-level)
+  5. How “AI Intensity” works (high-level rubric)
+  6. What we don’t do (no behind-login scraping; no selling resumes)
+
+B) Add a “Methodology” button wherever you show trust metrics (dashboards/report pages) linking to /trust.
+
+========================================================
+3) TRUST LAYER 3 — RELEVANCE TRUST (Make it personal)
+========================================================
+A) Add “Why this job is shown to you” on job detail page:
+- If user has resume/profile:
+  - Show top 3 matching signals:
+    - matched skills
+    - matched role family
+    - matched seniority
+  - Show top 3 gaps:
+    - missing skills/tools inferred from job description
+- If no resume:
+  - Show generic explanation: “Based on title/category/location filters”
+
+B) Backend:
+- Create endpoint GET /api/jobs/:id/why
+  Returns:
+  {
+    matchScore?: number,
+    matchedSignals: string[],
+    gaps: string[],
+    evidence: {skillsMatched: string[], skillsMissing: string[], toolsMentioned: string[]}
+  }
+- Implement this using existing classification + resume parsing logic.
+- If data is missing, degrade gracefully.
+
+========================================================
+4) TRUST LAYER 4 — INTELLIGENCE AUTHORITY (Market insights)
+========================================================
+A) Add “Market Insights” mini-panel on Browse Jobs and/or Dashboard:
+- “Role distribution by track”
+- “Entry accessible %”
+- “Geographic reach”
+- “Top skills this month”
+Use your existing analytics data if present; otherwise compute from the jobs table weekly.
+
+B) Create endpoint GET /api/insights/summary:
+  {
+    totalActiveJobs,
+    companiesCount,
+    countriesCount,
+    roleDistributionByTrack,
+    entryAccessiblePct,
+    topSkills: [{skill, count}],
+    aiIntensityDistribution
+  }
+
+C) Display “Generated on <date>” + “Data window: last 30 days” so numbers are interpretable.
+
+========================================================
+5) TRUST LAYER 5 — ETHICAL TRUST (Privacy + commitments)
+========================================================
+A) Add a short “Trust & Privacy Commitments” section (site footer + /trust page):
+- We do not sell candidate data
+- You can delete your resume/profile
+- We do not scrape behind login
+- We prioritize employer/ATS sources
+
+B) Implement “Delete my data”:
+- In user settings page, add button “Delete my resume data”
+- Endpoint: DELETE /api/me/resume (hard delete resume file + embeddings + derived signals)
+- Confirm modal + success toast
+
+C) Add “Report an issue” on job detail:
+- Button opens modal with reasons:
+  - job expired
+  - wrong title/category
+  - wrong location
+  - spam/low quality
+- Endpoint POST /api/jobs/:id/report
+- Store in table job_reports(id, job_id, user_id?, reason, notes, created_at)
+- Admin can review
+
+========================================================
+QUALITY + CONSISTENCY REQUIREMENTS
+========================================================
+- All timestamps must be in user locale format; store UTC in DB.
+- All trust numbers must have clear denominators (e.g., last 30 days).
+- Never show overly precise numbers unless real (e.g., use 93/100 not 93.2 unless computed meaningfully).
+- Every page must degrade gracefully if user has no resume or data missing.
+- Add unit tests for:
+  - /api/meta/refresh
+  - /api/jobs/:id/why (fallback behavior)
+  - /api/insights/summary
+- Add a simple “Trust checklist” README section describing where each layer is implemented.
+
+DELIVERABLES
+- Migrations + code changes
+- New /trust page
+- Verified Source badge + Last updated indicator
+- “Why this job” endpoint + UI
+- Insights summary endpoint + UI panel
+- Delete resume endpoint + UI
+- Report job issue flow
+- Commit and ensure the build passes.
+
+Proceed now: locate the relevant existing pages/components, implement the above with clean, modular code, and ensure consistent UI styling.

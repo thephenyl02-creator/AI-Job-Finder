@@ -9392,7 +9392,21 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
       seniorityDistribution: miData.seniorityDistribution || [],
       topCompanies: miData.topCompanies || [],
       geography: miData.geography || [],
+      dataQuality: dataQualityCache?.data || null,
     };
+
+    if (!result.dataQuality) {
+      try {
+        const dqResponse = await fetch(`http://localhost:${process.env.PORT || 5000}/api/stats/data-quality`, {
+          headers: { "User-Agent": "Mozilla/5.0 Internal" },
+        });
+        if (dqResponse.ok) {
+          result.dataQuality = await dqResponse.json();
+        }
+      } catch {}
+    }
+
+    return result;
   }
 
   app.get("/api/market-intelligence/report", isAuthenticated, requirePro, async (req, res) => {

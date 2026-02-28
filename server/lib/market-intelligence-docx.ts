@@ -34,6 +34,32 @@ interface MarketData {
   seniorityDistribution: { level: string; count: number }[];
   topCompanies: { company: string; jobCount: number }[];
   geography: { countryCode: string; countryName: string; jobCount: number }[];
+  dataQuality?: {
+    curation: {
+      totalScreened: number;
+      totalPublished: number;
+      passRate: number;
+      totalRejected: number;
+      rejectedPct: number;
+      totalInReview: number;
+      inReviewPct: number;
+      filterCategories: number;
+      uniqueCompanies: number;
+      uniqueSources: number;
+    };
+    quality: {
+      avgQualityScore: number;
+      avgRelevanceScore: number;
+      qualityTiers: { excellent: number; veryGood: number; good: number; adequate: number };
+      totalWithQualityScore: number;
+    };
+    rejectionBreakdown: { reason: string; count: number }[];
+    market: {
+      trackDistribution: { name: string; count: number; percentage: number }[];
+      entryAccessiblePct: number;
+      uniqueCountries: number;
+    };
+  };
 }
 
 const NAVY = "1a2332";
@@ -436,8 +462,97 @@ export async function generateMarketIntelligenceDocx(data: MarketData, period: s
     ],
   }));
 
+  if (data.dataQuality) {
+    bodyChildren.push(...sectionTitleWithBreak("02", "Data Quality & Curation"));
+
+    const dq = data.dataQuality;
+
+    bodyChildren.push(subsectionTitle("Curation Pipeline"));
+
+    const pipeColW = [Math.floor(FULL_WIDTH / 3), Math.floor(FULL_WIDTH / 3), FULL_WIDTH - 2 * Math.floor(FULL_WIDTH / 3)];
+    bodyChildren.push(new Table({
+      width: { size: FULL_WIDTH, type: WidthType.DXA },
+      layout: TableLayoutType.FIXED,
+      rows: [
+        new TableRow({ children: [tblHeaderCell("Screened", pipeColW[0], AlignmentType.CENTER), tblHeaderCell("Published", pipeColW[1], AlignmentType.CENTER), tblHeaderCell("Pass Rate", pipeColW[2], AlignmentType.CENTER)] }),
+        new TableRow({
+          children: [
+            tblNumCell(fmtNum(dq.curation.totalScreened), pipeColW[0], 0, true),
+            tblNumCell(fmtNum(dq.curation.totalPublished), pipeColW[1], 0, true),
+            tblNumCell(`${dq.curation.passRate}%`, pipeColW[2], 0, true),
+          ],
+        }),
+      ],
+    }));
+
+    bodyChildren.push(spacer(160));
+    bodyChildren.push(subsectionTitle("Quality Scores"));
+    bodyChildren.push(bodyText(
+      `Average Quality Score: ${dq.quality.avgQualityScore.toFixed(1)} / 100  |  Average Relevance Score: ${dq.quality.avgRelevanceScore.toFixed(1)} / 10  |  Scored Roles: ${fmtNum(dq.quality.totalWithQualityScore)}`
+    ));
+
+    const tiers = dq.quality.qualityTiers;
+    const tierTotal = tiers.excellent + tiers.veryGood + tiers.good + tiers.adequate;
+    if (tierTotal > 0) {
+      bodyChildren.push(bodyText(
+        `Excellent: ${tiers.excellent} (${fmtPct(tiers.excellent, tierTotal)}%)  |  Very Good: ${tiers.veryGood} (${fmtPct(tiers.veryGood, tierTotal)}%)  |  Good: ${tiers.good} (${fmtPct(tiers.good, tierTotal)}%)  |  Adequate: ${tiers.adequate} (${fmtPct(tiers.adequate, tierTotal)}%)`
+      ));
+    }
+
+    if (dq.rejectionBreakdown.length > 0) {
+      bodyChildren.push(spacer(160));
+      bodyChildren.push(subsectionTitle("Top Rejection Reasons"));
+
+      const rejColW = [Math.floor(FULL_WIDTH * 0.7), FULL_WIDTH - Math.floor(FULL_WIDTH * 0.7)];
+      bodyChildren.push(new Table({
+        width: { size: FULL_WIDTH, type: WidthType.DXA },
+        layout: TableLayoutType.FIXED,
+        rows: [
+          new TableRow({ children: [tblHeaderCell("Reason", rejColW[0]), tblHeaderCell("Count", rejColW[1], AlignmentType.RIGHT)] }),
+          ...dq.rejectionBreakdown.slice(0, 6).map((r, i) => new TableRow({
+            children: [
+              tblDataCell(r.reason, rejColW[0], AlignmentType.LEFT, i),
+              tblNumCell(fmtNum(r.count), rejColW[1], i),
+            ],
+          })),
+        ],
+      }));
+    }
+
+    if (dq.market.trackDistribution.length > 0) {
+      bodyChildren.push(spacer(160));
+      bodyChildren.push(subsectionTitle("Track Distribution"));
+
+      const trackColW = [Math.floor(FULL_WIDTH * 0.45), Math.floor(FULL_WIDTH * 0.25), FULL_WIDTH - Math.floor(FULL_WIDTH * 0.45) - Math.floor(FULL_WIDTH * 0.25)];
+      bodyChildren.push(new Table({
+        width: { size: FULL_WIDTH, type: WidthType.DXA },
+        layout: TableLayoutType.FIXED,
+        rows: [
+          new TableRow({ children: [tblHeaderCell("Track", trackColW[0]), tblHeaderCell("Roles", trackColW[1], AlignmentType.RIGHT), tblHeaderCell("Share", trackColW[2], AlignmentType.RIGHT)] }),
+          ...dq.market.trackDistribution.map((t, i) => new TableRow({
+            children: [
+              tblDataCell(t.name, trackColW[0], AlignmentType.LEFT, i),
+              tblNumCell(fmtNum(t.count), trackColW[1], i),
+              tblNumCell(`${t.percentage}%`, trackColW[2], i),
+            ],
+          })),
+        ],
+      }));
+    }
+
+    bodyChildren.push(spacer(160));
+    bodyChildren.push(subsectionTitle("Market Reach"));
+    bodyChildren.push(bodyText(
+      `Entry-Accessible Roles: ${dq.market.entryAccessiblePct}%  |  Geographic Reach: ${dq.market.uniqueCountries} countries  |  Unique Companies: ${fmtNum(dq.curation.uniqueCompanies)}  |  Unique Sources: ${fmtNum(dq.curation.uniqueSources)}`
+    ));
+
+    bodyChildren.push(insightCallout(
+      `Our curation pipeline screens ${fmtNum(dq.curation.totalScreened)} roles and publishes ${fmtNum(dq.curation.totalPublished)} (${dq.curation.passRate}% pass rate), ensuring only verified, high-quality legal technology positions appear in this report.`
+    ));
+  }
+
   if (data.skillsDemand.length > 0) {
-    bodyChildren.push(...sectionTitleWithBreak("02", "Skills in Demand"));
+    bodyChildren.push(...sectionTitleWithBreak("03", "Skills in Demand"));
     const skillsInsight = generateSectionInsight("skills", data);
     if (skillsInsight) bodyChildren.push(insightCallout(skillsInsight));
 
@@ -476,7 +591,7 @@ export async function generateMarketIntelligenceDocx(data: MarketData, period: s
   }
 
   if (data.careerPaths.length > 0) {
-    bodyChildren.push(...sectionTitleWithBreak("03", "Career Paths"));
+    bodyChildren.push(...sectionTitleWithBreak("04", "Career Paths"));
     const careersInsight = generateSectionInsight("careers", data);
     if (careersInsight) bodyChildren.push(insightCallout(careersInsight));
 
@@ -499,7 +614,7 @@ export async function generateMarketIntelligenceDocx(data: MarketData, period: s
   }
 
   if (data.salaryByPath.length > 0) {
-    bodyChildren.push(...sectionTitleWithBreak("04", "Compensation Analysis"));
+    bodyChildren.push(...sectionTitleWithBreak("05", "Compensation Analysis"));
     const salaryInsight = generateSectionInsight("salary", data);
     if (salaryInsight) bodyChildren.push(insightCallout(salaryInsight));
 
@@ -525,7 +640,7 @@ export async function generateMarketIntelligenceDocx(data: MarketData, period: s
   const aiTotal = (data.aiIntensity.low || 0) + (data.aiIntensity.medium || 0) + (data.aiIntensity.high || 0);
 
   if (wmTotal > 0 || aiTotal > 0) {
-    bodyChildren.push(...sectionTitleWithBreak("05", "Work Mode & AI Intensity"));
+    bodyChildren.push(...sectionTitleWithBreak("06", "Work Mode & AI Intensity"));
     const wmInsight = generateSectionInsight("workmode", data);
     if (wmInsight) bodyChildren.push(insightCallout(wmInsight));
 
@@ -542,7 +657,7 @@ export async function generateMarketIntelligenceDocx(data: MarketData, period: s
   }
 
   if (data.seniorityDistribution.length > 0) {
-    bodyChildren.push(...sectionTitleWithBreak("06", "Seniority Distribution"));
+    bodyChildren.push(...sectionTitleWithBreak("07", "Seniority Distribution"));
     const senInsight = generateSectionInsight("seniority", data);
     if (senInsight) bodyChildren.push(insightCallout(senInsight));
 
@@ -565,7 +680,7 @@ export async function generateMarketIntelligenceDocx(data: MarketData, period: s
   }
 
   if (data.topCompanies.length > 0 || data.geography.length > 0) {
-    bodyChildren.push(...sectionTitleWithBreak("07", "Companies & Geography"));
+    bodyChildren.push(...sectionTitleWithBreak("08", "Companies & Geography"));
 
     if (data.topCompanies.length > 0) {
       bodyChildren.push(subsectionTitle("Top Hiring Companies"));

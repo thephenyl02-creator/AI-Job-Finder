@@ -37,6 +37,32 @@ interface MarketData {
     workModeByMonth: Record<string, Record<string, number>>;
     skillTrends: Record<string, { name: string; count: number }[]>;
   };
+  dataQuality?: {
+    curation: {
+      totalScreened: number;
+      totalPublished: number;
+      passRate: number;
+      totalRejected: number;
+      rejectedPct: number;
+      totalInReview: number;
+      inReviewPct: number;
+      filterCategories: number;
+      uniqueCompanies: number;
+      uniqueSources: number;
+    };
+    quality: {
+      avgQualityScore: number;
+      avgRelevanceScore: number;
+      qualityTiers: { excellent: number; veryGood: number; good: number; adequate: number };
+      totalWithQualityScore: number;
+    };
+    rejectionBreakdown: { reason: string; count: number }[];
+    market: {
+      trackDistribution: { name: string; count: number; percentage: number }[];
+      entryAccessiblePct: number;
+      uniqueCountries: number;
+    };
+  };
   transitionIntelligence?: {
     totalTransitionFriendly: number;
     transitionFriendlyPct: number;
@@ -488,9 +514,170 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string, 
   const execInsight = generateSectionInsight("executive", data);
   if (execInsight) narrativeParagraph(doc, execInsight, pn);
 
+  // ── DATA QUALITY & CURATION ──
+  if (data.dataQuality) {
+    const dq = data.dataQuality;
+    sectionTitle(doc, "02", "Data Quality & Curation", pn);
+
+    narrativeParagraph(doc, `Our curation pipeline screened ${fmtNum(dq.curation.totalScreened)} job listings and published ${fmtNum(dq.curation.totalPublished)} — a ${dq.curation.passRate}% pass rate ensuring only high-quality, relevant positions reach the platform. ${fmtNum(dq.curation.totalRejected)} listings (${dq.curation.rejectedPct}%) were rejected and ${fmtNum(dq.curation.totalInReview)} (${dq.curation.inReviewPct}%) are pending review across ${dq.curation.filterCategories} filter categories from ${fmtNum(dq.curation.uniqueCompanies)} companies and ${fmtNum(dq.curation.uniqueSources)} sources.`, pn);
+
+    const dqBoxW = (CONTENT_WIDTH - 16) / 3;
+    const dqBoxH = 48;
+    ensureSpace(doc, dqBoxH + 8, pn);
+    const dqStats = [
+      { value: fmtNum(dq.curation.totalScreened), label: "SCREENED" },
+      { value: fmtNum(dq.curation.totalPublished), label: "PUBLISHED" },
+      { value: `${dq.curation.passRate}%`, label: "PASS RATE" },
+    ];
+    let dqY = doc.y;
+    dqStats.forEach((s, i) => {
+      const bx = MARGIN + i * (dqBoxW + 8);
+      drawRect(doc, bx, dqY, dqBoxW, dqBoxH, NAVY, 4);
+      doc.save();
+      doc.fontSize(18).fillColor(WHITE).font("Helvetica-Bold")
+        .text(s.value, bx + 8, dqY + 8, { width: dqBoxW - 16, align: "center" });
+      doc.fontSize(6.5).fillColor(GRAY_300).font("Helvetica")
+        .text(s.label, bx + 8, dqY + 30, { width: dqBoxW - 16, align: "center", characterSpacing: 0.8 });
+      doc.restore();
+    });
+    doc.y = dqY + dqBoxH + 10;
+
+    if (dq.quality) {
+      ensureSpace(doc, 30, pn);
+      const qsY = doc.y;
+      doc.save();
+      doc.fontSize(9).fillColor(NAVY).font("Helvetica-Bold")
+        .text("Quality Scores", MARGIN, qsY, { width: CONTENT_WIDTH });
+      doc.restore();
+      doc.y = qsY + 16;
+
+      const qScoreBoxW = (CONTENT_WIDTH - 8) / 2;
+      ensureSpace(doc, 44, pn);
+      const qScoreY = doc.y;
+      const qScores = [
+        { value: `${dq.quality.avgQualityScore.toFixed(1)}/100`, label: "AVG QUALITY SCORE" },
+        { value: `${dq.quality.avgRelevanceScore.toFixed(1)}/10`, label: "AVG RELEVANCE SCORE" },
+      ];
+      qScores.forEach((s, i) => {
+        const bx = MARGIN + i * (qScoreBoxW + 8);
+        drawRect(doc, bx, qScoreY, qScoreBoxW, 40, GRAY_100, 4);
+        doc.save();
+        doc.fontSize(16).fillColor(NAVY).font("Helvetica-Bold")
+          .text(s.value, bx + 8, qScoreY + 6, { width: qScoreBoxW - 16, align: "center" });
+        doc.fontSize(6.5).fillColor(GRAY_500).font("Helvetica")
+          .text(s.label, bx + 8, qScoreY + 26, { width: qScoreBoxW - 16, align: "center", characterSpacing: 0.8 });
+        doc.restore();
+      });
+      doc.y = qScoreY + 48;
+
+      if (dq.quality.qualityTiers) {
+        ensureSpace(doc, 60, pn);
+        const tierY = doc.y;
+        doc.save();
+        doc.fontSize(9).fillColor(NAVY).font("Helvetica-Bold")
+          .text("Quality Tier Breakdown", MARGIN, tierY, { width: CONTENT_WIDTH });
+        doc.restore();
+        doc.y = tierY + 16;
+
+        const totalTiers = dq.quality.qualityTiers.excellent + dq.quality.qualityTiers.veryGood + dq.quality.qualityTiers.good + dq.quality.qualityTiers.adequate;
+        const maxTier = Math.max(dq.quality.qualityTiers.excellent, dq.quality.qualityTiers.veryGood, dq.quality.qualityTiers.good, dq.quality.qualityTiers.adequate, 1);
+        const tiers = [
+          { label: "Excellent", count: dq.quality.qualityTiers.excellent },
+          { label: "Very Good", count: dq.quality.qualityTiers.veryGood },
+          { label: "Good", count: dq.quality.qualityTiers.good },
+          { label: "Adequate", count: dq.quality.qualityTiers.adequate },
+        ];
+        const barMaxW = CONTENT_WIDTH - 170;
+        for (const tier of tiers) {
+          ensureSpace(doc, 16, pn);
+          const ry = doc.y;
+          const pct = totalTiers > 0 ? Math.round(tier.count / totalTiers * 100) : 0;
+          doc.save();
+          doc.fontSize(8).fillColor(NAVY).font("Helvetica")
+            .text(tier.label, MARGIN, ry, { width: 80 });
+          doc.restore();
+          drawBar(doc, MARGIN + 85, ry + 2, barMaxW, tier.count / maxTier, 7, ACCENT);
+          doc.save();
+          doc.fontSize(7.5).fillColor(GRAY_500).font("Helvetica-Bold")
+            .text(`${fmtNum(tier.count)} (${pct}%)`, MARGIN + 85 + barMaxW + 6, ry, { width: 70, align: "right" });
+          doc.restore();
+          doc.y = ry + 16;
+        }
+        doc.y += 6;
+      }
+    }
+
+    if (dq.rejectionBreakdown && dq.rejectionBreakdown.length > 0) {
+      ensureSpace(doc, 40, pn);
+      const rejY = doc.y;
+      doc.save();
+      doc.fontSize(9).fillColor(NAVY).font("Helvetica-Bold")
+        .text("Top Rejection Reasons", MARGIN, rejY, { width: CONTENT_WIDTH });
+      doc.restore();
+      doc.y = rejY + 16;
+
+      tableHeaderRow(doc, [
+        { text: "REASON", x: MARGIN + 4, w: CONTENT_WIDTH * 0.7 },
+        { text: "COUNT", x: MARGIN + CONTENT_WIDTH * 0.75, w: CONTENT_WIDTH * 0.25 - 4, align: "right" },
+      ]);
+
+      const topReasons = dq.rejectionBreakdown.slice(0, 6);
+      for (let i = 0; i < topReasons.length; i++) {
+        ensureSpace(doc, 16, pn);
+        tableDataRow(doc, [
+          { text: topReasons[i].reason, x: MARGIN + 4, w: CONTENT_WIDTH * 0.7 },
+          { text: fmtNum(topReasons[i].count), x: MARGIN + CONTENT_WIDTH * 0.75, w: CONTENT_WIDTH * 0.25 - 4, align: "right" },
+        ], i % 2 === 0);
+      }
+      doc.y += 8;
+    }
+
+    if (dq.market) {
+      if (dq.market.trackDistribution && dq.market.trackDistribution.length > 0) {
+        ensureSpace(doc, 40, pn);
+        const tdY = doc.y;
+        doc.save();
+        doc.fontSize(9).fillColor(NAVY).font("Helvetica-Bold")
+          .text("Track Distribution", MARGIN, tdY, { width: CONTENT_WIDTH });
+        doc.restore();
+        doc.y = tdY + 16;
+
+        const maxTrack = Math.max(...dq.market.trackDistribution.map(t => t.count), 1);
+        const trackBarMax = CONTENT_WIDTH - 170;
+        for (const track of dq.market.trackDistribution) {
+          ensureSpace(doc, 16, pn);
+          const ry = doc.y;
+          doc.save();
+          doc.fontSize(8).fillColor(NAVY).font("Helvetica")
+            .text(track.name, MARGIN, ry, { width: 85 });
+          doc.restore();
+          drawBar(doc, MARGIN + 90, ry + 2, trackBarMax, track.count / maxTrack, 7, TEAL);
+          doc.save();
+          doc.fontSize(7.5).fillColor(GRAY_500).font("Helvetica-Bold")
+            .text(`${fmtNum(track.count)} (${track.percentage}%)`, MARGIN + 90 + trackBarMax + 6, ry, { width: 70, align: "right" });
+          doc.restore();
+          doc.y = ry + 16;
+        }
+        doc.y += 6;
+      }
+
+      ensureSpace(doc, 30, pn);
+      const mktY = doc.y;
+      const entryPct = dq.market.entryAccessiblePct;
+      const geoReach = dq.market.uniqueCountries;
+      doc.save();
+      doc.fontSize(8.5).fillColor(GRAY_600).font("Helvetica")
+        .text(`Entry-accessible roles: ${entryPct}%  ·  Geographic reach: ${geoReach} countries`, MARGIN, mktY, { width: CONTENT_WIDTH });
+      doc.restore();
+      doc.y = mktY + 14;
+    }
+
+    insightBlock(doc, `Our curation pipeline maintains high standards: only ${dq.curation.passRate}% of screened listings pass quality gates, resulting in ${fmtNum(dq.curation.totalPublished)} published roles with an average quality score of ${dq.quality?.avgQualityScore ?? 0}/100. This rigorous filtering ensures the data in this report reflects genuine, relevant opportunities.`, pn);
+  }
+
   // ── SKILLS IN DEMAND ──
   if (data.skillsDemand.length > 0) {
-    sectionTitle(doc, "02", "Skills in Demand", pn);
+    sectionTitle(doc, "03", "Skills in Demand", pn);
     const maxCount = data.skillsDemand[0]?.count || 1;
     const barMax = CONTENT_WIDTH - 170;
 
@@ -522,7 +709,7 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string, 
   // ── TRANSITION INTELLIGENCE ──
   if (data.transitionIntelligence) {
     const ti = data.transitionIntelligence;
-    sectionTitle(doc, "03", "Transition Intelligence", pn);
+    sectionTitle(doc, "04", "Transition Intelligence", pn);
 
     narrativeParagraph(doc, `${ti.transitionFriendlyPct}% of all roles (${fmtNum(ti.totalTransitionFriendly)} positions) explicitly welcome career changers — professionals transitioning from traditional legal practice into legal technology. The average experience requirement is ${ti.avgExperience} years, making many roles accessible to mid-career lawyers.`, pn);
 
@@ -691,7 +878,7 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string, 
 
   // ── CAREER PATHS ──
   if (data.careerPaths.length > 0) {
-    sectionTitle(doc, "04", "Career Paths", pn);
+    sectionTitle(doc, "05", "Career Paths", pn);
     const cpCols = [
       { x: MARGIN, w: 180 },
       { x: MARGIN + 185, w: 55 },
@@ -722,7 +909,7 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string, 
 
   // ── SALARY INSIGHTS ──
   if (data.salaryByPath.length > 0) {
-    sectionTitle(doc, "05", "Salary Insights", pn);
+    sectionTitle(doc, "06", "Salary Insights", pn);
     const salCols = [
       { x: MARGIN, w: 175 },
       { x: MARGIN + 180, w: 140 },
@@ -753,7 +940,7 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string, 
   const aiTotal = (data.aiIntensity.low || 0) + (data.aiIntensity.medium || 0) + (data.aiIntensity.high || 0);
 
   if (wmTotal > 0 || aiTotal > 0) {
-    sectionTitle(doc, "06", "Work Mode & AI Intensity", pn);
+    sectionTitle(doc, "07", "Work Mode & AI Intensity", pn);
     ensureSpace(doc, 70, pn);
 
     if (wmTotal > 0) {
@@ -817,7 +1004,7 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string, 
 
   // ── SENIORITY DISTRIBUTION ──
   if (data.seniorityDistribution.length > 0) {
-    sectionTitle(doc, "07", "Seniority Distribution", pn);
+    sectionTitle(doc, "08", "Seniority Distribution", pn);
     const maxSen = Math.max(...data.seniorityDistribution.map(s => s.count), 1);
     for (const s of data.seniorityDistribution) {
       ensureSpace(doc, 18, pn);
@@ -841,7 +1028,7 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string, 
 
   // ── TOP COMPANIES & GEOGRAPHY ──
   if (data.topCompanies.length > 0 || data.geography.length > 0) {
-    sectionTitle(doc, "08", "Top Companies & Geography", pn);
+    sectionTitle(doc, "09", "Top Companies & Geography", pn);
 
     const halfW = (CONTENT_WIDTH - 24) / 2;
     const companyRows = Math.min(data.topCompanies.length, 10);
@@ -915,7 +1102,7 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string, 
       return `${names[parseInt(mo) - 1]} '${y.slice(2)}`;
     };
 
-    sectionTitle(doc, "09", "Market Evolution", pn);
+    sectionTitle(doc, "10", "Market Evolution", pn);
 
     ensureSpace(doc, 40, pn);
     doc.save();
