@@ -31,6 +31,7 @@ interface MarketData {
   geography: { countryCode: string; countryName: string; jobCount: number }[];
   historicalTrends?: {
     totalEverScraped: number;
+    totalTracked: number;
     jobsByMonth: Record<string, number>;
     publishedByMonth: Record<string, number>;
     categoryByMonth: Record<string, Record<string, number>>;

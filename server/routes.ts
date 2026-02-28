@@ -373,6 +373,7 @@ export async function registerRoutes(
   // Public stats endpoint (no auth required)
   app.get("/api/stats", async (req, res) => {
     try {
+      res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
       const jobs = await storage.getActiveJobs();
       const uniqueCompanies = new Set(jobs.map(j => j.company)).size;
       const uniqueCategories = new Set(jobs.map(j => j.roleCategory).filter(Boolean)).size;
@@ -407,6 +408,7 @@ export async function registerRoutes(
 
   app.get("/api/stats/data-quality", async (_req, res) => {
     try {
+      res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
       if (dataQualityCache && Date.now() - dataQualityCache.cachedAt < DATA_QUALITY_CACHE_TTL) {
         return res.json(dataQualityCache.data);
       }
@@ -430,7 +432,7 @@ export async function registerRoutes(
         salaryMin: jobs.salaryMin,
       }).from(jobs);
 
-      const published = allJobs.filter(j => j.isPublished && j.isActive);
+      const published = allJobs.filter(j => j.isPublished && j.isActive && j.pipelineStatus === 'ready' && j.jobStatus === 'open');
       const rejected = allJobs.filter(j => j.pipelineStatus === 'rejected');
       const inReview = allJobs.filter(j => j.pipelineStatus === 'review');
 
@@ -488,7 +490,7 @@ export async function registerRoutes(
 
       const uniqueCompanies = new Set(published.map(j => j.company)).size;
       const uniqueSources = new Set(published.map(j => j.source).filter(Boolean)).size;
-      const uniqueCountries = new Set(published.map(j => j.countryCode).filter(Boolean)).size;
+      const uniqueCountries = new Set(published.map(j => j.countryCode).filter(c => c && c !== 'WW' && c !== 'UN')).size;
       const uniqueRegions = new Set(published.map(j => j.locationRegion).filter(Boolean)).size;
 
       const entryLevel = published.filter(j => ['Entry', 'Junior', 'Associate', 'Intern', 'Fellowship'].includes(j.seniorityLevel || '')).length;
@@ -516,7 +518,7 @@ export async function registerRoutes(
           rejectedPct,
           totalInReview: inReview.length,
           inReviewPct,
-          filterCategories: Object.keys(reasonCounts).length,
+          filterCategories: 17,
           uniqueCompanies,
           uniqueSources,
         },
@@ -553,6 +555,7 @@ export async function registerRoutes(
 
   app.get("/api/meta/refresh", async (_req, res) => {
     try {
+      res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
       const now = new Date();
       const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
       const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -561,6 +564,8 @@ export async function registerRoutes(
         .where(and(
           eq(jobs.isPublished, true),
           eq(jobs.isActive, true),
+          eq(jobs.pipelineStatus, 'ready'),
+          eq(jobs.jobStatus, 'open'),
           sql`${jobs.lastCheckedAt} >= ${oneDayAgo}`
         ));
 
@@ -568,11 +573,13 @@ export async function registerRoutes(
         .where(and(
           eq(jobs.isPublished, true),
           eq(jobs.isActive, true),
+          eq(jobs.pipelineStatus, 'ready'),
+          eq(jobs.jobStatus, 'open'),
           sql`${jobs.firstSeenAt} >= ${sevenDaysAgo}`
         ));
 
       const [lastScrape] = await db.select({ latest: sql`MAX(${jobs.lastCheckedAt})` }).from(jobs)
-        .where(and(eq(jobs.isPublished, true), eq(jobs.isActive, true)));
+        .where(and(eq(jobs.isPublished, true), eq(jobs.isActive, true), eq(jobs.pipelineStatus, 'ready'), eq(jobs.jobStatus, 'open')));
 
       res.json({
         lastScrapeRunAt: lastScrape?.latest || null,
@@ -587,6 +594,7 @@ export async function registerRoutes(
 
   app.get("/api/stats/social-proof", async (_req, res) => {
     try {
+      res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
       const [{ total: totalUsersCount }] = await db.select({ total: count() }).from(users);
       const [{ total: diagnosticsCount }] = await db.select({ total: count() }).from(diagnosticReports);
       const activeJobs = await storage.getActiveJobs();
@@ -639,6 +647,7 @@ export async function registerRoutes(
 
   app.get("/api/stats/historical", optionalAuth, async (_req: any, res) => {
     try {
+      res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
       const allJobs = await db.select({
         id: jobs.id,
         isActive: jobs.isActive,
@@ -659,10 +668,13 @@ export async function registerRoutes(
           eq(jobs.isPublished, true),
           eq(jobs.isActive, true),
           eq(jobs.pipelineStatus, 'ready'),
+          eq(jobs.jobStatus, 'open'),
         )
       );
 
-      const totalEverScraped = allJobs.length;
+      const [{ total: totalScreenedCount }] = await db.select({ total: count() }).from(jobs);
+
+      const totalTracked = allJobs.length;
       const totalPublished = allJobs.filter(j => j.isPublished).length;
       const totalArchived = allJobs.filter(j => j.jobStatus === 'archived' || j.jobStatus === 'closed').length;
 
@@ -791,7 +803,8 @@ export async function registerRoutes(
       const tgbm = monthLimit === Infinity ? topGeographyByMonth : limitMonths(topGeographyByMonth, monthLimit);
 
       res.json({
-        totalEverScraped,
+        totalTracked,
+        totalEverScreened: Number(totalScreenedCount),
         totalPublished,
         totalArchived,
         jobsByMonth: jbm,
@@ -8780,6 +8793,7 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
 
   app.get("/api/market-intelligence", intelligenceLimiter, optionalAuth, async (_req: any, res) => {
     try {
+      res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
       const user = _req.user as any;
       const userId = user?.id;
       let isPro = false;
@@ -8808,7 +8822,7 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
       const allJobs = await storage.getPublishedJobs();
       const totalJobs = allJobs.length;
       const companies = new Set(allJobs.map(j => j.company));
-      const countries = new Set(allJobs.map(j => j.countryCode).filter(Boolean));
+      const countries = new Set(allJobs.map(j => j.countryCode).filter(c => c && c !== 'WW' && c !== 'UN'));
       const now = new Date();
       const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
       const newThisWeek = allJobs.filter(j => j.firstSeenAt && new Date(j.firstSeenAt) > oneWeekAgo);
@@ -9405,7 +9419,7 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
       }
     }
     if (!miData) return null;
-    return {
+    const result: any = {
       overview: {
         ...miData.overview,
         totalCountries: miData.overview.countriesCount || miData.overview.totalCountries || 0,
@@ -9464,6 +9478,7 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
           eq(jobs.isPublished, true),
           eq(jobs.isActive, true),
           eq(jobs.pipelineStatus, 'ready'),
+          eq(jobs.jobStatus, 'open'),
         )
       );
 
@@ -9495,6 +9510,7 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
 
       (pdfData as any).historicalTrends = {
         totalEverScraped: allJobsForHistory.length,
+        totalTracked: allJobsForHistory.length,
         jobsByMonth: jbm,
         publishedByMonth: pbm,
         categoryByMonth: cbm,

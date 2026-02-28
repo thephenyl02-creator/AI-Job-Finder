@@ -241,7 +241,8 @@ export default function MarketIntelligence() {
   });
 
   const { data: historicalData } = useQuery<{
-    totalEverScraped: number;
+    totalTracked: number;
+    totalEverScreened: number;
     totalPublished: number;
     totalArchived: number;
     jobsByMonth: Record<string, number>;
@@ -356,7 +357,9 @@ export default function MarketIntelligence() {
     }
   };
 
-  const lawyerLedPct = transitionData?.trackSummary.find(t => t.track === "Lawyer-Led")?.percentage || 0;
+  const lawyerLedPct = transitionData?.trackSummary.find(t => t.track === "Lawyer-Led")?.percentage
+    || dataQuality?.market?.trackDistribution?.find((t: { name: string; percentage: number }) => t.name === "Lawyer-Led")?.percentage
+    || 0;
   const entryAccessible = seniorityDistribution.filter(s => ["Intern", "Fellowship", "Entry", "Junior", "Mid"].includes(s.level)).reduce((a, b) => a + b.count, 0);
   const entryAccessiblePct = overview.totalJobs ? Math.round((entryAccessible / overview.totalJobs) * 100) : 0;
 
@@ -489,8 +492,8 @@ export default function MarketIntelligence() {
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
               {[
                 { label: "Active Roles", value: overview.totalJobs.toLocaleString(), sub: `+${overview.newJobsThisWeek} this week`, icon: Briefcase },
-                { label: "Career Changers", value: transitionData ? `${transitionData.transitionFriendlyPct}%` : `${overview.totalCompanies}`, sub: transitionData ? `${transitionData.totalTransitionFriendly} roles` : "companies", icon: Users },
-                { label: "Lawyer-Led", value: `${lawyerLedPct}%`, sub: `${transitionData?.trackSummary.find(t => t.track === "Lawyer-Led")?.jobCount || 0} roles`, icon: Shield },
+                { label: "Career Changers", value: transitionData ? `${transitionData.transitionFriendlyPct}%` : "—", sub: transitionData ? `${transitionData.totalTransitionFriendly} roles` : "Pro", icon: Users },
+                { label: "Lawyer-Led", value: `${lawyerLedPct}%`, sub: `${transitionData?.trackSummary.find(t => t.track === "Lawyer-Led")?.jobCount || (dataQuality?.market?.trackDistribution?.find((t: { name: string; count: number }) => t.name === "Lawyer-Led")?.count || 0)} roles`, icon: Shield },
                 { label: "Avg Experience", value: transitionData ? `${transitionData.avgExperience}y` : "—", sub: `${entryAccessiblePct}% entry-accessible`, icon: GraduationCap },
                 { label: "Remote", value: `${overview.remotePercentage}%`, sub: `${safeRemote.count} roles`, icon: Wifi },
                 { label: "Salary Data", value: `${overview.jobsWithSalary}`, sub: `${overview.totalJobs ? Math.round((overview.jobsWithSalary / overview.totalJobs) * 100) : 0}% transparent`, icon: TrendingUp },
@@ -699,7 +702,7 @@ export default function MarketIntelligence() {
                       Trend charts will appear as more months of data accumulate.
                     </p>
                     <p className="text-[10px] text-muted-foreground mt-1">
-                      {historicalData.totalEverScraped.toLocaleString()} jobs tracked so far
+                      {historicalData.totalTracked.toLocaleString()} jobs tracked so far
                     </p>
                   </div>
                   <p className="text-[10px] text-muted-foreground/50 select-none text-right mt-2" data-testid="text-attribution">Source: lawjobs.co</p>
@@ -782,7 +785,7 @@ export default function MarketIntelligence() {
                   </div>
                 </div>
                 <p className="text-[10px] text-muted-foreground text-center mt-3" data-testid="text-evolution-note">
-                  Based on {historicalData.totalEverScraped.toLocaleString()} jobs tracked
+                  Based on {historicalData.totalTracked.toLocaleString()} jobs tracked
                   {historicalData.totalPublished > 0 && ` · ${historicalData.totalPublished.toLocaleString()} published`}
                   {historicalData.totalArchived > 0 && ` · ${historicalData.totalArchived.toLocaleString()} archived`}
                 </p>

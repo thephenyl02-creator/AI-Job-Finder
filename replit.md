@@ -55,8 +55,12 @@ Legal Tech Careers is a career intelligence platform designed for legal professi
 
 ### Job Archiving & Historical Data
 - **Permanent Archive**: Once archived (`jobStatus='archived'`), jobs can never be resurrected. Scrapers only update `lastScrapedAt`/`lastSeenAt` on archived jobs — never `isActive`, `isPublished`, or `pipelineStatus`.
-- **Historical API**: `GET /api/stats/historical` provides aggregated historical job data filtered to published+active+ready jobs only.
-- **MI Reports**: Report generation queries also filter to published+active+ready — no rejected/archived data leaks into reports.
+- **Canonical Active-Inventory Filter**: ALL endpoints showing job counts must use `isPublished=true, isActive=true, pipelineStatus='ready', jobStatus='open'`. This includes `/api/stats`, `/api/stats/data-quality`, `/api/market-intelligence`, `/api/meta/refresh`, `/api/stats/historical`, `/api/job-density`, `/api/stats/social-proof`, and PDF/DOCX report queries.
+- **Country Counts**: Always exclude `WW` (Worldwide) and `UN` (Unknown) codes — only count real geographic countries.
+- **Cache-Control**: All stats/analytics endpoints set `Cache-Control: no-cache, no-store, must-revalidate` to prevent stale 304 responses during audit worker runs.
+- **Historical API**: `GET /api/stats/historical` returns `totalTracked` (canonical filter count), `totalEverScreened` (all-time DB count), and monthly trend data. Frontend uses `totalTracked`.
+- **filterCategories**: Static value (17) representing pipeline filter category count — not dynamically computed from rejection reason codes.
+- **MI Reports**: Report generation queries also filter with all 4 canonical conditions — no rejected/archived data leaks into reports.
 - **Market Evolution UI**: Displays job volume and skill trajectory over time using Recharts.
 
 ### Skill Normalization
