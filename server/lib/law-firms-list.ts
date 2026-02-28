@@ -34,21 +34,9 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
     type: 'startup',
   },
   {
-    name: 'EvenUp',
-    careerUrl: 'https://www.evenuplaw.com/careers/',
-    greenhouseId: 'evenuplaw',
-    type: 'startup',
-  },
-  {
     name: 'Spellbook',
     careerUrl: 'https://www.spellbook.legal/careers',
     ashbyUrl: 'https://api.ashbyhq.com/posting-api/job-board/spellbook.legal',
-    type: 'startup',
-  },
-  {
-    name: 'Darrow',
-    careerUrl: 'https://www.darrow.ai/open-positions',
-    greenhouseId: 'darabordarrow',
     type: 'startup',
   },
   {
@@ -76,16 +64,9 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
     type: 'startup',
   },
   {
-    name: 'LegalOn Technologies',
-    careerUrl: 'https://www.legalon.ai/careers',
-    greenhouseId: 'legalontechnologies',
-    type: 'startup',
-  },
-  {
     name: 'Neota Logic',
     careerUrl: 'https://www.neotalogic.com/careers/',
     workableId: 'neota',
-    leverPostingsUrl: 'https://jobs.lever.co/neotalogic',
     type: 'startup',
   },
   {
@@ -110,90 +91,6 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
     name: 'Plexus',
     careerUrl: 'https://jobs.lever.co/plexus',
     leverPostingsUrl: 'https://jobs.lever.co/plexus',
-    type: 'startup',
-  },
-  {
-    name: 'CoCounsel (formerly Casetext)',
-    careerUrl: 'https://boards.greenhouse.io/casetext',
-    greenhouseId: 'casetext',
-    type: 'startup',
-  },
-  {
-    name: 'Luminance',
-    careerUrl: 'https://www.luminance.com/careers.html',
-    leverPostingsUrl: 'https://jobs.lever.co/luminance',
-    type: 'startup',
-  },
-  {
-    name: 'Legatics',
-    careerUrl: 'https://www.legatics.com/careers',
-    leverPostingsUrl: 'https://jobs.lever.co/legatics',
-    type: 'startup',
-  },
-  {
-    name: 'Avvoka',
-    careerUrl: 'https://www.avvoka.com/careers',
-    leverPostingsUrl: 'https://jobs.lever.co/avvoka',
-    type: 'startup',
-  },
-  {
-    name: 'Definely',
-    careerUrl: 'https://www.definely.com/careers',
-    leverPostingsUrl: 'https://jobs.lever.co/definely',
-    type: 'startup',
-  },
-  {
-    name: 'Bryter',
-    careerUrl: 'https://bryter.com/careers/',
-    greenhouseId: 'brikibryter',
-    type: 'startup',
-  },
-  {
-    name: 'ThoughtRiver',
-    careerUrl: 'https://www.thoughtriver.com/careers',
-    leverPostingsUrl: 'https://jobs.lever.co/thoughtriver',
-    type: 'startup',
-  },
-  {
-    name: 'Checkbox',
-    careerUrl: 'https://www.checkbox.ai/careers',
-    greenhouseId: 'checkboxai',
-    type: 'startup',
-  },
-  {
-    name: 'Josef',
-    careerUrl: 'https://joseflegal.com/careers',
-    leverPostingsUrl: 'https://jobs.lever.co/josef',
-    type: 'startup',
-  },
-  {
-    name: 'Genie AI',
-    careerUrl: 'https://www.genieai.co/careers',
-    ashbyUrl: 'https://api.ashbyhq.com/posting-api/job-board/genieai',
-    type: 'startup',
-  },
-  {
-    name: 'Responsiv',
-    careerUrl: 'https://www.responsiv.ai/careers',
-    leverPostingsUrl: 'https://jobs.lever.co/responsiv',
-    type: 'startup',
-  },
-  {
-    name: 'Alexi',
-    careerUrl: 'https://www.alexi.com/careers',
-    leverPostingsUrl: 'https://jobs.lever.co/alexi',
-    type: 'startup',
-  },
-  {
-    name: 'Clearbrief',
-    careerUrl: 'https://clearbrief.com/careers',
-    ashbyUrl: 'https://api.ashbyhq.com/posting-api/job-board/clearbrief',
-    type: 'startup',
-  },
-  {
-    name: 'Judicata',
-    careerUrl: 'https://www.judicata.com/careers',
-    greenhouseId: 'judicata',
     type: 'startup',
   },
 
@@ -235,18 +132,6 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
     careerUrl: 'https://www.diligent.com/company/careers',
     greenhouseId: 'diligentcorporation',
     type: 'company',
-  },
-  {
-    name: 'Zegal',
-    careerUrl: 'https://www.zegal.com/careers',
-    leverPostingsUrl: 'https://jobs.lever.co/zegal',
-    type: 'startup',
-  },
-  {
-    name: 'Henchman',
-    careerUrl: 'https://www.henchman.com/careers',
-    leverPostingsUrl: 'https://jobs.lever.co/henchman',
-    type: 'startup',
   },
 
   // ===================================================
@@ -290,36 +175,6 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
     name: 'Litify',
     careerUrl: 'https://www.litify.com/careers/',
     greenhouseId: 'litify',
-    type: 'tech-legal',
-  },
-  {
-    name: 'Smokeball',
-    careerUrl: 'https://www.smokeball.com/careers/',
-    greenhouseId: 'smokeball',
-    type: 'tech-legal',
-  },
-  {
-    name: 'MyCase',
-    careerUrl: 'https://www.mycase.com/careers/',
-    greenhouseId: 'mycase',
-    type: 'tech-legal',
-  },
-  {
-    name: 'CosmoLex',
-    careerUrl: 'https://www.cosmolex.com/careers',
-    greenhouseId: 'cosmolex',
-    type: 'tech-legal',
-  },
-  {
-    name: 'PracticePanther',
-    careerUrl: 'https://www.practicepanther.com/careers/',
-    greenhouseId: 'practicepanther',
-    type: 'tech-legal',
-  },
-  {
-    name: 'Actionstep',
-    careerUrl: 'https://www.actionstep.com/careers/',
-    leverPostingsUrl: 'https://jobs.lever.co/actionstep',
     type: 'tech-legal',
   },
 
@@ -367,21 +222,9 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
     type: 'tech-legal',
   },
   {
-    name: 'Concord',
-    careerUrl: 'https://www.concordnow.com/careers',
-    leverPostingsUrl: 'https://jobs.lever.co/concordnow',
-    type: 'tech-legal',
-  },
-  {
     name: 'Precisely',
     careerUrl: 'https://www.precisely.com/careers',
     type: 'company',
-  },
-  {
-    name: 'Malbek',
-    careerUrl: 'https://www.malbek.io/careers',
-    leverPostingsUrl: 'https://jobs.lever.co/malbek',
-    type: 'tech-legal',
   },
 
   // --- Legal Spend & Operations ---
@@ -389,26 +232,6 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
     name: 'Brightflag',
     careerUrl: 'https://www.brightflag.com/careers/',
     greenhouseId: 'brightflag',
-    leverPostingsUrl: 'https://jobs.lever.co/brightflag',
-    type: 'tech-legal',
-  },
-  {
-    name: 'Mitratech',
-    careerUrl: 'https://mitratech.com/careers',
-    greenhouseId: 'milosmitratechinc',
-    leverPostingsUrl: 'https://jobs.lever.co/mitratech',
-    type: 'company',
-  },
-  {
-    name: 'SimpleLegal',
-    careerUrl: 'https://www.simplelegal.com/careers',
-    leverPostingsUrl: 'https://jobs.lever.co/simplelegal',
-    type: 'tech-legal',
-  },
-  {
-    name: 'BusyLamp (Onit)',
-    careerUrl: 'https://www.busylamp.com/careers/',
-    leverPostingsUrl: 'https://jobs.lever.co/busylamp',
     type: 'tech-legal',
   },
 
@@ -417,19 +240,12 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
     name: 'NetDocuments',
     careerUrl: 'https://www.netdocuments.com/careers',
     greenhouseId: 'netdocuments',
-    leverPostingsUrl: 'https://jobs.lever.co/netdocuments',
     type: 'company',
   },
   {
     name: 'Litera',
     careerUrl: 'https://www.litera.com/careers',
     workday: { company: 'litera', instance: 'wd12', site: 'Litera_Careers' },
-    type: 'company',
-  },
-  {
-    name: 'iManage',
-    careerUrl: 'https://imanage.com/careers/',
-    greenhouseId: 'imanage',
     type: 'company',
   },
 
@@ -444,7 +260,6 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
     name: 'Everlaw',
     careerUrl: 'https://www.everlaw.com/careers/',
     greenhouseId: 'everlaw',
-    leverPostingsUrl: 'https://jobs.lever.co/everlaw',
     type: 'tech-legal',
   },
   {
@@ -472,40 +287,14 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
     type: 'tech-legal',
   },
   {
-    name: 'Reveal',
-    careerUrl: 'https://www.revealdata.com/careers',
-    greenhouseId: 'reveal47',
+    name: 'Mitratech',
+    careerUrl: 'https://www.mitratech.com/careers/',
     type: 'tech-legal',
   },
   {
-    name: 'Nuix',
-    careerUrl: 'https://www.nuix.com/careers',
-    greenhouseId: 'nuix',
-    type: 'tech-legal',
-  },
-  {
-    name: 'Logikcull',
-    careerUrl: 'https://www.logikcull.com/careers',
-    greenhouseId: 'logikcull',
-    type: 'tech-legal',
-  },
-  {
-    name: 'Exterro',
-    careerUrl: 'https://www.exterro.com/careers',
-    greenhouseId: 'exterro',
-    type: 'tech-legal',
-  },
-  {
-    name: 'Zapproved',
-    careerUrl: 'https://www.zapproved.com/careers/',
-    greenhouseId: 'zapproved',
-    type: 'tech-legal',
-  },
-  {
-    name: 'Hanzo',
-    careerUrl: 'https://www.hanzo.co/careers',
-    greenhouseId: 'hanzo',
-    type: 'tech-legal',
+    name: 'Checkbox',
+    careerUrl: 'https://www.checkbox.ai/careers',
+    type: 'startup',
   },
 
   // --- Contract Automation & AI ---
@@ -527,12 +316,6 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
     name: 'Lex Machina',
     careerUrl: 'https://lexmachina.com/careers/',
     greenhouseId: 'lex',
-    type: 'tech-legal',
-  },
-  {
-    name: 'vLex',
-    careerUrl: 'https://vlex.com/careers',
-    leverPostingsUrl: 'https://jobs.lever.co/vlex',
     type: 'tech-legal',
   },
 
@@ -564,55 +347,13 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
     type: 'tech-legal',
   },
   {
-    name: 'AuditBoard',
-    careerUrl: 'https://www.auditboard.com/careers/',
-    greenhouseId: 'auditboard',
-    type: 'tech-legal',
-  },
-  {
     name: 'Workiva',
     careerUrl: 'https://www.workiva.com/careers',
     type: 'tech-legal',
   },
   {
-    name: 'NAVEX Global',
-    careerUrl: 'https://www.navex.com/en-us/company/careers/',
-    greenhouseId: 'navabornavexglobal',
-    type: 'tech-legal',
-  },
-  {
     name: 'NICE Actimize',
     careerUrl: 'https://www.niceactimize.com/careers/',
-    type: 'tech-legal',
-  },
-  {
-    name: 'Riskonnect',
-    careerUrl: 'https://riskonnect.com/careers/',
-    greenhouseId: 'riskonnect',
-    type: 'tech-legal',
-  },
-  {
-    name: 'Resolver',
-    careerUrl: 'https://www.resolver.com/careers/',
-    greenhouseId: 'resolver',
-    type: 'tech-legal',
-  },
-  {
-    name: 'Compliance.ai',
-    careerUrl: 'https://www.compliance.ai/careers',
-    leverPostingsUrl: 'https://jobs.lever.co/complianceai',
-    type: 'tech-legal',
-  },
-  {
-    name: 'Clausematch',
-    careerUrl: 'https://www.clausematch.com/careers',
-    leverPostingsUrl: 'https://jobs.lever.co/clausematch',
-    type: 'tech-legal',
-  },
-  {
-    name: 'Themis',
-    careerUrl: 'https://www.themis.com/careers',
-    ashbyUrl: 'https://api.ashbyhq.com/posting-api/job-board/themis',
     type: 'tech-legal',
   },
 
@@ -633,18 +374,6 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
     name: 'Dennemeyer',
     careerUrl: 'https://www.dennemeyer.com/careers/',
     workday: { company: 'dennemeyer', instance: 'wd3', site: 'dennemeyer_careers' },
-    type: 'tech-legal',
-  },
-  {
-    name: 'Anaqua',
-    careerUrl: 'https://www.anaqua.com/careers/',
-    greenhouseId: 'anaqua',
-    type: 'tech-legal',
-  },
-  {
-    name: 'MaxVal Group',
-    careerUrl: 'https://www.maxval.com/careers/',
-    leverPostingsUrl: 'https://jobs.lever.co/maxval',
     type: 'tech-legal',
   },
   {
@@ -675,24 +404,6 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
     workday: { company: 'aderant', instance: 'wd5', site: 'Aderant_External_Careers' },
     type: 'tech-legal',
   },
-  {
-    name: 'AbacusNext',
-    careerUrl: 'https://www.abacusnext.com/careers',
-    greenhouseId: 'abacusnext',
-    type: 'tech-legal',
-  },
-  {
-    name: 'Neos',
-    careerUrl: 'https://www.assemblysoftware.com/careers',
-    greenhouseId: 'assemblysoftware',
-    type: 'tech-legal',
-  },
-  {
-    name: 'Tabs3 Software',
-    careerUrl: 'https://www.tabs3.com/careers/',
-    leverPostingsUrl: 'https://jobs.lever.co/tabs3',
-    type: 'tech-legal',
-  },
 
   // --- Canadian Legal Tech ---
   {
@@ -700,18 +411,6 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
     careerUrl: 'https://www.athennian.com/careers',
     leverPostingsUrl: 'https://jobs.lever.co/athennian',
     type: 'startup',
-  },
-  {
-    name: 'Knotch',
-    careerUrl: 'https://www.knotch.com/careers',
-    greenhouseId: 'knotch',
-    type: 'startup',
-  },
-  {
-    name: 'Dye & Durham',
-    careerUrl: 'https://www.dyedurham.com/careers/',
-    greenhouseId: 'dyedurham',
-    type: 'tech-legal',
   },
 
   // ===================================================
@@ -832,12 +531,6 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
     type: 'biglaw',
   },
   {
-    name: 'Simpson Thacher & Bartlett',
-    careerUrl: 'https://www.simpsonthacher.com/careers',
-    icims: 'simpsonthacher',
-    type: 'biglaw',
-  },
-  {
     name: 'Debevoise & Plimpton',
     careerUrl: 'https://www.debevoise.com/careers',
     type: 'biglaw',
@@ -858,12 +551,6 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
     type: 'biglaw',
   },
   {
-    name: 'Reed Smith',
-    careerUrl: 'https://www.reedsmith.com/en/careers',
-    icims: 'reedsmith',
-    type: 'biglaw',
-  },
-  {
     name: 'Jones Day',
     careerUrl: 'https://www.jonesday.com/en/careers',
     type: 'biglaw',
@@ -877,13 +564,11 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   {
     name: 'Sidley Austin',
     careerUrl: 'https://www.sidley.com/en/careers',
-    workday: { company: 'sidley', instance: 'wd5', site: 'External_Careers' },
     type: 'biglaw',
   },
   {
     name: 'Mayer Brown',
     careerUrl: 'https://www.mayerbrown.com/en/careers',
-    workday: { company: 'mayerbrown', instance: 'wd5', site: 'Mayer_Brown_Careers' },
     type: 'biglaw',
   },
   {
@@ -908,15 +593,8 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
     type: 'biglaw',
   },
   {
-    name: 'Orrick',
-    careerUrl: 'https://www.orrick.com/en/Careers',
-    greenhouseId: 'oraborrick',
-    type: 'biglaw',
-  },
-  {
     name: 'Ropes & Gray',
     careerUrl: 'https://www.ropesgray.com/en/careers',
-    workday: { company: 'ropesgray', instance: 'wd5', site: 'RopesGray_Careers' },
     type: 'biglaw',
   },
   {
@@ -968,7 +646,6 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   {
     name: 'Allen & Overy (A&O Shearman)',
     careerUrl: 'https://www.aoshearman.com/careers',
-    workday: { company: 'aoshearman', instance: 'wd3', site: 'External_AO_Shearman' },
     type: 'biglaw',
   },
   {
@@ -1146,21 +823,9 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
     type: 'tech-legal',
   },
   {
-    name: 'Notarize',
-    careerUrl: 'https://www.notarize.com/careers',
-    greenhouseId: 'notarize',
-    type: 'tech-legal',
-  },
-  {
     name: 'Docusign CLM (SpringCM)',
     careerUrl: 'https://careers.docusign.com/',
     smartrecruitersId: 'DocuSign',
-    type: 'tech-legal',
-  },
-  {
-    name: 'Formstack',
-    careerUrl: 'https://www.formstack.com/careers',
-    greenhouseId: 'formstack',
     type: 'tech-legal',
   },
 
@@ -1183,12 +848,6 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
     name: 'Celonis',
     careerUrl: 'https://www.celonis.com/careers/',
     greenhouseId: 'celonis',
-    type: 'company',
-  },
-  {
-    name: 'Hyperscience',
-    careerUrl: 'https://www.hyperscience.com/careers/',
-    greenhouseId: 'hyperscience',
     type: 'company',
   },
 
@@ -1232,12 +891,6 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
     type: 'tech-legal',
   },
   {
-    name: 'Corporater',
-    careerUrl: 'https://corporater.com/careers/',
-    leverPostingsUrl: 'https://jobs.lever.co/corporater',
-    type: 'tech-legal',
-  },
-  {
     name: 'Archer (RSA)',
     careerUrl: 'https://www.archerirm.com/careers',
     type: 'tech-legal',
@@ -1252,18 +905,6 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
     greenhouseId: 'rocketlawyer',
     type: 'tech-legal',
   },
-  {
-    name: 'LegalZoom',
-    careerUrl: 'https://www.legalzoom.com/careers',
-    greenhouseId: 'legalzoom',
-    type: 'tech-legal',
-  },
-  {
-    name: 'Avvo',
-    careerUrl: 'https://www.avvo.com/careers',
-    greenhouseId: 'avvo',
-    type: 'tech-legal',
-  },
 
   // ===================================================
   // ALTERNATIVE LEGAL SERVICE PROVIDERS (ALSPs)
@@ -1272,7 +913,6 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
     name: 'Axiom',
     careerUrl: 'https://www.axiomlaw.com/careers',
     greenhouseId: 'axiomtalentplatform',
-    leverPostingsUrl: 'https://jobs.lever.co/axiomlaw',
     type: 'alsp',
   },
   {
@@ -1285,7 +925,6 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
     name: 'QuisLex',
     careerUrl: 'https://www.quislex.com/careers/',
     icims: 'quislex',
-    leverPostingsUrl: 'https://jobs.lever.co/quislex',
     type: 'alsp',
   },
   {
@@ -1316,24 +955,6 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
     greenhouseId: 'axiomtalentplatform',
     type: 'alsp',
   },
-  {
-    name: 'Elevate Services',
-    careerUrl: 'https://elevateservices.com/careers/',
-    leverPostingsUrl: 'https://jobs.lever.co/elevateservices',
-    type: 'alsp',
-  },
-  {
-    name: 'Morae Global',
-    careerUrl: 'https://moraeglobal.com/careers/',
-    leverPostingsUrl: 'https://jobs.lever.co/moraeglobal',
-    type: 'alsp',
-  },
-  {
-    name: 'UnitedLex',
-    careerUrl: 'https://www.unitedlex.com/careers',
-    greenhouseId: 'unitedlex',
-    type: 'alsp',
-  },
 
   // ===================================================
   // PRIVACY & DATA PROTECTION
@@ -1342,36 +963,6 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
     name: 'BigID',
     careerUrl: 'https://bigid.com/careers/',
     greenhouseId: 'bigid',
-    type: 'tech-legal',
-  },
-  {
-    name: 'Securiti',
-    careerUrl: 'https://securiti.ai/careers/',
-    greenhouseId: 'securitiai',
-    type: 'tech-legal',
-  },
-  {
-    name: 'WireWheel',
-    careerUrl: 'https://wirewheel.io/careers/',
-    leverPostingsUrl: 'https://jobs.lever.co/wirewheel',
-    type: 'tech-legal',
-  },
-  {
-    name: 'TrustArc',
-    careerUrl: 'https://trustarc.com/careers/',
-    greenhouseId: 'trustarc',
-    type: 'tech-legal',
-  },
-  {
-    name: 'DataGrail',
-    careerUrl: 'https://www.datagrail.io/careers/',
-    ashbyUrl: 'https://api.ashbyhq.com/posting-api/job-board/datagrail',
-    type: 'tech-legal',
-  },
-  {
-    name: 'Transcend',
-    careerUrl: 'https://transcend.io/careers',
-    ashbyUrl: 'https://api.ashbyhq.com/posting-api/job-board/transcend',
     type: 'tech-legal',
   },
 
@@ -1384,40 +975,10 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
     workday: { company: 'relx', instance: 'wd3', site: 'LexisNexisLegal' },
     type: 'tech-legal',
   },
-  {
-    name: 'BillBlast',
-    careerUrl: 'https://www.billblast.com/careers',
-    leverPostingsUrl: 'https://jobs.lever.co/billblast',
-    type: 'tech-legal',
-  },
-  {
-    name: 'CARET Legal',
-    careerUrl: 'https://www.caretlegal.com/careers',
-    greenhouseId: 'caretlegal',
-    type: 'tech-legal',
-  },
-  {
-    name: 'TimeSolv',
-    careerUrl: 'https://www.timesolv.com/careers/',
-    leverPostingsUrl: 'https://jobs.lever.co/timesolv',
-    type: 'tech-legal',
-  },
 
   // ===================================================
   // LEGAL ANALYTICS & INTELLIGENCE
   // ===================================================
-  {
-    name: 'Premonition',
-    careerUrl: 'https://premonition.ai/careers/',
-    leverPostingsUrl: 'https://jobs.lever.co/premonition',
-    type: 'tech-legal',
-  },
-  {
-    name: 'Trellis',
-    careerUrl: 'https://trellis.law/careers',
-    leverPostingsUrl: 'https://jobs.lever.co/trellislaw',
-    type: 'tech-legal',
-  },
   {
     name: 'Ravel Law (LexisNexis)',
     careerUrl: 'https://relx.wd3.myworkdayjobs.com/LexisNexisLegal',
@@ -1434,12 +995,6 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
     type: 'company',
   },
   {
-    name: 'Granicus',
-    careerUrl: 'https://granicus.com/careers/',
-    greenhouseId: 'granicus',
-    type: 'company',
-  },
-  {
     name: 'Thomson Reuters (Court Solutions)',
     careerUrl: 'https://careers.thomsonreuters.com/',
     workday: { company: 'thomsonreuters', instance: 'wd5', site: 'External_Career_Site' },
@@ -1449,70 +1004,10 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   // ===================================================
   // LEGAL WORKFLOW & AUTOMATION
   // ===================================================
-  {
-    name: 'Tonkean',
-    careerUrl: 'https://tonkean.com/careers',
-    greenhouseId: 'tonkean',
-    type: 'tech-legal',
-  },
-  {
-    name: 'Streamline AI',
-    careerUrl: 'https://www.streamlineai.com/careers',
-    ashbyUrl: 'https://api.ashbyhq.com/posting-api/job-board/streamlineai',
-    type: 'tech-legal',
-  },
-  {
-    name: 'Sirion',
-    careerUrl: 'https://www.sirionlabs.com/careers',
-    greenhouseId: 'sirion',
-    type: 'tech-legal',
-  },
-  {
-    name: 'SirionLabs',
-    careerUrl: 'https://www.sirionlabs.com/careers',
-    greenhouseId: 'sirion',
-    type: 'tech-legal',
-  },
-  {
-    name: 'SpotDraft',
-    careerUrl: 'https://www.spotdraft.com/careers',
-    greenhouseId: 'spotdraft',
-    type: 'tech-legal',
-  },
-  {
-    name: 'Lexion',
-    careerUrl: 'https://lexion.ai/careers',
-    ashbyUrl: 'https://api.ashbyhq.com/posting-api/job-board/lexion',
-    type: 'tech-legal',
-  },
-  {
-    name: 'Evisort',
-    careerUrl: 'https://www.evisort.com/careers',
-    greenhouseId: 'evisort',
-    type: 'tech-legal',
-  },
-  {
-    name: 'Jus Mundi',
-    careerUrl: 'https://jusmundi.com/en/careers',
-    leverPostingsUrl: 'https://jobs.lever.co/jusmundi',
-    type: 'tech-legal',
-  },
 
   // ===================================================
   // ADDITIONAL LEGAL AI & LEGAL TECH STARTUPS
   // ===================================================
-  {
-    name: 'Supio',
-    careerUrl: 'https://www.supio.com/careers',
-    ashbyUrl: 'https://api.ashbyhq.com/posting-api/job-board/supio',
-    type: 'startup',
-  },
-  {
-    name: 'Paxton AI',
-    careerUrl: 'https://www.paxton.ai/careers',
-    ashbyUrl: 'https://api.ashbyhq.com/posting-api/job-board/paxton',
-    type: 'startup',
-  },
   {
     name: 'Case Status',
     careerUrl: 'https://www.casestatus.com/careers',
@@ -1535,84 +1030,6 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
     name: 'Kore.ai',
     careerUrl: 'https://kore.ai/careers/',
     type: 'company',
-  },
-  {
-    name: 'IntelAgree',
-    careerUrl: 'https://intelagree.com/careers/',
-    greenhouseId: 'intelagree',
-    type: 'tech-legal',
-  },
-  {
-    name: 'Xakia Technologies',
-    careerUrl: 'https://www.xakiatech.com/careers',
-    leverPostingsUrl: 'https://jobs.lever.co/xakia',
-    type: 'tech-legal',
-  },
-  {
-    name: 'ThoughtTrace',
-    careerUrl: 'https://www.thoughttrace.com/careers',
-    greenhouseId: 'thoughttrace',
-    type: 'tech-legal',
-  },
-  {
-    name: 'Legistify',
-    careerUrl: 'https://www.legistify.com/careers',
-    leverPostingsUrl: 'https://jobs.lever.co/legistify',
-    type: 'startup',
-  },
-  {
-    name: 'Lawyaw',
-    careerUrl: 'https://lawyaw.com/careers',
-    greenhouseId: 'lawyaw',
-    type: 'startup',
-  },
-  {
-    name: 'Lawgeex',
-    careerUrl: 'https://www.lawgeex.com/careers/',
-    greenhouseId: 'lawgeex',
-    type: 'startup',
-  },
-  {
-    name: 'Documate',
-    careerUrl: 'https://www.documate.org/careers',
-    leverPostingsUrl: 'https://jobs.lever.co/documate',
-    type: 'startup',
-  },
-  {
-    name: 'Lawyered',
-    careerUrl: 'https://www.lawyered.in/careers',
-    leverPostingsUrl: 'https://jobs.lever.co/lawyered',
-    type: 'startup',
-  },
-  {
-    name: 'ClearAccessIP',
-    careerUrl: 'https://www.clearaccessip.com/careers',
-    greenhouseId: 'clearaccessip',
-    type: 'tech-legal',
-  },
-  {
-    name: 'Legalfit',
-    careerUrl: 'https://www.legalfit.com/careers',
-    leverPostingsUrl: 'https://jobs.lever.co/legalfit',
-    type: 'startup',
-  },
-  {
-    name: 'Apperio',
-    careerUrl: 'https://www.apperio.com/careers',
-    leverPostingsUrl: 'https://jobs.lever.co/apperio',
-    type: 'tech-legal',
-  },
-  {
-    name: 'Tessian',
-    careerUrl: 'https://www.tessian.com/careers/',
-    greenhouseId: 'tessian',
-    type: 'tech-legal',
-  },
-  {
-    name: 'Onna',
-    careerUrl: 'https://onna.com/careers/',
-    greenhouseId: 'onna',
-    type: 'tech-legal',
   },
   {
     name: 'Hive (Legal)',
@@ -1852,7 +1269,6 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   {
     name: 'Katten Muchin Rosenman',
     careerUrl: 'https://katten.com/careers',
-    workday: { company: 'katten', instance: 'wd5', site: 'Katten_External' },
     type: 'biglaw',
   },
   {
@@ -1960,7 +1376,6 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   {
     name: 'Paul Hastings',
     careerUrl: 'https://www.paulhastings.com/careers',
-    workday: { company: 'paulhastings', instance: 'wd5', site: 'PaulHastings_Careers' },
     type: 'biglaw',
   },
   {
@@ -2063,12 +1478,6 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   {
     name: 'Bennett Jones',
     careerUrl: 'https://www.bennettjones.com/Careers',
-    type: 'biglaw',
-  },
-  {
-    name: 'Osler Hoskin (Greenhouse)',
-    careerUrl: 'https://www.osler.com/en/careers',
-    greenhouseId: 'osler',
     type: 'biglaw',
   },
   {
@@ -2201,30 +1610,6 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   // LEGAL AI & CONTRACT TECH (Missing Startups)
   // ===================================================
   {
-    name: 'Klarity',
-    careerUrl: 'https://www.klarity.com/careers',
-    leverPostingsUrl: 'https://jobs.lever.co/klarity',
-    type: 'startup',
-  },
-  {
-    name: 'Summize',
-    careerUrl: 'https://www.summize.com/careers',
-    ashbyUrl: 'https://api.ashbyhq.com/posting-api/job-board/summize',
-    type: 'startup',
-  },
-  {
-    name: 'Rally Legal',
-    careerUrl: 'https://www.rallylegal.com/careers',
-    ashbyUrl: 'https://api.ashbyhq.com/posting-api/job-board/rally',
-    type: 'startup',
-  },
-  {
-    name: 'Ligl',
-    careerUrl: 'https://www.ligl.io/careers',
-    leverPostingsUrl: 'https://jobs.lever.co/ligl',
-    type: 'startup',
-  },
-  {
     name: 'Loio',
     careerUrl: 'https://loio.com/careers',
     type: 'startup',
@@ -2237,18 +1622,6 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   {
     name: 'CaseMine',
     careerUrl: 'https://www.casemine.com/careers',
-    type: 'startup',
-  },
-  {
-    name: 'Eigen Technologies',
-    careerUrl: 'https://www.eigen.co/careers',
-    ashbyUrl: 'https://api.ashbyhq.com/posting-api/job-board/eigen',
-    type: 'startup',
-  },
-  {
-    name: 'Henchman AI',
-    careerUrl: 'https://www.henchman.com/careers',
-    leverPostingsUrl: 'https://jobs.lever.co/henchman',
     type: 'startup',
   },
   {
@@ -2272,12 +1645,6 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
     type: 'startup',
   },
   {
-    name: 'Smith.ai',
-    careerUrl: 'https://smith.ai/careers',
-    greenhouseId: 'smithai',
-    type: 'startup',
-  },
-  {
     name: 'Legalfly',
     careerUrl: 'https://www.legalfly.com/careers',
     type: 'startup',
@@ -2294,12 +1661,6 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   {
     name: 'Outlaw',
     careerUrl: 'https://www.outlaw.com/careers',
-    type: 'tech-legal',
-  },
-  {
-    name: 'Precisely CLM',
-    careerUrl: 'https://www.precisely.com/careers',
-    greenhouseId: 'precisely',
     type: 'tech-legal',
   },
   {
@@ -2338,30 +1699,6 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
     type: 'tech-legal',
   },
   {
-    name: 'Chainalysis',
-    careerUrl: 'https://www.chainalysis.com/careers/',
-    greenhouseId: 'chainalysis',
-    type: 'tech-legal',
-  },
-  {
-    name: 'Hummingbird',
-    careerUrl: 'https://hummingbird.co/careers',
-    greenhouseId: 'hummingbird',
-    type: 'tech-legal',
-  },
-  {
-    name: 'Unit21',
-    careerUrl: 'https://www.unit21.ai/careers',
-    ashbyUrl: 'https://api.ashbyhq.com/posting-api/job-board/unit21',
-    type: 'tech-legal',
-  },
-  {
-    name: 'Alloy',
-    careerUrl: 'https://www.alloy.com/careers',
-    greenhouseId: 'allaboroy',
-    type: 'tech-legal',
-  },
-  {
     name: 'Behavox',
     careerUrl: 'https://www.behavox.com/careers/',
     greenhouseId: 'behavox',
@@ -2384,20 +1721,8 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
     type: 'tech-legal',
   },
   {
-    name: 'Prevalent',
-    careerUrl: 'https://www.prevalent.net/careers/',
-    greenhouseId: 'prevalent',
-    type: 'tech-legal',
-  },
-  {
     name: 'ZenGRC (Reciprocity)',
     careerUrl: 'https://reciprocity.com/careers/',
-    type: 'tech-legal',
-  },
-  {
-    name: 'Smarsh',
-    careerUrl: 'https://www.smarsh.com/careers',
-    greenhouseId: 'smarsh',
     type: 'tech-legal',
   },
   {
@@ -2432,12 +1757,6 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
     name: 'Consilio',
     careerUrl: 'https://www.consilio.com/careers/',
     workday: { company: 'consilio', instance: 'wd5', site: 'Consilio_Careers' },
-    type: 'tech-legal',
-  },
-  {
-    name: 'KLDiscovery',
-    careerUrl: 'https://www.kldiscovery.com/careers',
-    greenhouseId: 'kldiscovery',
     type: 'tech-legal',
   },
   {
@@ -2612,12 +1931,6 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
     type: 'startup',
   },
   {
-    name: 'LawVu',
-    careerUrl: 'https://www.lawvu.com/careers',
-    leverPostingsUrl: 'https://jobs.lever.co/lawvu',
-    type: 'tech-legal',
-  },
-  {
     name: 'Bodhala',
     careerUrl: 'https://www.bodhala.com/careers',
     type: 'tech-legal',
@@ -2630,12 +1943,6 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   {
     name: 'ContractSafe',
     careerUrl: 'https://www.contractsafe.com/careers',
-    type: 'tech-legal',
-  },
-  {
-    name: 'Agiloft CLM',
-    careerUrl: 'https://www.agiloft.com/company/careers/',
-    leverPostingsUrl: 'https://jobs.lever.co/agiloft',
     type: 'tech-legal',
   },
   {

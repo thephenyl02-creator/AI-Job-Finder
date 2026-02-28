@@ -63,8 +63,14 @@ Legal Tech Careers is a career intelligence platform designed for legal professi
 
 ### Job Curation Pipeline
 - **Process**: A two-layer pipeline (ingestion → AI enrichment → trust gate → published inventory) ensures quality, deduplication, and link validation.
-- **Scrapers**: Utilizes various APIs and generic HTML scrapers for broad job coverage.
-- **Automation**: Scheduled workers manage ingestion, scoring, deduplication, and validation.
+- **Company-Type-Aware Quality Gate**: Different thresholds based on company classification:
+  - `legal-tech-startup` (startup/alsp/tech-legal types): minRelevance=6, qualityThreshold=35 — most roles are relevant
+  - `law-firm` (biglaw type): minRelevance=8, qualityThreshold=40 — only legal tech/innovation roles
+  - `general-tech` (company type): minRelevance=7, qualityThreshold=40 — only legal-product-connected roles
+- **Back-Office Title Filter**: Titles like "Procurement", "Payroll", "Receptionist", "SEM Specialist" go to review queue regardless of company, unless they have legal title signals.
+- **No Auto-Boost**: AI relevance scores stand as-is. Previously, legal tech company jobs were auto-boosted to score 6.
+- **Scrapers**: Greenhouse, Lever, Ashby, Workday, iCIMS (JSON API + RSS fallback), SmartRecruiters, Workable, BambooHR, Rippling, YC auto-discovery.
+- **Automation**: Scheduled workers manage ingestion, scoring, deduplication, and validation. Live job audit runs every 4 hours with same company-type thresholds.
 - **Quality Assurance**: A QA validation system with an admin review queue maintains data integrity.
 - **Admin Dashboard**: Provides an overview of scraper runs, source health, and rejection reasons.
 

@@ -31,6 +31,71 @@ const ALL_TRACKED_COMPANIES = new Set(
   LAW_FIRMS_AND_COMPANIES.map(f => normalizeCompanyName(f.name))
 );
 
+type CompanyCategory = 'legal-tech-startup' | 'law-firm' | 'general-tech';
+
+const COMPANY_TYPE_MAP = new Map<string, CompanyCategory>();
+for (const firm of LAW_FIRMS_AND_COMPANIES) {
+  const key = normalizeCompanyName(firm.name);
+  if (firm.type === 'startup' || firm.type === 'alsp' || firm.type === 'tech-legal') {
+    COMPANY_TYPE_MAP.set(key, 'legal-tech-startup');
+  } else if (firm.type === 'biglaw') {
+    COMPANY_TYPE_MAP.set(key, 'law-firm');
+  } else {
+    COMPANY_TYPE_MAP.set(key, 'general-tech');
+  }
+}
+
+function getCompanyCategory(company: string): CompanyCategory {
+  return COMPANY_TYPE_MAP.get(normalizeCompanyName(company)) || 'general-tech';
+}
+
+interface QualityThresholds {
+  minRelevance: number;
+  qualityThreshold: number;
+  minConfidence: number;
+}
+
+function getQualityThresholds(company: string): QualityThresholds {
+  const category = getCompanyCategory(company);
+  switch (category) {
+    case 'legal-tech-startup':
+      return { minRelevance: 6, qualityThreshold: 35, minConfidence: 40 };
+    case 'law-firm':
+      return { minRelevance: 8, qualityThreshold: 40, minConfidence: 50 };
+    case 'general-tech':
+      return { minRelevance: 7, qualityThreshold: 40, minConfidence: 50 };
+  }
+}
+
+const BACK_OFFICE_TITLE_PATTERNS = [
+  /\bprocurement\b/i,
+  /\bsourcing (manager|director|specialist)\b/i,
+  /\b(SEM|SEO)\s+(specialist|manager|director)\b/i,
+  /\bcareer manager\b/i,
+  /\breceptionist\b/i,
+  /\baccounting (director|manager)\b/i,
+  /\bpayroll\b/i,
+  /\bfacilities (manager|coordinator|director)\b/i,
+  /\bjanitorial\b/i,
+  /\bcafeteria\b/i,
+  /\bwarehouse\b/i,
+  /\bforklift\b/i,
+  /\bmaintenance technician\b/i,
+];
+
+const LEGAL_TITLE_SIGNALS = [
+  /\blegal\b/i, /\bcounsel\b/i, /\battorney\b/i, /\blawyer\b/i,
+  /\bcompliance\b/i, /\bprivacy\b/i, /\bregulatory\b/i,
+  /\bcontract(s|ing)?\b/i, /\bgovernance\b/i, /\bediscovery\b/i,
+  /\bpatent\b/i, /\bip\b/i, /\binnovation\b/i, /\bknowledge management\b/i,
+  /\brisk\b/i, /\bgrc\b/i, /\baudit\b/i, /\bpolicy\b/i,
+];
+
+function isBackOfficeTitle(title: string): boolean {
+  if (LEGAL_TITLE_SIGNALS.some(p => p.test(title))) return false;
+  return BACK_OFFICE_TITLE_PATTERNS.some(p => p.test(title));
+}
+
 function isLegalTechCompany(company: string): boolean {
   return LEGAL_TECH_COMPANIES.has(normalizeCompanyName(company));
 }
@@ -829,17 +894,6 @@ async function enrichJob(job: Job): Promise<void> {
       enrichedData.aiNiceToHaves = catResult.aiNiceToHaves || null;
       enrichedData.legalRelevanceScore = catResult.legalRelevanceScore;
 
-      if (isLegalTechCompany(job.company)) {
-        const aiScore = catResult.legalRelevanceScore || 0;
-        if (aiScore < 6) {
-          enrichedData.legalRelevanceScore = 6;
-          console.log(`[Enrichment] Boosted relevance for "${job.title}" at ${job.company}: ${aiScore} -> 6 (legal tech company)`);
-        }
-        if (catResult.reviewStatus === 'rejected') {
-          catResult.reviewStatus = 'needs_review';
-        }
-      }
-
       enrichedData.reviewStatus = catResult.reviewStatus;
 
       if (!enrichedData.seniorityLevel || enrichedData.seniorityLevel === 'Not specified') {
@@ -898,17 +952,19 @@ async function enrichJob(job: Job): Promise<void> {
     const structuredComplete = isStructuredDescriptionComplete(enrichedData.structuredDescription || job.structuredDescription);
     const relevanceScore = enrichedData.legalRelevanceScore || 0;
 
-    const isLegalTech = isLegalTechCompany(job.company);
-    const isTracked = ALL_TRACKED_COMPANIES.has(normalizeCompanyName(job.company));
-    const qualityThreshold = relevanceScore >= 7 ? 30 : (isLegalTech ? 35 : (isTracked ? 40 : 50));
-    const minRelevance = isLegalTech ? 3 : (isTracked ? 4 : 5);
-    const minConfidence = isLegalTech ? 30 : (isTracked ? 35 : 50);
+    const thresholds = getQualityThresholds(job.company);
+    const backOffice = isBackOfficeTitle(job.title);
 
     if (catResult?.reviewStatus === 'rejected' || relevanceConfidence < 30) {
       enrichedData.pipelineStatus = 'rejected';
       enrichedData.isPublished = false;
       enrichedData.reviewReasonCode = 'LOW_RELEVANCE';
-    } else if (relevanceConfidence >= minConfidence && enrichedData.roleCategory && relevanceScore >= minRelevance && qualityScore >= qualityThreshold) {
+    } else if (backOffice) {
+      enrichedData.pipelineStatus = 'ready';
+      enrichedData.isPublished = false;
+      enrichedData.reviewReasonCode = 'BACK_OFFICE_TITLE';
+      console.log(`[Enrichment] Back-office title sent to review: "${job.title}" at ${job.company}`);
+    } else if (relevanceConfidence >= thresholds.minConfidence && enrichedData.roleCategory && relevanceScore >= thresholds.minRelevance && qualityScore >= thresholds.qualityThreshold) {
       const existingDuplicate = await storage.findLiveJobDuplicate(job.title, job.company, job.location, job.id);
       if (existingDuplicate) {
         enrichedData.pipelineStatus = 'rejected';
@@ -923,9 +979,9 @@ async function enrichJob(job: Job): Promise<void> {
       enrichedData.pipelineStatus = 'ready';
       if (!enrichedData.roleCategory) {
         enrichedData.reviewReasonCode = 'MISSING_CATEGORY';
-      } else if (relevanceScore < minRelevance) {
+      } else if (relevanceScore < thresholds.minRelevance) {
         enrichedData.reviewReasonCode = 'LOW_RELEVANCE_SCORE';
-      } else if (qualityScore < qualityThreshold) {
+      } else if (qualityScore < thresholds.qualityThreshold) {
         enrichedData.reviewReasonCode = 'LOW_QUALITY_SCORE';
       } else {
         enrichedData.reviewReasonCode = 'MANUAL_REVIEW';
@@ -1057,17 +1113,21 @@ async function runLiveJobAudit(): Promise<{ audited: number; flagged: number; pr
 
       const isAdminApproved = job.reviewStatus === 'approved';
 
+      if (!isAdminApproved && isBackOfficeTitle(job.title)) {
+        console.log(`[Audit] Unpublish "${job.title}" at ${job.company} - back-office title`);
+        await storage.updateJobWorkerFields(job.id, { isPublished: false, reviewReasonCode: 'BACK_OFFICE_TITLE' });
+        flagged++;
+        continue;
+      }
+
+      const auditThresholds = getQualityThresholds(job.company);
       let failReason: string | null = null;
-      const jobIsLegalTech = isLegalTechCompany(job.company);
-      const auditQualityThreshold = (job.legalRelevanceScore ?? 0) >= 7 ? 40 : (jobIsLegalTech ? 40 : 50);
-      const auditMinRelevance = jobIsLegalTech ? 4 : 5;
-      const auditMinConfidence = jobIsLegalTech ? 40 : 50;
       if (!job.isActive && !isAdminApproved) failReason = 'INACTIVE';
       else if (job.jobStatus !== 'open' && !isAdminApproved) failReason = 'JOB_CLOSED';
-      else if (!isAdminApproved && (job.qualityScore ?? 0) < auditQualityThreshold) failReason = 'LOW_QUALITY_SCORE';
-      else if (!isAdminApproved && (job.legalRelevanceScore ?? 0) < auditMinRelevance) failReason = 'LOW_RELEVANCE_SCORE';
+      else if (!isAdminApproved && (job.qualityScore ?? 0) < auditThresholds.qualityThreshold) failReason = 'LOW_QUALITY_SCORE';
+      else if (!isAdminApproved && (job.legalRelevanceScore ?? 0) < auditThresholds.minRelevance) failReason = 'LOW_RELEVANCE_SCORE';
       else if (!job.roleCategory) failReason = 'MISSING_CATEGORY';
-      else if (!isAdminApproved && (job.relevanceConfidence ?? 0) < auditMinConfidence) failReason = 'LOW_CONFIDENCE';
+      else if (!isAdminApproved && (job.relevanceConfidence ?? 0) < auditThresholds.minConfidence) failReason = 'LOW_CONFIDENCE';
       else if (!job.applyUrl || job.applyUrl.trim() === '') failReason = 'NO_APPLY_URL';
 
       if (failReason) {
@@ -1089,18 +1149,16 @@ async function runLiveJobAudit(): Promise<{ audited: number; flagged: number; pr
     );
 
     for (const job of candidates) {
-      const candIsLegalTech = isLegalTechCompany(job.company);
-      const candidateQualityThreshold = (job.legalRelevanceScore ?? 0) >= 7 ? 40 : (candIsLegalTech ? 40 : 50);
-      const candMinRelevance = candIsLegalTech ? 4 : 5;
-      const candMinConfidence = candIsLegalTech ? 40 : 50;
-      const passesGate = (job.qualityScore ?? 0) >= candidateQualityThreshold
-        && (job.legalRelevanceScore ?? 0) >= candMinRelevance
+      const candThresholds = getQualityThresholds(job.company);
+      const passesGate = (job.qualityScore ?? 0) >= candThresholds.qualityThreshold
+        && (job.legalRelevanceScore ?? 0) >= candThresholds.minRelevance
         && job.roleCategory !== null
-        && (job.relevanceConfidence ?? 0) >= candMinConfidence
+        && (job.relevanceConfidence ?? 0) >= candThresholds.minConfidence
         && job.applyUrl && job.applyUrl.trim() !== ''
         && !isGenericCareersUrl(job.applyUrl)
         && !shouldHardReject(job.title, job.company)
-        && !shouldRejectByCompany(job.title, job.company);
+        && !shouldRejectByCompany(job.title, job.company)
+        && !isBackOfficeTitle(job.title);
 
       if (!passesGate) continue;
 
@@ -1179,8 +1237,6 @@ export async function recoverStuckReadyJobs(): Promise<{ promoted: number; total
 
   let promoted = 0;
   for (const job of candidates) {
-    const jobIsLegalTech = isLegalTechCompany(job.company);
-    const isTracked = ALL_TRACKED_COMPANIES.has(normalizeCompanyName(job.company));
     const quality = job.qualityScore ?? 0;
     const relevance = job.legalRelevanceScore ?? 0;
     const confidence = job.relevanceConfidence ?? 0;
@@ -1192,14 +1248,14 @@ export async function recoverStuckReadyJobs(): Promise<{ promoted: number; total
 
     if (job.reviewStatus === 'approved') {
       passes = true;
-    } else if (isTracked || jobIsLegalTech) {
-      passes = quality >= 40 && relevance >= 4 && confidence >= 30;
-    } else if (relevance >= 7) {
-      passes = quality >= 40 && confidence >= 40;
     } else {
-      passes = quality >= 50 && relevance >= 5 && confidence >= 50
+      const recThresholds = getQualityThresholds(job.company);
+      passes = quality >= recThresholds.qualityThreshold
+        && relevance >= recThresholds.minRelevance
+        && confidence >= recThresholds.minConfidence
         && !shouldHardReject(job.title, job.company)
-        && !shouldRejectByCompany(job.title, job.company);
+        && !shouldRejectByCompany(job.title, job.company)
+        && !isBackOfficeTitle(job.title);
     }
 
     if (!passes) continue;

@@ -838,98 +838,207 @@ export async function scrapeRippling(ripplingSlug: string, companyName: string):
 
 export async function scrapeICIMS(icimsSlug: string, companyName: string): Promise<ScrapedJob[]> {
   try {
-    const urls = [
-      `https://careers-${icimsSlug}.icims.com/jobs/search`,
-      `https://${icimsSlug}.icims.com/jobs/search`,
-    ];
-
-    for (const searchUrl of urls) {
-      try {
-        const response = await fetchWithRetry(searchUrl, { method: 'GET' });
-        const $ = cheerio.load(response.data);
-        const jobs: ScrapedJob[] = [];
-        const baseUrl = new URL(searchUrl).origin;
-
-        const jobRows = $('.iCIMS_JobsTable tr, .iCIMS_JobsTable .row, [class*="JobsTable"] tr, [class*="job-listing"], [class*="job-row"], .iCIMS_MainWrapper .container-fluid .row');
-
-        if (jobRows.length === 0) {
-          $('a[href*="/jobs/"]').each((i, el) => {
-            const $el = $(el);
-            let href = $el.attr('href') || '';
-            const title = $el.text().trim();
-
-            if (!title || title.length < 3 || title.length > 200) return;
-
-            if (href.startsWith('/')) {
-              href = baseUrl + href;
-            } else if (!href.startsWith('http')) {
-              href = baseUrl + '/' + href;
-            }
-
-            const locationEl = $el.closest('tr, .row, [class*="row"]').find('[class*="location"], [class*="Location"], td:nth-child(2)');
-            const location = locationEl.text().trim() || '';
-            const locationType = detectLocationType(location + ' ' + title);
-
-            jobs.push({
-              title,
-              company: companyName,
-              location: location || 'Not specified',
-              description: '',
-              applyUrl: href,
-              postedDate: new Date().toISOString(),
-              source: 'icims',
-              externalId: `icims_${icimsSlug}_${i}`,
-              locationType,
-            });
-          });
-        } else {
-          jobRows.each((i, row) => {
-            const $row = $(row);
-            const $link = $row.find('a[href*="/jobs/"]').first();
-            if ($link.length === 0) return;
-
-            let href = $link.attr('href') || '';
-            const title = $link.text().trim();
-
-            if (!title || title.length < 3 || title.length > 200) return;
-
-            if (href.startsWith('/')) {
-              href = baseUrl + href;
-            } else if (!href.startsWith('http')) {
-              href = baseUrl + '/' + href;
-            }
-
-            const locationEl = $row.find('[class*="location"], [class*="Location"], td:nth-child(2), .iCIMS_JobLocation');
-            const location = locationEl.text().trim() || '';
-            const locationType = detectLocationType(location + ' ' + title);
-
-            jobs.push({
-              title,
-              company: companyName,
-              location: location || 'Not specified',
-              description: '',
-              applyUrl: href,
-              postedDate: new Date().toISOString(),
-              source: 'icims',
-              externalId: `icims_${icimsSlug}_${i}`,
-              locationType,
-            });
-          });
-        }
-
-        if (jobs.length > 0) {
-          return jobs;
-        }
-      } catch {
-        continue;
-      }
+    const jobs = await scrapeICIMSSearchApi(icimsSlug, companyName);
+    if (jobs.length > 0) {
+      logInfo('ICIMS', `${companyName}: ${jobs.length} jobs from search API`);
+      return jobs;
     }
 
+    const feedJobs = await scrapeICIMSFeed(icimsSlug, companyName);
+    if (feedJobs.length > 0) {
+      logInfo('ICIMS', `${companyName}: ${feedJobs.length} jobs from RSS feed`);
+      return feedJobs;
+    }
+
+    logWarn('ICIMS', `${companyName}: No jobs found via API or feed`);
     return [];
   } catch (error: any) {
     logError('ICIMS', `Error scraping ${companyName}`, { error: error.message });
     return [];
   }
+}
+
+async function scrapeICIMSSearchApi(icimsSlug: string, companyName: string): Promise<ScrapedJob[]> {
+  const baseUrls = [
+    `https://careers-${icimsSlug}.icims.com`,
+    `https://${icimsSlug}.icims.com`,
+  ];
+
+  for (const baseUrl of baseUrls) {
+    try {
+      const searchUrl = `${baseUrl}/jobs/search?ss=1&searchRelation=keyword_all&mobile=false&width=1140&height=500&bga=true&needsRedirect=false&jan1offset=-300&jun1offset=-240`;
+      const response = await fetchWithRetry(searchUrl, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json, text/html, */*',
+          'X-Requested-With': 'XMLHttpRequest',
+        },
+      });
+
+      const data = response.data;
+      const jobs: ScrapedJob[] = [];
+
+      if (typeof data === 'object' && data !== null) {
+        const jobList = data.jobPositionPostings || data.jobs || data.results || data.data || [];
+        const items = Array.isArray(jobList) ? jobList : (Array.isArray(data) ? data : []);
+
+        for (const job of items) {
+          const title = job.title || job.Title || job.jobTitle || job.position || '';
+          if (!title || title.length < 3) continue;
+
+          const jobId = job.id || job.Id || job.jobId || job.requisitionId || '';
+          let applyUrl = job.url || job.applyUrl || job.link || job.jobUrl || '';
+          if (!applyUrl && jobId) {
+            applyUrl = `${baseUrl}/jobs/${jobId}/job`;
+          }
+          if (applyUrl && !applyUrl.startsWith('http')) {
+            applyUrl = baseUrl + (applyUrl.startsWith('/') ? '' : '/') + applyUrl;
+          }
+
+          const location = job.location || job.Location || job.city || job.normalizedLocation || '';
+          const locationType = detectLocationType(location + ' ' + title);
+          const postedDate = job.postedDate || job.datePosted || job.postingDate || job.createdDate || new Date().toISOString();
+          const description = job.description || job.jobDescription || job.summary || '';
+
+          jobs.push({
+            title,
+            company: companyName,
+            location: location || 'Not specified',
+            description,
+            applyUrl,
+            postedDate,
+            source: 'icims',
+            externalId: `icims_${icimsSlug}_${jobId || jobs.length}`,
+            locationType,
+            department: job.department || job.category || undefined,
+          });
+        }
+
+        if (jobs.length > 0) return jobs;
+      }
+
+      if (typeof data === 'string' && data.includes('<')) {
+        const $ = cheerio.load(data);
+        const seenUrls = new Set<string>();
+
+        $('a[href*="/jobs/"]').each((i, el) => {
+          const $el = $(el);
+          let href = $el.attr('href') || '';
+          const title = $el.text().trim();
+
+          if (!title || title.length < 3 || title.length > 200) return;
+          if (/search|login|sign|apply|reset/i.test(title)) return;
+
+          if (href.startsWith('/')) {
+            href = baseUrl + href;
+          } else if (!href.startsWith('http')) {
+            href = baseUrl + '/' + href;
+          }
+
+          if (seenUrls.has(href)) return;
+          seenUrls.add(href);
+
+          const jobIdMatch = href.match(/\/jobs\/(\d+)/);
+          const jobId = jobIdMatch ? jobIdMatch[1] : String(i);
+
+          const locationEl = $el.closest('tr, .row, [class*="row"], div').find('[class*="location"], [class*="Location"]');
+          const location = locationEl.text().trim() || '';
+          const locationType = detectLocationType(location + ' ' + title);
+
+          jobs.push({
+            title,
+            company: companyName,
+            location: location || 'Not specified',
+            description: '',
+            applyUrl: href,
+            postedDate: new Date().toISOString(),
+            source: 'icims',
+            externalId: `icims_${icimsSlug}_${jobId}`,
+            locationType,
+          });
+        });
+
+        if (jobs.length > 0) return jobs;
+      }
+    } catch {
+      continue;
+    }
+  }
+
+  return [];
+}
+
+async function scrapeICIMSFeed(icimsSlug: string, companyName: string): Promise<ScrapedJob[]> {
+  const feedUrls = [
+    `https://careers-${icimsSlug}.icims.com/jobs/feed/`,
+    `https://${icimsSlug}.icims.com/jobs/feed/`,
+  ];
+
+  for (const feedUrl of feedUrls) {
+    try {
+      const response = await fetchWithRetry(feedUrl, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/rss+xml, application/xml, text/xml, */*',
+        },
+      });
+
+      const xmlData = typeof response.data === 'string' ? response.data : '';
+      if (!xmlData || !xmlData.includes('<')) continue;
+
+      const $ = cheerio.load(xmlData, { xmlMode: true });
+      const jobs: ScrapedJob[] = [];
+      const baseUrl = new URL(feedUrl).origin;
+
+      $('item').each((i, el) => {
+        const $item = $(el);
+        const title = $item.find('title').text().trim();
+        if (!title || title.length < 3) return;
+
+        let link = $item.find('link').text().trim();
+        if (!link) {
+          link = $item.find('guid').text().trim();
+        }
+        if (link && !link.startsWith('http')) {
+          link = baseUrl + (link.startsWith('/') ? '' : '/') + link;
+        }
+
+        const description = $item.find('description').text().trim();
+        const pubDate = $item.find('pubDate').text().trim();
+        const category = $item.find('category').text().trim();
+
+        const locationMatch = description.match(/(?:Location|City|Office)\s*:\s*([^<\n]+)/i);
+        const location = locationMatch ? locationMatch[1].trim() : '';
+        const locationType = detectLocationType(location + ' ' + title + ' ' + description);
+
+        const jobIdMatch = link.match(/\/jobs\/(\d+)/);
+        const jobId = jobIdMatch ? jobIdMatch[1] : String(i);
+
+        const salary = parseSalaryFromText(description);
+
+        jobs.push({
+          title,
+          company: companyName,
+          location: location || 'Not specified',
+          description,
+          applyUrl: link,
+          postedDate: pubDate ? new Date(pubDate).toISOString() : new Date().toISOString(),
+          source: 'icims',
+          externalId: `icims_${icimsSlug}_${jobId}`,
+          locationType,
+          salaryMin: salary.min,
+          salaryMax: salary.max,
+          department: category || undefined,
+        });
+      });
+
+      if (jobs.length > 0) return jobs;
+    } catch {
+      continue;
+    }
+  }
+
+  return [];
 }
 
 export async function scrapeWorkable(workableId: string, companyName: string): Promise<ScrapedJob[]> {
