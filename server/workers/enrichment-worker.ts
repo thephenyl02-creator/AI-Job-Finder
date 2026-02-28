@@ -136,6 +136,22 @@ const BACK_OFFICE_TITLE_PATTERNS = [
   /\bwarehouse\b/i,
   /\bforklift\b/i,
   /\bmaintenance technician\b/i,
+  /\bcommunications (lead|manager|director|specialist)\b/i,
+  /\bfield marketing\b/i,
+  /\bevent marketing\b/i,
+  /\bcompensation\s*((&|and)\s*)?benefits\b/i,
+  /\btotal rewards\b/i,
+  /\bworkplace\s+operations\b/i,
+  /\boffice\s+operations\b/i,
+  /\bsupply chain\b/i,
+  /\blogistics (manager|director|coordinator)\b/i,
+  /\bcontent (writer|strategist)\b/i,
+  /\bsocial media (manager|specialist|coordinator)\b/i,
+  /\bcreative director\b/i,
+  /\bgraphic designer\b/i,
+  /\bpeople operations\b/i,
+  /\brecruiting coordinator\b/i,
+  /\bhr\s+(manager|director|generalist|specialist|coordinator|business partner)\b/i,
 ];
 
 const LEGAL_TITLE_SIGNALS = [
@@ -583,54 +599,8 @@ const TECH_IMPLEMENTATION_TITLE_SIGNALS = [
   /\bdigital\b/i, /\bimplementation\b/i, /\bautomation\b/i,
 ];
 
-const GENERIC_BUSINESS_ROLE_PATTERNS = [
-  /\baccount executive\b/i,
-  /\benterprise account executive\b/i,
-  /\bcorporate account executive\b/i,
-  /\bstrategic account executive\b/i,
-  /\bcustomer success manager\b/i,
-  /\bprincipal customer success\b/i,
-  /\bsenior customer success\b/i,
-  /\bdirector of customer success\b/i,
-  /\bcustomer solutions architect\b/i,
-  /\bbusiness development (representative|manager|director|team lead)\b/i,
-  /\bmanager,?\s*business development\b/i,
-  /\bsales (representative|manager|director)\b/i,
-  /\bregional sales\b/i,
-  /\benterprise sales\b/i,
-  /\bpartner development director\b/i,
-  /\bstrategic partnerships manager\b/i,
-  /\bmarketing (manager|director|programs)\b/i,
-  /\bproduct marketing manager\b/i,
-  /\bsolution marketing manager\b/i,
-  /\bpricing specialist\b/i,
-  /\btax (operations|compliance|manager)\b/i,
-  /\blegal administrative assistant\b/i,
-  /\boffice manager\b/i,
-  /\bexecutive assistant\b/i,
-  /\bproposal specialist\b/i,
-  /\bhead of ai value\b/i,
-  /\bgtm enablement\b/i,
-  /\bproduct strategy analyst\b/i,
-];
-
-export function isGenericBusinessRole(title: string): boolean {
-  return GENERIC_BUSINESS_ROLE_PATTERNS.some(pattern => pattern.test(title));
-}
-
-function hasNegativeAiSignal(aiSummary: string | null): boolean {
-  if (!aiSummary) return false;
-  const negativePatterns = [
-    /does not involve.*technology/i,
-    /not suitable for lawyers.*transition/i,
-    /not.*legal tech/i,
-    /no.*technology component/i,
-    /not.*relevant.*legal technology/i,
-    /purely.*administrative/i,
-    /traditional.*business development/i,
-  ];
-  return negativePatterns.some(pattern => pattern.test(aiSummary));
-}
+import { isGenericBusinessRole, hasNegativeAiSignal } from "../lib/job-quality-patterns";
+export { isGenericBusinessRole, hasNegativeAiSignal };
 
 function shouldRejectByCompany(title: string, company: string): boolean {
   const companyType = NON_LEGAL_TECH_COMPANIES[company];
@@ -1268,9 +1238,23 @@ async function runLiveJobAudit(): Promise<{ audited: number; flagged: number; pr
 
       const isAdminApproved = job.reviewStatus === 'approved';
 
-      if (!isAdminApproved && isBackOfficeTitle(job.title)) {
+      if (isBackOfficeTitle(job.title)) {
         console.log(`[Audit] Unpublish "${job.title}" at ${job.company} - back-office title`);
         await storage.updateJobWorkerFields(job.id, { isPublished: false, reviewReasonCode: 'BACK_OFFICE_TITLE' });
+        flagged++;
+        continue;
+      }
+
+      if (isGenericBusinessRole(job.title) && (job.legalRelevanceScore ?? 0) < 8) {
+        console.log(`[Audit] Unpublish "${job.title}" at ${job.company} - generic business role (relevance=${job.legalRelevanceScore})`);
+        await storage.updateJobWorkerFields(job.id, { isPublished: false, reviewReasonCode: 'GENERIC_BUSINESS_ROLE' });
+        flagged++;
+        continue;
+      }
+
+      if (hasNegativeAiSignal(job.aiSummary)) {
+        console.log(`[Audit] Unpublish "${job.title}" at ${job.company} - negative AI signal`);
+        await storage.updateJobWorkerFields(job.id, { isPublished: false, reviewReasonCode: 'AI_FLAGGED_IRRELEVANT' });
         flagged++;
         continue;
       }

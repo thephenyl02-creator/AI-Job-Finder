@@ -3,8 +3,9 @@ import { jobs, firmSources } from "@shared/schema";
 import { eq, and, lt, lte, isNull, sql, or, like, ne } from "drizzle-orm";
 import { clearMarketIntelligenceCache } from "./mi-cache";
 import { normalizeSkill, toTitleCase } from "./skills-normalization";
+import { isGenericBusinessRole, hasNegativeAiSignal } from "./job-quality-patterns";
 
-const CLEANUP_VERSION = "v3c_comprehensive_cleanup";
+const CLEANUP_VERSION = "v4d_generic_role_cleanup";
 
 async function hasRunCleanup(version: string): Promise<boolean> {
   try {
@@ -452,6 +453,55 @@ export async function runDataCleanup(force = false): Promise<{
       console.log(`[DataCleanup] Fixed ${mismatchFixed} locationType/workMode mismatches`);
     }
 
+    let genericRolesUnpublished = 0;
+    let negativeAiUnpublished = 0;
+    let nullQualityLowRelUnpublished = 0;
+
+    const publishedJobs = await db.select({
+      id: jobs.id,
+      title: jobs.title,
+      company: jobs.company,
+      legalRelevanceScore: jobs.legalRelevanceScore,
+      qualityScore: jobs.qualityScore,
+      aiSummary: jobs.aiSummary,
+      isPublished: jobs.isPublished,
+    }).from(jobs).where(
+      and(eq(jobs.isPublished, true), eq(jobs.isActive, true))
+    );
+
+    for (const job of publishedJobs) {
+      const relevance = job.legalRelevanceScore ?? 0;
+      let shouldUnpublish = false;
+      let reason = '';
+
+      if (isGenericBusinessRole(job.title) && relevance < 8) {
+        shouldUnpublish = true;
+        reason = 'GENERIC_BUSINESS_ROLE';
+        genericRolesUnpublished++;
+      } else if (hasNegativeAiSignal(job.aiSummary)) {
+        shouldUnpublish = true;
+        reason = 'AI_FLAGGED_IRRELEVANT';
+        negativeAiUnpublished++;
+      } else if (job.qualityScore === null && relevance < 8) {
+        shouldUnpublish = true;
+        reason = 'NULL_QUALITY_LOW_RELEVANCE';
+        nullQualityLowRelUnpublished++;
+      }
+
+      if (shouldUnpublish) {
+        await db.update(jobs).set({
+          isPublished: false,
+          reviewStatus: 'needs_review',
+          pipelineStatus: 'review',
+          reviewReasonCode: reason,
+        }).where(eq(jobs.id, job.id));
+      }
+    }
+
+    console.log(`[DataCleanup] Generic business roles unpublished: ${genericRolesUnpublished}`);
+    console.log(`[DataCleanup] Negative AI signal unpublished: ${negativeAiUnpublished}`);
+    console.log(`[DataCleanup] Null quality/low relevance unpublished: ${nullQualityLowRelUnpublished}`);
+
     if (!force) {
       await markCleanupComplete(CLEANUP_VERSION);
     }
@@ -460,7 +510,8 @@ export async function runDataCleanup(force = false): Promise<{
       results.unpublishedNegativeAi + results.rearchivedResurrected + results.decodedEntities +
       results.skillsNormalized + results.locationTypeFixed + results.locationRegionFixed +
       results.locationStringsFixed + results.titlesFixed + results.unpublishedQuestionable +
-      results.careerTrackFixed + results.workModeSynced;
+      results.careerTrackFixed + results.workModeSynced +
+      genericRolesUnpublished + negativeAiUnpublished + nullQualityLowRelUnpublished;
 
     if (totalChanges > 0) {
       clearMarketIntelligenceCache();

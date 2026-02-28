@@ -69,9 +69,10 @@ Legal Tech Careers is a career intelligence platform designed for legal professi
   - `legal-tech-startup` (startup/alsp/tech-legal types): minRelevance=6, qualityThreshold=35 — most roles are relevant
   - `law-firm` (biglaw type): minRelevance=8, qualityThreshold=40 — only legal tech/innovation roles
   - `general-tech` (company type): minRelevance=7, qualityThreshold=40 — only legal-product-connected roles
-- **Back-Office Title Filter**: Titles like "Procurement", "Payroll", "Receptionist", "SEM Specialist" go to review queue regardless of company, unless they have legal title signals.
-- **Generic Business Role Filter**: Account executives, BDRs, customer success managers, marketing managers, etc. require relevance ≥ 8 to auto-publish — otherwise queued for review.
-- **AI Negative Signal Filter**: If AI summary flags a role as "does not involve technology" or "not suitable for lawyers transitioning", it goes to review queue.
+- **Back-Office Title Filter**: Titles like "Procurement", "Payroll", "Receptionist", "SEM Specialist", "People Operations", "Communications Lead", "Social Media", "Creative Director" go to review queue regardless of company, unless they have legal title signals.
+- **Generic Business Role Filter**: 80+ patterns covering Account Executives, BDRs/SDRs, Customer Success, Sales Engineers, Product Marketing, GTM roles, Revenue Operations, Financial Analysts, Data Scientists, Business Intelligence Analysts, Infrastructure roles, Cybersecurity, Chief of Staff, Pre-Sales, Pricing Analysts, Program Managers, and more. These require relevance ≥ 8 to auto-publish — otherwise queued for review.
+- **AI Negative Signal Filter**: 16 phrases including "does not involve technology", "not suitable for lawyers transitioning", "no direct connection to legal", "general business role", "standard business function". Jobs with these AI signals go to review queue.
+- **Audit Worker Generic Role Check**: Live audit (every 4 hours) catches and unpublishes generic business roles that slipped through at relevance < 8. Admin-approved exemption does NOT apply to generic business roles.
 - **HTML Entity Decoding**: `decodeHtmlEntities()` runs on job titles and company names during enrichment to prevent `&amp;` artifacts.
 - **Uniform Publishing Gate**: All paths to `isPublished=true` (enrichment, recovery, publish-all-eligible, admin PATCH, bulk QA) enforce company-type-aware thresholds via `getQualityThresholds()`. Admin PATCH requires relevance ≥ 6 and roleCategory.
 - **Storage-Level Publish Guard**: `publishJob()` and `updateJobWorkerFields()` in `server/storage.ts` enforce a hard floor: relevance ≥ 6 and roleCategory must be assigned. This is the last line of defense — no code path can bypass it.
