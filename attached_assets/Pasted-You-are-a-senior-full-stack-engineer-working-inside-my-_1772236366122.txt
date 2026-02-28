@@ -1,0 +1,56 @@
+You are a senior full-stack engineer working inside my Replit project “AI-Job-Finder / Legal Tech Careers”.
+
+Goal: Fix inconsistencies and formatting issues in the generated Monthly Report PDF (LegalTechCareers_Monthly_Report_2026-02-27.pdf), and make the report definitions unambiguous.
+
+Context: The report currently shows:
+- Remote+Hybrid is stated as 54% in one place and 53% in another.
+- “New this week” is 464 while monthly totals show tracked/discovered values that can confuse readers.
+- “Top Geographies” table has broken formatting (e.g., “United States 45 1”, “United Kingdom 10 1”) and should show “United States 451”, “United Kingdom 101”, etc.
+- Salary table includes very small sample sizes (e.g., n=3) without a clear disclaimer.
+- AI Intensity is shown (Low/Medium/High) but methodology doesn’t explain how it’s computed.
+
+What I need you to do:
+1) Find the report generation code responsible for:
+   - report statistics (active roles, new this week, salary count, work mode counts/percentages)
+   - top geographies table
+   - PDF rendering / layout
+   Likely locations: server/lib/* (e.g., market-intelligence-pdf.ts or similar), plus any route that generates the PDF.
+
+2) Fix the Work Mode consistency:
+   - Make a single source of truth for “Remote + Hybrid %”.
+   - Ensure it’s computed from the same denominator used everywhere in the report (active published roles in this snapshot).
+   - Decide rounding rules: round to nearest whole percent consistently across the report (e.g., 53.6% -> 54% everywhere).
+   - Update both the Executive Summary and the Analysis section to use that same computed percentage string.
+
+3) Add a “Definitions” box (small section) to remove confusion:
+   - Active roles = currently active, published, passed quality gate (snapshot count)
+   - New this week = roles first seen in the last 7 days that are still active in this snapshot
+   - Discovered/tracked (monthly job volume) = total postings observed that month (includes those that later closed/expired, after dedupe)
+   - Published = subset that passed quality gate and were shown on the site
+   Make sure these definitions match the report numbers and do not contradict them.
+
+4) Fix “Top Geographies” formatting and values:
+   - Ensure the table correctly shows the integer counts (e.g., 451 not split across lines).
+   - Fix any column width / text wrapping in the PDF renderer that’s causing digits to split.
+   - Ensure the paragraph below uses the same values as the table.
+   - Add a quick unit test or debug log to confirm the top geo map keys and counts before rendering.
+
+5) Add salary small-sample disclaimer:
+   - If sample size < 10 for any category, mark it with an asterisk and add a footnote:
+     “*Small sample sizes may skew medians; interpret cautiously.”
+   - Keep the table clean and readable.
+
+6) Explain “AI Intensity” in methodology:
+   - Add 1–2 lines explaining how Low/Medium/High is calculated (classifier or keyword thresholds).
+   - If it’s keyword-based now, document the keywords/threshold approach succinctly.
+   - If it’s a model/classifier, document “LLM-assisted classification based on job description; thresholds defined by rubric”.
+
+7) Run the generator to produce a corrected PDF for the same snapshot date and save it alongside the old one (e.g., LegalTechCareers_Monthly_Report_2026-02-27_v2.pdf).
+   - Verify: Remote/Hybrid percent matches everywhere, geography counts render correctly, definitions box present, disclaimer present, methodology updated.
+
+Deliverables:
+- Code changes in the report generation and PDF layout.
+- A brief note in a README or comment summarizing: rounding rules, definitions, and where counts come from.
+- The regenerated PDF file.
+
+Proceed now: locate the generator code, implement fixes, run and validate output.
