@@ -53,8 +53,10 @@ Legal Tech Careers is a career intelligence platform designed for legal professi
 ### Job Archiving & Historical Data
 - **Permanent Archive**: Archived jobs (`jobStatus='archived'`) cannot be resurrected.
 - **Canonical Active-Inventory Filter**: All endpoints displaying active job counts use `isPublished=true, isActive=true, pipelineStatus='ready', jobStatus='open'`.
-- **Data Quality Dual Filters**: Uses `pipelinePassed` for curation stats and `activeInventory` for market benchmarks.
-- **Country Counts**: Excludes `WW` and `UN` codes.
+- **Data Quality Dual Filters**: `/api/stats/data-quality` uses `pipelinePassed` (`pipelineStatus='ready'`) for curation pipeline stats (totalPublished, passRate) and `activeInventory` (canonical 4-filter) for quality scores and market benchmarks (track distribution, companies, countries, entry-to-mid level, salary transparency).
+- **Entry-to-Mid Level**: Standardized across platform as `["Entry", "Junior", "Associate", "Intern", "Fellowship", "Mid"]`. Label is "entry-to-mid level" everywhere (MI page, trust page, PDF/DOCX reports, insights endpoint). Frontend falls back to `dataQuality.market.entryAccessiblePct` when seniorityDistribution is restricted (non-Pro).
+- **Historical Endpoint**: Returns `totalActive` (not `totalPublished`) to avoid naming collision with data-quality's `totalPublished` (which means pipeline-passed).
+- **Country Counts**: Excludes `WW` and `UN` codes everywhere (stats, MI, transition, data-quality, job-density).
 - **Cache-Control**: Stats/analytics endpoints set `Cache-Control: no-cache, no-store, must-revalidate`.
 
 ### Skill Normalization

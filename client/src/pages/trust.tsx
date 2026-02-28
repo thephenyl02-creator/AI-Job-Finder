@@ -335,7 +335,7 @@ export default function Trust() {
                   testId="stat-regions"
                 />
                 <StatCard
-                  label="Entry-Accessible"
+                  label="Entry-to-Mid Level"
                   value={`${stats.market.entryAccessiblePct}%`}
                   testId="stat-entry-pct"
                 />

@@ -244,7 +244,7 @@ export default function MarketIntelligence() {
   const { data: historicalData } = useQuery<{
     totalTracked: number;
     totalEverScreened: number;
-    totalPublished: number;
+    totalActive: number;
     totalArchived: number;
     jobsByMonth: Record<string, number>;
     publishedByMonth: Record<string, number>;
@@ -361,8 +361,10 @@ export default function MarketIntelligence() {
   const lawyerLedPct = transitionData?.trackSummary.find(t => t.track === "Lawyer-Led")?.percentage
     || dataQuality?.market?.trackDistribution?.find((t: { name: string; percentage: number }) => t.name === "Lawyer-Led")?.percentage
     || 0;
-  const entryAccessible = seniorityDistribution.filter(s => ["Intern", "Fellowship", "Entry", "Junior", "Mid"].includes(s.level)).reduce((a, b) => a + b.count, 0);
-  const entryAccessiblePct = overview.totalJobs ? Math.round((entryAccessible / overview.totalJobs) * 100) : 0;
+  const entryAccessibleFromSeniority = seniorityDistribution.length > 0
+    ? Math.round((seniorityDistribution.filter(s => ["Intern", "Fellowship", "Entry", "Junior", "Associate", "Mid"].includes(s.level)).reduce((a, b) => a + b.count, 0) / (overview.totalJobs || 1)) * 100)
+    : null;
+  const entryAccessiblePct = entryAccessibleFromSeniority ?? dataQuality?.market?.entryAccessiblePct ?? 0;
 
   const hasHardSoftSplit = hardSkillsDemand.length > 0 && softSkillsDemand.length > 0;
   const skillsChartData = skillsDemand.slice(0, 10).map((s) => ({
@@ -495,7 +497,7 @@ export default function MarketIntelligence() {
                 { label: "Active Roles", value: overview.totalJobs.toLocaleString(), sub: `+${overview.newJobsThisWeek} this week`, icon: Briefcase },
                 { label: "Career Changers", value: transitionData ? `${transitionData.transitionFriendlyPct}%` : "—", sub: transitionData ? `${transitionData.totalTransitionFriendly} roles` : "Pro", icon: Users },
                 { label: "Lawyer-Led", value: `${lawyerLedPct}%`, sub: `${transitionData?.trackSummary.find(t => t.track === "Lawyer-Led")?.jobCount || (dataQuality?.market?.trackDistribution?.find((t: { name: string; count: number }) => t.name === "Lawyer-Led")?.count || 0)} roles`, icon: Shield },
-                { label: "Avg Experience", value: transitionData ? `${transitionData.avgExperience}y` : "—", sub: `${entryAccessiblePct}% entry-accessible`, icon: GraduationCap },
+                { label: "Avg Experience", value: transitionData ? `${transitionData.avgExperience}y` : "—", sub: `${entryAccessiblePct}% entry-to-mid`, icon: GraduationCap },
                 { label: "Remote", value: `${overview.remotePercentage}%`, sub: `${safeRemote.count} roles`, icon: Wifi },
                 { label: "Salary Data", value: `${overview.jobsWithSalary}`, sub: `${overview.totalJobs ? Math.round((overview.jobsWithSalary / overview.totalJobs) * 100) : 0}% transparent`, icon: TrendingUp },
               ].map((stat, i) => (
@@ -528,7 +530,8 @@ export default function MarketIntelligence() {
                   </div>
                   <div className="mb-3">
                     <span className="mi-metric">{dataQuality.curation.totalPublished.toLocaleString()}</span>
-                    <span className="text-[11px] text-muted-foreground ml-1">roles published from {dataQuality.curation.totalScreened.toLocaleString()}+ screened</span>
+                    <span className="text-[11px] text-muted-foreground ml-1">passed quality gate from {dataQuality.curation.totalScreened.toLocaleString()}+ screened</span>
+                    <div className="text-[10px] text-muted-foreground mt-0.5">{dataQuality.curation.activeInventory.toLocaleString()} currently active</div>
                   </div>
                   <div className="mb-3">
                     <div className="flex justify-between text-[10px] text-muted-foreground mb-1">
@@ -649,9 +652,9 @@ export default function MarketIntelligence() {
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div data-testid="stat-entry-accessible">
-                      <span className="mi-label">Entry Accessible</span>
+                      <span className="mi-label">Entry-to-Mid Level</span>
                       <p className="mi-metric-sm">{dataQuality.market.entryAccessiblePct}%</p>
-                      <span className="text-[10px] text-muted-foreground">entry/junior roles</span>
+                      <span className="text-[10px] text-muted-foreground">career-changer accessible</span>
                     </div>
                     <div data-testid="stat-geographic-reach">
                       <span className="mi-label">Geographic Reach</span>
@@ -787,7 +790,7 @@ export default function MarketIntelligence() {
                 </div>
                 <p className="text-[10px] text-muted-foreground text-center mt-3" data-testid="text-evolution-note">
                   Based on {historicalData.totalTracked.toLocaleString()} jobs tracked
-                  {historicalData.totalPublished > 0 && ` · ${historicalData.totalPublished.toLocaleString()} published`}
+                  {historicalData.totalActive > 0 && ` · ${historicalData.totalActive.toLocaleString()} active`}
                   {historicalData.totalArchived > 0 && ` · ${historicalData.totalArchived.toLocaleString()} archived`}
                 </p>
                 {historicalData.limited && (

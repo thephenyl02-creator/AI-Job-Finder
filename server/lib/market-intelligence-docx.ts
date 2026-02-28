@@ -543,7 +543,7 @@ export async function generateMarketIntelligenceDocx(data: MarketData, period: s
     bodyChildren.push(spacer(160));
     bodyChildren.push(subsectionTitle("Market Reach"));
     bodyChildren.push(bodyText(
-      `Entry-Accessible Roles: ${dq.market.entryAccessiblePct}%  |  Geographic Reach: ${dq.market.uniqueCountries} countries  |  Unique Companies: ${fmtNum(dq.curation.uniqueCompanies)}  |  Unique Sources: ${fmtNum(dq.curation.uniqueSources)}`
+      `Entry-to-Mid Level Roles: ${dq.market.entryAccessiblePct}%  |  Geographic Reach: ${dq.market.uniqueCountries} countries  |  Unique Companies: ${fmtNum(dq.curation.uniqueCompanies)}  |  Unique Sources: ${fmtNum(dq.curation.uniqueSources)}`
     ));
 
     bodyChildren.push(insightCallout(
@@ -914,11 +914,11 @@ function generateSectionInsight(section: string, data: MarketData): string {
     case "seniority": {
       if (data.seniorityDistribution.length === 0) return "";
       const total = data.seniorityDistribution.reduce((sum, s) => sum + s.count, 0);
-      const entry = data.seniorityDistribution.find(s => s.level.toLowerCase().includes("entry") || s.level.toLowerCase().includes("junior"));
-      const mid = data.seniorityDistribution.find(s => s.level.toLowerCase().includes("mid"));
-      if (entry && mid) {
-        const accessiblePct = fmtPct(entry.count + mid.count, total);
-        return `${accessiblePct}% of roles are at Entry or Mid level, suggesting the market is receptive to professionals entering from adjacent fields.`;
+      const entryToMid = ["entry", "junior", "associate", "intern", "fellowship", "mid"];
+      const accessible = data.seniorityDistribution.filter(s => entryToMid.includes(s.level.toLowerCase())).reduce((sum, s) => sum + s.count, 0);
+      if (accessible > 0) {
+        const accessiblePct = fmtPct(accessible, total);
+        return `${accessiblePct}% of roles are at entry-to-mid level, suggesting the market is receptive to professionals entering from adjacent fields.`;
       }
       return "";
     }

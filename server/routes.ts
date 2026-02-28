@@ -377,7 +377,7 @@ export async function registerRoutes(
       const jobs = await storage.getActiveJobs();
       const uniqueCompanies = new Set(jobs.map(j => j.company)).size;
       const uniqueCategories = new Set(jobs.map(j => j.roleCategory).filter(Boolean)).size;
-      const entryLevelJobs = jobs.filter(j => ["Entry", "Junior", "Associate", "Intern", "Fellowship"].includes(j.seniorityLevel || "")).length;
+      const entryLevelJobs = jobs.filter(j => ["Entry", "Junior", "Associate", "Intern", "Fellowship", "Mid"].includes(j.seniorityLevel || "")).length;
       const categoryCounts: Record<string, number> = {};
       for (const job of jobs) {
         if (job.roleCategory) {
@@ -437,8 +437,8 @@ export async function registerRoutes(
       const rejected = allJobs.filter(j => j.pipelineStatus === 'rejected');
       const inReview = allJobs.filter(j => j.pipelineStatus === 'review');
 
-      const qualityScores = pipelinePassed.filter(j => j.qualityScore !== null).map(j => j.qualityScore as number);
-      const relevanceScores = pipelinePassed.filter(j => j.legalRelevanceScore !== null).map(j => j.legalRelevanceScore as number);
+      const qualityScores = activeInventory.filter(j => j.qualityScore !== null).map(j => j.qualityScore as number);
+      const relevanceScores = activeInventory.filter(j => j.legalRelevanceScore !== null).map(j => j.legalRelevanceScore as number);
       const avgQuality = qualityScores.length ? Math.round(qualityScores.reduce((a, b) => a + b, 0) / qualityScores.length * 10) / 10 : 0;
       const avgRelevance = relevanceScores.length ? Math.round(relevanceScores.reduce((a, b) => a + b, 0) / relevanceScores.length * 10) / 10 : 0;
 
@@ -494,7 +494,7 @@ export async function registerRoutes(
       const uniqueCountries = new Set(activeInventory.map(j => j.countryCode).filter(c => c && c !== 'WW' && c !== 'UN')).size;
       const uniqueRegions = new Set(activeInventory.map(j => j.locationRegion).filter(Boolean)).size;
 
-      const entryLevel = activeInventory.filter(j => ['Entry', 'Junior', 'Associate', 'Intern', 'Fellowship'].includes(j.seniorityLevel || '')).length;
+      const entryLevel = activeInventory.filter(j => ['Entry', 'Junior', 'Associate', 'Intern', 'Fellowship', 'Mid'].includes(j.seniorityLevel || '')).length;
       const entryAccessiblePct = activeInventory.length ? Math.round((entryLevel / activeInventory.length) * 100) : 0;
       const withSalary = activeInventory.filter(j => j.salaryMin !== null).length;
       const salaryTransparencyPct = activeInventory.length ? Math.round((withSalary / activeInventory.length) * 100) : 0;
@@ -677,8 +677,8 @@ export async function registerRoutes(
       const [{ total: totalScreenedCount }] = await db.select({ total: count() }).from(jobs);
 
       const totalTracked = allJobs.length;
-      const totalPublished = allJobs.filter(j => j.isPublished).length;
-      const totalArchived = allJobs.filter(j => j.jobStatus === 'archived' || j.jobStatus === 'closed').length;
+      const totalActive = allJobs.length;
+      const totalArchived = 0;
 
       const monthKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 
@@ -807,7 +807,7 @@ export async function registerRoutes(
       res.json({
         totalTracked,
         totalEverScreened: Number(totalScreenedCount),
-        totalPublished,
+        totalActive,
         totalArchived,
         jobsByMonth: jbm,
         publishedByMonth: pbm,
@@ -6800,7 +6800,7 @@ Return a JSON response with this exact structure:
         .sort((a, b) => b.avgSalary - a.avgSalary);
 
       const internFellowshipCount = allJobs.filter((j) => ["Intern", "Fellowship"].includes(j.seniorityLevel || "")).length;
-      const entryLevelCount = allJobs.filter((j) => ["Entry", "Junior", "Associate", "Intern", "Fellowship"].includes(j.seniorityLevel || "")).length;
+      const entryLevelCount = allJobs.filter((j) => ["Entry", "Junior", "Associate", "Intern", "Fellowship", "Mid"].includes(j.seniorityLevel || "")).length;
 
       const facts = `LEGAL TECH JOB MARKET DATA (from ${totalJobs} active listings):
 

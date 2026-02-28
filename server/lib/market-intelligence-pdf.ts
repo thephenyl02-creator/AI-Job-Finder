@@ -345,11 +345,11 @@ function generateSectionInsight(section: string, data: MarketData): string {
     case "seniority": {
       if (data.seniorityDistribution.length === 0) return "";
       const total = data.seniorityDistribution.reduce((sum, s) => sum + s.count, 0);
-      const entry = data.seniorityDistribution.find(s => s.level.toLowerCase().includes("entry") || s.level.toLowerCase().includes("junior"));
-      const mid = data.seniorityDistribution.find(s => s.level.toLowerCase().includes("mid"));
-      if (entry && mid) {
-        const accessiblePct = fmtPct(entry.count + mid.count, total);
-        return `${accessiblePct}% of roles are at Entry or Mid level, suggesting that the market is receptive to professionals entering from adjacent fields. Career changers with legal experience should target these positions, where domain knowledge can compensate for less technical depth.`;
+      const entryToMid = ["entry", "junior", "associate", "intern", "fellowship", "mid"];
+      const accessible = data.seniorityDistribution.filter(s => entryToMid.includes(s.level.toLowerCase())).reduce((sum, s) => sum + s.count, 0);
+      if (accessible > 0) {
+        const accessiblePct = fmtPct(accessible, total);
+        return `${accessiblePct}% of roles are at entry-to-mid level, suggesting that the market is receptive to professionals entering from adjacent fields. Career changers with legal experience should target these positions, where domain knowledge can compensate for less technical depth.`;
       }
       const seniorEntry = data.seniorityDistribution[0];
       return `The seniority distribution is led by ${seniorEntry.level}-level roles (${fmtNum(seniorEntry.count)} positions), providing data on where hiring demand concentrates across experience levels.`;
@@ -668,7 +668,7 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string, 
       const geoReach = dq.market.uniqueCountries;
       doc.save();
       doc.fontSize(8.5).fillColor(GRAY_600).font("Helvetica")
-        .text(`Entry-accessible roles: ${entryPct}%  ·  Geographic reach: ${geoReach} countries`, MARGIN, mktY, { width: CONTENT_WIDTH });
+        .text(`Entry-to-mid level roles: ${entryPct}%  ·  Geographic reach: ${geoReach} countries`, MARGIN, mktY, { width: CONTENT_WIDTH });
       doc.restore();
       doc.y = mktY + 14;
     }
