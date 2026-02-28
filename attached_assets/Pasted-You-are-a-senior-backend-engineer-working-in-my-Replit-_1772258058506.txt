@@ -1,0 +1,157 @@
+You are a senior backend engineer working in my Replit project (Node/TypeScript/Express + DB). 
+Goal: Make job ingestion “Cloudflare-proof” AND make job titles + legal-tech classification “super fool-proof” by:
+(1) avoiding Cloudflare firm domains via ATS-first ingestion,
+(2) storing raw job data always,
+(3) standardizing titles with a canonical mapping engine,
+(4) classifying legal-tech roles with a robust multi-pass taxonomy pipeline,
+(5) detecting and resolving discrepancies (title drift, duplicates, re-posts).
+
+IMPORTANT CONSTRAINTS:
+- Do NOT attempt to bypass Cloudflare or defeat WAF/bot challenges.
+- Do NOT scrape behind authentication.
+- Prefer canonical ATS/vendored job portals and structured endpoints.
+- If firm careers pages are blocked, mark source as NEEDS_REVIEW and allow manual ATS URL entry.
+
+========================
+A) CLOUDFARE-PROOF INGESTION (ATS-FIRST)
+========================
+1) Create DB table firm_sources:
+   id, firm_name, firm_domain, careers_url, discovered_job_portal_url, ats_type, fetch_mode, status, last_success_at, last_error, created_at, updated_at
+   enums:
+    - ats_type: WORKDAY, ICIMS, TALEO, SUCCESSFACTORS, SMARTRECRUITERS, GREENHOUSE, LEVER, ASHBY, ORACLE, UKG, ADP, CUSTOM, UNKNOWN
+    - fetch_mode: DIRECT_HTTP, STRUCTURED_ENDPOINT, HTML_PARSE, BROWSER_RENDER (ONLY for JS rendering when accessible), MANUAL_REVIEW
+    - status: ACTIVE, INACTIVE, NEEDS_REVIEW, BLOCKED
+
+2) Implement source discovery:
+   file: server/lib/source-discovery.ts
+   function discoverJobPortal(careersUrl): returns {jobPortalUrl, atsType, confidence, evidence, redirectChain}
+   - Fetch careersUrl (follow redirects) and parse for “View jobs/Open positions” links.
+   - If Cloudflare/WAF challenge detected (403/429, “Just a moment…”, “Checking your browser…”, __cf_chl, cf-ray header), do NOT attempt bypass.
+     -> set firm_sources.status=NEEDS_REVIEW, last_error="BLOCKED_FIRM_DOMAIN: add ATS URL manually by clicking View Jobs in a browser and pasting final URL"
+
+3) Implement ATS adapters:
+   folder: server/lib/ats-adapters/
+   one file per ATS:
+    workday.ts icims.ts greenhouse.ts lever.ts ashby.ts smartrecruiters.ts taleo.ts successfactors.ts oracle.ts ukg.ts adp.ts custom.ts
+   Each adapter implements:
+    - canHandle(url)
+    - listJobs(sourceUrl) -> JobListing[]
+    - getJobDetail(url) -> enrich description/department if listJobs returns partial data
+   JobListing schema MUST include:
+    external_id, raw_title, raw_location, raw_description, raw_department, url, posted_at, employment_type, source_ats, source_url
+   Prefer structured JSON endpoints. Fall back to HTML parsing where needed.
+
+========================
+B) TITLE CORRECTNESS + LEGAL TECH STANDARDIZATION (FOOL-PROOF)
+========================
+4) ALWAYS store raw fields untouched:
+   In jobs table (or a new ingested_jobs table), store:
+    raw_title, raw_description, raw_department, raw_location, raw_employment_type, raw_posted_at, source_ats, source_url, external_id
+   Never overwrite raw_* fields.
+
+5) Add canonical title mapping engine:
+   Create tables:
+    - title_dictionary:
+        id, normalized_title, canonical_title, role_family, role_track, confidence, examples_json, last_seen_at, created_at
+    - title_aliases:
+        id, alias_normalized_title, normalized_title (FK to title_dictionary), created_at
+   Create module: server/lib/title-normalizer.ts with:
+    normalizeTitle(rawTitle): string
+    extractSeniority(rawTitle): {level, tokens}
+    stripNoise(rawTitle): string  (remove location tags, bracketed notes, “(Remote)”, “- NY”, etc.)
+
+   Canonical mapping algorithm (must be deterministic and stable):
+    a) normalized = normalizeTitle(raw_title)
+    b) if exact match exists in title_dictionary -> use it
+    c) else try fuzzy match (threshold 0.90) over normalized_title
+    d) else call LLM ONLY as last resort to propose canonical_title + role_family + role_track
+       - Store the proposal to title_dictionary with confidence and examples
+       - DO NOT auto-apply low-confidence mappings (<0.75); mark as NEEDS_REVIEW
+
+   Output job fields:
+    canonical_title, seniority_level, role_family, role_track
+
+6) Legal-tech / Legal-AI classification must be multi-pass (no early filtering):
+   Add job scoring fields:
+    legal_tech_score (0-100)
+    ai_intensity (LOW/MED/HIGH)
+    role_track (LAWYER_LED / TECHNICAL / ECOSYSTEM)
+    taxonomy_primary, taxonomy_secondary
+    skills_json, tools_json
+
+   Create server/lib/classifiers/legal-tech-classifier.ts with:
+    classifyJob({canonical_title, raw_title, raw_description, raw_department}):
+      returns {legal_tech_score, ai_intensity, role_track, taxonomy_primary, taxonomy_secondary, skills, tools, confidence}
+
+   Classification rules:
+    - Use BOTH rules + LLM:
+      *Rules layer* (fast):
+        - keyword dictionaries for Legal Ops, Innovation, Knowledge Mgmt, eDiscovery, CLM, Privacy, AI Governance, etc.
+        - tool dictionaries: Relativity, iManage, HighQ, Ironclad, Icertis, DocuSign CLM, Litera, NetDocuments, etc.
+      *LLM layer* (only if rules confidence is low or job is ambiguous):
+        - Provide the full description (truncated safely), title, department
+        - Return strictly-typed JSON
+        - Add “reason” field for audit but store separately (do not show raw reasoning to end users)
+
+   Always store confidence + reason metadata for QA.
+
+7) Discrepancy handling (title drift, reposts, duplicates):
+   Implement job identity logic:
+    - primary key: source_ats + external_id
+    - fallback if no external_id: hash(company + normalized_title + normalized_location + first_200_chars_of_description)
+   Track:
+    first_seen_at, last_seen_at, last_changed_at
+   Detect:
+    - title drift: raw_title changed for same external_id -> store history in job_title_history table
+    - description drift: store diff summary (optional)
+    - reposts: if job disappears then reappears with new external_id but same hash -> link records
+
+   Create tables:
+    - job_title_history(job_id, old_raw_title, new_raw_title, changed_at)
+    - job_change_log(job_id, change_type, old_value, new_value, changed_at)
+
+========================
+C) QA / VALIDATION (MAKE IT FOOL-PROOF)
+========================
+8) Add “Quality Gate” checks before publishing jobs:
+   A job is “publishable” only if:
+    - has raw_title
+    - has a usable description OR passes minimum metadata fields
+    - canonical_title exists OR mapping confidence >= 0.75
+    - location normalized OR work_mode known
+   Otherwise set status=DRAFT and send to admin review queue.
+
+9) Add admin review queues:
+   - Unmapped titles (low confidence)
+   - Ambiguous taxonomy classification
+   - Missing description
+   - Duplicate/repost suspected
+   Admin endpoints/pages must allow:
+    - approving canonical title mapping
+    - correcting taxonomy
+    - merging duplicates
+    - marking false positives
+
+10) Metrics & monitoring:
+   Build dashboard metrics:
+    - % jobs with canonical_title
+    - % jobs with legal_tech_score >= 60
+    - # titles needing review
+    - scrape failures by ATS type
+    - sudden drop per firm (7-day baseline)
+   Add alerts for:
+    - firm goes from X jobs/week to 0
+    - adapter failures
+    - spike in unmapped titles
+
+========================
+D) DELIVERABLES
+========================
+- Implement firm_sources registry + discovery + ATS adapters refactor.
+- Implement raw storage + canonical title mapping engine + title history.
+- Implement multi-pass legal-tech classification + scoring.
+- Implement QA gates + admin review queues.
+- Regenerate a test run for at least 20 sources and print a summary:
+  total jobs ingested, % mapped titles, % legal tech score >=60, # needing review.
+- Add README documentation: “How titles are normalized”, “How legal tech score works”, “How Cloudflare-proof ingestion works”.
+Proceed now.
