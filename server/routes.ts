@@ -3116,6 +3116,213 @@ Rules:
     }
   });
 
+  // ========== ADMIN: FIRM SOURCES ==========
+  app.get("/api/admin/sources", isAuthenticated, async (req, res) => {
+    if (!(await isAdminCheck(req))) return res.status(403).json({ error: "Admin access required" });
+    try {
+      const { firmSources } = await import("@shared/schema");
+      const sources = await db.select().from(firmSources).orderBy(firmSources.firmName);
+      res.json(sources);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/admin/sources/:id/discover", isAuthenticated, async (req, res) => {
+    if (!(await isAdminCheck(req))) return res.status(403).json({ error: "Admin access required" });
+    try {
+      const id = parseInt(req.params.id);
+      const discoverSchema = z.object({ url: z.string().url("Must be a valid URL") });
+      const parsed = discoverSchema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ error: parsed.error.errors[0].message });
+      const { url } = parsed.data;
+
+      const { detectATSFromUrl, validateATSConfig } = await import("./lib/ats-detector");
+      const { firmSources } = await import("@shared/schema");
+      const detection = detectATSFromUrl(url);
+
+      let validation = null;
+      if (detection.atsType !== "unknown") {
+        validation = await validateATSConfig(detection.atsType, detection.config);
+      }
+
+      const updateData: Record<string, any> = {
+        discoveredPortalUrl: url,
+        atsType: detection.atsType,
+        updatedAt: new Date(),
+      };
+
+      if (detection.atsType !== "unknown" && validation?.valid) {
+        updateData.fetchMode = "ats_api";
+        updateData.status = "active";
+        updateData.atsConfig = detection.config;
+        updateData.lastErrorMessage = null;
+        updateData.jobCount = validation.jobCount > 0 ? validation.jobCount : 0;
+      } else if (detection.atsType !== "unknown" && !validation?.valid) {
+        updateData.fetchMode = "needs_setup";
+        updateData.status = "needs_review";
+        updateData.atsConfig = detection.config;
+        updateData.lastErrorMessage = validation?.error || "ATS detected but validation failed";
+      } else {
+        updateData.fetchMode = "manual_html";
+        updateData.status = "needs_review";
+        updateData.lastErrorMessage = "No standard ATS detected. Use HTML import.";
+      }
+
+      await db.update(firmSources).set(updateData).where(eq(firmSources.id, id));
+      res.json({ ...detection, validation });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/admin/sources/:id/parse-html", isAuthenticated, async (req, res) => {
+    if (!(await isAdminCheck(req))) return res.status(403).json({ error: "Admin access required" });
+    try {
+      const id = parseInt(req.params.id);
+      const parseHtmlSchema = z.object({ html: z.string().min(10, "HTML content is too short"), confirm: z.boolean().optional() });
+      const parsed = parseHtmlSchema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ error: parsed.error.errors[0].message });
+      const { html, confirm } = parsed.data;
+
+      const { firmSources } = await import("@shared/schema");
+      const [source] = await db.select().from(firmSources).where(eq(firmSources.id, id));
+      if (!source) return res.status(404).json({ error: "Source not found" });
+
+      const { parseJobsFromHTML } = await import("./lib/html-job-parser");
+      const parsedJobs = parseJobsFromHTML(html, source.firmName, source.careerUrl);
+
+      if (!confirm) {
+        return res.json({ jobs: parsedJobs, count: parsedJobs.length });
+      }
+
+      let imported = 0;
+      for (const pj of parsedJobs) {
+        const jobHash = `manual_${source.firmName.replace(/\s+/g, '_')}_${Buffer.from(pj.title + pj.applyUrl).toString('base64').substring(0, 20)}`;
+        const existing = await db.select({ id: jobs.id }).from(jobs).where(eq(jobs.externalId, jobHash)).limit(1);
+        if (existing.length > 0) continue;
+
+        await db.insert(jobs).values({
+          title: pj.title,
+          company: source.firmName,
+          location: pj.location || "Not specified",
+          description: pj.department ? `Department: ${pj.department}` : "Imported via HTML paste - pending enrichment",
+          applyUrl: pj.applyUrl,
+          source: "manual_html",
+          externalId: jobHash,
+          isActive: true,
+          isPublished: false,
+          pipelineStatus: "raw",
+        } as any);
+        imported++;
+      }
+
+      await db.update(firmSources).set({
+        fetchMode: "manual_html",
+        status: "active",
+        lastSuccessAt: new Date(),
+        jobCount: parsedJobs.length,
+        lastErrorMessage: null,
+        updatedAt: new Date(),
+      }).where(eq(firmSources.id, id));
+
+      res.json({ imported, total: parsedJobs.length });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/admin/sources/:id/test-scrape", isAuthenticated, async (req, res) => {
+    if (!(await isAdminCheck(req))) return res.status(403).json({ error: "Admin access required" });
+    try {
+      const id = parseInt(req.params.id);
+      const { firmSources } = await import("@shared/schema");
+      const [source] = await db.select().from(firmSources).where(eq(firmSources.id, id));
+      if (!source) return res.status(404).json({ error: "Source not found" });
+
+      if (source.fetchMode !== "ats_api" || !source.atsConfig) {
+        return res.status(400).json({ error: "Source must have a configured ATS for test scraping" });
+      }
+
+      const config = source.atsConfig as Record<string, string>;
+      let scrapedJobs: any[] = [];
+
+      switch (source.atsType) {
+        case "greenhouse":
+          scrapedJobs = await (await import("./lib/law-firm-scraper")).scrapeGreenhouse(config.boardId, source.firmName);
+          break;
+        case "lever":
+          scrapedJobs = await (await import("./lib/law-firm-scraper")).scrapeLever(`https://api.lever.co/v0/postings/${config.company}`, source.firmName);
+          break;
+        case "workday":
+          scrapedJobs = await (await import("./lib/law-firm-scraper")).scrapeWorkday({ company: config.company, instance: config.instance, site: config.site }, source.firmName);
+          break;
+        case "icims":
+          scrapedJobs = await (await import("./lib/law-firm-scraper")).scrapeICIMS(config.slug, source.firmName);
+          break;
+        case "ashby":
+          const ashbyUrl = `https://api.ashbyhq.com/posting-api/job-board/${config.company}`;
+          scrapedJobs = await (await import("./lib/law-firm-scraper")).scrapeAshby(ashbyUrl, source.firmName);
+          break;
+        case "smartrecruiters":
+          scrapedJobs = await (await import("./lib/law-firm-scraper")).scrapeSmartRecruiters(config.company, source.firmName);
+          break;
+        case "bamboohr":
+          scrapedJobs = await (await import("./lib/law-firm-scraper")).scrapeBambooHR(config.company, source.firmName);
+          break;
+        case "rippling":
+          scrapedJobs = await (await import("./lib/law-firm-scraper")).scrapeRippling(config.company, source.firmName);
+          break;
+        case "workable":
+          scrapedJobs = await (await import("./lib/law-firm-scraper")).scrapeWorkable(config.company, source.firmName);
+          break;
+      }
+
+      await db.update(firmSources).set({
+        lastSuccessAt: new Date(),
+        jobCount: scrapedJobs.length,
+        lastErrorMessage: null,
+        updatedAt: new Date(),
+      }).where(eq(firmSources.id, id));
+
+      res.json({
+        jobCount: scrapedJobs.length,
+        sampleTitles: scrapedJobs.slice(0, 10).map((j: any) => j.title),
+      });
+    } catch (error: any) {
+      const { firmSources } = await import("@shared/schema");
+      await db.update(firmSources).set({
+        lastErrorMessage: error.message?.substring(0, 500),
+        updatedAt: new Date(),
+      }).where(eq(firmSources.id, parseInt(req.params.id)));
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.patch("/api/admin/sources/:id", isAuthenticated, async (req, res) => {
+    if (!(await isAdminCheck(req))) return res.status(403).json({ error: "Admin access required" });
+    try {
+      const id = parseInt(req.params.id);
+      const patchSchema = z.object({
+        status: z.enum(["active", "needs_review", "classification_only"]).optional(),
+        fetchMode: z.enum(["ats_api", "manual_html", "needs_setup"]).optional(),
+        atsType: z.string().max(50).optional(),
+      });
+      const parsed = patchSchema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ error: parsed.error.errors[0].message });
+      const { status, fetchMode, atsType } = parsed.data;
+      const { firmSources } = await import("@shared/schema");
+      const updateData: Record<string, any> = { updatedAt: new Date() };
+      if (status) updateData.status = status;
+      if (fetchMode) updateData.fetchMode = fetchMode;
+      if (atsType) updateData.atsType = atsType;
+      await db.update(firmSources).set(updateData).where(eq(firmSources.id, id));
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Admin: Get list of companies that can be scraped
   app.get("/api/admin/scraper/companies", isAuthenticated, async (req, res) => {
     if (!(await isAdminCheck(req))) {

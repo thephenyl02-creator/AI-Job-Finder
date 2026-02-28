@@ -12,6 +12,7 @@ import {
   Upload,
   ClipboardCheck,
   Users,
+  Globe,
 } from "lucide-react";
 
 const ADMIN_NAV = [
@@ -23,6 +24,7 @@ const ADMIN_NAV = [
   { href: "/admin/import-jobs", label: "Import", icon: Upload, testId: "link-admin-import" },
   { href: "/admin/review-jobs", label: "Review", icon: ClipboardCheck, testId: "link-admin-review" },
   { href: "/admin/users", label: "Users", icon: Users, testId: "link-admin-users" },
+  { href: "/admin/sources", label: "Sources", icon: Globe, testId: "link-admin-sources" },
 ];
 
 interface AdminHeaderProps {

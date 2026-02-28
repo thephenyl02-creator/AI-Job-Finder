@@ -28,6 +28,7 @@ import AdminReports from "@/pages/admin-reports";
 import AdminImport from "@/pages/admin-import";
 import AdminReview from "@/pages/admin-review";
 import AdminUsers from "@/pages/admin-users";
+import AdminSources from "@/pages/admin-sources";
 import Pricing from "@/pages/pricing";
 import Terms from "@/pages/terms";
 import Privacy from "@/pages/privacy";
@@ -93,6 +94,7 @@ function AppRouter() {
       <Route path="/admin/import-jobs"><AdminRoute component={AdminImport} /></Route>
       <Route path="/admin/review-jobs"><AdminRoute component={AdminReview} /></Route>
       <Route path="/admin/users"><AdminRoute component={AdminUsers} /></Route>
+      <Route path="/admin/sources"><AdminRoute component={AdminSources} /></Route>
       <Route path="/career-advisor"><Redirect to="/jobs" /></Route>
       <Route path="/insights">{isAuthenticated ? <Insights /> : <Landing />}</Route>
       <Route path="/alerts">{isAuthenticated ? <Alerts /> : <Landing />}</Route>

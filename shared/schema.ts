@@ -1108,6 +1108,31 @@ export interface EditorPayload {
   };
 }
 
+export const firmSources = pgTable("firm_sources", {
+  id: serial("id").primaryKey(),
+  firmName: varchar("firm_name", { length: 255 }).notNull(),
+  careerUrl: varchar("career_url", { length: 500 }).notNull(),
+  discoveredPortalUrl: varchar("discovered_portal_url", { length: 500 }),
+  atsType: varchar("ats_type", { length: 50 }).default("unknown"),
+  fetchMode: varchar("fetch_mode", { length: 50 }).default("needs_setup"),
+  status: varchar("status", { length: 50 }).default("needs_review"),
+  atsConfig: jsonb("ats_config"),
+  lastSuccessAt: timestamp("last_success_at"),
+  lastErrorMessage: text("last_error_message"),
+  jobCount: integer("job_count").default(0),
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: timestamp("updated_at").default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const insertFirmSourceSchema = createInsertSchema(firmSources).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertFirmSource = z.infer<typeof insertFirmSourceSchema>;
+export type FirmSource = typeof firmSources.$inferSelect;
+
 export const apiKeys = pgTable("api_keys", {
   id: serial("id").primaryKey(),
   key: varchar("key", { length: 64 }).notNull().unique(),

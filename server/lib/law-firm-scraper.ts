@@ -1881,6 +1881,64 @@ export async function scrapeAllLawFirms(): Promise<{
   if (skippedCircuitOpen > 0) {
     logWarn('CIRCUIT', `Skipped ${skippedCircuitOpen} companies due to open circuits`);
   }
+
+  try {
+    const { db } = await import('../db');
+    const { firmSources } = await import('@shared/schema');
+    const { eq } = await import('drizzle-orm');
+    const activeSources = await db.select().from(firmSources)
+      .where(eq(firmSources.status, 'active'));
+    const apiSources = activeSources.filter(s => s.fetchMode === 'ats_api' && s.atsConfig);
+
+    if (apiSources.length > 0) {
+      logInfo('FIRM_SOURCES', `Scraping ${apiSources.length} firm_sources with ATS API configs`);
+    }
+
+    for (const source of apiSources) {
+      if (Date.now() - globalStart > GLOBAL_TIMEOUT_MS) break;
+      const config = source.atsConfig as Record<string, string>;
+      const companyStart = Date.now();
+
+      try {
+        let scrapedJobs: ScrapedJob[] = [];
+        switch (source.atsType) {
+          case 'greenhouse': scrapedJobs = await scrapeGreenhouse(config.boardId, source.firmName); break;
+          case 'lever': scrapedJobs = await scrapeLever(`https://api.lever.co/v0/postings/${config.company}`, source.firmName); break;
+          case 'workday': scrapedJobs = await scrapeWorkday({ company: config.company, instance: config.instance, site: config.site }, source.firmName); break;
+          case 'icims': scrapedJobs = await scrapeICIMS(config.slug, source.firmName); break;
+          case 'ashby': scrapedJobs = await scrapeAshby(`https://api.ashbyhq.com/posting-api/job-board/${config.company}`, source.firmName); break;
+          case 'smartrecruiters': scrapedJobs = await scrapeSmartRecruiters(config.company, source.firmName); break;
+          case 'bamboohr': scrapedJobs = await scrapeBambooHR(config.company, source.firmName); break;
+          case 'rippling': scrapedJobs = await scrapeRippling(config.company, source.firmName); break;
+          case 'workable': scrapedJobs = await scrapeWorkable(config.company, source.firmName); break;
+        }
+
+        const firmType = 'biglaw';
+        const legalTechJobs = scrapedJobs
+          .filter(job => isLegalTechRole(job.title, firmType))
+          .filter(job => isValidJobUrl(job.applyUrl));
+        const transformedJobs = legalTechJobs.map(job => transformToJobSchema(job));
+
+        logInfo('FIRM_SOURCES', `${source.firmName}: ${scrapedJobs.length} scraped, ${legalTechJobs.length} legal tech (via ${source.atsType})`);
+        totalScraped += scrapedJobs.length;
+        totalFiltered += legalTechJobs.length;
+        if (legalTechJobs.length > 0) companiesWithJobs++;
+        allJobs.push(...transformedJobs);
+        stats.push({ company: source.firmName, found: scrapedJobs.length, filtered: legalTechJobs.length });
+        sourceResults.push({ company: source.firmName, atsType: source.atsType || 'unknown', status: 'success', found: scrapedJobs.length, filtered: legalTechJobs.length, durationMs: Date.now() - companyStart });
+
+        await db.update(firmSources).set({ lastSuccessAt: new Date(), jobCount: scrapedJobs.length, lastErrorMessage: null, updatedAt: new Date() }).where(eq(firmSources.id, source.id));
+      } catch (error: any) {
+        logError('FIRM_SOURCES', `Error scraping ${source.firmName}`, { error: error.message });
+        sourceResults.push({ company: source.firmName, atsType: source.atsType || 'unknown', status: 'failed', found: 0, filtered: 0, durationMs: Date.now() - companyStart, errorCode: 'SCRAPE_ERROR', errorMessage: error.message?.substring(0, 500) });
+        await db.update(firmSources).set({ lastErrorMessage: error.message?.substring(0, 500), updatedAt: new Date() }).where(eq(firmSources.id, source.id));
+      }
+
+      await delay(2000);
+    }
+  } catch (err: any) {
+    logError('FIRM_SOURCES', `Failed to load firm_sources`, { error: err.message });
+  }
   
   const funnel = {
     totalScraped,
