@@ -58,6 +58,7 @@ Legal Tech Careers is a career intelligence platform designed for legal professi
 - **Historical Endpoint**: Returns `totalActive` (not `totalPublished`) to avoid naming collision with data-quality's `totalPublished` (which means pipeline-passed).
 - **Country Counts**: Excludes `WW` and `UN` codes everywhere (stats, MI, transition, data-quality, job-density).
 - **Cache-Control**: Stats/analytics endpoints set `Cache-Control: no-cache, no-store, must-revalidate`.
+- **Unified Stats Caching**: All three stats endpoints (`/api/stats`, `/api/stats/data-quality`, `/api/market-intelligence`) share caches in `server/lib/mi-cache.ts`. `/api/stats` reads from the DQ cache when available. `clearAllStatsCaches()` invalidates both MI and DQ caches together and is called from all job publish/unpublish/deactivation paths (routes, data-cleanup, scheduled-scraper).
 
 ### Skill Normalization
 - **SKILLS_SYNONYM_MAP**: Normalizes skill variants.

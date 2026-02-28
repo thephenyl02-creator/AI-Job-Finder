@@ -3,6 +3,7 @@ import { storage } from '../storage';
 import type { InsertJob, Job } from '../../shared/schema';
 import { logInfo, logWarn, logError, logSuccess, cleanupOldLogs } from './logger';
 import { matchNewJobsAgainstAlerts } from './alert-matcher';
+import { clearAllStatsCaches } from './mi-cache';
 import { scrapeAllLawFirms, isLegalTechRole, transformToJobSchema, type SourceResult } from './law-firm-scraper';
 import { LAW_FIRMS_AND_COMPANIES } from './law-firms-list';
 
@@ -414,6 +415,7 @@ export async function runScheduledScrape(triggeredBy: string = 'scheduler'): Pro
         const staleDeactivated = await storage.deactivateStaleJobs(scrapedExternalIds, successfulSources, scrapedCompanyNames);
         if (staleDeactivated > 0) {
           logInfo('STALE', `Deactivated ${staleDeactivated} stale jobs from ${scrapedCompanyNames.size} scraped companies`);
+          clearAllStatsCaches();
         }
       }
     } else {

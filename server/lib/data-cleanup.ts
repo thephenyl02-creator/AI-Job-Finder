@@ -1,7 +1,7 @@
 import { db } from "../db";
 import { jobs, firmSources } from "@shared/schema";
 import { eq, and, lt, lte, isNull, sql, or, like, ne } from "drizzle-orm";
-import { clearMarketIntelligenceCache } from "./mi-cache";
+import { clearAllStatsCaches } from "./mi-cache";
 import { normalizeSkill, toTitleCase } from "./skills-normalization";
 import { isGenericBusinessRole, hasNegativeAiSignal } from "./job-quality-patterns";
 
@@ -514,8 +514,8 @@ export async function runDataCleanup(force = false): Promise<{
       genericRolesUnpublished + negativeAiUnpublished + nullQualityLowRelUnpublished;
 
     if (totalChanges > 0) {
-      clearMarketIntelligenceCache();
-      console.log(`[DataCleanup] MI cache cleared after ${totalChanges} total changes`);
+      clearAllStatsCaches();
+      console.log(`[DataCleanup] All stats caches cleared after ${totalChanges} total changes`);
     }
 
     console.log(`[DataCleanup] Complete:`, JSON.stringify(results));

@@ -143,9 +143,9 @@ async function requirePro(req: any, res: any, next: any) {
   });
 }
 
-import { clearMarketIntelligenceCache, getMarketIntelligenceCache, setMarketIntelligenceCache } from "./lib/mi-cache";
+import { clearMarketIntelligenceCache, getMarketIntelligenceCache, setMarketIntelligenceCache, clearDataQualityCache, getDataQualityCache, setDataQualityCache, clearAllStatsCaches } from "./lib/mi-cache";
 import { getQualityThresholds, isGenericBusinessRole } from "./workers/enrichment-worker";
-export { clearMarketIntelligenceCache } from "./lib/mi-cache";
+export { clearMarketIntelligenceCache, clearAllStatsCaches } from "./lib/mi-cache";
 
 function addAttribution(data: any, userEmail?: string) {
   return {
@@ -374,21 +374,40 @@ export async function registerRoutes(
   app.get("/api/stats", async (req, res) => {
     try {
       res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
-      const jobs = await storage.getActiveJobs();
-      const uniqueCompanies = new Set(jobs.map(j => j.company)).size;
-      const uniqueCategories = new Set(jobs.map(j => j.roleCategory).filter(Boolean)).size;
-      const entryLevelJobs = jobs.filter(j => ["Entry", "Junior", "Associate", "Intern", "Fellowship", "Mid"].includes(j.seniorityLevel || "")).length;
-      const categoryCounts: Record<string, number> = {};
-      for (const job of jobs) {
-        if (job.roleCategory) {
-          categoryCounts[job.roleCategory] = (categoryCounts[job.roleCategory] || 0) + 1;
+
+      const cachedDQ = getDataQualityCache();
+      let totalJobs: number;
+      let uniqueCompanies: number;
+      let uniqueCategories: number;
+      let entryLevelJobs: number;
+      let categoryCounts: Record<string, number> = {};
+
+      if (cachedDQ) {
+        totalJobs = cachedDQ.curation.activeInventory;
+        uniqueCompanies = cachedDQ.curation.uniqueCompanies;
+        uniqueCategories = cachedDQ.market.categoryDistribution?.length || 0;
+        entryLevelJobs = Math.round((cachedDQ.market.entryAccessiblePct / 100) * totalJobs);
+        for (const cat of cachedDQ.market.categoryDistribution || []) {
+          categoryCounts[cat.name] = cat.count;
+        }
+      } else {
+        const jobs = await storage.getActiveJobs();
+        totalJobs = jobs.length;
+        uniqueCompanies = new Set(jobs.map(j => j.company)).size;
+        uniqueCategories = new Set(jobs.map(j => j.roleCategory).filter(Boolean)).size;
+        entryLevelJobs = jobs.filter(j => ["Entry", "Junior", "Associate", "Intern", "Fellowship", "Mid"].includes(j.seniorityLevel || "")).length;
+        for (const job of jobs) {
+          if (job.roleCategory) {
+            categoryCounts[job.roleCategory] = (categoryCounts[job.roleCategory] || 0) + 1;
+          }
         }
       }
+
       const allEvents = await storage.getEvents();
       const upcomingEvents = allEvents.filter(e => new Date(e.startDate) >= new Date()).length;
       const [{ total: totalUsersCount }] = await db.select({ total: count() }).from(users);
       res.json({
-        totalJobs: jobs.length,
+        totalJobs,
         totalCompanies: uniqueCompanies,
         totalCategories: uniqueCategories,
         entryLevelJobs,
@@ -403,14 +422,12 @@ export async function registerRoutes(
     }
   });
 
-  let dataQualityCache: { data: any; cachedAt: number } | null = null;
-  const DATA_QUALITY_CACHE_TTL = 60 * 60 * 1000;
-
   app.get("/api/stats/data-quality", async (_req, res) => {
     try {
       res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
-      if (dataQualityCache && Date.now() - dataQualityCache.cachedAt < DATA_QUALITY_CACHE_TTL) {
-        return res.json(dataQualityCache.data);
+      const cachedDQ = getDataQualityCache();
+      if (cachedDQ) {
+        return res.json(cachedDQ);
       }
 
       const allJobs = await db.select({
@@ -547,7 +564,7 @@ export async function registerRoutes(
         generatedAt: new Date().toISOString(),
       };
 
-      dataQualityCache = { data: result, cachedAt: Date.now() };
+      setDataQualityCache(result);
       res.json(result);
     } catch (error) {
       console.error("Error fetching data quality stats:", error);
@@ -4081,7 +4098,7 @@ Rules:
           published++;
         }
       }
-      clearMarketIntelligenceCache();
+      clearAllStatsCaches();
       res.json({ published, skipped, total: approvedJobs.length });
     } catch (error) {
       console.error("Error bulk publishing:", error);
@@ -4258,7 +4275,7 @@ Rules:
       }
 
       const updated = await storage.publishJob(id);
-      clearMarketIntelligenceCache();
+      clearAllStatsCaches();
       res.json({ job: updated });
     } catch (error) {
       console.error("Error publishing job:", error);
@@ -4274,7 +4291,7 @@ Rules:
       const id = parseInt(req.params.id as string);
       const updated = await storage.unpublishJob(id);
       if (!updated) return res.status(404).json({ error: "Job not found" });
-      clearMarketIntelligenceCache();
+      clearAllStatsCaches();
       res.json({ job: updated });
     } catch (error) {
       console.error("Error unpublishing job:", error);
@@ -4603,7 +4620,7 @@ Rules:
         qaCheckedAt: new Date(),
       } as any);
 
-      clearMarketIntelligenceCache();
+      clearAllStatsCaches();
       res.json({
         success: true,
         job: updated,
@@ -4902,7 +4919,7 @@ Rules:
       }
 
       console.log(`[Admin] Publish All Eligible: ${published} published, ${skipped} skipped out of ${candidates.length} candidates`);
-      if (published > 0) clearMarketIntelligenceCache();
+      if (published > 0) clearAllStatsCaches();
       res.json({ published, skipped, total: candidates.length, publishedJobs: publishedJobs.slice(0, 50) });
     } catch (error: any) {
       console.error("[Admin] Publish All Eligible error:", error);
@@ -4955,7 +4972,7 @@ Rules:
       }
 
       const published = results.filter(r => r.status === 'published').length;
-      if (published > 0) clearMarketIntelligenceCache();
+      if (published > 0) clearAllStatsCaches();
       res.json({ success: true, published, total: results.length, results });
     } catch (error: any) {
       console.error("[Bulk QA Publish] Error:", error);
@@ -9442,7 +9459,7 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
       seniorityDistribution: miData.seniorityDistribution || [],
       topCompanies: miData.topCompanies || [],
       geography: miData.geography || [],
-      dataQuality: dataQualityCache?.data || null,
+      dataQuality: getDataQualityCache() || null,
     };
 
     if (!result.dataQuality) {
