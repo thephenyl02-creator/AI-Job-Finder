@@ -55,6 +55,9 @@ import {
   GraduationCap,
   ArrowUpRight,
   Wrench,
+  CheckCircle,
+  Filter,
+  Database,
 } from "lucide-react";
 import {
   TRACK_COLORS,
@@ -95,6 +98,36 @@ interface MarketIntelligenceData {
     readinessDistribution: { bucket: string; count: number }[];
     topSkillGaps: { skill: string; count: number }[];
     topCareerPaths: { path: string; count: number }[];
+  };
+}
+
+interface DataQualityData {
+  curation: {
+    totalScreened: number;
+    totalPublished: number;
+    passRate: number;
+    totalRejected: number;
+    rejectedPct: number;
+    totalInReview: number;
+    inReviewPct: number;
+    filterCategories: number;
+    uniqueCompanies: number;
+    uniqueSources: number;
+  };
+  quality: {
+    avgQualityScore: number;
+    avgRelevanceScore: number;
+    qualityTiers: { excellent: number; veryGood: number; good: number; adequate: number };
+    totalWithQualityScore: number;
+  };
+  rejectionBreakdown: { reason: string; count: number }[];
+  market: {
+    categoryDistribution: { name: string; count: number; percentage: number }[];
+    trackDistribution: { name: string; count: number; percentage: number }[];
+    entryAccessiblePct: number;
+    salaryTransparencyPct: number;
+    uniqueCountries: number;
+    uniqueRegions: number;
   };
 }
 
@@ -201,6 +234,10 @@ export default function MarketIntelligence() {
 
   const { data: transitionData } = useQuery<TransitionData>({
     queryKey: ["/api/market-intelligence/transition"],
+  });
+
+  const { data: dataQuality } = useQuery<DataQualityData>({
+    queryKey: ["/api/stats/data-quality"],
   });
 
   const { data: historicalData } = useQuery<{
@@ -469,6 +506,177 @@ export default function MarketIntelligence() {
             </div>
           </div>
         </section>
+
+        {dataQuality && (
+          <section className="border-t border-border/40" data-testid="section-data-quality">
+            <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
+              <p className="mi-section-title mb-1">Data Quality & Market Benchmarks</p>
+              <p className="mi-insight mb-4">Every listing is screened through {dataQuality.curation.filterCategories} quality filters before it reaches you</p>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="mi-panel" data-testid="panel-curation">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-6 h-6 rounded flex items-center justify-center bg-primary/10">
+                      <Filter className="h-3.5 w-3.5 text-primary" />
+                    </div>
+                    <span className="text-sm font-semibold text-foreground">Curation Pipeline</span>
+                  </div>
+                  <div className="mb-3">
+                    <span className="mi-metric">{dataQuality.curation.totalPublished.toLocaleString()}</span>
+                    <span className="text-[11px] text-muted-foreground ml-1">roles published from {dataQuality.curation.totalScreened.toLocaleString()}+ screened</span>
+                  </div>
+                  <div className="mb-3">
+                    <div className="flex justify-between text-[10px] text-muted-foreground mb-1">
+                      <span>Published ({dataQuality.curation.passRate}%)</span>
+                      <span>Rejected ({dataQuality.curation.rejectedPct}%)</span>
+                    </div>
+                    <div className="h-2 rounded-full overflow-hidden flex bg-muted" data-testid="bar-pipeline">
+                      <div
+                        className="h-full bg-emerald-500 rounded-l-full"
+                        style={{ width: `${dataQuality.curation.passRate}%` }}
+                      />
+                      <div
+                        className="h-full bg-red-400/70"
+                        style={{ width: `${dataQuality.curation.rejectedPct}%` }}
+                      />
+                      <div
+                        className="h-full bg-amber-400/70 rounded-r-full"
+                        style={{ width: `${dataQuality.curation.inReviewPct}%` }}
+                      />
+                    </div>
+                    <div className="flex justify-end text-[10px] text-muted-foreground mt-0.5">
+                      <span>In Review ({dataQuality.curation.inReviewPct}%)</span>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div data-testid="stat-companies">
+                      <span className="mi-label">Companies</span>
+                      <p className="mi-metric-sm">{dataQuality.curation.uniqueCompanies}</p>
+                    </div>
+                    <div data-testid="stat-sources">
+                      <span className="mi-label">Sources</span>
+                      <p className="mi-metric-sm">{dataQuality.curation.uniqueSources}</p>
+                    </div>
+                    <div data-testid="stat-filters">
+                      <span className="mi-label">Filters</span>
+                      <p className="mi-metric-sm">{dataQuality.curation.filterCategories}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mi-panel" data-testid="panel-quality">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-6 h-6 rounded flex items-center justify-center bg-emerald-500/10">
+                      <CheckCircle className="h-3.5 w-3.5 text-emerald-600" />
+                    </div>
+                    <span className="text-sm font-semibold text-foreground">Quality Assurance</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 mb-3">
+                    <div data-testid="stat-quality-score">
+                      <span className="mi-label">Quality Score</span>
+                      <p className="mi-metric">{dataQuality.quality.avgQualityScore}<span className="text-xs text-muted-foreground">/100</span></p>
+                    </div>
+                    <div data-testid="stat-relevance-score">
+                      <span className="mi-label">Relevance</span>
+                      <p className="mi-metric">{dataQuality.quality.avgRelevanceScore}<span className="text-xs text-muted-foreground">/10</span></p>
+                    </div>
+                  </div>
+                  <div className="mb-2">
+                    <span className="mi-label mb-1 block">Quality Distribution</span>
+                    {(() => {
+                      const total = dataQuality.quality.totalWithQualityScore || 1;
+                      const tiers = [
+                        { label: "Excellent", count: dataQuality.quality.qualityTiers.excellent, color: "bg-emerald-500" },
+                        { label: "Very Good", count: dataQuality.quality.qualityTiers.veryGood, color: "bg-emerald-400" },
+                        { label: "Good", count: dataQuality.quality.qualityTiers.good, color: "bg-amber-400" },
+                        { label: "Adequate", count: dataQuality.quality.qualityTiers.adequate, color: "bg-slate-400" },
+                      ];
+                      return (
+                        <>
+                          <div className="h-2 rounded-full overflow-hidden flex bg-muted" data-testid="bar-quality-tiers">
+                            {tiers.map(t => (
+                              <div key={t.label} className={`h-full ${t.color}`} style={{ width: `${Math.round((t.count / total) * 100)}%` }} />
+                            ))}
+                          </div>
+                          <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5">
+                            {tiers.filter(t => t.count > 0).map(t => (
+                              <div key={t.label} className="flex items-center gap-1">
+                                <div className={`w-2 h-2 rounded-sm ${t.color}`} />
+                                <span className="text-[10px] text-muted-foreground">{t.label} ({Math.round((t.count / total) * 100)}%)</span>
+                              </div>
+                            ))}
+                          </div>
+                        </>
+                      );
+                    })()}
+                  </div>
+                </div>
+
+                <div className="mi-panel" data-testid="panel-benchmarks">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-6 h-6 rounded flex items-center justify-center bg-blue-500/10">
+                      <Database className="h-3.5 w-3.5 text-blue-600" />
+                    </div>
+                    <span className="text-sm font-semibold text-foreground">Market Benchmarks</span>
+                  </div>
+                  <div className="mb-3">
+                    <span className="mi-label mb-1.5 block">Role Distribution by Track</span>
+                    <div className="space-y-1.5">
+                      {dataQuality.market.trackDistribution.map((t) => {
+                        const trackColors: Record<string, string> = {
+                          "Lawyer-Led": "bg-blue-500",
+                          "Technical": "bg-violet-500",
+                          "Ecosystem": "bg-teal-500",
+                        };
+                        return (
+                          <div key={t.name} data-testid={`bar-track-${t.name.toLowerCase().replace(/\s+/g, "-")}`}>
+                            <div className="flex justify-between text-[10px] text-muted-foreground mb-0.5">
+                              <span>{t.name}</span>
+                              <span>{t.percentage}% ({t.count})</span>
+                            </div>
+                            <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                              <div className={`h-full rounded-full ${trackColors[t.name] || "bg-primary"}`} style={{ width: `${t.percentage}%` }} />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div data-testid="stat-entry-accessible">
+                      <span className="mi-label">Entry Accessible</span>
+                      <p className="mi-metric-sm">{dataQuality.market.entryAccessiblePct}%</p>
+                      <span className="text-[10px] text-muted-foreground">entry/junior roles</span>
+                    </div>
+                    <div data-testid="stat-geographic-reach">
+                      <span className="mi-label">Geographic Reach</span>
+                      <p className="mi-metric-sm">{dataQuality.market.uniqueCountries}</p>
+                      <span className="text-[10px] text-muted-foreground">countries</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {dataQuality.rejectionBreakdown.length > 0 && (
+                <div className="mt-3 mi-panel" data-testid="panel-rejection-breakdown">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-xs font-medium text-foreground">Why Jobs Don't Make the Cut</span>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
+                    {dataQuality.rejectionBreakdown.map((r) => (
+                      <div key={r.reason} className="text-center" data-testid={`rejection-${r.reason.toLowerCase().replace(/\s+/g, "-")}`}>
+                        <p className="text-sm font-semibold text-foreground">{r.count.toLocaleString()}</p>
+                        <span className="text-[10px] text-muted-foreground leading-tight block">{r.reason}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <p className="text-[10px] text-muted-foreground/50 select-none text-right mt-2">Updated {new Date().toLocaleDateString("en-US", { month: "short", year: "numeric" })}</p>
+            </div>
+          </section>
+        )}
 
         {!canAccessFull && (
           <section className="max-w-6xl mx-auto px-4 sm:px-6 py-4" data-testid="section-mi-progate">

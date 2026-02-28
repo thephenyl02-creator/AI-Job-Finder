@@ -94,7 +94,8 @@ Legal Tech Careers is a career intelligence platform designed for legal professi
 - **Career Guidance**: Market insights dashboard, conversational assistant, and personalized path recommendations.
 - **Career Diagnostic Engine**: Offers skill clustering, readiness scoring, transition planning, and career path visualizations.
 - **Career Fit Quiz**: Recommends career paths based on a short quiz.
-- **Market Intelligence Page**: A Bloomberg-style career intelligence terminal with data-dense panels on market pulse, skill bridging, entry corridors, skills in demand, salary trends, work mode, AI intensity, seniority, companies, geography, and transition-friendly employers.
+- **Market Intelligence Page**: A Bloomberg-style career intelligence terminal with data-dense panels on market pulse, data quality & market benchmarks, skill bridging, entry corridors, skills in demand, salary trends, work mode, AI intensity, seniority, companies, geography, and transition-friendly employers.
+- **Data Quality & Market Benchmarks Section**: Visible to all users (before Pro gate). Shows curation pipeline stats (screened/published/rejected), quality assurance scores, rejection breakdown, and market benchmarks (track distribution, entry accessibility, geographic reach). Powered by `GET /api/stats/data-quality` (cached 1hr).
 - **Transition Intelligence API**: Computes lawyer-specific career data including track summaries, entry corridors, skill bridge, and regional intelligence.
 - **Pro Feature Gates**: Backend and frontend checks to gate premium features for Pro users.
 

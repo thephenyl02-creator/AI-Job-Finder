@@ -402,6 +402,155 @@ export async function registerRoutes(
     }
   });
 
+  let dataQualityCache: { data: any; cachedAt: number } | null = null;
+  const DATA_QUALITY_CACHE_TTL = 60 * 60 * 1000;
+
+  app.get("/api/stats/data-quality", async (_req, res) => {
+    try {
+      if (dataQualityCache && Date.now() - dataQualityCache.cachedAt < DATA_QUALITY_CACHE_TTL) {
+        return res.json(dataQualityCache.data);
+      }
+
+      const allJobs = await db.select({
+        id: jobs.id,
+        isPublished: jobs.isPublished,
+        isActive: jobs.isActive,
+        jobStatus: jobs.jobStatus,
+        pipelineStatus: jobs.pipelineStatus,
+        qualityScore: jobs.qualityScore,
+        legalRelevanceScore: jobs.legalRelevanceScore,
+        reviewReasonCode: jobs.reviewReasonCode,
+        roleCategory: jobs.roleCategory,
+        seniorityLevel: jobs.seniorityLevel,
+        careerTrack: jobs.careerTrack,
+        countryCode: jobs.countryCode,
+        locationRegion: jobs.locationRegion,
+        company: jobs.company,
+        source: jobs.source,
+        salaryMin: jobs.salaryMin,
+      }).from(jobs);
+
+      const published = allJobs.filter(j => j.isPublished && j.isActive);
+      const rejected = allJobs.filter(j => j.pipelineStatus === 'rejected');
+      const inReview = allJobs.filter(j => j.pipelineStatus === 'review');
+
+      const qualityScores = published.filter(j => j.qualityScore !== null).map(j => j.qualityScore as number);
+      const relevanceScores = published.filter(j => j.legalRelevanceScore !== null).map(j => j.legalRelevanceScore as number);
+      const avgQuality = qualityScores.length ? Math.round(qualityScores.reduce((a, b) => a + b, 0) / qualityScores.length * 10) / 10 : 0;
+      const avgRelevance = relevanceScores.length ? Math.round(relevanceScores.reduce((a, b) => a + b, 0) / relevanceScores.length * 10) / 10 : 0;
+
+      const qualityTiers = {
+        excellent: qualityScores.filter(s => s >= 90).length,
+        veryGood: qualityScores.filter(s => s >= 80 && s < 90).length,
+        good: qualityScores.filter(s => s >= 70 && s < 80).length,
+        adequate: qualityScores.filter(s => s < 70).length,
+      };
+
+      const reasonCounts: Record<string, number> = {};
+      for (const j of allJobs) {
+        if (j.reviewReasonCode) {
+          reasonCounts[j.reviewReasonCode] = (reasonCounts[j.reviewReasonCode] || 0) + 1;
+        }
+      }
+      const REASON_LABELS: Record<string, string> = {
+        LOW_RELEVANCE: "Low Legal Tech Relevance",
+        IRRELEVANT_TITLE: "Non-Legal-Tech Title",
+        AUDIT_LOW_RELEVANCE: "Failed Quality Audit",
+        GENERIC_BUSINESS_ROLE: "Generic Business Role",
+        AUDIT_TITLE_REJECT: "Title Screened Out",
+        GARBAGE_DESCRIPTION: "Poor Description Quality",
+        LOW_RELEVANCE_SCORE: "Below Relevance Threshold",
+        AUDIT_COMPANY_REJECT: "Non-Legal-Tech Company",
+        AI_FLAGGED_IRRELEVANT: "Flagged as Irrelevant",
+        NEAR_DUPLICATE: "Near Duplicate",
+      };
+      const rejectionBreakdown = Object.entries(reasonCounts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 6)
+        .map(([code, count]) => ({
+          reason: REASON_LABELS[code] || code.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+          count,
+        }));
+
+      const categoryDistribution: Record<string, number> = {};
+      for (const j of published) {
+        if (j.roleCategory) {
+          categoryDistribution[j.roleCategory] = (categoryDistribution[j.roleCategory] || 0) + 1;
+        }
+      }
+
+      const trackDistribution: Record<string, number> = {};
+      for (const j of published) {
+        if (j.careerTrack) {
+          trackDistribution[j.careerTrack] = (trackDistribution[j.careerTrack] || 0) + 1;
+        }
+      }
+
+      const uniqueCompanies = new Set(published.map(j => j.company)).size;
+      const uniqueSources = new Set(published.map(j => j.source).filter(Boolean)).size;
+      const uniqueCountries = new Set(published.map(j => j.countryCode).filter(Boolean)).size;
+      const uniqueRegions = new Set(published.map(j => j.locationRegion).filter(Boolean)).size;
+
+      const entryLevel = published.filter(j => ['Entry', 'Junior', 'Associate', 'Intern', 'Fellowship'].includes(j.seniorityLevel || '')).length;
+      const entryAccessiblePct = published.length ? Math.round((entryLevel / published.length) * 100) : 0;
+      const withSalary = published.filter(j => j.salaryMin !== null).length;
+      const salaryTransparencyPct = published.length ? Math.round((withSalary / published.length) * 100) : 0;
+
+      const relevanceDist: Record<number, number> = {};
+      for (const s of relevanceScores) {
+        relevanceDist[s] = (relevanceDist[s] || 0) + 1;
+      }
+
+      const total = allJobs.length || 1;
+      const publishedPct = Math.round((published.length / total) * 100);
+      const rejectedPct = Math.round((rejected.length / total) * 100);
+      const inReviewPct = Math.round((inReview.length / total) * 100);
+      const pubLen = published.length || 1;
+
+      const result = {
+        curation: {
+          totalScreened: allJobs.length,
+          totalPublished: published.length,
+          passRate: publishedPct,
+          totalRejected: rejected.length,
+          rejectedPct,
+          totalInReview: inReview.length,
+          inReviewPct,
+          filterCategories: Object.keys(reasonCounts).length,
+          uniqueCompanies,
+          uniqueSources,
+        },
+        quality: {
+          avgQualityScore: avgQuality,
+          avgRelevanceScore: avgRelevance,
+          qualityTiers,
+          relevanceDistribution: relevanceDist,
+          totalWithQualityScore: qualityScores.length,
+        },
+        rejectionBreakdown,
+        market: {
+          categoryDistribution: Object.entries(categoryDistribution)
+            .sort((a, b) => b[1] - a[1])
+            .map(([name, count]) => ({ name, count, percentage: Math.round((count / pubLen) * 100) })),
+          trackDistribution: Object.entries(trackDistribution)
+            .sort((a, b) => b[1] - a[1])
+            .map(([name, count]) => ({ name, count, percentage: Math.round((count / pubLen) * 100) })),
+          entryAccessiblePct,
+          salaryTransparencyPct,
+          uniqueCountries,
+          uniqueRegions,
+        },
+        generatedAt: new Date().toISOString(),
+      };
+
+      dataQualityCache = { data: result, cachedAt: Date.now() };
+      res.json(result);
+    } catch (error) {
+      console.error("Error fetching data quality stats:", error);
+      res.status(500).json({ error: "Failed to fetch data quality stats" });
+    }
+  });
+
   app.get("/api/stats/social-proof", async (_req, res) => {
     try {
       const [{ total: totalUsersCount }] = await db.select({ total: count() }).from(users);
