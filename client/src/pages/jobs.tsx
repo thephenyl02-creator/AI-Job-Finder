@@ -754,7 +754,7 @@ export default function Jobs() {
               Find your next role in legal tech
             </h1>
             <p className="text-sm text-muted-foreground mb-1" data-testid="text-page-subtitle">
-              {totalJobCount} curated roles across legal technology
+              {statsData?.totalJobs ?? totalJobCount} curated roles across legal technology
             </p>
             {refreshMeta && (
               <p className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground/70 mb-5" data-testid="text-freshness-header">

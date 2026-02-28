@@ -1083,6 +1083,14 @@ export async function registerRoutes(
       }
 
       const result = await storage.getPublishedJobsPaginated(page, limit, filters);
+      const hasFilters = filters.category || filters.location || filters.locationType || filters.search || filters.seniority || filters.region || filters.country || (filters.workMode && filters.workMode !== 'all') || filters.track;
+      if (!hasFilters) {
+        const jobsCanonical = getCanonicalStats();
+        if (jobsCanonical) {
+          result.total = jobsCanonical.totalJobs;
+          result.totalPages = Math.ceil(result.total / limit);
+        }
+      }
       res.json(result);
     } catch (error) {
       console.error("Error fetching jobs:", error);
