@@ -143,7 +143,7 @@ async function requirePro(req: any, res: any, next: any) {
   });
 }
 
-import { clearMarketIntelligenceCache, getMarketIntelligenceCache, setMarketIntelligenceCache, clearDataQualityCache, getDataQualityCache, setDataQualityCache, clearAllStatsCaches } from "./lib/mi-cache";
+import { clearMarketIntelligenceCache, getMarketIntelligenceCache, setMarketIntelligenceCache, clearDataQualityCache, getDataQualityCache, setDataQualityCache, clearAllStatsCaches, getCanonicalStats, setCanonicalStats } from "./lib/mi-cache";
 import { getQualityThresholds, isGenericBusinessRole } from "./workers/enrichment-worker";
 export { clearMarketIntelligenceCache, clearAllStatsCaches } from "./lib/mi-cache";
 
@@ -376,6 +376,7 @@ export async function registerRoutes(
       res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
 
       const cachedDQ = getDataQualityCache();
+      const statsCanonical = getCanonicalStats();
       let totalJobs: number;
       let uniqueCompanies: number;
       let uniqueCategories: number;
@@ -383,8 +384,8 @@ export async function registerRoutes(
       let categoryCounts: Record<string, number> = {};
 
       if (cachedDQ) {
-        totalJobs = cachedDQ.curation.activeInventory;
-        uniqueCompanies = cachedDQ.curation.uniqueCompanies;
+        totalJobs = statsCanonical ? statsCanonical.totalJobs : cachedDQ.curation.activeInventory;
+        uniqueCompanies = statsCanonical ? statsCanonical.totalCompanies : cachedDQ.curation.uniqueCompanies;
         uniqueCategories = cachedDQ.market.categoryDistribution?.length || 0;
         entryLevelJobs = Math.round((cachedDQ.market.entryAccessiblePct / 100) * totalJobs);
         for (const cat of cachedDQ.market.categoryDistribution || []) {
@@ -392,14 +393,17 @@ export async function registerRoutes(
         }
       } else {
         const jobs = await storage.getActiveJobs();
-        totalJobs = jobs.length;
-        uniqueCompanies = new Set(jobs.map(j => j.company)).size;
+        totalJobs = statsCanonical ? statsCanonical.totalJobs : jobs.length;
+        uniqueCompanies = statsCanonical ? statsCanonical.totalCompanies : new Set(jobs.map(j => j.company)).size;
         uniqueCategories = new Set(jobs.map(j => j.roleCategory).filter(Boolean)).size;
         entryLevelJobs = jobs.filter(j => ["Entry", "Junior", "Associate", "Intern", "Fellowship", "Mid"].includes(j.seniorityLevel || "")).length;
         for (const job of jobs) {
           if (job.roleCategory) {
             categoryCounts[job.roleCategory] = (categoryCounts[job.roleCategory] || 0) + 1;
           }
+        }
+        if (!statsCanonical) {
+          setCanonicalStats(jobs.length, new Set(jobs.map(j => j.company)).size, new Set(jobs.map(j => j.countryCode).filter(c => c && c !== 'WW' && c !== 'UN')).size);
         }
       }
 
@@ -506,10 +510,20 @@ export async function registerRoutes(
         }
       }
 
-      const uniqueCompanies = new Set(activeInventory.map(j => j.company)).size;
+      let uniqueCompanies: number;
+      let uniqueCountries: number;
       const uniqueSources = new Set(activeInventory.map(j => j.source).filter(Boolean)).size;
-      const uniqueCountries = new Set(activeInventory.map(j => j.countryCode).filter(c => c && c !== 'WW' && c !== 'UN')).size;
       const uniqueRegions = new Set(activeInventory.map(j => j.locationRegion).filter(Boolean)).size;
+
+      const existingCanonical = getCanonicalStats();
+      if (existingCanonical) {
+        uniqueCompanies = existingCanonical.totalCompanies;
+        uniqueCountries = existingCanonical.totalCountries;
+      } else {
+        uniqueCompanies = new Set(activeInventory.map(j => j.company)).size;
+        uniqueCountries = new Set(activeInventory.map(j => j.countryCode).filter(c => c && c !== 'WW' && c !== 'UN')).size;
+        setCanonicalStats(activeInventory.length, uniqueCompanies, uniqueCountries);
+      }
 
       const entryLevel = activeInventory.filter(j => ['Entry', 'Junior', 'Associate', 'Intern', 'Fellowship', 'Mid'].includes(j.seniorityLevel || '')).length;
       const entryAccessiblePct = activeInventory.length ? Math.round((entryLevel / activeInventory.length) * 100) : 0;
@@ -525,7 +539,8 @@ export async function registerRoutes(
       const publishedPct = Math.round((pipelinePassed.length / total) * 100);
       const rejectedPct = Math.round((rejected.length / total) * 100);
       const inReviewPct = Math.round((inReview.length / total) * 100);
-      const activeLen = activeInventory.length || 1;
+      const canonicalCount = existingCanonical ? existingCanonical.totalJobs : activeInventory.length;
+      const activeLen = canonicalCount || 1;
 
       const result = {
         curation: {
@@ -539,7 +554,7 @@ export async function registerRoutes(
           filterCategories: 17,
           uniqueCompanies,
           uniqueSources,
-          activeInventory: activeInventory.length,
+          activeInventory: canonicalCount,
         },
         quality: {
           avgQualityScore: avgQuality,
@@ -617,16 +632,23 @@ export async function registerRoutes(
       const [{ total: totalUsersCount }] = await db.select({ total: count() }).from(users);
       const [{ total: diagnosticsCount }] = await db.select({ total: count() }).from(diagnosticReports);
 
-      const cachedDQ = getDataQualityCache();
+      const spCanonical = getCanonicalStats();
       let jobsCurated: number;
       let companiesTracked: number;
-      if (cachedDQ) {
-        jobsCurated = cachedDQ.curation.activeInventory;
-        companiesTracked = cachedDQ.curation.uniqueCompanies;
+      if (spCanonical) {
+        jobsCurated = spCanonical.totalJobs;
+        companiesTracked = spCanonical.totalCompanies;
       } else {
-        const activeJobs = await storage.getActiveJobs();
-        jobsCurated = activeJobs.length;
-        companiesTracked = new Set(activeJobs.map(j => j.company)).size;
+        const cachedDQ = getDataQualityCache();
+        if (cachedDQ) {
+          jobsCurated = cachedDQ.curation.activeInventory;
+          companiesTracked = cachedDQ.curation.uniqueCompanies;
+        } else {
+          const activeJobs = await storage.getActiveJobs();
+          jobsCurated = activeJobs.length;
+          companiesTracked = new Set(activeJobs.map(j => j.company)).size;
+          setCanonicalStats(jobsCurated, companiesTracked, new Set(activeJobs.map(j => j.countryCode).filter(c => c && c !== 'WW' && c !== 'UN')).size);
+        }
       }
 
       res.json({
@@ -704,9 +726,10 @@ export async function registerRoutes(
 
       const [{ total: totalScreenedCount }] = await db.select({ total: count() }).from(jobs);
 
+      const histCanonical = getCanonicalStats();
       const cachedDQ = getDataQualityCache();
-      const totalTracked = cachedDQ ? cachedDQ.curation.activeInventory : allJobs.length;
-      const totalActive = cachedDQ ? cachedDQ.curation.activeInventory : allJobs.length;
+      const totalTracked = histCanonical ? histCanonical.totalJobs : (cachedDQ ? cachedDQ.curation.activeInventory : allJobs.length);
+      const totalActive = totalTracked;
       const totalArchived = 0;
 
       const monthKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
@@ -872,9 +895,14 @@ export async function registerRoutes(
         }
       }
       const pulse = await storage.getMarketPulse(topCategory);
-      const cachedDQ = getDataQualityCache();
-      if (cachedDQ) {
-        pulse.totalJobs = cachedDQ.curation.activeInventory;
+      const pulseCanonical = getCanonicalStats();
+      if (pulseCanonical) {
+        pulse.totalJobs = pulseCanonical.totalJobs;
+      } else {
+        const cachedDQ = getDataQualityCache();
+        if (cachedDQ) {
+          pulse.totalJobs = cachedDQ.curation.activeInventory;
+        }
       }
       res.json(pulse);
     } catch (error) {
@@ -1149,11 +1177,12 @@ export async function registerRoutes(
         .slice(0, 5)
         .map(([name, count]) => ({ name, count }));
 
-      const cachedDQ = getDataQualityCache();
-      const totalJobsCount = cachedDQ ? cachedDQ.curation.activeInventory : allMatchingJobs.length;
+      const densityCanonical = getCanonicalStats();
+      const totalJobsCount = densityCanonical ? densityCanonical.totalJobs : allMatchingJobs.length;
+      const countriesCountVal = densityCanonical ? densityCanonical.totalCountries : countriesData.filter(c => c.countryCode !== 'WW' && c.countryCode !== 'UN').length;
       res.json({
         totalJobs: totalJobsCount,
-        countriesCount: countriesData.filter(c => c.countryCode !== 'WW' && c.countryCode !== 'UN').length,
+        countriesCount: countriesCountVal,
         remoteShare: allMatchingJobs.length > 0 ? Math.round((remoteCount / allMatchingJobs.length) * 100) : 0,
         byCountry: countriesData,
         topCategories,
@@ -8817,12 +8846,12 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
         else workModeCounts.onsite++;
       }
 
-      const cachedDQ = getDataQualityCache();
+      const demandCanonical = getCanonicalStats();
       res.json({
         topSkills,
         categoryCounts: Object.entries(categoryCounts).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count),
         workModeCounts,
-        totalJobs: cachedDQ ? cachedDQ.curation.activeInventory : allJobs.length,
+        totalJobs: demandCanonical ? demandCanonical.totalJobs : allJobs.length,
       });
     } catch (error: any) {
       console.error("Error computing market demand:", error);
@@ -8859,9 +8888,16 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
       }
 
       const allJobs = await storage.getPublishedJobs();
-      const totalJobs = allJobs.length;
+      const miCanonical = getCanonicalStats();
+      let totalJobs: number;
       const companies = new Set(allJobs.map(j => j.company));
       const countries = new Set(allJobs.map(j => j.countryCode).filter(c => c && c !== 'WW' && c !== 'UN'));
+      if (miCanonical) {
+        totalJobs = miCanonical.totalJobs;
+      } else {
+        totalJobs = allJobs.length;
+        setCanonicalStats(allJobs.length, companies.size, countries.size);
+      }
       const now = new Date();
       const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
       const newThisWeek = allJobs.filter(j => j.firstSeenAt && new Date(j.firstSeenAt) > oneWeekAgo);
@@ -9034,9 +9070,9 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
       const result = {
         overview: {
           totalJobs,
-          totalCompanies: companies.size,
-          countriesCount: countries.size,
-          remotePercentage: totalJobs ? Math.round((remoteJobs.length / totalJobs) * 100) : 0,
+          totalCompanies: miCanonical ? miCanonical.totalCompanies : companies.size,
+          countriesCount: miCanonical ? miCanonical.totalCountries : countries.size,
+          remotePercentage: allJobs.length ? Math.round((remoteJobs.length / allJobs.length) * 100) : 0,
           newJobsThisWeek: newThisWeek.length,
           avgSalaryMin: jobsWithSalMin.length ? Math.round(jobsWithSalMin.reduce((s, j) => s + j.salaryMin!, 0) / jobsWithSalMin.length) : null,
           avgSalaryMax: jobsWithSalMax.length ? Math.round(jobsWithSalMax.reduce((s, j) => s + j.salaryMax!, 0) / jobsWithSalMax.length) : null,

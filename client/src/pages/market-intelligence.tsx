@@ -529,7 +529,7 @@ export default function MarketIntelligence() {
                     <span className="text-sm font-semibold text-foreground">Curation Pipeline</span>
                   </div>
                   <div className="mb-3">
-                    <span className="mi-metric">{dataQuality.curation.activeInventory.toLocaleString()}</span>
+                    <span className="mi-metric">{(overview?.totalJobs ?? dataQuality.curation.activeInventory).toLocaleString()}</span>
                     <span className="text-[11px] text-muted-foreground ml-1">verified roles from {dataQuality.curation.totalScreened.toLocaleString()}+ reviewed</span>
                   </div>
                   <div className="mb-3">
@@ -558,7 +558,7 @@ export default function MarketIntelligence() {
                   <div className="grid grid-cols-3 gap-2">
                     <div data-testid="stat-companies">
                       <span className="mi-label">Companies</span>
-                      <p className="mi-metric-sm">{dataQuality.curation.uniqueCompanies}</p>
+                      <p className="mi-metric-sm">{overview?.totalCompanies ?? dataQuality.curation.uniqueCompanies}</p>
                     </div>
                     <div data-testid="stat-sources">
                       <span className="mi-label">Job Sources</span>
@@ -659,7 +659,7 @@ export default function MarketIntelligence() {
                     </div>
                     <div data-testid="stat-geographic-reach">
                       <span className="mi-label">Geographic Reach</span>
-                      <p className="mi-metric-sm">{dataQuality.market.uniqueCountries}</p>
+                      <p className="mi-metric-sm">{overview?.countriesCount ?? dataQuality.market.uniqueCountries}</p>
                       <span className="text-[10px] text-muted-foreground">countries</span>
                     </div>
                   </div>
