@@ -2,7 +2,7 @@
 
 ## Overview
 
-Legal Tech Careers is a career intelligence platform designed for legal professionals transitioning into legal technology. It serves as a comprehensive hub for diagnostic career guidance, leveraging resume data for market analysis, and offering specialized market intelligence. The platform aims to be a personalized career command center, helping users navigate and succeed in the legal tech industry. Its core vision is to be the leading resource for career advancement and market understanding in legal technology.
+Legal Tech Careers is a career intelligence platform designed for legal professionals transitioning into legal technology. It provides diagnostic career guidance, leverages resume data for market analysis, and offers specialized market intelligence. The platform aims to be a personalized career command center, helping users navigate and succeed in the legal tech industry. Its core vision is to be the leading resource for career advancement and market understanding in legal technology.
 
 ## User Preferences
 
@@ -18,7 +18,7 @@ Legal Tech Careers is a career intelligence platform designed for legal professi
 - **Styling**: Tailwind CSS with shadcn/ui components (New York style)
 - **Theme**: Light/dark mode with a deep navy/slate palette
 - **Typography**: Playfair Display (serif headings), DM Sans (body), JetBrains Mono (code)
-- **Mobile**: Fully optimized for 375px baseline. All pages use `sm:` (640px+) Tailwind prefix for desktop upgrades. Touch targets min 44px. No horizontal overflow on any page.
+- **Mobile**: Fully optimized for 375px baseline.
 
 ### Backend
 - **Runtime**: Node.js with Express
@@ -26,18 +26,16 @@ Legal Tech Careers is a career intelligence platform designed for legal professi
 - **API Design**: RESTful
 
 ### Data Storage
-- **Database**: PostgreSQL (dev and production have **separate database instances**)
+- **Database**: PostgreSQL (separate instances for dev and production)
 - **ORM**: Drizzle ORM
-- **Dev vs Prod**: Replit deployments use a separate PostgreSQL instance. SQL-only fixes must be applied via code (startup scripts or admin API endpoints) to affect both environments.
 
 ### Authentication
 - **Methods**: Custom email/password and Google OAuth 2.0.
 - **Session Management**: PostgreSQL-backed sessions.
-- **Unified Auth Response**: `/api/auth/user` endpoint provides user state including `isAdmin`, `subscriptionTier`, and `isPro`.
 
 ### AI Integration
-- **Capabilities**: Powers Guided Search, Job Categorization, Resume Parsing, Resume-Job Comparison, Conversational Assistant, ATS Resume Review, AI-assisted resume builder, Market Insights Q&A, Career Diagnostic Engine (skill clustering, readiness scoring, transition planning), and per-job fit scoring.
-- **Skill Extraction**: AI categorizes `hardSkills` (specific tools/platforms) and `softSkills` (specific professional applications).
+- **Capabilities**: Powers Guided Search, Job Categorization, Resume Parsing, Resume-Job Comparison, Conversational Assistant, ATS Resume Review, AI-assisted resume builder, Market Insights Q&A, Career Diagnostic Engine, and per-job fit scoring.
+- **Skill Extraction**: AI categorizes `hardSkills` and `softSkills`.
 - **Categorization Boundaries**: Explicit rules prevent over-bucketing into Legal Operations and Legal Consulting.
 
 ### Payments & Subscription
@@ -47,82 +45,70 @@ Legal Tech Careers is a career intelligence platform designed for legal professi
 ### Role Track Classification
 - **System**: Three role tracks (Lawyer-Led / Technical / Ecosystem) classify every job.
 - **Mapping**: 13 job categories map to these 3 tracks.
-- **UI**: Category badges are color-coded by track. Track filter pills on jobs page.
 
 ### Analytics & Tracking
 - **Authenticated**: Tracks user activities like page views, searches, saves, exports, and upgrades.
-- **Anonymous**: Tracks unauthenticated events such as landing page views and quiz completions.
+- **Anonymous**: Tracks unauthenticated events.
 
 ### Job Archiving & Historical Data
-- **Permanent Archive**: Once archived (`jobStatus='archived'`), jobs can never be resurrected. Scrapers only update `lastScrapedAt`/`lastSeenAt` on archived jobs — never `isActive`, `isPublished`, or `pipelineStatus`.
-- **Canonical Active-Inventory Filter**: ALL endpoints showing job counts must use `isPublished=true, isActive=true, pipelineStatus='ready', jobStatus='open'`. This includes `/api/stats`, `/api/stats/data-quality`, `/api/market-intelligence`, `/api/meta/refresh`, `/api/stats/historical`, `/api/job-density`, `/api/stats/social-proof`, and PDF/DOCX report queries.
-- **Country Counts**: Always exclude `WW` (Worldwide) and `UN` (Unknown) codes — only count real geographic countries.
-- **Cache-Control**: All stats/analytics endpoints set `Cache-Control: no-cache, no-store, must-revalidate` to prevent stale 304 responses during audit worker runs.
-- **Historical API**: `GET /api/stats/historical` returns `totalTracked` (canonical filter count), `totalEverScreened` (all-time DB count), and monthly trend data. Frontend uses `totalTracked`.
-- **filterCategories**: Static value (17) representing pipeline filter category count — not dynamically computed from rejection reason codes.
-- **MI Reports**: Report generation queries also filter with all 4 canonical conditions — no rejected/archived data leaks into reports.
-- **Market Evolution UI**: Displays job volume and skill trajectory over time using Recharts.
+- **Permanent Archive**: Archived jobs (`jobStatus='archived'`) cannot be resurrected.
+- **Canonical Active-Inventory Filter**: All endpoints displaying active job counts use `isPublished=true, isActive=true, pipelineStatus='ready', jobStatus='open'`.
+- **Data Quality Dual Filters**: Uses `pipelinePassed` for curation stats and `activeInventory` for market benchmarks.
+- **Country Counts**: Excludes `WW` and `UN` codes.
+- **Cache-Control**: Stats/analytics endpoints set `Cache-Control: no-cache, no-store, must-revalidate`.
 
 ### Skill Normalization
-- **SKILLS_SYNONYM_MAP**: Normalizes skill variants for consistent data analysis.
-- **Backfill**: Populates `hard_skills` and `soft_skills` arrays via AI re-categorization for enhanced Market Intelligence.
+- **SKILLS_SYNONYM_MAP**: Normalizes skill variants.
+- **Backfill**: Populates `hard_skills` and `soft_skills` via AI re-categorization.
 
 ### Job Curation Pipeline
-- **Process**: A two-layer pipeline (ingestion → AI enrichment → trust gate → published inventory) ensures quality, deduplication, and link validation.
-- **Company-Type-Aware Quality Gate**: Different thresholds based on company classification:
-  - `legal-tech-startup` (startup/alsp/tech-legal types): minRelevance=6, qualityThreshold=35 — most roles are relevant
-  - `law-firm` (biglaw type): minRelevance=8, qualityThreshold=40 — only legal tech/innovation roles
-  - `general-tech` (company type): minRelevance=7, qualityThreshold=40 — only legal-product-connected roles
-- **Back-Office Title Filter**: Titles like "Procurement", "Payroll", "Receptionist", "SEM Specialist", "People Operations", "Communications Lead", "Social Media", "Creative Director" go to review queue regardless of company, unless they have legal title signals.
-- **Generic Business Role Filter**: 80+ patterns covering Account Executives, BDRs/SDRs, Customer Success, Sales Engineers, Product Marketing, GTM roles, Revenue Operations, Financial Analysts, Data Scientists, Business Intelligence Analysts, Infrastructure roles, Cybersecurity, Chief of Staff, Pre-Sales, Pricing Analysts, Program Managers, and more. These require relevance ≥ 8 to auto-publish — otherwise queued for review.
-- **AI Negative Signal Filter**: 16 phrases including "does not involve technology", "not suitable for lawyers transitioning", "no direct connection to legal", "general business role", "standard business function". Jobs with these AI signals go to review queue.
-- **Audit Worker Generic Role Check**: Live audit (every 4 hours) catches and unpublishes generic business roles that slipped through at relevance < 8. Admin-approved exemption does NOT apply to generic business roles.
-- **HTML Entity Decoding**: `decodeHtmlEntities()` runs on job titles and company names during enrichment to prevent `&amp;` artifacts.
-- **Uniform Publishing Gate**: All paths to `isPublished=true` (enrichment, recovery, publish-all-eligible, admin PATCH, bulk QA) enforce company-type-aware thresholds via `getQualityThresholds()`. Admin PATCH requires relevance ≥ 6 and roleCategory.
-- **Storage-Level Publish Guard**: `publishJob()` and `updateJobWorkerFields()` in `server/storage.ts` enforce a hard floor: relevance ≥ 6 and roleCategory must be assigned. This is the last line of defense — no code path can bypass it.
-- **Startup Data Cleanup**: `server/lib/data-cleanup.ts` runs once per version at server startup in both dev and prod. Unpublishes low-relevance, null-quality, and negative-AI-signal jobs; re-archives resurrected jobs; decodes HTML entities. Uses `app_settings` table for version tracking.
-- **Admin Data Cleanup**: `POST /api/admin/data-cleanup` endpoint triggers on-demand cleanup (force mode, always runs regardless of version flag). Returns summary of changes.
-- **No Auto-Boost**: AI relevance scores stand as-is. Previously, legal tech company jobs were auto-boosted to score 6.
-- **Public Job Access**: `getPublicJob` enforces `jobStatus='open'` — archived/closed jobs return 404 even with direct URL.
-- **Scrapers**: Greenhouse, Lever, Ashby, Workday, iCIMS (JSON API + RSS fallback), SmartRecruiters, Workable, BambooHR, Rippling, YC auto-discovery.
-- **Automation**: Scheduled workers manage ingestion, scoring, deduplication, and validation. Live job audit runs every 4 hours with same company-type thresholds.
-- **Quality Assurance**: A QA validation system with an admin review queue maintains data integrity.
+- **Process**: Two-layer pipeline (ingestion → AI enrichment → trust gate → published inventory) ensures quality, deduplication, and link validation.
+- **Company-Type-Aware Quality Gate**: Different thresholds based on company classification (`legal-tech-startup`, `law-firm`, `general-tech`).
+- **Title and Role Filters**: Back-office titles and generic business roles are filtered or require higher relevance scores.
+- **AI Negative Signal Filter**: Identifies and queues jobs with negative AI signals.
+- **Uniform Publishing Gate**: All paths to `isPublished=true` enforce company-type-aware thresholds.
+- **Storage-Level Publish Guard**: Enforces relevance ≥ 6 and assigned `roleCategory`.
+- **Startup Data Cleanup**: Runs once per version at server startup to unpublish low-relevance jobs, etc.
+- **Admin Data Cleanup**: On-demand cleanup via an admin endpoint.
+- **Public Job Access**: `getPublicJob` enforces `jobStatus='open'`.
+- **Scrapers**: Supports various ATS platforms (Greenhouse, Lever, Ashby, Workday, iCIMS, SmartRecruiters, Workable, BambooHR, Rippling, YC).
+- **Automation**: Scheduled workers manage ingestion, scoring, deduplication, and validation.
+- **Quality Assurance**: Admin review queue for data integrity.
 - **Admin Dashboard**: Provides an overview of scraper runs, source health, and rejection reasons.
 
 ### Core Features
-- **Landing Page**: Highlights career intelligence and a "Check Your Fit" call to action.
-- **Career Command Center Dashboard**: Personalized home page for authenticated users with career snapshot, action feed, saved jobs, and market pulse.
+- **Landing Page**: Highlights career intelligence and "Check Your Fit" CTA.
+- **Career Command Center Dashboard**: Personalized home page for authenticated users.
 - **Smart Search**: AI-powered natural language job search.
-- **Resume Management & Editing**: Upload, parse, manage multiple resumes, and use an AI-powered editor for tailoring and ATS scoring.
-- **Job Matching**: AI-driven comparison of resumes against job postings, providing fit scores and gap analysis.
-- **Career Guidance**: Market insights dashboard, conversational assistant, and personalized path recommendations.
-- **Career Diagnostic Engine**: Offers skill clustering, readiness scoring, transition planning, and career path visualizations.
-- **Career Fit Quiz**: Recommends career paths based on a short quiz.
-- **Market Intelligence Page**: A Bloomberg-style career intelligence terminal with data-dense panels on market pulse, data quality & market benchmarks, skill bridging, entry corridors, skills in demand, salary trends, work mode, AI intensity, seniority, companies, geography, and transition-friendly employers.
-- **Data Quality & Market Benchmarks Section**: Visible to all users (before Pro gate). Shows curation pipeline stats (screened/published/rejected), quality assurance scores, rejection breakdown, and market benchmarks (track distribution, entry accessibility, geographic reach). Powered by `GET /api/stats/data-quality` (cached 1hr). Also included in downloadable PDF and DOCX reports as section "02 Data Quality & Curation".
-- **Transition Intelligence API**: Computes lawyer-specific career data including track summaries, entry corridors, skill bridge, and regional intelligence.
-- **Trust & Methodology Page**: Public `/trust` page explaining curation process, quality filters, verified sources, relevance scoring, and data integrity practices. Pulls live stats from `/api/stats/data-quality`.
-- **Verified Source Badges**: Job cards show "Verified" badge (ShieldCheck) when source is a known ATS (Greenhouse, Lever, Ashby, Workday, iCIMS, SmartRecruiters, YC).
-- **Platform Freshness**: `GET /api/meta/refresh` returns `lastScrapeRunAt`, `jobsVerifiedLast24h`, `jobsAddedLast7d`. Browse Jobs page shows freshness header with last refresh time.
-- **Market Evolution (Free Tier)**: Trend charts (job volume, skills trajectory) visible to all users. Free users see last 2 months; Pro users see full history. Backend limits via `limited` flag in `/api/stats/historical`.
-- **Pro Feature Gates**: Backend and frontend checks to gate premium features for Pro users.
+- **Resume Management & Editing**: Upload, parse, manage multiple resumes, AI editor for tailoring and ATS scoring.
+- **Job Matching**: AI-driven resume-job comparison, fit scores, gap analysis.
+- **Career Guidance**: Market insights, conversational assistant, personalized path recommendations.
+- **Career Diagnostic Engine**: Skill clustering, readiness scoring, transition planning, visualizations.
+- **Career Fit Quiz**: Recommends career paths.
+- **Market Intelligence Page**: Bloomberg-style terminal with data on market pulse, benchmarks, skills, salary trends, etc.
+- **Data Quality & Market Benchmarks Section**: Publicly visible section on curation pipeline stats and market benchmarks.
+- **Transition Intelligence API**: Computes lawyer-specific career data.
+- **Trust & Methodology Page**: Public page explaining curation process and data integrity.
+- **Verified Source Badges**: Job cards show badges for known ATS sources.
+- **Platform Freshness**: Displays `lastScrapeRunAt`, `jobsVerifiedLast24h`, `jobsAddedLast7d`.
+- **Market Evolution (Free Tier)**: Trend charts with limited history for free users, full history for Pro.
+- **Pro Feature Gates**: Backend and frontend checks to gate premium features.
 
 ### Data Moat & API Security
-- **Rate Limiting**: `express-rate-limit` with tiered limits — Global: 100/min unauth, 300/min auth. Intelligence: 10/min unauth, 60/min auth. Jobs: 30/min unauth, 120/min auth.
-- **API Key Guard**: Blocks programmatic/bot access to `/api/` without admin-issued API key. Browser users pass freely. Admin manages keys via `/api/admin/api-keys`.
-- **API Keys Table**: `api_keys` (key, label, createdBy, createdAt, isActive, lastUsedAt) for external API consumers.
-- **Intelligence Data Restriction**: `/api/market-intelligence` returns only aggregate counts for non-Pro users. `/api/market-intelligence/transition` requires Pro authentication.
-- **Job Detail Truncation**: Unauthenticated users get title, company, location, work mode + first 150 chars of description. Full details require login.
-- **Attribution Watermarking**: All intelligence API responses include `_attribution` field with source, license, and user email. PDF reports have proprietary footer watermarks.
-- **Anti-Indexing**: `X-Robots-Tag: noindex, nofollow` on all `/api/` responses.
+- **Rate Limiting**: Tiered limits for unauthenticated and authenticated users.
+- **API Key Guard**: Blocks programmatic access without an admin-issued API key.
+- **Intelligence Data Restriction**: Aggregate counts for non-Pro users, detailed data requires Pro.
+- **Job Detail Truncation**: Unauthenticated users see truncated job descriptions.
+- **Attribution Watermarking**: All intelligence API responses include `_attribution`.
+- **Anti-Indexing**: `X-Robots-Tag: noindex, nofollow` on API responses.
 
 ### Conversion Engine
-- **Job Signup Gate**: Unauthenticated job detail page shows truncated info + Card with "Sign up free to see full details" CTA.
-- **View-Count Soft Gate**: After 5 job views without auth, Dialog prompts signup. Dismissable but re-triggers on subsequent views.
-- **Pro Upgrade Banner**: Slim persistent banner for free authenticated users in header. Dismissable via localStorage, reappears after 3 days.
-- **Post-Diagnostic Pro Upsell**: Blurred preview section showing mock skill clusters, career paths, transition plan, and market demand with "Unlock Full Report — $5/mo" CTA.
-- **Social Proof Counters**: Real data from `/api/stats/social-proof` displayed on landing, pricing, quiz, and MI pages.
-- **LinkedIn Share Cards**: `/share/readiness` endpoint generates branded HTML with OG meta tags for LinkedIn preview cards showing readiness score and career path.
+- **Job Signup Gate**: Truncated job details for unauthenticated users with signup CTA.
+- **View-Count Soft Gate**: Dialog prompts signup after 5 job views.
+- **Pro Upgrade Banner**: Persistent banner for free authenticated users.
+- **Post-Diagnostic Pro Upsell**: Blurred preview with "Unlock Full Report" CTA.
+- **Social Proof Counters**: Displays real data on various pages.
+- **LinkedIn Share Cards**: Generates branded HTML for LinkedIn previews.
 
 ## External Dependencies
 

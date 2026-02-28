@@ -113,6 +113,7 @@ interface DataQualityData {
     filterCategories: number;
     uniqueCompanies: number;
     uniqueSources: number;
+    activeInventory: number;
   };
   quality: {
     avgQualityScore: number;

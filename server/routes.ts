@@ -432,12 +432,13 @@ export async function registerRoutes(
         salaryMin: jobs.salaryMin,
       }).from(jobs);
 
-      const published = allJobs.filter(j => j.isPublished && j.isActive && j.pipelineStatus === 'ready' && j.jobStatus === 'open');
+      const pipelinePassed = allJobs.filter(j => j.pipelineStatus === 'ready');
+      const activeInventory = allJobs.filter(j => j.isPublished && j.isActive && j.pipelineStatus === 'ready' && j.jobStatus === 'open');
       const rejected = allJobs.filter(j => j.pipelineStatus === 'rejected');
       const inReview = allJobs.filter(j => j.pipelineStatus === 'review');
 
-      const qualityScores = published.filter(j => j.qualityScore !== null).map(j => j.qualityScore as number);
-      const relevanceScores = published.filter(j => j.legalRelevanceScore !== null).map(j => j.legalRelevanceScore as number);
+      const qualityScores = pipelinePassed.filter(j => j.qualityScore !== null).map(j => j.qualityScore as number);
+      const relevanceScores = pipelinePassed.filter(j => j.legalRelevanceScore !== null).map(j => j.legalRelevanceScore as number);
       const avgQuality = qualityScores.length ? Math.round(qualityScores.reduce((a, b) => a + b, 0) / qualityScores.length * 10) / 10 : 0;
       const avgRelevance = relevanceScores.length ? Math.round(relevanceScores.reduce((a, b) => a + b, 0) / relevanceScores.length * 10) / 10 : 0;
 
@@ -449,7 +450,7 @@ export async function registerRoutes(
       };
 
       const reasonCounts: Record<string, number> = {};
-      for (const j of allJobs) {
+      for (const j of rejected) {
         if (j.reviewReasonCode) {
           reasonCounts[j.reviewReasonCode] = (reasonCounts[j.reviewReasonCode] || 0) + 1;
         }
@@ -475,28 +476,28 @@ export async function registerRoutes(
         }));
 
       const categoryDistribution: Record<string, number> = {};
-      for (const j of published) {
+      for (const j of activeInventory) {
         if (j.roleCategory) {
           categoryDistribution[j.roleCategory] = (categoryDistribution[j.roleCategory] || 0) + 1;
         }
       }
 
       const trackDistribution: Record<string, number> = {};
-      for (const j of published) {
+      for (const j of activeInventory) {
         if (j.careerTrack) {
           trackDistribution[j.careerTrack] = (trackDistribution[j.careerTrack] || 0) + 1;
         }
       }
 
-      const uniqueCompanies = new Set(published.map(j => j.company)).size;
-      const uniqueSources = new Set(published.map(j => j.source).filter(Boolean)).size;
-      const uniqueCountries = new Set(published.map(j => j.countryCode).filter(c => c && c !== 'WW' && c !== 'UN')).size;
-      const uniqueRegions = new Set(published.map(j => j.locationRegion).filter(Boolean)).size;
+      const uniqueCompanies = new Set(activeInventory.map(j => j.company)).size;
+      const uniqueSources = new Set(activeInventory.map(j => j.source).filter(Boolean)).size;
+      const uniqueCountries = new Set(activeInventory.map(j => j.countryCode).filter(c => c && c !== 'WW' && c !== 'UN')).size;
+      const uniqueRegions = new Set(activeInventory.map(j => j.locationRegion).filter(Boolean)).size;
 
-      const entryLevel = published.filter(j => ['Entry', 'Junior', 'Associate', 'Intern', 'Fellowship'].includes(j.seniorityLevel || '')).length;
-      const entryAccessiblePct = published.length ? Math.round((entryLevel / published.length) * 100) : 0;
-      const withSalary = published.filter(j => j.salaryMin !== null).length;
-      const salaryTransparencyPct = published.length ? Math.round((withSalary / published.length) * 100) : 0;
+      const entryLevel = activeInventory.filter(j => ['Entry', 'Junior', 'Associate', 'Intern', 'Fellowship'].includes(j.seniorityLevel || '')).length;
+      const entryAccessiblePct = activeInventory.length ? Math.round((entryLevel / activeInventory.length) * 100) : 0;
+      const withSalary = activeInventory.filter(j => j.salaryMin !== null).length;
+      const salaryTransparencyPct = activeInventory.length ? Math.round((withSalary / activeInventory.length) * 100) : 0;
 
       const relevanceDist: Record<number, number> = {};
       for (const s of relevanceScores) {
@@ -504,15 +505,15 @@ export async function registerRoutes(
       }
 
       const total = allJobs.length || 1;
-      const publishedPct = Math.round((published.length / total) * 100);
+      const publishedPct = Math.round((pipelinePassed.length / total) * 100);
       const rejectedPct = Math.round((rejected.length / total) * 100);
       const inReviewPct = Math.round((inReview.length / total) * 100);
-      const pubLen = published.length || 1;
+      const activeLen = activeInventory.length || 1;
 
       const result = {
         curation: {
           totalScreened: allJobs.length,
-          totalPublished: published.length,
+          totalPublished: pipelinePassed.length,
           passRate: publishedPct,
           totalRejected: rejected.length,
           rejectedPct,
@@ -521,6 +522,7 @@ export async function registerRoutes(
           filterCategories: 17,
           uniqueCompanies,
           uniqueSources,
+          activeInventory: activeInventory.length,
         },
         quality: {
           avgQualityScore: avgQuality,
@@ -533,10 +535,10 @@ export async function registerRoutes(
         market: {
           categoryDistribution: Object.entries(categoryDistribution)
             .sort((a, b) => b[1] - a[1])
-            .map(([name, count]) => ({ name, count, percentage: Math.round((count / pubLen) * 100) })),
+            .map(([name, count]) => ({ name, count, percentage: Math.round((count / activeLen) * 100) })),
           trackDistribution: Object.entries(trackDistribution)
             .sort((a, b) => b[1] - a[1])
-            .map(([name, count]) => ({ name, count, percentage: Math.round((count / pubLen) * 100) })),
+            .map(([name, count]) => ({ name, count, percentage: Math.round((count / activeLen) * 100) })),
           entryAccessiblePct,
           salaryTransparencyPct,
           uniqueCountries,
@@ -8889,7 +8891,7 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
           seniorityMap[job.seniorityLevel] = (seniorityMap[job.seniorityLevel] || 0) + 1;
         }
         companyMap[job.company] = (companyMap[job.company] || 0) + 1;
-        if (job.countryCode && job.countryCode !== 'UN') {
+        if (job.countryCode && job.countryCode !== 'UN' && job.countryCode !== 'WW') {
           if (!countryMap[job.countryCode]) countryMap[job.countryCode] = { name: job.countryName || job.countryCode, count: 0 };
           countryMap[job.countryCode].count++;
         }
@@ -9181,7 +9183,7 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
           }
         }
 
-        if (job.countryCode && job.countryCode !== 'UN') {
+        if (job.countryCode && job.countryCode !== 'UN' && job.countryCode !== 'WW') {
           td.countryMap[job.countryCode] = (td.countryMap[job.countryCode] || 0) + 1;
 
           if (!countryTrackMap[job.countryCode]) {
