@@ -97,6 +97,10 @@ Legal Tech Careers is a career intelligence platform designed for legal professi
 - **Market Intelligence Page**: A Bloomberg-style career intelligence terminal with data-dense panels on market pulse, data quality & market benchmarks, skill bridging, entry corridors, skills in demand, salary trends, work mode, AI intensity, seniority, companies, geography, and transition-friendly employers.
 - **Data Quality & Market Benchmarks Section**: Visible to all users (before Pro gate). Shows curation pipeline stats (screened/published/rejected), quality assurance scores, rejection breakdown, and market benchmarks (track distribution, entry accessibility, geographic reach). Powered by `GET /api/stats/data-quality` (cached 1hr). Also included in downloadable PDF and DOCX reports as section "02 Data Quality & Curation".
 - **Transition Intelligence API**: Computes lawyer-specific career data including track summaries, entry corridors, skill bridge, and regional intelligence.
+- **Trust & Methodology Page**: Public `/trust` page explaining curation process, quality filters, verified sources, relevance scoring, and data integrity practices. Pulls live stats from `/api/stats/data-quality`.
+- **Verified Source Badges**: Job cards show "Verified" badge (ShieldCheck) when source is a known ATS (Greenhouse, Lever, Ashby, Workday, iCIMS, SmartRecruiters, YC).
+- **Platform Freshness**: `GET /api/meta/refresh` returns `lastScrapeRunAt`, `jobsVerifiedLast24h`, `jobsAddedLast7d`. Browse Jobs page shows freshness header with last refresh time.
+- **Market Evolution (Free Tier)**: Trend charts (job volume, skills trajectory) visible to all users. Free users see last 2 months; Pro users see full history. Backend limits via `limited` flag in `/api/stats/historical`.
 - **Pro Feature Gates**: Backend and frontend checks to gate premium features for Pro users.
 
 ### Data Moat & API Security

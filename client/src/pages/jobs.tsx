@@ -45,6 +45,7 @@ import {
   AlertCircle,
   Briefcase,
   Brain,
+  ShieldCheck,
 } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -682,6 +683,11 @@ export default function Jobs() {
     staleTime: 5 * 60 * 1000,
   });
 
+  const { data: refreshMeta } = useQuery<{ lastScrapeRunAt: string | null; jobsVerifiedLast24h: number; jobsAddedLast7d: number }>({
+    queryKey: ["/api/meta/refresh"],
+    staleTime: 5 * 60 * 1000,
+  });
+
   const searchSuggestions = suggestionsData?.suggestions ?? DEFAULT_SEARCH_SUGGESTIONS;
   const isPersonalized = suggestionsData?.personalized ?? false;
 
@@ -747,9 +753,43 @@ export default function Jobs() {
             <h1 className="text-xl sm:text-2xl font-semibold text-foreground tracking-tight mb-1" data-testid="text-page-title">
               Find your next role in legal tech
             </h1>
-            <p className="text-sm text-muted-foreground mb-5" data-testid="text-page-subtitle">
+            <p className="text-sm text-muted-foreground mb-1" data-testid="text-page-subtitle">
               {totalJobCount} curated roles across legal technology
             </p>
+            {refreshMeta && (
+              <p className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground/70 mb-5" data-testid="text-freshness-header">
+                <ShieldCheck className="h-3 w-3" />
+                <span>Jobs verified daily</span>
+                {refreshMeta.lastScrapeRunAt && (
+                  <>
+                    <span className="text-muted-foreground/40">·</span>
+                    <span>Last refresh: {(() => {
+                      const diff = Math.floor((Date.now() - new Date(refreshMeta.lastScrapeRunAt).getTime()) / (1000 * 60 * 60));
+                      if (diff < 1) return "just now";
+                      if (diff < 24) return `${diff}h ago`;
+                      return `${Math.floor(diff / 24)}d ago`;
+                    })()}</span>
+                  </>
+                )}
+                {refreshMeta.jobsVerifiedLast24h > 0 && (
+                  <>
+                    <span className="text-muted-foreground/40">·</span>
+                    <span>{refreshMeta.jobsVerifiedLast24h} verified today</span>
+                  </>
+                )}
+                {refreshMeta.jobsAddedLast7d > 0 && (
+                  <>
+                    <span className="text-muted-foreground/40">·</span>
+                    <span>{refreshMeta.jobsAddedLast7d} new this week</span>
+                  </>
+                )}
+                <span className="text-muted-foreground/40">·</span>
+                <Link href="/trust" className="text-primary/70 hover:text-primary transition-colors" data-testid="link-methodology-jobs">
+                  How we curate
+                </Link>
+              </p>
+            )}
+            {!refreshMeta && <div className="mb-5" />}
 
             <div data-testid="card-smart-search" className="max-w-3xl mx-auto">
               <div

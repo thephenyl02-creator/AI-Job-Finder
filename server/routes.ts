@@ -551,6 +551,40 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/meta/refresh", async (_req, res) => {
+    try {
+      const now = new Date();
+      const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+      const [verified24h] = await db.select({ total: count() }).from(jobs)
+        .where(and(
+          eq(jobs.isPublished, true),
+          eq(jobs.isActive, true),
+          sql`${jobs.lastCheckedAt} >= ${oneDayAgo}`
+        ));
+
+      const [added7d] = await db.select({ total: count() }).from(jobs)
+        .where(and(
+          eq(jobs.isPublished, true),
+          eq(jobs.isActive, true),
+          sql`${jobs.firstSeenAt} >= ${sevenDaysAgo}`
+        ));
+
+      const [lastScrape] = await db.select({ latest: sql`MAX(${jobs.lastCheckedAt})` }).from(jobs)
+        .where(and(eq(jobs.isPublished, true), eq(jobs.isActive, true)));
+
+      res.json({
+        lastScrapeRunAt: lastScrape?.latest || null,
+        jobsVerifiedLast24h: Number(verified24h?.total || 0),
+        jobsAddedLast7d: Number(added7d?.total || 0),
+      });
+    } catch (error) {
+      console.error("Error fetching refresh meta:", error);
+      res.status(500).json({ error: "Failed to fetch refresh stats" });
+    }
+  });
+
   app.get("/api/stats/social-proof", async (_req, res) => {
     try {
       const [{ total: totalUsersCount }] = await db.select({ total: count() }).from(users);

@@ -253,6 +253,7 @@ export default function MarketIntelligence() {
     companyTrends: Record<string, { name: string; count: number }[]>;
     skillTrends: Record<string, { name: string; count: number }[]>;
     geographyTrends: Record<string, { name: string; count: number }[]>;
+    limited?: boolean;
   }>({
     queryKey: ["/api/stats/historical"],
   });
@@ -673,10 +674,134 @@ export default function MarketIntelligence() {
                 </div>
               )}
 
-              <p className="text-[10px] text-muted-foreground/50 select-none text-right mt-2">Updated {new Date().toLocaleDateString("en-US", { month: "short", year: "numeric" })}</p>
+              <div className="flex items-center justify-between mt-2">
+                <Link href="/trust" className="text-[10px] text-primary/60 hover:text-primary transition-colors" data-testid="link-methodology-dq">
+                  How we curate &rarr;
+                </Link>
+                <p className="text-[10px] text-muted-foreground/50 select-none">Updated {new Date().toLocaleDateString("en-US", { month: "short", year: "numeric" })}</p>
+              </div>
             </div>
           </section>
         )}
+
+        {/* MARKET EVOLUTION — visible to all users */}
+        {historicalData && (() => {
+          const months = Object.keys(historicalData.jobsByMonth).sort();
+          if (months.length < 2) {
+            return (
+              <section className="border-t border-border/40" data-testid="section-market-evolution">
+                <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
+                  <p className="mi-section-title mb-2">Market Evolution</p>
+                  <div className="mi-panel text-center py-6">
+                    <TrendingUp className="h-5 w-5 text-muted-foreground mx-auto mb-2" />
+                    <p className="text-xs text-muted-foreground" data-testid="text-evolution-note">
+                      Tracking since {months[0] ? new Date(months[0] + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'now'}.
+                      Trend charts will appear as more months of data accumulate.
+                    </p>
+                    <p className="text-[10px] text-muted-foreground mt-1">
+                      {historicalData.totalEverScraped.toLocaleString()} jobs tracked so far
+                    </p>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground/50 select-none text-right mt-2" data-testid="text-attribution">Source: lawjobs.co</p>
+                </div>
+              </section>
+            );
+          }
+
+          const formatMonth = (m: string) => {
+            const [y, mo] = m.split('-');
+            const names = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            return `${names[parseInt(mo) - 1]} ${y.slice(2)}`;
+          };
+
+          const volumeData = months.map(m => ({
+            month: formatMonth(m),
+            discovered: historicalData.jobsByMonth[m] || 0,
+            published: historicalData.publishedByMonth?.[m] || 0,
+          }));
+
+          const allSkills = new Map<string, number>();
+          for (const skills of Object.values(historicalData.skillTrends || {})) {
+            for (const s of skills) allSkills.set(s.name, (allSkills.get(s.name) || 0) + s.count);
+          }
+          const topSkills = Array.from(allSkills.entries()).sort(([,a], [,b]) => b - a).slice(0, 5).map(([name]) => name);
+
+          const skillsData = months.map(m => {
+            const row: Record<string, any> = { month: formatMonth(m) };
+            const monthSkills = historicalData.skillTrends?.[m] || [];
+            for (const skill of topSkills) {
+              const found = monthSkills.find(s => s.name === skill);
+              row[skill] = found?.count || 0;
+            }
+            return row;
+          });
+
+          return (
+            <section className="border-t border-border/40" data-testid="section-market-evolution">
+              <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-4">
+                  <p className="mi-section-title">Market Evolution</p>
+                  {historicalData.limited && (
+                    <span className="text-[11px] text-muted-foreground">Showing last 2 months</span>
+                  )}
+                </div>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="mi-panel" data-testid="chart-job-volume">
+                    <p className="mi-label mb-3">Job Volume Over Time</p>
+                    <div className="h-[200px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={volumeData} barGap={2}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.4} />
+                          <XAxis dataKey="month" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
+                          <YAxis tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
+                          <Tooltip {...SHARED_TOOLTIP_STYLE} />
+                          <Legend wrapperStyle={{ fontSize: 10 }} />
+                          <Bar dataKey="discovered" name="Discovered" fill="hsl(var(--chart-1))" radius={[2, 2, 0, 0]} />
+                          <Bar dataKey="published" name="Published" fill="hsl(var(--chart-5))" radius={[2, 2, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+
+                  <div className="mi-panel" data-testid="chart-skills-trajectory">
+                    <p className="mi-label mb-3">Skills Trajectory</p>
+                    <div className="h-[200px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={skillsData}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.4} />
+                          <XAxis dataKey="month" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
+                          <YAxis tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
+                          <Tooltip {...SHARED_TOOLTIP_STYLE} />
+                          <Legend wrapperStyle={{ fontSize: 10 }} />
+                          {topSkills.map((skill, i) => (
+                            <Line key={skill} type="monotone" dataKey={skill} stroke={GENERIC_PALETTE[i % GENERIC_PALETTE.length]} strokeWidth={2} dot={{ r: 2 }} name={skill.length > 18 ? skill.slice(0, 16) + '…' : skill} />
+                          ))}
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                </div>
+                <p className="text-[10px] text-muted-foreground text-center mt-3" data-testid="text-evolution-note">
+                  Based on {historicalData.totalEverScraped.toLocaleString()} jobs tracked
+                  {historicalData.totalPublished > 0 && ` · ${historicalData.totalPublished.toLocaleString()} published`}
+                  {historicalData.totalArchived > 0 && ` · ${historicalData.totalArchived.toLocaleString()} archived`}
+                </p>
+                {historicalData.limited && (
+                  <div className="flex items-center justify-center gap-2 mt-3" data-testid="evolution-upsell">
+                    <Link href="/pricing">
+                      <Button variant="outline" size="sm" className="gap-1.5" data-testid="button-evolution-upgrade">
+                        <Crown className="h-3 w-3 text-amber-500" />
+                        See full history
+                        <ArrowRight className="h-3 w-3" />
+                      </Button>
+                    </Link>
+                  </div>
+                )}
+                <p className="text-[10px] text-muted-foreground/50 select-none text-right mt-2" data-testid="text-attribution">Source: lawjobs.co</p>
+              </div>
+            </section>
+          );
+        })()}
 
         {!canAccessFull && (
           <section className="max-w-6xl mx-auto px-4 sm:px-6 py-4" data-testid="section-mi-progate">
@@ -694,7 +819,7 @@ export default function MarketIntelligence() {
                 "Top hiring companies & geography",
                 "Transition-friendly employer rankings",
                 "Community benchmarks & readiness data",
-                "Market evolution & trend charts",
+                "Full market evolution history",
                 "Downloadable PDF reports",
               ]}
             />
@@ -1236,120 +1361,6 @@ export default function MarketIntelligence() {
             </div>
           </section>
         )}
-
-        {/* MARKET EVOLUTION */}
-        {historicalData && (() => {
-          const months = Object.keys(historicalData.jobsByMonth).sort();
-          if (months.length < 2) {
-            return (
-              <section className="border-t border-border/40" data-testid="section-market-evolution">
-                <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
-                  <p className="mi-section-title mb-2">Market Evolution</p>
-                  <div className="mi-panel text-center py-6">
-                    <TrendingUp className="h-5 w-5 text-muted-foreground mx-auto mb-2" />
-                    <p className="text-xs text-muted-foreground" data-testid="text-evolution-note">
-                      Tracking since {months[0] ? new Date(months[0] + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'now'}.
-                      Trend charts will appear as more months of data accumulate.
-                    </p>
-                    <p className="text-[10px] text-muted-foreground mt-1">
-                      {historicalData.totalEverScraped.toLocaleString()} jobs tracked so far
-                    </p>
-                  </div>
-                  <p className="text-[10px] text-muted-foreground/50 select-none text-right mt-2" data-testid="text-attribution">Source: lawjobs.co</p>
-                </div>
-              </section>
-            );
-          }
-
-          const formatMonth = (m: string) => {
-            const [y, mo] = m.split('-');
-            const names = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-            return `${names[parseInt(mo) - 1]} ${y.slice(2)}`;
-          };
-
-          const volumeData = months.map(m => ({
-            month: formatMonth(m),
-            discovered: historicalData.jobsByMonth[m] || 0,
-            published: historicalData.publishedByMonth?.[m] || 0,
-          }));
-
-          const allSkills = new Map<string, number>();
-          for (const skills of Object.values(historicalData.skillTrends || {})) {
-            for (const s of skills) allSkills.set(s.name, (allSkills.get(s.name) || 0) + s.count);
-          }
-          const topSkills = Array.from(allSkills.entries()).sort(([,a], [,b]) => b - a).slice(0, 5).map(([name]) => name);
-
-          const skillsData = months.map(m => {
-            const row: Record<string, any> = { month: formatMonth(m) };
-            const monthSkills = historicalData.skillTrends?.[m] || [];
-            for (const skill of topSkills) {
-              const found = monthSkills.find(s => s.name === skill);
-              row[skill] = found?.count || 0;
-            }
-            return row;
-          });
-
-          const workModeEvolution = months.map(m => {
-            const wm = historicalData.workModeByMonth?.[m] || {};
-            const total = (wm['remote'] || 0) + (wm['hybrid'] || 0) + (wm['onsite'] || 0);
-            return {
-              month: formatMonth(m),
-              remote: total ? Math.round(((wm['remote'] || 0) / total) * 100) : 0,
-              hybrid: total ? Math.round(((wm['hybrid'] || 0) / total) * 100) : 0,
-              onsite: total ? Math.round(((wm['onsite'] || 0) / total) * 100) : 0,
-            };
-          });
-
-          return (
-            <section className="border-t border-border/40" data-testid="section-market-evolution">
-              <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
-                <p className="mi-section-title mb-4">Market Evolution</p>
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="mi-panel" data-testid="chart-job-volume">
-                    <p className="mi-label mb-3">Job Volume Over Time</p>
-                    <div className="h-[200px]">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={volumeData} barGap={2}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.4} />
-                          <XAxis dataKey="month" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
-                          <YAxis tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
-                          <Tooltip {...SHARED_TOOLTIP_STYLE} />
-                          <Legend wrapperStyle={{ fontSize: 10 }} />
-                          <Bar dataKey="discovered" name="Discovered" fill="hsl(var(--chart-1))" radius={[2, 2, 0, 0]} />
-                          <Bar dataKey="published" name="Published" fill="hsl(var(--chart-5))" radius={[2, 2, 0, 0]} />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </div>
-
-                  <div className="mi-panel" data-testid="chart-skills-trajectory">
-                    <p className="mi-label mb-3">Skills Trajectory</p>
-                    <div className="h-[200px]">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={skillsData}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.4} />
-                          <XAxis dataKey="month" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
-                          <YAxis tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
-                          <Tooltip {...SHARED_TOOLTIP_STYLE} />
-                          <Legend wrapperStyle={{ fontSize: 10 }} />
-                          {topSkills.map((skill, i) => (
-                            <Line key={skill} type="monotone" dataKey={skill} stroke={GENERIC_PALETTE[i % GENERIC_PALETTE.length]} strokeWidth={2} dot={{ r: 2 }} name={skill.length > 18 ? skill.slice(0, 16) + '…' : skill} />
-                          ))}
-                        </LineChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </div>
-                </div>
-                <p className="text-[10px] text-muted-foreground text-center mt-3" data-testid="text-evolution-note">
-                  Based on {historicalData.totalEverScraped.toLocaleString()} jobs tracked
-                  {historicalData.totalPublished > 0 && ` · ${historicalData.totalPublished.toLocaleString()} published`}
-                  {historicalData.totalArchived > 0 && ` · ${historicalData.totalArchived.toLocaleString()} archived`}
-                </p>
-                <p className="text-[10px] text-muted-foreground/50 select-none text-right mt-2" data-testid="text-attribution">Source: lawjobs.co</p>
-              </div>
-            </section>
-          );
-        })()}
 
         </>}
 

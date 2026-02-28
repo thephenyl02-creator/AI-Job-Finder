@@ -13,6 +13,9 @@ export function Footer() {
           <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
             <span>Legal Tech Careers</span>
             <span className="hidden sm:inline">&middot;</span>
+            <Link href="/trust" className="hover:text-foreground transition-colors" data-testid="footer-link-trust">
+              How We Curate
+            </Link>
             <Link href="/terms" className="hover:text-foreground transition-colors" data-testid="footer-link-terms">
               Terms
             </Link>
@@ -29,16 +32,26 @@ export function Footer() {
     <footer className="border-t border-border/40 mt-auto">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
-          <div className="flex items-center gap-2">
-            <Logo className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm text-muted-foreground">
-              Legal Tech Careers
-            </span>
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-2">
+              <Logo className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">
+                Legal Tech Careers
+              </span>
+            </div>
+            <p className="text-[10px] text-muted-foreground/60 max-w-[280px]" data-testid="text-footer-trust-line">
+              We never sell candidate data. Delete your resume anytime.
+            </p>
           </div>
           <div className="flex flex-wrap items-center gap-x-1 gap-y-1">
             <Link href="/about">
               <Button variant="ghost" size="sm" className="text-muted-foreground text-xs font-normal" data-testid="footer-link-about">
                 About
+              </Button>
+            </Link>
+            <Link href="/trust">
+              <Button variant="ghost" size="sm" className="text-muted-foreground text-xs font-normal" data-testid="footer-link-trust">
+                How We Curate
               </Button>
             </Link>
             <Link href="/pricing">

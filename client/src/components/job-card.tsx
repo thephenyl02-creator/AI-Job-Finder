@@ -2,7 +2,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ExternalLink, Bookmark, DollarSign, Zap, TrendingUp, Target } from "lucide-react";
+import { ExternalLink, Bookmark, DollarSign, Zap, TrendingUp, Target, ShieldCheck } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { JobLocation } from "./job-location";
 import type { JobWithScore } from "@shared/schema";
@@ -104,6 +104,16 @@ function getAiIntensityLabel(level: string): { label: string; color: string } {
     case "medium": return { label: "Some AI", color: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300" };
     default: return { label: "Low AI", color: "bg-slate-100 text-slate-600 dark:bg-slate-900/40 dark:text-slate-400" };
   }
+}
+
+const VERIFIED_ATS_SOURCES = new Set([
+  "greenhouse", "lever", "ashby", "workday", "icims", "smartrecruiters",
+  "yc_greenhouse", "yc_lever", "yc_ashby",
+]);
+
+function isVerifiedSource(source?: string | null): boolean {
+  if (!source) return false;
+  return VERIFIED_ATS_SOURCES.has(source.toLowerCase());
 }
 
 function getTransitionLabel(level: string): { label: string; color: string } {
@@ -231,6 +241,12 @@ export function JobCard({ job, isSaved = false, isAuthenticated = false, fitData
                   <Badge variant="outline" className="gap-0.5 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800" data-testid={`text-salary-${job.id}`}>
                     <DollarSign className="h-3 w-3" />
                     {salary}
+                  </Badge>
+                )}
+                {isVerifiedSource(job.source) && (
+                  <Badge variant="secondary" className="gap-0.5 text-xs text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30" data-testid={`badge-verified-${job.id}`}>
+                    <ShieldCheck className="h-3 w-3" />
+                    Verified
                   </Badge>
                 )}
                 {job.roleSubcategory && (
