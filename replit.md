@@ -53,8 +53,9 @@ Legal Tech Careers is a career intelligence platform designed for legal professi
 - **Anonymous**: Tracks unauthenticated events such as landing page views and quiz completions.
 
 ### Job Archiving & Historical Data
-- **Soft Archive**: Jobs are soft-deleted by setting `jobStatus='archived'` and related flags.
-- **Historical API**: `GET /api/stats/historical` provides aggregated historical job data, including monthly breakdowns.
+- **Permanent Archive**: Once archived (`jobStatus='archived'`), jobs can never be resurrected. Scrapers only update `lastScrapedAt`/`lastSeenAt` on archived jobs — never `isActive`, `isPublished`, or `pipelineStatus`.
+- **Historical API**: `GET /api/stats/historical` provides aggregated historical job data filtered to published+active+ready jobs only.
+- **MI Reports**: Report generation queries also filter to published+active+ready — no rejected/archived data leaks into reports.
 - **Market Evolution UI**: Displays job volume and skill trajectory over time using Recharts.
 
 ### Skill Normalization
@@ -68,7 +69,12 @@ Legal Tech Careers is a career intelligence platform designed for legal professi
   - `law-firm` (biglaw type): minRelevance=8, qualityThreshold=40 — only legal tech/innovation roles
   - `general-tech` (company type): minRelevance=7, qualityThreshold=40 — only legal-product-connected roles
 - **Back-Office Title Filter**: Titles like "Procurement", "Payroll", "Receptionist", "SEM Specialist" go to review queue regardless of company, unless they have legal title signals.
+- **Generic Business Role Filter**: Account executives, BDRs, customer success managers, marketing managers, etc. require relevance ≥ 8 to auto-publish — otherwise queued for review.
+- **AI Negative Signal Filter**: If AI summary flags a role as "does not involve technology" or "not suitable for lawyers transitioning", it goes to review queue.
+- **HTML Entity Decoding**: `decodeHtmlEntities()` runs on job titles and company names during enrichment to prevent `&amp;` artifacts.
+- **Uniform Publishing Gate**: All paths to `isPublished=true` (enrichment, recovery, publish-all-eligible, admin PATCH, bulk QA) enforce company-type-aware thresholds via `getQualityThresholds()`. Admin PATCH requires relevance ≥ 6 and roleCategory.
 - **No Auto-Boost**: AI relevance scores stand as-is. Previously, legal tech company jobs were auto-boosted to score 6.
+- **Public Job Access**: `getPublicJob` enforces `jobStatus='open'` — archived/closed jobs return 404 even with direct URL.
 - **Scrapers**: Greenhouse, Lever, Ashby, Workday, iCIMS (JSON API + RSS fallback), SmartRecruiters, Workable, BambooHR, Rippling, YC auto-discovery.
 - **Automation**: Scheduled workers manage ingestion, scoring, deduplication, and validation. Live job audit runs every 4 hours with same company-type thresholds.
 - **Quality Assurance**: A QA validation system with an admin review queue maintains data integrity.

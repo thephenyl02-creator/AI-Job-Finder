@@ -143,6 +143,7 @@ async function requirePro(req: any, res: any, next: any) {
 }
 
 import { clearMarketIntelligenceCache, getMarketIntelligenceCache, setMarketIntelligenceCache } from "./lib/mi-cache";
+import { getQualityThresholds, isGenericBusinessRole } from "./workers/enrichment-worker";
 export { clearMarketIntelligenceCache } from "./lib/mi-cache";
 
 function addAttribution(data: any, userEmail?: string) {
@@ -469,7 +470,13 @@ export async function registerRoutes(
         seniorityLevel: jobs.seniorityLevel,
         countryCode: jobs.countryCode,
         countryName: jobs.countryName,
-      }).from(jobs);
+      }).from(jobs).where(
+        and(
+          eq(jobs.isPublished, true),
+          eq(jobs.isActive, true),
+          eq(jobs.pipelineStatus, 'ready'),
+        )
+      );
 
       const totalEverScraped = allJobs.length;
       const totalPublished = allJobs.filter(j => j.isPublished).length;
@@ -4656,12 +4663,17 @@ Rules:
       const publishedJobs: Array<{ id: number; title: string; company: string }> = [];
 
       for (const job of candidates) {
-        const qualityThreshold = (job.legalRelevanceScore ?? 0) >= 7 ? 40 : 50;
-        const passesGate = (job.qualityScore ?? 0) >= qualityThreshold
-          && (job.legalRelevanceScore ?? 0) >= 3
+        const thresholds = getQualityThresholds(job.company);
+        const relevance = job.legalRelevanceScore ?? 0;
+        const quality = job.qualityScore ?? 0;
+        const confidence = job.relevanceConfidence ?? 0;
+
+        const passesGate = quality >= thresholds.qualityThreshold
+          && relevance >= thresholds.minRelevance
+          && confidence >= thresholds.minConfidence
           && job.roleCategory !== null
-          && (job.relevanceConfidence ?? 0) >= 40
-          && job.applyUrl && job.applyUrl.trim() !== '';
+          && job.applyUrl && job.applyUrl.trim() !== ''
+          && !(isGenericBusinessRole(job.title) && relevance < 8);
 
         if (!passesGate) { skipped++; continue; }
 
@@ -4978,6 +4990,20 @@ Rules:
 
       if (Object.keys(updates).length === 0) {
         return res.status(400).json({ error: "No valid fields to update" });
+      }
+
+      if (updates.isPublished === true) {
+        const existingJob = await storage.getJob(id);
+        if (existingJob) {
+          const relevance = updates.legalRelevanceScore ?? existingJob.legalRelevanceScore ?? 0;
+          const category = updates.roleCategory ?? existingJob.roleCategory;
+          if (relevance < 6) {
+            return res.status(400).json({ error: `Cannot publish: relevance score ${relevance} is below minimum (6). Update the relevance score first.` });
+          }
+          if (!category) {
+            return res.status(400).json({ error: "Cannot publish: role category is required. Assign a category first." });
+          }
+        }
       }
 
       const user = req.user as any;
@@ -9200,7 +9226,13 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
         roleCategory: jobs.roleCategory,
         workMode: jobs.workMode,
         keySkills: jobs.keySkills,
-      }).from(jobs);
+      }).from(jobs).where(
+        and(
+          eq(jobs.isPublished, true),
+          eq(jobs.isActive, true),
+          eq(jobs.pipelineStatus, 'ready'),
+        )
+      );
 
       const monthKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
       const jbm: Record<string, number> = {};

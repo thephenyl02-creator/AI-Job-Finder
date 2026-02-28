@@ -13,6 +13,19 @@ import { db } from '../db';
 import { eq, ne, and, sql } from 'drizzle-orm';
 import axios from 'axios';
 
+function decodeHtmlEntities(text: string): string {
+  return text
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&apos;/g, "'")
+    .replace(/&#x27;/g, "'")
+    .replace(/&#x2F;/g, '/')
+    .replace(/&nbsp;/g, ' ');
+}
+
 function normalizeCompanyName(name: string): string {
   return name.toLowerCase()
     .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, '')
@@ -55,7 +68,7 @@ interface QualityThresholds {
   minConfidence: number;
 }
 
-function getQualityThresholds(company: string): QualityThresholds {
+export function getQualityThresholds(company: string): QualityThresholds {
   const category = getCompanyCategory(company);
   switch (category) {
     case 'legal-tech-startup':
@@ -528,6 +541,55 @@ const TECH_IMPLEMENTATION_TITLE_SIGNALS = [
   /\bdigital\b/i, /\bimplementation\b/i, /\bautomation\b/i,
 ];
 
+const GENERIC_BUSINESS_ROLE_PATTERNS = [
+  /\baccount executive\b/i,
+  /\benterprise account executive\b/i,
+  /\bcorporate account executive\b/i,
+  /\bstrategic account executive\b/i,
+  /\bcustomer success manager\b/i,
+  /\bprincipal customer success\b/i,
+  /\bsenior customer success\b/i,
+  /\bdirector of customer success\b/i,
+  /\bcustomer solutions architect\b/i,
+  /\bbusiness development (representative|manager|director|team lead)\b/i,
+  /\bmanager,?\s*business development\b/i,
+  /\bsales (representative|manager|director)\b/i,
+  /\bregional sales\b/i,
+  /\benterprise sales\b/i,
+  /\bpartner development director\b/i,
+  /\bstrategic partnerships manager\b/i,
+  /\bmarketing (manager|director|programs)\b/i,
+  /\bproduct marketing manager\b/i,
+  /\bsolution marketing manager\b/i,
+  /\bpricing specialist\b/i,
+  /\btax (operations|compliance|manager)\b/i,
+  /\blegal administrative assistant\b/i,
+  /\boffice manager\b/i,
+  /\bexecutive assistant\b/i,
+  /\bproposal specialist\b/i,
+  /\bhead of ai value\b/i,
+  /\bgtm enablement\b/i,
+  /\bproduct strategy analyst\b/i,
+];
+
+export function isGenericBusinessRole(title: string): boolean {
+  return GENERIC_BUSINESS_ROLE_PATTERNS.some(pattern => pattern.test(title));
+}
+
+function hasNegativeAiSignal(aiSummary: string | null): boolean {
+  if (!aiSummary) return false;
+  const negativePatterns = [
+    /does not involve.*technology/i,
+    /not suitable for lawyers.*transition/i,
+    /not.*legal tech/i,
+    /no.*technology component/i,
+    /not.*relevant.*legal technology/i,
+    /purely.*administrative/i,
+    /traditional.*business development/i,
+  ];
+  return negativePatterns.some(pattern => pattern.test(aiSummary));
+}
+
 function shouldRejectByCompany(title: string, company: string): boolean {
   const companyType = NON_LEGAL_TECH_COMPANIES[company];
   if (!companyType) return false;
@@ -811,9 +873,15 @@ async function enrichJob(job: Job): Promise<void> {
     return;
   }
 
-  const cleanedTitle = cleanJobTitle(job.title);
-  if (cleanedTitle !== job.title) {
-    console.log(`[Enrichment] Title cleaned: "${job.title}" → "${cleanedTitle}"`);
+  const decodedTitle = decodeHtmlEntities(job.title);
+  const decodedCompany = decodeHtmlEntities(job.company);
+  if (decodedTitle !== job.title || decodedCompany !== job.company) {
+    console.log(`[Enrichment] HTML entities decoded: title="${decodedTitle}", company="${decodedCompany}"`);
+  }
+
+  const cleanedTitle = cleanJobTitle(decodedTitle);
+  if (cleanedTitle !== decodedTitle) {
+    console.log(`[Enrichment] Title cleaned: "${decodedTitle}" → "${cleanedTitle}"`);
   }
 
   const enrichedData: Record<string, any> = {
@@ -822,6 +890,9 @@ async function enrichJob(job: Job): Promise<void> {
 
   if (cleanedTitle !== job.title) {
     enrichedData.title = cleanedTitle;
+  }
+  if (decodedCompany !== job.company) {
+    enrichedData.company = decodedCompany;
   }
 
   try {
@@ -964,6 +1035,16 @@ async function enrichJob(job: Job): Promise<void> {
       enrichedData.isPublished = false;
       enrichedData.reviewReasonCode = 'BACK_OFFICE_TITLE';
       console.log(`[Enrichment] Back-office title sent to review: "${job.title}" at ${job.company}`);
+    } else if (isGenericBusinessRole(job.title) && relevanceScore < 8) {
+      enrichedData.pipelineStatus = 'ready';
+      enrichedData.isPublished = false;
+      enrichedData.reviewReasonCode = 'GENERIC_BUSINESS_ROLE';
+      console.log(`[Enrichment] Generic business role sent to review: "${job.title}" at ${job.company} (relevance=${relevanceScore})`);
+    } else if (hasNegativeAiSignal(enrichedData.aiSummary || job.aiSummary)) {
+      enrichedData.pipelineStatus = 'ready';
+      enrichedData.isPublished = false;
+      enrichedData.reviewReasonCode = 'AI_FLAGGED_IRRELEVANT';
+      console.log(`[Enrichment] AI flagged as irrelevant: "${job.title}" at ${job.company}`);
     } else if (relevanceConfidence >= thresholds.minConfidence && enrichedData.roleCategory && relevanceScore >= thresholds.minRelevance && qualityScore >= thresholds.qualityThreshold) {
       const existingDuplicate = await storage.findLiveJobDuplicate(job.title, job.company, job.location, job.id);
       if (existingDuplicate) {
@@ -1231,7 +1312,8 @@ export async function recoverStuckReadyJobs(): Promise<{ promoted: number; total
       eq(jobs.pipelineStatus, 'ready'),
       eq(jobs.isPublished, false),
       ne(jobs.jobStatus, 'archived'),
-      ne(jobs.jobStatus, 'closed')
+      ne(jobs.jobStatus, 'closed'),
+      ne(jobs.pipelineStatus, 'archived')
     )
   );
 
@@ -1246,16 +1328,19 @@ export async function recoverStuckReadyJobs(): Promise<{ promoted: number; total
 
     let passes = false;
 
+    if (isGenericBusinessRole(job.title) && relevance < 8) continue;
+    if (hasNegativeAiSignal(job.aiSummary)) continue;
+    if (isBackOfficeTitle(job.title)) continue;
+
     if (job.reviewStatus === 'approved') {
-      passes = true;
+      passes = relevance >= 6;
     } else {
       const recThresholds = getQualityThresholds(job.company);
       passes = quality >= recThresholds.qualityThreshold
         && relevance >= recThresholds.minRelevance
         && confidence >= recThresholds.minConfidence
         && !shouldHardReject(job.title, job.company)
-        && !shouldRejectByCompany(job.title, job.company)
-        && !isBackOfficeTitle(job.title);
+        && !shouldRejectByCompany(job.title, job.company);
     }
 
     if (!passes) continue;

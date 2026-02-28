@@ -53,7 +53,7 @@ export function AdminHeader({ title, description }: AdminHeaderProps) {
           </span>
         </Link>
 
-        <div className="hidden lg:flex items-center gap-0.5 ml-2">
+        <div className="hidden lg:flex items-center gap-0.5 ml-2 overflow-x-auto">
           {ADMIN_NAV.map((item) => (
             <Link key={item.href} href={item.href}>
               <Button

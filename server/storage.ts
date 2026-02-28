@@ -471,6 +471,16 @@ class DatabaseStorage implements IStorage {
 
     const existing = await this.getJobByExternalId(job.externalId);
     if (existing) {
+      const isArchived = existing.jobStatus === 'archived' || existing.pipelineStatus === 'archived';
+      if (isArchived) {
+        const [updatedJob] = await db
+          .update(jobs)
+          .set({ lastScrapedAt: new Date(), lastSeenAt: new Date() })
+          .where(eq(jobs.externalId, job.externalId))
+          .returning();
+        return { job: updatedJob, isNew: false };
+      }
+
       const aiFields = ['roleCategory', 'roleSubcategory', 'seniorityLevel', 'keySkills', 'aiSummary', 'matchKeywords', 'aiResponsibilities', 'aiQualifications', 'aiNiceToHaves'] as const;
       const loc = normalizeCountry((job.location || '').trim(), !!job.isRemote, {
         applyUrl: job.applyUrl,
@@ -541,6 +551,15 @@ class DatabaseStorage implements IStorage {
           eq(jobs.applyUrl, job.applyUrl)
         ).limit(1);
         if (applyUrlDupe) {
+          const dupeIsArchived = applyUrlDupe.jobStatus === 'archived' || applyUrlDupe.pipelineStatus === 'archived';
+          if (dupeIsArchived) {
+            const [updatedJob] = await db
+              .update(jobs)
+              .set({ lastScrapedAt: new Date(), lastSeenAt: new Date() })
+              .where(eq(jobs.id, applyUrlDupe.id))
+              .returning();
+            return { job: updatedJob, isNew: false };
+          }
           const updateData: Record<string, any> = {
             lastScrapedAt: new Date(),
             lastSeenAt: new Date(),
@@ -576,6 +595,15 @@ class DatabaseStorage implements IStorage {
           )
         ).limit(1);
         if (titleCompanyDupe) {
+          const tcDupeIsArchived = titleCompanyDupe.jobStatus === 'archived' || titleCompanyDupe.pipelineStatus === 'archived';
+          if (tcDupeIsArchived) {
+            const [updatedJob] = await db
+              .update(jobs)
+              .set({ lastScrapedAt: new Date(), lastSeenAt: new Date() })
+              .where(eq(jobs.id, titleCompanyDupe.id))
+              .returning();
+            return { job: updatedJob, isNew: false };
+          }
           const updateData: Record<string, any> = {
             lastScrapedAt: new Date(),
             isActive: true,
@@ -640,6 +668,7 @@ class DatabaseStorage implements IStorage {
       source: jobs.source,
       company: jobs.company,
       pipelineStatus: jobs.pipelineStatus,
+      jobStatus: jobs.jobStatus,
       isPublished: jobs.isPublished,
       lastEnrichedAt: jobs.lastEnrichedAt,
     })
@@ -657,6 +686,7 @@ class DatabaseStorage implements IStorage {
       if (!job.externalId || !job.source) continue;
       if (!sources.includes(job.source)) continue;
       if (job.pipelineStatus === 'raw') continue;
+      if (job.pipelineStatus === 'archived' || job.jobStatus === 'archived') continue;
       if (job.isPublished && job.lastEnrichedAt && job.lastEnrichedAt > twentyFourHoursAgo) continue;
       if (normalizedScrapedCompanies && job.company && !normalizedScrapedCompanies.has(normalizeCompany(job.company))) continue;
       if (!scrapedExternalIds.has(job.externalId)) {
@@ -2943,6 +2973,7 @@ class DatabaseStorage implements IStorage {
         eq(jobs.isActive, true),
         eq(jobs.isPublished, true),
         eq(jobs.pipelineStatus, 'ready'),
+        eq(jobs.jobStatus, 'open'),
       ));
     return job;
   }
