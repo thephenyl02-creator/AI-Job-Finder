@@ -220,6 +220,11 @@ export default function DashboardPage() {
     refetchInterval: 60000,
   });
 
+  const { data: recentJobsData } = useQuery<{ jobs: { id: number; title: string; company: string; location: string; workMode: string; roleCategory: string; seniorityLevel: string }[] }>({
+    queryKey: ["/api/jobs?limit=3&sort=newest"],
+    enabled: !isPro,
+  });
+
   const diagnosticReport = rawDiagnostic?.report || null;
   const hasResumes = (dashData?.readiness?.resumeCount ?? 0) > 0;
   const hasDiagnostic = !!diagnosticReport && hasResumes;
@@ -412,6 +417,38 @@ export default function DashboardPage() {
                 </div>
               </CardContent>
             </Card>
+          )}
+
+          {!isPro && recentJobsData?.jobs && recentJobsData.jobs.length > 0 && (
+            <div className="mb-8 sm:mb-10" data-testid="section-new-this-week">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Briefcase className="h-4 w-4 text-primary" />
+                  <h2 className="text-base font-semibold text-foreground">New this week</h2>
+                </div>
+                <Link href="/jobs">
+                  <Button variant="ghost" size="sm" className="text-xs text-primary gap-1" data-testid="button-see-all-jobs">
+                    See all jobs <ArrowRight className="h-3 w-3" />
+                  </Button>
+                </Link>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-3">
+                {recentJobsData.jobs.slice(0, 3).map((job) => (
+                  <Link key={job.id} href={`/jobs/${job.id}`}>
+                    <Card className="card-elev-interactive cursor-pointer h-full" data-testid={`card-recent-job-${job.id}`}>
+                      <CardContent className="p-4">
+                        <p className="text-sm font-medium text-foreground line-clamp-2 mb-1">{job.title}</p>
+                        <p className="text-xs text-muted-foreground mb-2">{job.company}</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {job.roleCategory && <Badge variant="secondary" className="text-[10px]">{job.roleCategory}</Badge>}
+                          {job.workMode && <Badge variant="outline" className="text-[10px]">{job.workMode}</Badge>}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                ))}
+              </div>
+            </div>
           )}
 
           {!isPro && (

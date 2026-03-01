@@ -388,7 +388,7 @@ function ReadinessLadder({ ladder, isPro }: {
           </button>
           {expandedTier === tier.key && tier.roles.length > 0 && (
             <div className="px-3 pb-3 space-y-2">
-              {tier.roles.slice(0, isPro ? undefined : 2).map((role, idx) => (
+              {tier.roles.map((role, idx) => (
                 <div key={idx} className="bg-muted/30 rounded-md p-2.5 border border-border/30">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
@@ -420,13 +420,13 @@ function ReadinessLadder({ ladder, isPro }: {
                   )}
                 </div>
               ))}
-              {!isPro && tier.roles.length > 2 && (
-                <div className="flex items-center gap-2 p-2 rounded-md bg-muted/50 border border-dashed border-border">
-                  <Lock className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span className="text-xs text-muted-foreground">+{tier.roles.length - 2} more {tier.key === "ready" ? "roles you qualify for" : "roles within reach"}</span>
+              {!isPro && tier.roles.length > 0 && (
+                <div className="flex items-center gap-2 p-2 rounded-md bg-primary/5 border border-dashed border-primary/20">
+                  <Lock className="h-3.5 w-3.5 text-primary/60" />
+                  <span className="text-xs text-muted-foreground">Unlock strengths & blockers for each role</span>
                   <Link href="/pricing">
                     <Button variant="ghost" size="sm" className="h-auto p-0 text-xs text-primary" data-testid="unlock-roles-cta">
-                      See all matches
+                      Upgrade to Pro
                     </Button>
                   </Link>
                 </div>
@@ -443,7 +443,7 @@ function TransitionPlan({ plan, isPro }: { plan: TransitionWeek[]; isPro: boolea
   return (
     <div className="space-y-3" data-testid="transition-plan">
       {plan.map((week, weekIdx) => {
-        const isLocked = !isPro && weekIdx > 0;
+        const isLocked = !isPro && weekIdx > 1;
         return (
           <div key={week.week} className="relative">
             {isLocked && (
@@ -451,12 +451,12 @@ function TransitionPlan({ plan, isPro }: { plan: TransitionWeek[]; isPro: boolea
                 <div className="flex flex-col items-center gap-1.5">
                   <Lock className="h-4 w-4 text-muted-foreground" />
                   <span className="text-xs text-muted-foreground">
-                    {weekIdx === 1 ? "Your next steps are ready" : `Week ${week.week} plan`}
+                    {weekIdx === 2 ? "Your next steps are ready" : `Week ${week.week} plan`}
                   </span>
-                  {weekIdx === 1 && (
+                  {weekIdx === 2 && (
                     <Link href="/pricing">
                       <Button size="sm" className="h-7 text-xs mt-1" data-testid="unlock-plan-cta">
-                        Unlock your 30-day plan
+                        Unlock your full 30-day plan
                       </Button>
                     </Link>
                   )}

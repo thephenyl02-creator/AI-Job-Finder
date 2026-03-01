@@ -357,42 +357,87 @@ export default function Alerts() {
         </div>
 
         {!isPro && (
-          <Card className="mb-6" data-testid="card-alerts-pro-teaser">
-            <CardContent className="pt-6 pb-6">
-              <div className="text-center mb-5">
-                <div className="w-14 h-14 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Bell className="h-6 w-6 text-primary" />
-                </div>
-                <h2 className="text-lg font-medium text-foreground mb-2">
-                  Never miss a new role
-                </h2>
-                <p className="text-sm text-muted-foreground max-w-md mx-auto mb-1">
-                  Set up alerts for specific categories, keywords, seniority levels, or remote-only roles. We'll notify you the moment a match is posted.
-                </p>
-              </div>
+          <>
+            <div className="mb-4">
+              <p className="text-sm text-muted-foreground">
+                Pro members create custom alerts to get notified when new roles match their criteria. Here's what alerts look like:
+              </p>
+            </div>
 
-              <div className="rounded-md bg-muted/40 border border-border/50 p-4 mb-5">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">Example alert criteria</p>
-                <div className="flex flex-wrap gap-1.5">
-                  <Badge variant="secondary" className="text-xs">Legal AI & Machine Learning</Badge>
-                  <Badge variant="secondary" className="text-xs">Remote Only</Badge>
-                  <Badge variant="secondary" className="text-xs">Senior+</Badge>
-                  <Badge variant="outline" className="text-xs">Keywords: compliance, product</Badge>
-                </div>
-              </div>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 mb-6">
+              <Card className="border-dashed opacity-80" data-testid="card-example-alert-1">
+                <CardContent className="pt-5 pb-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="p-1.5 rounded-md bg-green-500/10">
+                      <Bell className="h-3.5 w-3.5 text-green-600" />
+                    </div>
+                    <span className="text-xs text-green-600 font-medium">Active</span>
+                  </div>
+                  <p className="text-sm font-medium text-foreground mb-2">Remote Compliance Roles</p>
+                  <div className="flex flex-wrap gap-1.5 mb-3">
+                    <Badge variant="secondary" className="text-[10px]">Compliance & RegTech</Badge>
+                    <Badge variant="secondary" className="text-[10px]">Remote</Badge>
+                    <Badge variant="outline" className="text-[10px]">Mid-Senior</Badge>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground">Checks daily · Last match: 2 days ago</p>
+                </CardContent>
+              </Card>
 
-              <div className="text-center">
-                <Link href="/pricing">
-                  <Button className="gap-2" data-testid="button-alerts-upgrade">
-                    <Crown className="h-4 w-4" />
-                    Upgrade to Pro — $5/mo
-                    <ArrowRight className="h-4 w-4" />
-                  </Button>
-                </Link>
-                <p className="text-xs text-muted-foreground mt-2">Cancel anytime. Save 50% with yearly billing.</p>
-              </div>
-            </CardContent>
-          </Card>
+              <Card className="border-dashed opacity-80" data-testid="card-example-alert-2">
+                <CardContent className="pt-5 pb-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="p-1.5 rounded-md bg-green-500/10">
+                      <Bell className="h-3.5 w-3.5 text-green-600" />
+                    </div>
+                    <span className="text-xs text-green-600 font-medium">Active</span>
+                  </div>
+                  <p className="text-sm font-medium text-foreground mb-2">Entry-Level Legal Ops</p>
+                  <div className="flex flex-wrap gap-1.5 mb-3">
+                    <Badge variant="secondary" className="text-[10px]">Legal Operations</Badge>
+                    <Badge variant="outline" className="text-[10px]">Entry-Mid</Badge>
+                    <Badge variant="outline" className="text-[10px]">US & UK</Badge>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground">Checks daily · Last match: today</p>
+                </CardContent>
+              </Card>
+
+              <Card className="border-dashed opacity-80" data-testid="card-example-alert-3">
+                <CardContent className="pt-5 pb-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="p-1.5 rounded-md bg-green-500/10">
+                      <Bell className="h-3.5 w-3.5 text-green-600" />
+                    </div>
+                    <span className="text-xs text-green-600 font-medium">Active</span>
+                  </div>
+                  <p className="text-sm font-medium text-foreground mb-2">Legal AI Product Roles</p>
+                  <div className="flex flex-wrap gap-1.5 mb-3">
+                    <Badge variant="secondary" className="text-[10px]">Legal AI & Machine Learning</Badge>
+                    <Badge variant="secondary" className="text-[10px]">Legal Product Management</Badge>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground">Checks daily · Last match: 5 days ago</p>
+                </CardContent>
+              </Card>
+            </div>
+
+            <Card className="mb-6" data-testid="card-alerts-pro-teaser">
+              <CardContent className="py-6">
+                <div className="text-center">
+                  <p className="text-sm font-medium text-foreground mb-1">Create your own alerts with Pro</p>
+                  <p className="text-xs text-muted-foreground max-w-md mx-auto mb-4">
+                    Set up unlimited alerts for specific categories, keywords, seniority levels, or remote-only roles. We'll notify you the moment a match is posted.
+                  </p>
+                  <Link href="/pricing">
+                    <Button className="gap-2" data-testid="button-alerts-upgrade">
+                      <Crown className="h-4 w-4" />
+                      Upgrade to Pro — $5/mo
+                      <ArrowRight className="h-4 w-4" />
+                    </Button>
+                  </Link>
+                  <p className="text-xs text-muted-foreground mt-2">Cancel anytime. Save 50% with yearly billing.</p>
+                </div>
+              </CardContent>
+            </Card>
+          </>
         )}
 
         {isPro && showForm && (

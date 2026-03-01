@@ -551,8 +551,8 @@ export default function JobDetail() {
       }
     },
     onError: (error: any) => {
-      if (error?.message?.includes("5 jobs") || error?.message?.includes("Upgrade to Pro")) {
-        toast({ title: "Save limit reached", description: "Free accounts can save up to 5 jobs. Upgrade to Pro for unlimited saves.", variant: "destructive" });
+      if (error?.message?.includes("10 jobs") || error?.message?.includes("Upgrade to Pro")) {
+        toast({ title: "Save limit reached", description: "Free accounts can save up to 10 jobs. Upgrade to Pro for unlimited saves.", variant: "destructive" });
       }
     },
   });

@@ -405,43 +405,12 @@ export default function Insights() {
 
   const { data, isLoading, dataUpdatedAt } = useQuery<MarketAnalytics>({
     queryKey: ["/api/analytics/market"],
-    enabled: isAuthenticated && isPro,
+    enabled: isAuthenticated,
     refetchInterval: 30000,
   });
 
   if (authLoading || subLoading) {
     return <SkeletonDashboard />;
-  }
-
-  if (!isPro) {
-    return (
-      <div className="min-h-screen bg-background overflow-x-hidden">
-        <Header />
-        <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
-          <div className="mb-6 sm:mb-8">
-            <h1 className="text-xl sm:text-3xl font-serif font-medium text-foreground tracking-tight mb-1 sm:mb-2" data-testid="text-insights-title">
-              Market insights
-            </h1>
-            <p className="text-sm sm:text-base text-muted-foreground max-w-xl">
-              See what's happening in legal tech hiring right now. Ask questions or explore the live data below.
-            </p>
-          </div>
-          <ProGate
-            feature="Unlock Market Insights"
-            description="Get full access to live market analytics including active positions, salary data, company hiring trends, category breakdowns, skill demand, seniority landscape, and an AI-powered market analyst chat."
-            highlights={[
-              "Active positions & company hiring trends",
-              "Salary overview with median & average ranges",
-              "Category & seniority breakdowns",
-              "Top skills demand analysis",
-              "Work mode & experience distribution",
-              "AI-powered market analyst chat",
-            ]}
-          />
-        </main>
-        <Footer />
-      </div>
-    );
   }
 
   if (isLoading) {
@@ -495,7 +464,7 @@ export default function Insights() {
           </div>
         </div>
 
-        <InsightsChat />
+        {isPro && <InsightsChat />}
 
         <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 mb-8 sm:mb-10">
           <StatCard
@@ -528,48 +497,6 @@ export default function Insights() {
           />
         </div>
 
-        {(overview.medianSalaryMin || overview.medianSalaryMax) && (
-          <Card className="mb-8 sm:mb-10">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-base font-medium flex items-center gap-2">
-                <DollarSign className="h-4 w-4 text-muted-foreground" />
-                Salary Overview
-              </CardTitle>
-            </CardHeader>
-            <CardContent data-testid="section-salary-overview">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="rounded-md bg-muted/40 p-4">
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Median Range</p>
-                  <p className="text-lg font-semibold text-foreground tabular-nums" data-testid="text-median-salary">
-                    {overview.medianSalaryMin ? `$${Math.round(overview.medianSalaryMin / 1000)}K` : "N/A"}
-                    {" \u2013 "}
-                    {overview.medianSalaryMax ? `$${Math.round(overview.medianSalaryMax / 1000)}K` : "N/A"}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-0.5">Midpoint of reported salaries</p>
-                </div>
-                <div className="rounded-md bg-muted/40 p-4">
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Average Range</p>
-                  <p className="text-lg font-semibold text-foreground tabular-nums" data-testid="text-avg-salary">
-                    {overview.avgSalaryMin ? `$${Math.round(overview.avgSalaryMin / 1000)}K` : "N/A"}
-                    {" \u2013 "}
-                    {overview.avgSalaryMax ? `$${Math.round(overview.avgSalaryMax / 1000)}K` : "N/A"}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-0.5">Mean of reported salaries</p>
-                </div>
-                <div className="rounded-md bg-muted/40 p-4">
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Salary Transparency</p>
-                  <p className="text-lg font-semibold text-foreground tabular-nums" data-testid="text-salary-coverage">
-                    {overview.jobsWithSalary} of {overview.totalJobs}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {overview.totalJobs > 0 ? Math.round((overview.jobsWithSalary / overview.totalJobs) * 100) : 0}% of listings include salary
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
         <div className="grid md:grid-cols-2 gap-4 sm:gap-6 mb-4 sm:mb-6">
           <Card>
             <CardHeader className="pb-4">
@@ -592,6 +519,16 @@ export default function Insights() {
             </CardContent>
           </Card>
 
+          {!isPro ? (
+            <Card className="flex flex-col items-center justify-center p-6 text-center border-dashed">
+              <Award className="h-8 w-8 text-muted-foreground/40 mb-3" />
+              <p className="text-sm font-medium text-foreground mb-1">Seniority & experience breakdown</p>
+              <p className="text-xs text-muted-foreground mb-3">See how roles are distributed across career levels</p>
+              <Link href="/pricing">
+                <Button size="sm" variant="outline" className="text-xs" data-testid="button-unlock-seniority">Upgrade to Pro</Button>
+              </Link>
+            </Card>
+          ) : (
           <Card>
             <CardHeader className="pb-4">
               <CardTitle className="text-base font-medium flex items-center gap-2">
@@ -650,8 +587,10 @@ export default function Insights() {
               </div>
             </CardContent>
           </Card>
+          )}
         </div>
 
+        {isPro ? (
         <div className="grid md:grid-cols-2 gap-4 sm:gap-6 mb-4 sm:mb-6">
           <Card>
             <CardHeader className="pb-4">
@@ -717,7 +656,61 @@ export default function Insights() {
             </CardContent>
           </Card>
         </div>
+        ) : (
+        <ProGate
+          mode="blur"
+          feature="Unlock Full Market Intelligence"
+          description="Upgrade to Pro for salary data, skills demand, seniority breakdown, top employers, AI-powered market analyst chat, and more."
+          highlights={[
+            "Salary overview with median & average ranges",
+            "Seniority & experience level breakdown",
+            "Most in-demand skills analysis",
+            "Top hiring companies",
+            "AI-powered market analyst chat",
+            "Work arrangement & specialization data",
+          ]}
+        >
+          <div className="grid md:grid-cols-2 gap-4 sm:gap-6 mb-4 sm:mb-6">
+            <Card>
+              <CardContent className="p-6 space-y-4">
+                <div className="h-5 w-40 bg-muted/40 rounded" />
+                <div className="space-y-3">
+                  {[1, 2, 3, 4, 5].map((j) => (<div key={j}><div className="h-4 w-full bg-muted/30 rounded mb-1" /><div className="h-1.5 w-full bg-muted/20 rounded" /></div>))}
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-6 space-y-4">
+                <div className="h-5 w-36 bg-muted/40 rounded" />
+                <div className="space-y-3">
+                  {[1, 2, 3, 4, 5].map((j) => (<div key={j} className="flex items-center justify-between py-2"><div className="h-4 w-32 bg-muted/30 rounded" /><div className="h-5 w-16 bg-muted/20 rounded" /></div>))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+          <div className="grid md:grid-cols-2 gap-4 sm:gap-6 mb-4 sm:mb-6">
+            <Card>
+              <CardContent className="p-6 space-y-3">
+                <div className="h-5 w-32 bg-muted/40 rounded" />
+                <div className="flex flex-wrap gap-2">
+                  {[1, 2, 3, 4, 5, 6].map((j) => (<div key={j} className="h-6 w-24 bg-muted/20 rounded-full" />))}
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-6 space-y-3">
+                <div className="h-5 w-36 bg-muted/40 rounded" />
+                <div className="h-3 rounded-full bg-muted/30" />
+                <div className="grid grid-cols-2 gap-3">
+                  {[1, 2].map((j) => (<div key={j} className="h-16 bg-muted/20 rounded" />))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </ProGate>
+        )}
 
+        {isPro && (
         <div className="grid md:grid-cols-2 gap-4 sm:gap-6 mb-4 sm:mb-6">
           <Card>
             <CardHeader className="pb-4">
@@ -829,6 +822,49 @@ export default function Insights() {
             </CardContent>
           </Card>
         </div>
+        )}
+
+        {(overview.medianSalaryMin || overview.medianSalaryMax) && isPro && (
+          <Card className="mb-8 sm:mb-10">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-base font-medium flex items-center gap-2">
+                <DollarSign className="h-4 w-4 text-muted-foreground" />
+                Salary Overview
+              </CardTitle>
+            </CardHeader>
+            <CardContent data-testid="section-salary-overview">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="rounded-md bg-muted/40 p-4">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Median Range</p>
+                  <p className="text-lg font-semibold text-foreground tabular-nums" data-testid="text-median-salary">
+                    {overview.medianSalaryMin ? `$${Math.round(overview.medianSalaryMin / 1000)}K` : "N/A"}
+                    {" \u2013 "}
+                    {overview.medianSalaryMax ? `$${Math.round(overview.medianSalaryMax / 1000)}K` : "N/A"}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Midpoint of reported salaries</p>
+                </div>
+                <div className="rounded-md bg-muted/40 p-4">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Average Range</p>
+                  <p className="text-lg font-semibold text-foreground tabular-nums" data-testid="text-avg-salary">
+                    {overview.avgSalaryMin ? `$${Math.round(overview.avgSalaryMin / 1000)}K` : "N/A"}
+                    {" \u2013 "}
+                    {overview.avgSalaryMax ? `$${Math.round(overview.avgSalaryMax / 1000)}K` : "N/A"}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Mean of reported salaries</p>
+                </div>
+                <div className="rounded-md bg-muted/40 p-4">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Salary Transparency</p>
+                  <p className="text-lg font-semibold text-foreground tabular-nums" data-testid="text-salary-coverage">
+                    {overview.jobsWithSalary} of {overview.totalJobs}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {overview.totalJobs > 0 ? Math.round((overview.jobsWithSalary / overview.totalJobs) * 100) : 0}% of listings include salary
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <div className="text-center pt-4 pb-8">
           <p className="text-sm text-muted-foreground mb-4">

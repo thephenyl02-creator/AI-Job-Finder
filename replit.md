@@ -106,6 +106,15 @@ Legal Tech Careers is a career intelligence platform designed for legal professi
 - **Attribution Watermarking**: All intelligence API responses include `_attribution`.
 - **Anti-Indexing**: `X-Robots-Tag: noindex, nofollow` on API responses.
 
+### Free Tier Limits
+- **Smart Search**: 5 guided searches (lifetime).
+- **Chat Messages**: 5 per day (resets at midnight).
+- **Saved Jobs**: 10 jobs.
+- **Diagnostic**: Full role matches visible (titles, companies, fit scores). Strengths/Blockers Pro-only. Weeks 1-2 of 30-day plan visible, Weeks 3-4 locked.
+- **Insights Page**: Stat cards + category chart visible. Salary, seniority, skills, employers, AI chat blurred behind ProGate.
+- **Alerts Page**: Example alert cards shown. Creating alerts requires Pro.
+- **Dashboard**: "New This Week" job cards shown for free users above blurred Pro sections.
+
 ### Conversion Engine
 - **Job Signup Gate**: Truncated job details for unauthenticated users with signup CTA.
 - **View-Count Soft Gate**: Dialog prompts signup after 5 job views.

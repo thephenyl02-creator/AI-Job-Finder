@@ -242,7 +242,7 @@ export default function Jobs() {
   }, [isAuthenticated, hasResume, intelligenceResult, cachedIntelligence]);
 
   const guidedSearchUsed = usageLimits?.guidedSearch?.used ?? 0;
-  const guidedSearchLimit = usageLimits?.guidedSearch?.limit ?? 3;
+  const guidedSearchLimit = usageLimits?.guidedSearch?.limit ?? 5;
   const isPro = usageLimits?.isPro ?? false;
   const guidedTrialsRemaining = isPro ? Infinity : Math.max(0, guidedSearchLimit - guidedSearchUsed);
   const canUseGuidedSearch = isPro || guidedTrialsRemaining > 0;
@@ -318,7 +318,7 @@ export default function Jobs() {
       if (isLimitError) {
         setGuidedStep("idle");
         toast({
-          title: "You've used all 7 free smart searches",
+          title: "You've used all 5 free smart searches",
           description: "Upgrade to Pro for unlimited searches with follow-up questions.",
         });
       } else {
@@ -1150,8 +1150,8 @@ export default function Jobs() {
             {!isPro && (
               <p className="text-xs text-muted-foreground text-center">
                 {guidedTrialsRemaining > 0
-                  ? `${guidedTrialsRemaining} of 3 free guided ${guidedTrialsRemaining === 1 ? "search" : "searches"} remaining.`
-                  : "You've used all 3 free guided searches."}
+                  ? `${guidedTrialsRemaining} of ${guidedSearchLimit} free guided ${guidedTrialsRemaining === 1 ? "search" : "searches"} remaining.`
+                  : `You've used all ${guidedSearchLimit} free guided searches.`}
                 <Link href="/pricing" className="text-primary ml-1 font-medium">Upgrade for unlimited</Link>
               </p>
             )}

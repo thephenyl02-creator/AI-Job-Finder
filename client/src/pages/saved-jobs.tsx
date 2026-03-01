@@ -63,7 +63,7 @@ function getLegalFitLabel(score: number | null | undefined): string | null {
 }
 
 const MAX_COMPARE = 3;
-const FREE_SAVE_LIMIT = 5;
+const FREE_SAVE_LIMIT = 10;
 
 function CompareView({ jobs, onClose }: { jobs: Job[]; onClose: () => void }) {
   const rows: { label: string; render: (job: Job) => React.ReactNode }[] = [
