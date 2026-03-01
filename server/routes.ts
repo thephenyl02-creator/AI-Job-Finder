@@ -1918,7 +1918,7 @@ Only include jobs scoring above 40. Sort by score descending. Max 15 results.`;
   });
 
   // Guided search - analyze query and generate clarifying questions
-  // Free users get 3 guided searches total (server-side enforced), Pro users get unlimited
+  // Free users get 5 guided searches total (server-side enforced), Pro users get unlimited
   app.post("/api/search/analyze", isAuthenticated, async (req, res) => {
     try {
       const { query } = req.body;
