@@ -1,7 +1,7 @@
-import { storage } from '../storage';
-import https from 'https';
-import http from 'http';
-import { URL } from 'url';
+import { storage } from "../storage";
+import https from "https";
+import http from "http";
+import { URL } from "url";
 
 interface LinkCheckResult {
   eventId: number;
@@ -10,7 +10,7 @@ interface LinkCheckResult {
   ok: boolean;
 }
 
-const LINK_CHECK_INTERVAL_MS = 60 * 60 * 1000;
+const LINK_CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000;
 let intervalId: NodeJS.Timeout | null = null;
 let isRunning = false;
 
@@ -18,15 +18,17 @@ function checkUrl(url: string): Promise<{ status: number; ok: boolean }> {
   return new Promise((resolve) => {
     try {
       const parsed = new URL(url);
-      const mod = parsed.protocol === 'https:' ? https : http;
+      const mod = parsed.protocol === "https:" ? https : http;
       const req = mod.request(
         parsed,
         {
-          method: 'HEAD',
+          method: "HEAD",
           timeout: 15000,
           headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            "User-Agent":
+              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            Accept:
+              "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
           },
         },
         (r) => {
@@ -37,10 +39,10 @@ function checkUrl(url: string): Promise<{ status: number; ok: boolean }> {
           } else {
             resolve({ status: code, ok: code >= 200 && code < 400 });
           }
-        }
+        },
       );
-      req.on('error', () => resolve({ status: 0, ok: false }));
-      req.on('timeout', () => {
+      req.on("error", () => resolve({ status: 0, ok: false }));
+      req.on("timeout", () => {
         req.destroy();
         resolve({ status: 0, ok: false });
       });
@@ -51,7 +53,11 @@ function checkUrl(url: string): Promise<{ status: number; ok: boolean }> {
   });
 }
 
-async function validateEventLinks(): Promise<{ checked: number; verified: number; broken: number }> {
+async function validateEventLinks(): Promise<{
+  checked: number;
+  verified: number;
+  broken: number;
+}> {
   if (isRunning) return { checked: 0, verified: 0, broken: 0 };
   isRunning = true;
 
@@ -61,7 +67,9 @@ async function validateEventLinks(): Promise<{ checked: number; verified: number
       return { checked: 0, verified: 0, broken: 0 };
     }
 
-    console.log(`[EventLinkValidator] Checking ${eventsToCheck.length} event links...`);
+    console.log(
+      `[EventLinkValidator] Checking ${eventsToCheck.length} event links...`,
+    );
 
     let verified = 0;
     let broken = 0;
@@ -71,33 +79,37 @@ async function validateEventLinks(): Promise<{ checked: number; verified: number
       const results = await Promise.all(
         batch.map(async (event): Promise<LinkCheckResult> => {
           if (!event.registrationUrl) {
-            return { eventId: event.id, url: '', status: 0, ok: false };
+            return { eventId: event.id, url: "", status: 0, ok: false };
           }
           const result = await checkUrl(event.registrationUrl);
           return { eventId: event.id, url: event.registrationUrl, ...result };
-        })
+        }),
       );
 
       for (const result of results) {
         if (result.ok || result.status === 403) {
-          await storage.updateEventLinkStatus(result.eventId, 'verified');
+          await storage.updateEventLinkStatus(result.eventId, "verified");
           verified++;
         } else {
-          await storage.updateEventLinkStatus(result.eventId, 'broken');
+          await storage.updateEventLinkStatus(result.eventId, "broken");
           broken++;
-          console.log(`[EventLinkValidator] Broken link: event ${result.eventId} -> ${result.url} (status: ${result.status})`);
+          console.log(
+            `[EventLinkValidator] Broken link: event ${result.eventId} -> ${result.url} (status: ${result.status})`,
+          );
         }
       }
 
       if (i + 3 < eventsToCheck.length) {
-        await new Promise(r => setTimeout(r, 2000));
+        await new Promise((r) => setTimeout(r, 2000));
       }
     }
 
-    console.log(`[EventLinkValidator] Done: ${eventsToCheck.length} checked, ${verified} verified, ${broken} broken`);
+    console.log(
+      `[EventLinkValidator] Done: ${eventsToCheck.length} checked, ${verified} verified, ${broken} broken`,
+    );
     return { checked: eventsToCheck.length, verified, broken };
   } catch (error) {
-    console.error('[EventLinkValidator] Error:', error);
+    console.error("[EventLinkValidator] Error:", error);
     return { checked: 0, verified: 0, broken: 0 };
   } finally {
     isRunning = false;
@@ -107,7 +119,9 @@ async function validateEventLinks(): Promise<{ checked: number; verified: number
 export function startEventLinkValidation() {
   if (intervalId) return;
 
-  console.log('[EventLinkValidator] Starting automatic link validation (every hour, 24h expiry)');
+  console.log(
+    "[EventLinkValidator] Starting automatic link validation (every hour, 24h expiry)",
+  );
 
   setTimeout(() => {
     validateEventLinks().catch(console.error);
