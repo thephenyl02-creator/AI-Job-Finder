@@ -980,14 +980,15 @@ export default function MarketIntelligence() {
                           "Intellectual Property & Innovation": "IP & Innovation",
                           "Litigation & eDiscovery": "Litigation",
                         };
-                        const displayName = width < 80 && name && SHORT_NAMES[name] ? SHORT_NAMES[name] : name;
-                        const maxChars = Math.floor(width / 7);
-                        const truncatedName = displayName && displayName.length > maxChars ? displayName.slice(0, maxChars) + '…' : displayName;
+                        const displayName = name && SHORT_NAMES[name] ? SHORT_NAMES[name] : name;
+                        const fontSize = Math.min(11, width / 9);
+                        const maxChars = Math.floor(width / (fontSize * 0.65));
+                        const truncatedName = displayName && displayName.length > maxChars ? displayName.slice(0, maxChars - 1) + '…' : displayName;
                         return (
                           <g>
                             <rect x={x} y={y} width={width} height={height} rx={4} fill={color} fillOpacity={0.85} stroke="hsl(var(--card))" strokeWidth={2} />
                             {showName && (
-                              <text x={x + width / 2} y={y + height / 2 - (showValue ? 7 : 0)} textAnchor="middle" dominantBaseline="central" style={{ fontSize: Math.min(10, width / 8), fontWeight: 600, fill: '#fff', textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}>
+                              <text x={x + width / 2} y={y + height / 2 - (showValue ? 7 : 0)} textAnchor="middle" dominantBaseline="central" style={{ fontSize, fontWeight: 600, fill: '#fff', textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}>
                                 <title>{name}</title>
                                 {truncatedName}
                               </text>
