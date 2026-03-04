@@ -375,17 +375,17 @@ export default function MarketIntelligence() {
 
   const hasHardSoftSplit = hardSkillsDemand.length > 0 && softSkillsDemand.length > 0;
   const skillsChartData = skillsDemand.slice(0, 10).map((s) => ({
-    name: s.skill.length > 22 ? s.skill.slice(0, 20) + "\u2026" : s.skill,
+    name: s.skill,
     fullName: s.skill,
     count: s.count,
   }));
   const hardSkillsChartData = hardSkillsDemand.slice(0, 10).map((s) => ({
-    name: s.skill.length > 22 ? s.skill.slice(0, 20) + "\u2026" : s.skill,
+    name: s.skill,
     fullName: s.skill,
     count: s.count,
   }));
   const softSkillsChartData = softSkillsDemand.slice(0, 10).map((s) => ({
-    name: s.skill.length > 22 ? s.skill.slice(0, 20) + "\u2026" : s.skill,
+    name: s.skill,
     fullName: s.skill,
     count: s.count,
   }));
@@ -497,12 +497,12 @@ export default function MarketIntelligence() {
         </section>
 
         {/* MARKET PULSE TICKER */}
-        <section className="border-t border-border/40" data-testid="section-key-stats">
+        <section className="border-t border-border/60" data-testid="section-key-stats">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4">
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
               {[
                 { label: "Active Roles", value: overview.totalJobs.toLocaleString(), sub: `+${overview.newJobsThisWeek} this week`, icon: Briefcase, delta: overview.newJobsThisWeek > 0 ? "up" : "flat" },
-                { label: "Career Changers", value: transitionData ? `${transitionData.transitionFriendlyPct}%` : "—", sub: transitionData ? `${transitionData.totalTransitionFriendly} welcome career changers` : "Pro", icon: Users, delta: "flat" },
+                { label: "Career Changers", value: transitionData ? `${transitionData.transitionFriendlyPct}%` : "—", sub: transitionData ? `${transitionData.totalTransitionFriendly} roles` : "Pro", icon: Users, delta: "flat" },
                 { label: "Lawyer-Led", value: `${lawyerLedPct}%`, sub: `${transitionData?.trackSummary.find(t => t.track === "Lawyer-Led")?.jobCount || (dataQuality?.market?.trackDistribution?.find((t: { name: string; count: number }) => t.name === "Lawyer-Led")?.count || 0)} roles`, icon: Shield, delta: "flat" },
                 { label: "Entry-to-Mid", value: `${entryAccessiblePct}%`, sub: transitionData ? `${transitionData.avgExperience}y avg exp` : "of roles", icon: GraduationCap, delta: "flat" },
                 { label: "Remote", value: `${overview.remotePercentage}%`, sub: `${safeRemote.count} roles`, icon: Wifi, delta: "flat" },
@@ -523,7 +523,7 @@ export default function MarketIntelligence() {
         </section>
 
         {dataQuality && (
-          <section className="border-t border-border/40" data-testid="section-data-quality">
+          <section className="border-t border-border/60" data-testid="section-data-quality">
             <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
               <p className="mi-section-title mb-1">How We Curate</p>
               <p className="mi-insight mb-4">Every listing is screened through {dataQuality.curation.filterCategories} quality checks before it reaches you</p>
@@ -714,7 +714,7 @@ export default function MarketIntelligence() {
           const months = Object.keys(historicalData.jobsByMonth).sort();
           if (months.length < 2) {
             return (
-              <section className="border-t border-border/40" data-testid="section-market-evolution">
+              <section className="border-t border-border/60" data-testid="section-market-evolution">
                 <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
                   <p className="mi-section-title mb-2">Market Evolution</p>
                   <div className="mi-panel text-center py-6">
@@ -727,7 +727,7 @@ export default function MarketIntelligence() {
                       {historicalData.totalTracked.toLocaleString()} jobs tracked so far
                     </p>
                   </div>
-                  <p className="text-[10px] text-muted-foreground/50 select-none text-right mt-2" data-testid="text-attribution">Source: lawjobs.co</p>
+    
                 </div>
               </section>
             );
@@ -762,7 +762,7 @@ export default function MarketIntelligence() {
           });
 
           return (
-            <section className="border-t border-border/40" data-testid="section-market-evolution">
+            <section className="border-t border-border/60" data-testid="section-market-evolution">
               <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-4">
                   <p className="mi-section-title">Market Evolution</p>
@@ -790,10 +790,10 @@ export default function MarketIntelligence() {
                             </linearGradient>
                           </defs>
                           <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.3} />
-                          <XAxis dataKey="month" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
-                          <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+                          <XAxis dataKey="month" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))", fontFamily: "var(--font-sans)" }} axisLine={false} tickLine={false} />
+                          <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))", fontFamily: "var(--font-sans)" }} axisLine={false} tickLine={false} />
                           <Tooltip {...SHARED_TOOLTIP_STYLE} />
-                          <Legend wrapperStyle={{ fontSize: 10 }} />
+                          <Legend wrapperStyle={{ fontSize: 10, fontFamily: "var(--font-sans)" }} />
                           <Area type="monotone" dataKey="discovered" name="Discovered" stroke="hsl(var(--chart-1))" strokeWidth={2} fill="url(#gradDiscovered)" dot={{ r: 2, fill: "hsl(var(--chart-1))" }} />
                           <Area type="monotone" dataKey="published" name="Approved" stroke="hsl(var(--chart-5))" strokeWidth={2} fill="url(#gradPublished)" dot={{ r: 2, fill: "hsl(var(--chart-5))" }} />
                         </AreaChart>
@@ -818,10 +818,10 @@ export default function MarketIntelligence() {
                             ))}
                           </defs>
                           <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.3} />
-                          <XAxis dataKey="month" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
-                          <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+                          <XAxis dataKey="month" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))", fontFamily: "var(--font-sans)" }} axisLine={false} tickLine={false} />
+                          <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))", fontFamily: "var(--font-sans)" }} axisLine={false} tickLine={false} />
                           <Tooltip {...SHARED_TOOLTIP_STYLE} />
-                          <Legend wrapperStyle={{ fontSize: 10 }} />
+                          <Legend wrapperStyle={{ fontSize: 10, fontFamily: "var(--font-sans)" }} />
                           {topSkills.map((skill, i) => (
                             <Area key={skill} type="monotone" dataKey={skill} stroke={GENERIC_PALETTE[i % GENERIC_PALETTE.length]} strokeWidth={2} fill={`url(#skillGrad${i})`} dot={{ r: 2 }} name={skill.length > 18 ? skill.slice(0, 16) + '…' : skill} />
                           ))}
@@ -846,7 +846,7 @@ export default function MarketIntelligence() {
                     </Link>
                   </div>
                 )}
-                <p className="text-[10px] text-muted-foreground/50 select-none text-right mt-2" data-testid="text-attribution">Source: lawjobs.co</p>
+  
               </div>
             </section>
           );
@@ -878,7 +878,7 @@ export default function MarketIntelligence() {
         {canAccessFull && <>
         {/* THREE PATHS */}
         {transitionData && transitionData.trackSummary.length > 0 && (
-          <section className="border-t border-border/40" data-testid="section-three-paths">
+          <section className="border-t border-border/60" data-testid="section-three-paths">
             <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
               <p className="mi-section-title mb-4">Three Paths Into Legal Tech</p>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -942,14 +942,14 @@ export default function MarketIntelligence() {
                   );
                 })}
               </div>
-              <p className="text-[10px] text-muted-foreground/50 select-none text-right mt-2" data-testid="text-attribution">Source: lawjobs.co</p>
+
             </div>
           </section>
         )}
 
         {/* CAREER PATHS TREEMAP */}
         {careerPaths.length > 0 && (
-          <section className="border-t border-border/40" data-testid="section-career-treemap">
+          <section className="border-t border-border/60" data-testid="section-career-treemap">
             <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
               <p className="mi-section-title mb-1">Career Landscape</p>
               <p className="mi-insight mb-4">{careerPaths.length} categories across {overview.totalJobs.toLocaleString()} roles — sized by market share</p>
@@ -963,7 +963,22 @@ export default function MarketIntelligence() {
                       strokeWidth={2}
                       content={({ x, y, width, height, name, value, pct }: any) => {
                         if (!width || !height || width < 2 || height < 2) return null;
-                        const color = getCategoryColor(name || '');
+                        const TREEMAP_COLORS: Record<string, string> = {
+                          "Legal Operations": "#1e3a5f",
+                          "Compliance & Privacy": "#2d6a4f",
+                          "Contract Management": "#4a4e8a",
+                          "Legal Product Management": "#1a7f8f",
+                          "In-House Counsel": "#5b3a6b",
+                          "Legal Consulting & Advisory": "#2c5282",
+                          "Knowledge Management": "#6b4226",
+                          "Policy & Access to Justice": "#4a6741",
+                          "Intellectual Property & Innovation": "#7c3aed",
+                          "Legal Engineering": "#0e7490",
+                          "Legal AI & Analytics": "#0f766e",
+                          "Litigation & eDiscovery": "#6d28d9",
+                          "Legal Sales & Client Solutions": "#b45309",
+                        };
+                        const color = TREEMAP_COLORS[name || ''] || getCategoryColor(name || '');
                         const showName = width > 35 && height > 18;
                         const showValue = width > 25 && height > 14;
                         const SHORT_NAMES: Record<string, string> = {
@@ -980,21 +995,22 @@ export default function MarketIntelligence() {
                           "Intellectual Property & Innovation": "IP & Innovation",
                           "Litigation & eDiscovery": "Litigation",
                         };
-                        const displayName = name && SHORT_NAMES[name] ? SHORT_NAMES[name] : name;
-                        const fontSize = Math.min(11, width / 9);
-                        const maxChars = Math.floor(width / (fontSize * 0.65));
+                        const displayName = (width < 160 && name && SHORT_NAMES[name]) ? SHORT_NAMES[name] : name;
+                        const fontSize = Math.min(12, width / 9);
+                        const maxChars = Math.floor(width / (fontSize * 0.62));
                         const truncatedName = displayName && displayName.length > maxChars ? displayName.slice(0, maxChars - 1) + '…' : displayName;
+                        const valueFontSize = Math.min(9, width / 12);
                         return (
                           <g>
-                            <rect x={x} y={y} width={width} height={height} rx={4} fill={color} fillOpacity={0.85} stroke="hsl(var(--card))" strokeWidth={2} />
+                            <rect x={x} y={y} width={width} height={height} rx={4} fill={color} stroke="hsl(var(--card))" strokeWidth={2} />
                             {showName && (
-                              <text x={x + width / 2} y={y + height / 2 - (showValue ? 7 : 0)} textAnchor="middle" dominantBaseline="central" style={{ fontSize, fontWeight: 600, fill: '#fff', textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}>
+                              <text x={x + width / 2} y={y + height / 2 - (showValue ? 7 : 0)} textAnchor="middle" dominantBaseline="central" style={{ fontSize, fontWeight: 500, fill: '#fff', textShadow: '0 1px 3px rgba(0,0,0,0.4)', fontFamily: 'var(--font-sans)' }}>
                                 <title>{name}</title>
                                 {truncatedName}
                               </text>
                             )}
                             {showValue && (
-                              <text x={x + width / 2} y={y + height / 2 + (showName ? 9 : 0)} textAnchor="middle" dominantBaseline="central" style={{ fontSize: 8, fontWeight: 500, fill: 'rgba(255,255,255,0.8)', fontFamily: 'var(--font-mono)' }}>
+                              <text x={x + width / 2} y={y + height / 2 + (showName ? 9 : 0)} textAnchor="middle" dominantBaseline="central" style={{ fontSize: valueFontSize, fontWeight: 500, fill: 'rgba(255,255,255,0.85)', fontFamily: 'var(--font-mono)' }}>
                                 {value} ({pct}%)
                               </text>
                             )}
@@ -1005,14 +1021,14 @@ export default function MarketIntelligence() {
                   </ResponsiveContainer>
                 </div>
               </div>
-              <p className="text-[10px] text-muted-foreground/50 select-none text-right mt-2" data-testid="text-attribution">Source: lawjobs.co</p>
+
             </div>
           </section>
         )}
 
         {/* SKILL BRIDGE */}
         {transitionData && transitionData.skillBridge && (
-          <section className="border-t border-border/40" data-testid="section-skill-bridge">
+          <section className="border-t border-border/60" data-testid="section-skill-bridge">
             <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
               <p className="mi-section-title mb-1">Skill Bridge</p>
               <p className="mi-insight mb-4">What legal skills transfer — and what you'll need to learn</p>
@@ -1055,14 +1071,14 @@ export default function MarketIntelligence() {
                   );
                 })}
               </div>
-              <p className="text-[10px] text-muted-foreground/50 select-none text-right mt-2" data-testid="text-attribution">Source: lawjobs.co</p>
+
             </div>
           </section>
         )}
 
         {/* ENTRY CORRIDORS */}
         {transitionData && transitionData.entryCorridor.length > 0 && (
-          <section className="border-t border-border/40" data-testid="section-entry-corridors">
+          <section className="border-t border-border/60" data-testid="section-entry-corridors">
             <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
               <p className="mi-section-title mb-1">Entry Corridors</p>
               <p className="mi-insight mb-4">Categories ranked by how accessible they are for lawyers making the switch</p>
@@ -1110,7 +1126,7 @@ export default function MarketIntelligence() {
                           <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: trackColors?.primary }} />
                           <span className="text-xs font-medium text-foreground" title={c.category}>{c.category}</span>
                         </div>
-                        <div className="grid grid-cols-3 gap-x-3 gap-y-1 pl-4">
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 pl-4">
                           <div>
                             <span className="mi-label">Jobs</span>
                             <p className="text-xs text-foreground font-medium tabular-nums">{c.jobCount}</p>
@@ -1137,14 +1153,14 @@ export default function MarketIntelligence() {
                   );
                 })}
               </div>
-              <p className="text-[10px] text-muted-foreground/50 select-none text-right mt-2" data-testid="text-attribution">Source: lawjobs.co</p>
+
             </div>
           </section>
         )}
 
         {/* SKILLS IN DEMAND */}
         {skillsChartData.length > 0 && (
-          <section className="border-t border-border/40" data-testid="section-skills">
+          <section className="border-t border-border/60" data-testid="section-skills">
             <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
               <p className="mi-section-title mb-4">Skills in Demand</p>
               {hasHardSoftSplit ? (
@@ -1226,13 +1242,13 @@ export default function MarketIntelligence() {
                   </div>
                 </div>
               )}
-              <p className="text-[10px] text-muted-foreground/50 select-none text-right mt-2" data-testid="text-attribution">Source: lawjobs.co</p>
+
             </div>
           </section>
         )}
 
         {/* SALARY + WORK MODE + AI (2-col grid) */}
-        <section className="border-t border-border/40" data-testid="section-salary-work">
+        <section className="border-t border-border/60" data-testid="section-salary-work">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
             <div className="grid md:grid-cols-2 gap-4">
               {/* Salary - Lollipop Range Chart */}
@@ -1376,7 +1392,7 @@ export default function MarketIntelligence() {
                 </div>
               </div>
             </div>
-            <p className="text-[10px] text-muted-foreground/50 select-none text-right mt-2" data-testid="text-attribution">Source: lawjobs.co</p>
+
           </div>
         </section>
 
@@ -1385,7 +1401,7 @@ export default function MarketIntelligence() {
           const totalSeniority = seniorityChartData.reduce((sum, s) => sum + s.count, 0) || 1;
           const entryLevels = ["Intern", "Fellowship", "Entry", "Junior", "Mid"];
           return (
-            <section className="border-t border-border/40" data-testid="section-seniority">
+            <section className="border-t border-border/60" data-testid="section-seniority">
               <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-4">
                   <p className="mi-section-title">Seniority Landscape</p>
@@ -1409,36 +1425,36 @@ export default function MarketIntelligence() {
                           title={`${entry.name}: ${entry.count} (${Math.round(pct)}%)`}
                           data-testid={`seniority-${entry.name.toLowerCase()}`}
                         >
-                          {pct >= 14 && (
+                          {pct >= 8 && (
                             <span className="text-[9px] font-semibold text-white drop-shadow-sm truncate px-1">{entry.name} {Math.round(pct)}%</span>
                           )}
                         </div>
                       );
                     })}
                   </div>
-                  <div className="flex flex-wrap items-center gap-3 mt-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-3 gap-y-1.5 mt-3">
                     {seniorityChartData.map((entry, i) => {
                       const pct = Math.round((entry.count / totalSeniority) * 100);
                       const isEntry = entryLevels.includes(entry.name);
                       return (
                         <div key={entry.name} className="flex items-center gap-1.5" data-testid={`seniority-legend-${entry.name.toLowerCase()}`}>
-                          <span className="w-2 h-2 rounded-sm" style={{ backgroundColor: isEntry ? "hsl(var(--chart-2))" : "hsl(var(--chart-1))", opacity: Math.max(1 - (i * 0.06), 0.5) }} />
-                          <span className="text-[10px] text-muted-foreground">{entry.name}</span>
-                          <span className="text-[10px] text-foreground font-medium tabular-nums">{pct}%</span>
-                          <span className="text-[9px] text-muted-foreground/60 tabular-nums">({entry.count})</span>
+                          <span className="w-2 h-2 rounded-sm shrink-0" style={{ backgroundColor: isEntry ? "hsl(var(--chart-2))" : "hsl(var(--chart-1))", opacity: Math.max(1 - (i * 0.06), 0.5) }} />
+                          <span className="text-[10px] text-muted-foreground truncate" title={entry.name}>{entry.name}</span>
+                          <span className="text-[10px] text-foreground font-medium tabular-nums shrink-0">{pct}%</span>
+                          <span className="text-[9px] text-muted-foreground/60 tabular-nums shrink-0">({entry.count})</span>
                         </div>
                       );
                     })}
                   </div>
                 </div>
-                <p className="text-[10px] text-muted-foreground/50 select-none text-right mt-2" data-testid="text-attribution">Source: lawjobs.co</p>
+  
               </div>
             </section>
           );
         })()}
 
         {/* COMPANIES + GEOGRAPHY */}
-        <section className="border-t border-border/40" data-testid="section-companies-geography">
+        <section className="border-t border-border/60" data-testid="section-companies-geography">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
             <div className="grid md:grid-cols-2 gap-4">
               {/* Companies */}
@@ -1501,13 +1517,13 @@ export default function MarketIntelligence() {
                 </div>
               )}
             </div>
-            <p className="text-[10px] text-muted-foreground/50 select-none text-right mt-2" data-testid="text-attribution">Source: lawjobs.co</p>
+
           </div>
         </section>
 
         {/* TRANSITION-FRIENDLY EMPLOYERS */}
         {transitionData && transitionData.transitionEmployers.length > 0 && (
-          <section className="border-t border-border/40" data-testid="section-transition-employers">
+          <section className="border-t border-border/60" data-testid="section-transition-employers">
             <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
               <p className="mi-section-title mb-1">Transition-Friendly Employers</p>
               <p className="mi-insight mb-4">Companies with the most roles that explicitly welcome career changers</p>
@@ -1520,12 +1536,12 @@ export default function MarketIntelligence() {
                 {transitionData.transitionEmployers.map((e, i) => (
                   <div
                     key={e.company}
-                    className={`grid grid-cols-[1fr_auto] sm:grid-cols-[1fr_100px_120px] gap-2 px-3 py-2.5 ${i % 2 === 0 ? "" : "bg-muted/30"}`}
+                    className={`grid grid-cols-[1fr_auto_auto] sm:grid-cols-[1fr_100px_120px] gap-2 px-3 py-2.5 ${i % 2 === 0 ? "" : "bg-muted/30"}`}
                     data-testid={`employer-${i}`}
                   >
                     <span className="text-xs font-medium text-foreground truncate" title={e.company}>{e.company}</span>
                     <span className="text-xs text-foreground tabular-nums text-right font-medium">{e.transitionFriendlyCount}</span>
-                    <div className="hidden sm:flex items-center justify-end gap-1">
+                    <div className="flex items-center justify-end gap-1">
                       {e.tracks.map(t => (
                         <span key={t} className="w-2 h-2 rounded-full" style={{ backgroundColor: TRACK_COLORS[t as keyof typeof TRACK_COLORS]?.primary }} title={t} />
                       ))}
@@ -1533,14 +1549,14 @@ export default function MarketIntelligence() {
                   </div>
                 ))}
               </div>
-              <p className="text-[10px] text-muted-foreground/50 select-none text-right mt-2" data-testid="text-attribution">Source: lawjobs.co</p>
+
             </div>
           </section>
         )}
 
         {/* COMMUNITY PULSE */}
         {communityBenchmarks && (
-          <section className="border-t border-border/40" data-testid="section-community">
+          <section className="border-t border-border/60" data-testid="section-community">
             <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
               <p className="mi-section-title mb-1">Community Pulse</p>
               <p className="mi-insight mb-4">Aggregated insights from career diagnostic assessments</p>
@@ -1622,7 +1638,7 @@ export default function MarketIntelligence() {
                     })}
                   </div>
                   {communityBenchmarks.topCareerPaths.length > 0 && (
-                    <div className="mt-3 pt-3 border-t border-border/40">
+                    <div className="mt-3 pt-3 border-t border-border/60">
                       <p className="mi-label mb-1.5">Popular Paths</p>
                       <div className="flex flex-wrap gap-1">
                         {communityBenchmarks.topCareerPaths.slice(0, 4).map((cp) => (
@@ -1635,7 +1651,7 @@ export default function MarketIntelligence() {
                   )}
                 </div>
               </div>
-              <p className="text-[10px] text-muted-foreground/50 select-none text-right mt-2" data-testid="text-attribution">Source: lawjobs.co</p>
+
             </div>
           </section>
         )}
@@ -1643,7 +1659,7 @@ export default function MarketIntelligence() {
         </>}
 
         {/* CTA */}
-        <section className="border-t border-border/40" data-testid="section-cta">
+        <section className="border-t border-border/60" data-testid="section-cta">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10 text-center">
             <h2 className="text-lg sm:text-xl font-serif font-medium text-foreground mb-2" data-testid="text-cta-title">
               Ready to find out where you fit?
@@ -1657,6 +1673,7 @@ export default function MarketIntelligence() {
                 <ArrowRight className="ml-2 h-3.5 w-3.5" />
               </Link>
             </Button>
+            <p className="text-[10px] text-muted-foreground/40 select-none mt-6" data-testid="text-attribution">Data: lawjobs.co</p>
           </div>
         </section>
       </main>

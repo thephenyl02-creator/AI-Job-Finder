@@ -102,16 +102,19 @@ export const SHARED_TOOLTIP_STYLE = {
     fontSize: "12px",
     padding: "8px 12px",
     boxShadow: "var(--shadow-md)",
+    fontFamily: "var(--font-sans)",
   },
   labelStyle: {
     fontWeight: 600,
     marginBottom: "4px",
     fontSize: "11px",
     color: "hsl(var(--muted-foreground))",
+    fontFamily: "var(--font-sans)",
   },
   itemStyle: {
     fontSize: "12px",
     padding: "1px 0",
+    fontFamily: "var(--font-sans)",
   },
 };
 
