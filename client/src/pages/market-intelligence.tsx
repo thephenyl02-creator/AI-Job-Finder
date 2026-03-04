@@ -963,6 +963,7 @@ export default function MarketIntelligence() {
                       strokeWidth={2}
                       content={({ x, y, width, height, name, value, pct }: any) => {
                         if (!width || !height || width < 2 || height < 2) return null;
+                        const clean = (name || '').replace(/&amp;/g, '&');
                         const TREEMAP_COLORS: Record<string, string> = {
                           "Legal Operations": "#1e3a5f",
                           "Compliance & Privacy": "#2d6a4f",
@@ -978,7 +979,7 @@ export default function MarketIntelligence() {
                           "Litigation & eDiscovery": "#6d28d9",
                           "Legal Sales & Client Solutions": "#b45309",
                         };
-                        const color = TREEMAP_COLORS[name || ''] || getCategoryColor(name || '');
+                        const color = TREEMAP_COLORS[clean] || getCategoryColor(clean);
                         const showName = width > 35 && height > 18;
                         const showValue = width > 25 && height > 14;
                         const SHORT_NAMES: Record<string, string> = {
@@ -995,22 +996,22 @@ export default function MarketIntelligence() {
                           "Intellectual Property & Innovation": "IP & Innovation",
                           "Litigation & eDiscovery": "Litigation",
                         };
-                        const displayName = (name && SHORT_NAMES[name]) ? SHORT_NAMES[name] : name;
+                        const displayName = SHORT_NAMES[clean] || clean;
                         const fontSize = Math.min(12, width / 9);
                         const maxChars = Math.floor(width / (fontSize * 0.62));
-                        const truncatedName = displayName && displayName.length > maxChars ? displayName.slice(0, maxChars - 1) + '…' : displayName;
+                        const truncatedName = displayName.length > maxChars ? displayName.slice(0, maxChars - 1) + '…' : displayName;
                         const valueFontSize = Math.min(9, width / 12);
                         return (
                           <g>
                             <rect x={x} y={y} width={width} height={height} rx={4} fill={color} stroke="hsl(var(--card))" strokeWidth={2} />
                             {showName && (
-                              <text x={x + width / 2} y={y + height / 2 - (showValue ? 7 : 0)} textAnchor="middle" dominantBaseline="central" style={{ fontSize, fontWeight: 500, fill: '#fff', textShadow: '0 1px 2px rgba(0,0,0,0.25)', fontFamily: '"DM Sans", "Inter", sans-serif' }}>
-                                <title>{name}</title>
+                              <text x={x + width / 2} y={y + height / 2 - (showValue ? 7 : 0)} textAnchor="middle" dominantBaseline="central" style={{ fontSize, fontWeight: 500, fill: '#fff', fontFamily: '"DM Sans", "Inter", sans-serif' }}>
+                                <title>{clean}</title>
                                 {truncatedName}
                               </text>
                             )}
                             {showValue && (
-                              <text x={x + width / 2} y={y + height / 2 + (showName ? 9 : 0)} textAnchor="middle" dominantBaseline="central" style={{ fontSize: valueFontSize, fontWeight: 500, fill: 'rgba(255,255,255,0.85)', fontFamily: '"JetBrains Mono", monospace' }}>
+                              <text x={x + width / 2} y={y + height / 2 + (showName ? 9 : 0)} textAnchor="middle" dominantBaseline="central" style={{ fontSize: valueFontSize, fontWeight: 400, fill: 'rgba(255,255,255,0.8)', fontFamily: '"JetBrains Mono", monospace' }}>
                                 {value} ({pct}%)
                               </text>
                             )}
