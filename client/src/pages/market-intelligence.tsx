@@ -930,7 +930,7 @@ export default function MarketIntelligence() {
                       </div>
                       <div className="flex flex-wrap gap-1 mb-3">
                         {ts.topSkills.slice(0, 3).map(s => (
-                          <Badge key={s.skill} variant="outline" className="text-[10px] no-default-active-elevate">{s.skill}</Badge>
+                          <Badge key={s.skill} variant="outline" className="text-[10px] no-default-active-elevate" title={s.skill}>{s.skill}</Badge>
                         ))}
                       </div>
                       <Link href={`/jobs?track=${encodeURIComponent(ts.track)}`}>
@@ -954,7 +954,7 @@ export default function MarketIntelligence() {
               <p className="mi-section-title mb-1">Career Landscape</p>
               <p className="mi-insight mb-4">{careerPaths.length} categories across {overview.totalJobs.toLocaleString()} roles — sized by market share</p>
               <div className="mi-panel">
-                <div className="h-[320px] w-full">
+                <div className="h-[240px] sm:h-[320px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <Treemap
                       data={careerPaths.map(cp => ({ name: cp.name, size: cp.jobCount, pct: cp.percentage }))}
@@ -965,8 +965,8 @@ export default function MarketIntelligence() {
                       content={({ x, y, width, height, name, value, pct }: any) => {
                         if (!width || !height || width < 2 || height < 2) return null;
                         const color = getCategoryColor(name || '');
-                        const showName = width > 60 && height > 30;
-                        const showValue = width > 40 && height > 20;
+                        const showName = width > 45 && height > 22;
+                        const showValue = width > 30 && height > 16;
                         return (
                           <g>
                             <rect x={x} y={y} width={width} height={height} rx={4} fill={color} fillOpacity={0.85} stroke="hsl(var(--card))" strokeWidth={2} />
@@ -1014,8 +1014,8 @@ export default function MarketIntelligence() {
                           <p className="mi-label text-emerald-600 dark:text-emerald-400 mb-2">You Likely Have</p>
                           <div className="space-y-1.5">
                             {youHaveVisible.map(s => (
-                              <div key={s.skill} className="flex items-center justify-between gap-1">
-                                <span className="text-[11px] text-foreground truncate" title={s.skill}>{s.skill}</span>
+                              <div key={s.skill} className="flex items-center justify-between gap-2">
+                                <span className="text-[11px] text-foreground truncate min-w-0" title={s.skill}>{s.skill}</span>
                                 <span className="text-[10px] text-muted-foreground tabular-nums shrink-0">{s.count}</span>
                               </div>
                             ))}
@@ -1025,8 +1025,8 @@ export default function MarketIntelligence() {
                           <p className="mi-label text-amber-600 dark:text-amber-400 mb-2">To Build</p>
                           <div className="space-y-1.5">
                             {toBuildVisible.map(s => (
-                              <div key={s.skill} className="flex items-center justify-between gap-1">
-                                <span className="text-[11px] text-foreground truncate" title={s.skill}>{s.skill}</span>
+                              <div key={s.skill} className="flex items-center justify-between gap-2">
+                                <span className="text-[11px] text-foreground truncate min-w-0" title={s.skill}>{s.skill}</span>
                                 <span className="text-[10px] text-muted-foreground tabular-nums shrink-0">{s.count}</span>
                               </div>
                             ))}
@@ -1241,12 +1241,17 @@ export default function MarketIntelligence() {
                               {formatSalary(sp.medianMin)} – {formatSalary(sp.medianMax)}
                             </span>
                           </div>
+                          <div className="hidden sm:block">
                           <div className="h-3 rounded-full bg-muted/30 overflow-hidden relative">
                             <div className="absolute h-full rounded-full" style={{ left: `${minPct}%`, width: `${Math.max(maxPct - minPct, 2)}%`, background: `linear-gradient(90deg, ${trackColor}30, ${trackColor}60)` }} />
                             <div className="absolute top-0 h-full w-0.5 rounded-full" style={{ left: `${minPct}%`, backgroundColor: trackColor }} />
                             <div className="absolute top-0 h-full w-0.5 rounded-full" style={{ left: `${maxPct}%`, backgroundColor: trackColor }} />
                             <div className="absolute top-1/2 -translate-y-1/2 w-2 h-2 rounded-full border-2 border-background" style={{ left: `${minPct}%`, marginLeft: '-4px', backgroundColor: trackColor }} />
                             <div className="absolute top-1/2 -translate-y-1/2 w-2 h-2 rounded-full border-2 border-background" style={{ left: `${maxPct}%`, marginLeft: '-4px', backgroundColor: trackColor }} />
+                          </div>
+                          </div>
+                          <div className="sm:hidden h-1.5 rounded-full bg-muted/30 overflow-hidden">
+                            <div className="h-full rounded-full" style={{ width: `${maxPct}%`, backgroundColor: trackColor, opacity: 0.5 }} />
                           </div>
                         </div>
                       );
@@ -1263,8 +1268,8 @@ export default function MarketIntelligence() {
                     <span className="mi-label text-[10px]">Work Mode</span>
                   </div>
                   {workModeTotal > 0 && (
-                    <div className="flex items-center gap-4">
-                      <div className="w-[140px] h-[140px] shrink-0">
+                    <div className="flex flex-col sm:flex-row items-center gap-4">
+                      <div className="w-[100px] h-[100px] sm:w-[140px] sm:h-[140px] shrink-0">
                         <ResponsiveContainer width="100%" height="100%">
                           <PieChart>
                             <Pie
@@ -1316,8 +1321,8 @@ export default function MarketIntelligence() {
                     <Sparkles className="h-3 w-3 text-muted-foreground" />
                     <span className="mi-label text-[10px]">AI Intensity</span>
                   </div>
-                  <div className="flex items-center gap-4">
-                    <div className="w-[140px] h-[100px] shrink-0">
+                  <div className="flex flex-col sm:flex-row items-center gap-4">
+                    <div className="w-[100px] h-[70px] sm:w-[140px] sm:h-[100px] shrink-0">
                       <ResponsiveContainer width="100%" height="100%">
                         <RadialBarChart cx="50%" cy="100%" innerRadius="30%" outerRadius="100%" startAngle={180} endAngle={0}
                           data={[
@@ -1386,7 +1391,7 @@ export default function MarketIntelligence() {
                           title={`${entry.name}: ${entry.count} (${Math.round(pct)}%)`}
                           data-testid={`seniority-${entry.name.toLowerCase()}`}
                         >
-                          {pct >= 10 && (
+                          {pct >= 14 && (
                             <span className="text-[9px] font-semibold text-white drop-shadow-sm truncate px-1">{entry.name} {Math.round(pct)}%</span>
                           )}
                         </div>
@@ -1464,7 +1469,7 @@ export default function MarketIntelligence() {
                           <div className="flex items-center justify-between mb-0.5">
                             <div className="flex items-center gap-2 min-w-0">
                               <span className="mi-rank">#{i + 1}</span>
-                              <span className="text-[11px] text-foreground font-medium truncate">{geo.name}</span>
+                              <span className="text-[11px] text-foreground font-medium truncate" title={geo.name}>{geo.name}</span>
                             </div>
                             <span className="mi-bar-label text-foreground shrink-0">{geo.count}</span>
                           </div>
@@ -1527,9 +1532,9 @@ export default function MarketIntelligence() {
                     <Target className="h-3 w-3 text-muted-foreground" />
                     <span className="mi-label text-[10px]">Average Readiness</span>
                   </div>
-                  <div className="flex items-center gap-4">
+                  <div className="flex flex-col sm:flex-row items-center gap-4">
                     <div className="relative flex items-center justify-center shrink-0">
-                      <svg className="w-[80px] h-[48px]" viewBox="0 0 120 65">
+                      <svg className="w-[64px] h-[40px] sm:w-[80px] sm:h-[48px]" viewBox="0 0 120 65">
                         {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(i => {
                           const angle = Math.PI - (i / 10) * Math.PI;
                           const x1 = 60 + 48 * Math.cos(angle);
@@ -1587,7 +1592,7 @@ export default function MarketIntelligence() {
                           <div className="flex items-center justify-between mb-0.5">
                             <div className="flex items-center gap-2">
                               <span className="mi-rank">#{i + 1}</span>
-                              <span className="text-[11px] text-foreground truncate" title={sg.skill}>{sg.skill}</span>
+                              <span className="text-[11px] text-foreground truncate max-w-[140px] sm:max-w-none" title={sg.skill}>{sg.skill}</span>
                             </div>
                             <span className="mi-bar-label text-muted-foreground">{sg.count}</span>
                           </div>
@@ -1603,7 +1608,7 @@ export default function MarketIntelligence() {
                       <p className="mi-label mb-1.5">Popular Paths</p>
                       <div className="flex flex-wrap gap-1">
                         {communityBenchmarks.topCareerPaths.slice(0, 4).map((cp) => (
-                          <Badge key={cp.path} variant="outline" className="text-[10px] no-default-active-elevate" data-testid={`popular-path-${cp.path.toLowerCase().replace(/\s+/g, "-")}`}>
+                          <Badge key={cp.path} variant="outline" className="text-[10px] no-default-active-elevate" title={cp.path} data-testid={`popular-path-${cp.path.toLowerCase().replace(/\s+/g, "-")}`}>
                             {cp.path}
                           </Badge>
                         ))}

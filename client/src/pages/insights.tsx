@@ -727,6 +727,7 @@ export default function Insights() {
                     variant="outline"
                     className="text-xs py-1 px-2.5"
                     data-testid={`badge-subcategory-${i}`}
+                    title={sub.name}
                   >
                     {sub.name}
                     <span className="ml-1.5 text-muted-foreground tabular-nums">{sub.count}</span>

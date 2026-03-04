@@ -106,20 +106,29 @@ function DiagPanel({ title, subtitle, accent = "green", children, className = ""
 }
 
 function SkillRadarChart({ clusters }: { clusters: SkillCluster[] }) {
-  const data = clusters.map(c => ({
-    subject: c.name.replace("Legal ", "").replace("& ", "&\n"),
-    shortSubject: c.name.replace("Legal ", "").split(" ")[0],
-    score: c.score,
-    fullMark: 100,
-  }));
-
   const [isMobileChart, setIsMobileChart] = useState(false);
+  const [isNarrowChart, setIsNarrowChart] = useState(false);
   useEffect(() => {
-    const check = () => setIsMobileChart(window.innerWidth < 640);
+    const check = () => {
+      setIsMobileChart(window.innerWidth < 640);
+      setIsNarrowChart(window.innerWidth < 360);
+    };
     check();
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
   }, []);
+
+  const data = clusters.map(c => {
+    const base = c.name.replace("Legal ", "");
+    const short = base.split(" ")[0];
+    const narrow = short.length > 6 ? short.slice(0, 5) + "." : short;
+    return {
+      subject: base.replace("& ", "&\n"),
+      shortSubject: isNarrowChart ? narrow : short,
+      score: c.score,
+      fullMark: 100,
+    };
+  });
 
   return (
     <DiagPanel
@@ -129,11 +138,11 @@ function SkillRadarChart({ clusters }: { clusters: SkillCluster[] }) {
     >
       <div className="w-full h-[260px]" data-testid="skill-radar-chart">
         <ResponsiveContainer width="100%" height="100%">
-          <RadarChart cx="50%" cy="50%" outerRadius={isMobileChart ? "60%" : "70%"} data={data}>
+          <RadarChart cx="50%" cy="50%" outerRadius={isNarrowChart ? "55%" : isMobileChart ? "60%" : "70%"} data={data}>
             <PolarGrid stroke="hsl(var(--border))" strokeOpacity={0.5} />
             <PolarAngleAxis
               dataKey={isMobileChart ? "shortSubject" : "subject"}
-              tick={{ fontSize: isMobileChart ? 9 : 10, fill: "hsl(var(--muted-foreground))" }}
+              tick={{ fontSize: isNarrowChart ? 8 : isMobileChart ? 9 : 10, fill: "hsl(var(--muted-foreground))" }}
             />
             <PolarRadiusAxis
               angle={90}
@@ -393,11 +402,11 @@ function ReadinessLadder({ ladder, isPro }: {
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <Link href={`/jobs/${role.jobId}`}>
-                        <span className="text-sm font-medium text-foreground hover:text-primary transition-colors cursor-pointer line-clamp-1" data-testid={`readiness-role-${role.jobId}`}>
+                        <span className="text-sm font-medium text-foreground hover:text-primary transition-colors cursor-pointer line-clamp-1" title={role.title} data-testid={`readiness-role-${role.jobId}`}>
                           {role.title}
                         </span>
                       </Link>
-                      <p className="text-xs text-muted-foreground">{role.company}</p>
+                      <p className="text-xs text-muted-foreground truncate" title={role.company}>{role.company}</p>
                     </div>
                     <span className="diag-metric text-[10px] shrink-0 px-1.5 py-0.5 rounded bg-background border border-border">{role.fitScore}% fit</span>
                   </div>
@@ -467,7 +476,7 @@ function TransitionPlan({ plan, isPro }: { plan: TransitionWeek[]; isPro: boolea
               <CardHeader className="px-3 sm:px-4 pt-3 pb-1.5 space-y-0">
                 <div className="flex items-center gap-2">
                   <span className="diag-metric text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/30 shrink-0">W{week.week}</span>
-                  <CardTitle className="text-sm font-semibold">{week.theme}</CardTitle>
+                  <CardTitle className="text-sm font-semibold truncate" title={week.theme}>{week.theme}</CardTitle>
                 </div>
               </CardHeader>
               <CardContent className="px-3 sm:px-4 pb-3">
@@ -480,7 +489,7 @@ function TransitionPlan({ plan, isPro }: { plan: TransitionWeek[]; isPro: boolea
                         <div className="flex items-center gap-1.5 sm:gap-2 mt-0.5 text-muted-foreground flex-wrap">
                           <span className="font-mono text-[10px]">{action.timeEstimate}</span>
                           <span>·</span>
-                          <span className="text-primary/80 text-[10px]">{action.skillGapAddressed}</span>
+                          <span className="text-primary/80 text-[10px] truncate" title={action.skillGapAddressed}>{action.skillGapAddressed}</span>
                         </div>
                       </div>
                     </div>
@@ -612,7 +621,7 @@ function CareerPathFlow({
               </div>
               {path.topGaps[0] && (
                 <div className="flex justify-center -mt-1 -mb-1 relative z-10">
-                  <span className="text-[10px] text-muted-foreground font-mono bg-background px-1.5 py-0.5 rounded border border-border/30" data-testid={`career-flow-gap-${i}`}>
+                  <span className="text-[10px] text-muted-foreground font-mono bg-background px-1.5 py-0.5 rounded border border-border/30 max-w-[200px] truncate" title={path.topGaps[0]} data-testid={`career-flow-gap-${i}`}>
                     {path.topGaps[0]}
                   </span>
                 </div>
@@ -629,10 +638,10 @@ function CareerPathFlow({
                   </div>
                 )}
                 <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <span className={`text-sm font-semibold ${fitColor(path.fitLevel)}`}>{path.name}</span>
+                  <span className={`text-sm font-semibold ${fitColor(path.fitLevel)}`} title={path.name}>{path.name}</span>
                   <span className="diag-metric text-[10px] px-1.5 py-0.5 rounded bg-muted border border-border/50">{path.confidence}%</span>
                 </div>
-                <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{path.description}</p>
+                <p className="text-xs text-muted-foreground mt-1 line-clamp-1" title={path.description}>{path.description}</p>
                 {roles.length > 0 && (
                   <div className="mt-2 space-y-1">
                     {roles.slice(0, 2).map((role) => (
@@ -640,7 +649,7 @@ function CareerPathFlow({
                         <div className="flex items-center gap-1.5 text-[10px] cursor-pointer hover:text-foreground transition-colors" data-testid={`career-flow-role-${role.jobId}`}>
                           <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${role.tierColor === "emerald" ? "bg-emerald-500" : "bg-amber-500"}`} />
                           <span className="text-foreground/80 truncate" title={role.title}>{role.title}</span>
-                          <span className="text-muted-foreground shrink-0">@ {role.company}</span>
+                          <span className="text-muted-foreground shrink-0" title={role.company}>@ {role.company}</span>
                         </div>
                       </Link>
                     ))}
@@ -711,6 +720,7 @@ function CareerPathFlow({
                       fontFamily="var(--font-mono)"
                       data-testid={`career-flow-gap-${i}`}
                     >
+                      <title>{path.topGaps[0]}</title>
                       {path.topGaps[0].length > 28 ? path.topGaps[0].slice(0, 26) + "..." : path.topGaps[0]}
                     </text>
                   )}
@@ -738,10 +748,10 @@ function CareerPathFlow({
                     </div>
                   )}
                   <div className="flex items-center justify-between gap-2 flex-wrap">
-                    <span className={`text-sm font-semibold ${fitColor(path.fitLevel)}`}>{path.name}</span>
+                    <span className={`text-sm font-semibold ${fitColor(path.fitLevel)}`} title={path.name}>{path.name}</span>
                     <span className="diag-metric text-[10px] px-1.5 py-0.5 rounded bg-muted border border-border/50">{path.confidence}%</span>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{path.description}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1" title={path.description}>{path.description}</p>
                   {roles.length > 0 && (
                     <div className="mt-2 space-y-1">
                       {roles.slice(0, 2).map((role) => (
@@ -749,7 +759,7 @@ function CareerPathFlow({
                           <div className="flex items-center gap-1.5 text-[10px] cursor-pointer hover:text-foreground transition-colors" data-testid={`career-flow-role-${role.jobId}`}>
                             <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${role.tierColor === "emerald" ? "bg-emerald-500" : "bg-amber-500"}`} />
                             <span className="text-foreground/80 truncate" title={role.title}>{role.title}</span>
-                            <span className="text-muted-foreground shrink-0">@ {role.company}</span>
+                            <span className="text-muted-foreground shrink-0" title={role.company}>@ {role.company}</span>
                           </div>
                         </Link>
                       ))}
@@ -1473,6 +1483,8 @@ export default function DiagnosticPage() {
         <>
           {isPro && (
             <nav className="sticky top-0 z-50 -mx-4 px-4 py-1.5 sm:py-2.5 bg-background/80 backdrop-blur-md border-b border-border/40" data-testid="section-nav">
+              <div className="relative">
+              <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-background/80 to-transparent pointer-events-none z-10 sm:hidden" />
               <div className="flex items-center gap-0.5 sm:gap-1 overflow-x-auto scrollbar-none">
                 {[
                   { id: "overview", label: "Overview", icon: BarChart3 },
@@ -1494,6 +1506,7 @@ export default function DiagnosticPage() {
                     {section.label}
                   </Button>
                 ))}
+              </div>
               </div>
             </nav>
           )}

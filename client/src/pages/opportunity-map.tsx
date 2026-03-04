@@ -807,6 +807,7 @@ export default function OpportunityMap() {
                                 key={cat}
                                 variant="outline"
                                 className="text-[10px] no-default-active-elevate"
+                                title={cat}
                               >
                                 {cat}
                               </Badge>
@@ -842,6 +843,7 @@ export default function OpportunityMap() {
                           key={cat.name}
                           variant="outline"
                           className="text-[10px] no-default-active-elevate"
+                          title={cat.name}
                         >
                           {cat.name}
                           <span className="ml-1 text-muted-foreground">{cat.count}</span>

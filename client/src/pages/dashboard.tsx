@@ -371,7 +371,7 @@ export default function DashboardPage() {
                     </div>
                     {topPathName ? (
                       <>
-                        <p className="text-xs sm:text-sm font-semibold text-foreground leading-tight line-clamp-2" data-testid="text-top-path-name">
+                        <p className="text-xs sm:text-sm font-semibold text-foreground leading-tight line-clamp-2" data-testid="text-top-path-name" title={topPathName}>
                           {topPathName}
                         </p>
                         {topPathConfidence && (
@@ -437,11 +437,11 @@ export default function DashboardPage() {
                   <Link key={job.id} href={`/jobs/${job.id}`}>
                     <Card className="card-elev-interactive cursor-pointer h-full" data-testid={`card-recent-job-${job.id}`}>
                       <CardContent className="p-4">
-                        <p className="text-sm font-medium text-foreground line-clamp-2 mb-1">{job.title}</p>
-                        <p className="text-xs text-muted-foreground mb-2">{job.company}</p>
+                        <p className="text-sm font-medium text-foreground line-clamp-2 mb-1" title={job.title}>{job.title}</p>
+                        <p className="text-xs text-muted-foreground mb-2 truncate" title={job.company}>{job.company}</p>
                         <div className="flex flex-wrap gap-1.5">
-                          {job.roleCategory && <Badge variant="secondary" className="text-[10px]">{job.roleCategory}</Badge>}
-                          {job.workMode && <Badge variant="outline" className="text-[10px]">{job.workMode}</Badge>}
+                          {job.roleCategory && <Badge variant="secondary" className="text-[10px]" title={job.roleCategory}>{job.roleCategory}</Badge>}
+                          {job.workMode && <Badge variant="outline" className="text-[10px]" title={job.workMode}>{job.workMode}</Badge>}
                         </div>
                       </CardContent>
                     </Card>
@@ -516,7 +516,7 @@ export default function DashboardPage() {
                       <h2 className="text-lg font-semibold text-foreground">Career Snapshot</h2>
                     </div>
                     {topPathName && (
-                      <p className="text-sm text-muted-foreground mb-4">
+                      <p className="text-sm text-muted-foreground mb-4" title={`Top path: ${topPathName}${topPathConfidence ? ` · ${topPathConfidence}% confidence` : ""}`}>
                         Top path: <span className="font-medium text-foreground">{topPathName}</span>
                         {topPathConfidence && <span> · {topPathConfidence}% confidence</span>}
                       </p>
@@ -526,12 +526,17 @@ export default function DashboardPage() {
                         {diagnosticReport.skillClusters.slice(0, 5).map((skill, idx) => {
                           const dotColors = ["bg-primary", "bg-chart-2", "bg-chart-3", "bg-chart-4", "bg-chart-5"];
                           return (
-                            <Badge key={skill.name} variant="secondary" className="text-xs gap-1.5 py-1">
+                            <Badge key={skill.name} variant="secondary" className={`text-xs gap-1.5 py-1 ${idx >= 3 ? "hidden sm:inline-flex" : ""}`} title={`${skill.name}: ${skill.score}`}>
                               <span className={`inline-block h-2 w-2 rounded-full ${dotColors[idx % dotColors.length]}`} />
                               {skill.name}: {skill.score}
                             </Badge>
                           );
                         })}
+                        {diagnosticReport.skillClusters.length > 3 && (
+                          <Badge variant="outline" className="text-xs py-1 sm:hidden" title={`${diagnosticReport.skillClusters.length - 3} more skills`}>
+                            +{Math.min(diagnosticReport.skillClusters.slice(0, 5).length - 3, diagnosticReport.skillClusters.length - 3)} more
+                          </Badge>
+                        )}
                       </div>
                     )}
                   </div>
@@ -573,27 +578,25 @@ export default function DashboardPage() {
                       This Week
                     </CardTitle>
                     {hasDiagnostic && !planComplete && transitionPlan.length > 0 && (
-                      <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-                        <div className="flex items-center gap-1.5 sm:gap-2">
-                          <div className="flex gap-0.5 sm:gap-1">
-                            {[1, 2, 3, 4].map((w) => (
-                              <div
-                                key={w}
-                                className={`h-1.5 sm:h-2 w-5 sm:w-7 rounded-full transition-colors ${
-                                  w < currentWeek
-                                    ? "bg-gradient-to-r from-primary to-chart-2"
-                                    : w === currentWeek
-                                    ? "bg-primary/50"
-                                    : "bg-muted"
-                                }`}
-                                data-testid={`progress-week-${w}`}
-                              />
-                            ))}
-                          </div>
-                          <Badge variant="secondary" className="text-xs font-semibold">
-                            Week {currentWeek}/4 · {Math.round(weekProgress * 100)}%
-                          </Badge>
+                      <div className="flex items-center gap-1.5 sm:gap-2">
+                        <div className="flex gap-0.5 sm:gap-1">
+                          {[1, 2, 3, 4].map((w) => (
+                            <div
+                              key={w}
+                              className={`h-1.5 sm:h-2 w-4 sm:w-7 rounded-full transition-colors ${
+                                w < currentWeek
+                                  ? "bg-gradient-to-r from-primary to-chart-2"
+                                  : w === currentWeek
+                                  ? "bg-primary/50"
+                                  : "bg-muted"
+                              }`}
+                              data-testid={`progress-week-${w}`}
+                            />
+                          ))}
                         </div>
+                        <Badge variant="secondary" className="text-[10px] sm:text-xs font-semibold">
+                          W{currentWeek}<span className="hidden sm:inline">/4</span> · {Math.round(weekProgress * 100)}%
+                        </Badge>
                       </div>
                     )}
                   </div>
@@ -639,7 +642,7 @@ export default function DashboardPage() {
                                         {action.timeEstimate}
                                       </span>
                                       {action.skillGapAddressed && (
-                                        <Badge variant="outline" className="text-[10px]">
+                                        <Badge variant="outline" className="text-[10px]" title={action.skillGapAddressed}>
                                           {action.skillGapAddressed}
                                         </Badge>
                                       )}
@@ -686,7 +689,7 @@ export default function DashboardPage() {
                               </div>
                               <div className="flex-1 min-w-0">
                                 <p className="text-sm font-medium text-foreground truncate" title={topReadyJob.title}>{topReadyJob.title}</p>
-                                <p className="text-xs text-muted-foreground">{topReadyJob.company} · {topReadyJob.fitScore}% fit</p>
+                                <p className="text-xs text-muted-foreground truncate" title={`${topReadyJob.company} · ${topReadyJob.fitScore}% fit`}>{topReadyJob.company} · {topReadyJob.fitScore}% fit</p>
                               </div>
                               <ChevronRight className="h-4 w-4 text-muted-foreground" />
                             </div>
@@ -732,7 +735,7 @@ export default function DashboardPage() {
                                 <Building2 className="h-4 w-4 text-chart-1" />
                               </div>
                               <p className="text-sm text-muted-foreground">
-                                <span className="font-medium text-foreground">{marketPulse.topHiringCompanies[0].name}</span> is hiring the most
+                                <span className="font-medium text-foreground" title={marketPulse.topHiringCompanies[0].name}>{marketPulse.topHiringCompanies[0].name}</span> is hiring the most
                               </p>
                             </div>
                           )}
@@ -778,7 +781,7 @@ export default function DashboardPage() {
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex-1 min-w-0">
                             <p className="text-xs text-muted-foreground mb-1.5 font-medium uppercase tracking-wide">Top Hiring</p>
-                            <p className="text-xl font-bold text-foreground truncate" title={marketPulse.topHiringCompanies?.[0]?.name || "N/A"}>
+                            <p className="text-lg sm:text-xl font-bold text-foreground truncate" title={marketPulse.topHiringCompanies?.[0]?.name || "N/A"}>
                               {marketPulse.topHiringCompanies?.[0]?.name || "N/A"}
                             </p>
                             <p className="text-xs text-muted-foreground mt-1">
@@ -802,7 +805,7 @@ export default function DashboardPage() {
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex-1 min-w-0">
                             <p className="text-xs text-muted-foreground mb-1.5 font-medium uppercase tracking-wide">Most In-Demand</p>
-                            <p className="text-xl font-bold text-foreground truncate" title={marketPulse.trendingSkill?.name || "N/A"}>
+                            <p className="text-lg sm:text-xl font-bold text-foreground truncate" title={marketPulse.trendingSkill?.name || "N/A"}>
                               {marketPulse.trendingSkill?.name || "N/A"}
                             </p>
                             <p className="text-xs text-muted-foreground mt-1">
@@ -855,7 +858,7 @@ export default function DashboardPage() {
                               <div className="flex items-start justify-between gap-2">
                                 <div className="flex-1 min-w-0">
                                   <p className="text-xs text-muted-foreground mb-1.5 font-medium uppercase tracking-wide">Avg Salary</p>
-                                  <p className="text-xl font-bold text-foreground truncate" title={formatSalary(marketPulse.salaryInsight.avgMin, marketPulse.salaryInsight.avgMax) ?? undefined}>
+                                  <p className="text-lg sm:text-xl font-bold text-foreground truncate" title={formatSalary(marketPulse.salaryInsight.avgMin, marketPulse.salaryInsight.avgMax) ?? undefined}>
                                     {formatSalary(marketPulse.salaryInsight.avgMin, marketPulse.salaryInsight.avgMax)}
                                   </p>
                                   <p className="text-xs text-muted-foreground mt-1 truncate" title={marketPulse.salaryInsight.category}>

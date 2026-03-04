@@ -1542,7 +1542,7 @@ function ResumeEditorView({
 
         <div className="lg:hidden">
           <Tabs value={activeSection} onValueChange={(v) => setActiveSection(v as SectionKey)}>
-            <TabsList className="w-full grid grid-cols-3 xs:grid-cols-6 sm:grid-cols-6 h-auto gap-1">
+            <TabsList className="w-full grid grid-cols-3 sm:grid-cols-6 h-auto gap-1">
               {SECTION_NAV.map((item) => {
                 const Icon = item.icon;
                 return (

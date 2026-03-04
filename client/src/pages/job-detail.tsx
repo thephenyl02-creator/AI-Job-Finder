@@ -777,6 +777,7 @@ export default function JobDetail() {
                 <Badge
                   variant="outline"
                   className="gap-1"
+                  title={cleanStructuredText(job.roleCategory)}
                   data-testid="badge-role-category"
                 >
                   <Briefcase className="h-3 w-3" />
@@ -787,6 +788,7 @@ export default function JobDetail() {
                 <Badge
                   variant="outline"
                   className="gap-1 text-xs"
+                  title={cleanStructuredText(job.roleSubcategory)}
                   data-testid="badge-role-subcategory"
                 >
                   {cleanStructuredText(job.roleSubcategory)}
@@ -816,6 +818,7 @@ export default function JobDetail() {
                   key={i}
                   variant="secondary"
                   className="text-xs"
+                  title={cleanStructuredText(skill)}
                   data-testid={`badge-skill-${i}`}
                 >
                   {cleanStructuredText(skill)}
@@ -871,40 +874,42 @@ export default function JobDetail() {
           </div>
 
           {!isRestricted && (
-          <div className="flex items-center gap-2 mt-4 flex-wrap">
-            {isAuthenticated ? (
-              <Button
-                className="gap-2"
-                onClick={handleTailorClick}
-                data-testid="button-tailor-resume-top"
-              >
-                <FileText className="h-4 w-4" />
-                <span className="hidden sm:inline">Tailor Your Resume</span>
-                <span className="sm:hidden">Tailor Resume</span>
-              </Button>
-            ) : (
-              <Link href={authReturnUrl}>
-                <Button className="gap-2" data-testid="button-tailor-signin">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-4">
+            <div className="flex gap-2 w-full sm:w-auto">
+              {isAuthenticated ? (
+                <Button
+                  className="gap-2 flex-1 sm:flex-none"
+                  onClick={handleTailorClick}
+                  data-testid="button-tailor-resume-top"
+                >
                   <FileText className="h-4 w-4" />
                   <span className="hidden sm:inline">Tailor Your Resume</span>
                   <span className="sm:hidden">Tailor Resume</span>
                 </Button>
-              </Link>
-            )}
-            {job?.applyUrl ? (
-              <a href={job.applyUrl} target="_blank" rel="noopener noreferrer" onClick={handleApplyClick}>
-                <Button variant="outline" className="gap-2" data-testid="button-apply-top">
+              ) : (
+                <Link href={authReturnUrl} className="flex-1 sm:flex-none">
+                  <Button className="gap-2 w-full" data-testid="button-tailor-signin">
+                    <FileText className="h-4 w-4" />
+                    <span className="hidden sm:inline">Tailor Your Resume</span>
+                    <span className="sm:hidden">Tailor Resume</span>
+                  </Button>
+                </Link>
+              )}
+              {job?.applyUrl ? (
+                <a href={job.applyUrl} target="_blank" rel="noopener noreferrer" onClick={handleApplyClick} className="flex-1 sm:flex-none">
+                  <Button variant="outline" className="gap-2 w-full" data-testid="button-apply-top">
+                    <ExternalLink className="h-4 w-4" />
+                    <span className="hidden sm:inline">Apply on Company Website</span>
+                    <span className="sm:hidden">Apply</span>
+                  </Button>
+                </a>
+              ) : (
+                <Button variant="outline" className="gap-2 flex-1 sm:flex-none" disabled data-testid="button-apply-top">
                   <ExternalLink className="h-4 w-4" />
-                  <span className="hidden sm:inline">Apply on Company Website</span>
-                  <span className="sm:hidden">Apply</span>
+                  Apply link unavailable
                 </Button>
-              </a>
-            ) : (
-              <Button variant="outline" className="gap-2" disabled data-testid="button-apply-top">
-                <ExternalLink className="h-4 w-4" />
-                Apply link unavailable
-              </Button>
-            )}
+              )}
+            </div>
             {isAuthenticated ? (
               <Button
                 variant="ghost"
@@ -1116,13 +1121,13 @@ export default function JobDetail() {
                       <Progress value={rf.score} className="h-1.5 mb-2" />
                       <div className="flex flex-wrap gap-1">
                         {rf.matched.map((s, i) => (
-                          <Badge key={`m-${i}`} variant="outline" className="text-[10px] bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800/40 gap-0.5">
+                          <Badge key={`m-${i}`} variant="outline" className="text-[10px] bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800/40 gap-0.5" title={s}>
                             <CheckCircle2 className="h-2.5 w-2.5" />
                             {s}
                           </Badge>
                         ))}
                         {rf.missing.map((s, i) => (
-                          <Badge key={`g-${i}`} variant="outline" className="text-[10px] text-muted-foreground gap-0.5">
+                          <Badge key={`g-${i}`} variant="outline" className="text-[10px] text-muted-foreground gap-0.5" title={s}>
                             {s}
                           </Badge>
                         ))}
@@ -1176,6 +1181,7 @@ export default function JobDetail() {
                     key={i}
                     variant="outline"
                     className="text-xs gap-1 bg-primary/5 border-primary/20"
+                    title={cleanStructuredText(skill)}
                     data-testid={`badge-ats-keyword-${i}`}
                   >
                     <CheckCircle2 className="h-2.5 w-2.5 text-primary shrink-0" />
@@ -1316,11 +1322,11 @@ export default function JobDetail() {
                   <Link key={sj.id} href={`/jobs/${sj.id}`}>
                     <Card className="hover-elevate cursor-pointer h-full" data-testid={`card-similar-job-${sj.id}`}>
                       <CardContent className="p-3 sm:p-4">
-                        <h3 className="font-medium text-foreground text-sm leading-snug line-clamp-2" data-testid={`text-similar-title-${sj.id}`}>
+                        <h3 className="font-medium text-foreground text-sm leading-snug line-clamp-2" title={cleanStructuredText(sj.title)} data-testid={`text-similar-title-${sj.id}`}>
                           {cleanStructuredText(sj.title)}
                         </h3>
                         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1.5 text-xs text-muted-foreground">
-                          <span className="flex items-center gap-1">
+                          <span className="flex items-center gap-1" title={cleanStructuredText(sj.company)}>
                             <Building2 className="h-3 w-3" />
                             {cleanStructuredText(sj.company)}
                           </span>
@@ -1348,7 +1354,7 @@ export default function JobDetail() {
                             <Badge variant="outline" className="text-[10px]">{sj.seniorityLevel}</Badge>
                           )}
                           {sj.keySkills && sj.keySkills.slice(0, 3).map((skill, si) => (
-                            <Badge key={si} variant="outline" className="text-[10px]">
+                            <Badge key={si} variant="outline" className="text-[10px]" title={cleanStructuredText(skill)}>
                               {cleanStructuredText(skill)}
                             </Badge>
                           ))}
@@ -1368,6 +1374,7 @@ export default function JobDetail() {
 
       <div
         className={`fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-background/95 backdrop-blur-lg transition-transform duration-300 ${showStickyBar && !isRestricted ? "translate-y-0" : "translate-y-full"}`}
+        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
         data-testid="sticky-apply-bar"
       >
         <div className="max-w-3xl mx-auto px-3 sm:px-6 py-2.5 sm:py-3 flex items-center justify-between gap-2 sm:gap-3">

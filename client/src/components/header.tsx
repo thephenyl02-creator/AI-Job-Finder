@@ -142,7 +142,7 @@ export function Header() {
 
               <Sheet>
                 <SheetTrigger asChild>
-                  <Button variant="ghost" size="icon" className="md:hidden" data-testid="button-mobile-menu">
+                  <Button variant="ghost" size="icon" className="md:hidden min-h-[44px] min-w-[44px]" data-testid="button-mobile-menu">
                     <Menu className="h-5 w-5" />
                   </Button>
                 </SheetTrigger>

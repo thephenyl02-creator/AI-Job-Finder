@@ -10,7 +10,7 @@ export function Footer() {
     return (
       <footer className="border-t border-border/40 mt-auto">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
-          <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+          <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-xs text-muted-foreground">
             <span>Legal Tech Careers</span>
             <span className="hidden sm:inline">&middot;</span>
             <Link href="/trust" className="hover:text-foreground transition-colors" data-testid="footer-link-trust">
@@ -43,7 +43,7 @@ export function Footer() {
               We never sell candidate data. Delete your resume anytime.
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-x-1 gap-y-1">
+          <div className="flex flex-wrap items-center gap-x-1 gap-y-2">
             <Link href="/about">
               <Button variant="ghost" size="sm" className="text-muted-foreground text-xs font-normal" data-testid="footer-link-about">
                 About

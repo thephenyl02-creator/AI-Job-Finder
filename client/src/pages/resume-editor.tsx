@@ -827,7 +827,7 @@ export default function ResumeEditor() {
             </Link>
             {job && (
               <div className="min-w-0 hidden sm:block">
-                <p className="text-sm font-medium truncate" data-testid="text-job-title">
+                <p className="text-sm font-medium truncate" title={`Tailoring for ${job.title} at ${job.company}`} data-testid="text-job-title">
                   Tailoring for <span className="text-primary">{job.title}</span> at {job.company}
                 </p>
               </div>
@@ -1078,7 +1078,7 @@ export default function ResumeEditor() {
         </div>
       </div>
 
-      <div className="lg:hidden border-t bg-card px-3 py-2 flex items-center justify-between gap-2" data-testid="mobile-toolbar">
+      <div className="lg:hidden border-t bg-card px-3 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] flex items-center justify-between gap-2" data-testid="mobile-toolbar">
         <div className="flex items-center gap-1">
           <Button variant="ghost" size="icon" onClick={undo} disabled={undoStack.length === 0}>
             <Undo2 className="w-4 h-4" />
@@ -1141,7 +1141,7 @@ export default function ResumeEditor() {
               </div>
               <div className="flex-1 min-w-0">
                 <h3 className="font-semibold text-foreground">Resume downloaded</h3>
-                <p className="text-sm text-muted-foreground truncate">Tailored for {editorQuery.data?.job?.company || "this role"}</p>
+                <p className="text-sm text-muted-foreground truncate" title={`Tailored for ${editorQuery.data?.job?.company || "this role"}`}>Tailored for {editorQuery.data?.job?.company || "this role"}</p>
               </div>
               <Button variant="ghost" size="icon" className="shrink-0" onClick={() => setShowPostExport(false)} data-testid="button-close-dialog">
                 <X className="h-4 w-4" />

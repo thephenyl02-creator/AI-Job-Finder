@@ -126,7 +126,7 @@ export default function Landing() {
               </p>
 
               <h1
-                className="text-3xl sm:text-[3.25rem] font-serif font-medium text-foreground leading-[1.3] sm:leading-[1.5]"
+                className="text-2xl sm:text-[3.25rem] font-serif font-medium text-foreground leading-[1.3] sm:leading-[1.5]"
                 data-testid="text-hero-title"
               >
                 Where do you fit in legal tech?
@@ -173,7 +173,7 @@ export default function Landing() {
 
             <div className="w-full max-w-sm mx-auto lg:mx-0 lg:w-[380px] shrink-0">
               <Card className="overflow-visible card-elev-prominent" data-testid="diagnostic-preview-card">
-                <CardContent className="p-5">
+                <CardContent className="p-4 sm:p-5">
                   <p className="text-[10px] font-semibold text-muted-foreground tracking-wide uppercase mb-4">Sample Readiness Report</p>
                   <div className="flex items-center gap-4 mb-4">
                     <div className="relative flex items-center justify-center shrink-0">
@@ -197,7 +197,7 @@ export default function Landing() {
                   </div>
                   <div className="space-y-1.5 mb-3">
                     <div className="flex items-center justify-between gap-3 text-xs">
-                      <span className="text-muted-foreground">Contract Drafting</span>
+                      <span className="text-muted-foreground truncate" title="Contract Drafting">Contract Drafting</span>
                       <div className="flex items-center gap-1.5">
                         <div className="w-16 h-1.5 bg-muted/40 rounded-full overflow-hidden">
                           <div className="h-full bg-emerald-500 rounded-full" style={{ width: "82%" }} />
@@ -206,7 +206,7 @@ export default function Landing() {
                       </div>
                     </div>
                     <div className="flex items-center justify-between gap-3 text-xs">
-                      <span className="text-muted-foreground">Legal Tech Tools</span>
+                      <span className="text-muted-foreground truncate" title="Legal Tech Tools">Legal Tech Tools</span>
                       <div className="flex items-center gap-1.5">
                         <div className="w-16 h-1.5 bg-muted/40 rounded-full overflow-hidden">
                           <div className="h-full bg-amber-500 rounded-full" style={{ width: "54%" }} />
@@ -215,7 +215,7 @@ export default function Landing() {
                       </div>
                     </div>
                     <div className="flex items-center justify-between gap-3 text-xs">
-                      <span className="text-muted-foreground">Data Analytics</span>
+                      <span className="text-muted-foreground truncate" title="Data Analytics">Data Analytics</span>
                       <div className="flex items-center gap-1.5">
                         <div className="w-16 h-1.5 bg-muted/40 rounded-full overflow-hidden">
                           <div className="h-full bg-rose-500/60 rounded-full" style={{ width: "28%" }} />
@@ -225,7 +225,7 @@ export default function Landing() {
                     </div>
                   </div>
                   <div className="text-[10px] text-muted-foreground border-t border-border/30 pt-2.5">
-                    Top path: <span className="font-medium text-foreground">Legal Operations</span> · 87% match
+                    Top path: <span className="font-medium text-foreground" title="Legal Operations">Legal Operations</span> · 87% match
                   </div>
                 </CardContent>
               </Card>
@@ -341,12 +341,13 @@ export default function Landing() {
                   Upload your resume to see which paths match your background and how close you are to each one.
                 </p>
               </div>
-              <div className="flex items-center justify-center gap-2 sm:gap-3 flex-wrap max-w-2xl mx-auto" data-testid="career-paths-list">
+              <div className="flex items-center justify-center gap-2.5 sm:gap-3 flex-wrap max-w-2xl mx-auto" data-testid="career-paths-list">
                 {careerPathsWithCounts.map(([path, count], index) => (
                   <a key={path} href="/diagnostic" className={index >= 8 ? "hidden sm:block" : ""}>
                     <Badge
                       variant="outline"
                       className="text-xs px-3 sm:px-4 py-2 sm:py-2 cursor-pointer no-default-active-elevate hover-elevate"
+                      title={path}
                       data-testid={`career-path-${path.toLowerCase().replace(/\s+/g, "-")}`}
                     >
                       {CAREER_PATH_LABELS[path] || path}
@@ -416,15 +417,15 @@ export default function Landing() {
                             className="flex items-center justify-between gap-2 text-sm hover-elevate rounded-md px-2 py-1.5 -mx-2 cursor-pointer"
                             data-testid={`link-region-${region.countryCode}`}
                           >
-                            <span className="flex items-center gap-2">
+                            <span className="flex items-center gap-2 min-w-0">
                               {region.countryCode === "WW" ? (
                                 <Wifi className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                               ) : (
                                 <Globe className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                               )}
-                              <span className="text-foreground text-xs">{region.countryName}</span>
+                              <span className="text-foreground text-xs truncate" title={region.countryName}>{region.countryName}</span>
                             </span>
-                            <span className="text-muted-foreground text-xs tabular-nums">{region.jobCount}</span>
+                            <span className="text-muted-foreground text-xs tabular-nums shrink-0 min-w-[1.5rem] text-right">{region.jobCount}</span>
                           </a>
                         ))}
                     </div>

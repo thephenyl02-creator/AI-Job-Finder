@@ -793,7 +793,7 @@ export default function Jobs() {
 
             <div data-testid="card-smart-search" className="max-w-3xl mx-auto">
               <div
-                className="rounded-xl border border-foreground/15 bg-muted/20 px-5 py-4 sm:px-6 sm:py-5 transition-colors focus-within:border-primary/40 focus-within:bg-muted/30 card-elev-static cursor-text"
+                className="rounded-xl border border-foreground/15 bg-muted/20 px-3 py-3 sm:px-6 sm:py-5 transition-colors focus-within:border-primary/40 focus-within:bg-muted/30 card-elev-static cursor-text"
                 onClick={(e) => {
                   if (!(e.target as HTMLElement).closest('button, a, [role="button"]')) {
                     searchInputRef.current?.focus();
@@ -836,11 +836,11 @@ export default function Jobs() {
                       </PopoverContent>
                     </Popover>
                   )}
-                  <Search className="h-6 w-6 text-foreground/40 shrink-0" />
+                  <Search className="h-5 w-5 sm:h-6 sm:w-6 text-foreground/40 shrink-0" />
                   <Input
                     ref={searchInputRef}
                     placeholder={searchPlaceholder}
-                    className="!border-0 shadow-none h-14 text-lg focus-visible:ring-0 !bg-transparent placeholder:text-muted-foreground/40 px-0 !ring-0 !ring-offset-0"
+                    className="!border-0 shadow-none h-10 sm:h-14 text-base sm:text-lg focus-visible:ring-0 !bg-transparent placeholder:text-muted-foreground/40 px-0 !ring-0 !ring-offset-0"
                     value={smartQuery}
                     onChange={(e) => setSmartQuery(e.target.value)}
                     onKeyDown={(e) => {
@@ -869,12 +869,11 @@ export default function Jobs() {
                     </Button>
                     <Button
                       size="icon"
-                      className="h-10 w-10"
                       onClick={handleSmartSearch}
                       disabled={!smartQuery.trim() || isSearching}
                       data-testid="button-smart-search"
                     >
-                      {isSearching ? <Loader2 className="h-5 w-5 animate-spin" /> : <ArrowRight className="h-5 w-5" />}
+                      {isSearching ? <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin" /> : <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5" />}
                     </Button>
                     <kbd
                       className={`hidden sm:inline-flex h-5 items-center rounded border border-foreground/10 bg-muted/50 px-1.5 text-[10px] text-muted-foreground/60 font-mono transition-opacity ${smartQuery ? "opacity-0 pointer-events-none" : "opacity-100"}`}
@@ -1377,13 +1376,13 @@ export default function Jobs() {
                 {diagnosticData.report.readinessScore}
               </div>
               <div className="min-w-0">
-                <p className="text-sm font-medium text-foreground truncate" data-testid="text-readiness-label">
+                <p className="text-sm font-medium text-foreground truncate" data-testid="text-readiness-label" title={diagnosticData.report.readinessScore >= 75 ? "Market Ready" : diagnosticData.report.readinessScore >= 50 ? "Nearly Ready" : diagnosticData.report.readinessScore >= 30 ? "Building Momentum" : "Early Stage"}>
                   {diagnosticData.report.readinessScore >= 75 ? "Market Ready" :
                    diagnosticData.report.readinessScore >= 50 ? "Nearly Ready" :
                    diagnosticData.report.readinessScore >= 30 ? "Building Momentum" : "Early Stage"}
                 </p>
                 {diagnosticData.report.topPaths?.[0] && (
-                  <p className="text-xs text-muted-foreground truncate" data-testid="text-top-path">
+                  <p className="text-xs text-muted-foreground truncate" data-testid="text-top-path" title={`Top path: ${diagnosticData.report.topPaths[0].title}`}>
                     Top path: {diagnosticData.report.topPaths[0].title}
                   </p>
                 )}
@@ -1397,6 +1396,7 @@ export default function Jobs() {
                   variant="secondary"
                   className={`text-[10px] ${cluster.score >= 70 ? "text-emerald-600 dark:text-emerald-400" : cluster.score >= 40 ? "text-amber-600 dark:text-amber-400" : "text-red-600 dark:text-red-400"}`}
                   data-testid={`badge-skill-${cluster.name}`}
+                  title={`${cluster.name}: ${cluster.score}`}
                 >
                   {cluster.name}: {cluster.score}
                 </Badge>
@@ -1841,7 +1841,7 @@ export default function Jobs() {
                       </Avatar>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-start justify-between gap-2 flex-wrap">
-                          <h3 className="font-medium text-foreground text-sm sm:text-base leading-snug" data-testid={`text-job-title-${job.id}`}>
+                          <h3 className="font-medium text-foreground text-sm sm:text-base leading-snug line-clamp-2 sm:line-clamp-2" data-testid={`text-job-title-${job.id}`} title={cleanStructuredText(job.title)}>
                             {cleanStructuredText(job.title)}
                           </h3>
                           <div className="flex items-center gap-2 shrink-0">
@@ -1861,21 +1861,26 @@ export default function Jobs() {
                             )}
                           </div>
                         </div>
-                        <p className="text-xs sm:text-sm text-muted-foreground mt-0.5" data-testid={`text-job-company-${job.id}`}>
+                        <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 truncate" data-testid={`text-job-company-${job.id}`} title={cleanStructuredText(job.company)}>
                           {cleanStructuredText(job.company)}
                         </p>
-                        <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
-                          <JobLocation
-                            location={job.location}
-                            locationType={job.locationType}
-                            isRemote={job.isRemote}
-                            testIdPrefix={`browse-job-${job.id}`}
-                          />
-                          {taxonomy && (() => {
+                        {(() => {
+                          const badgeElements: JSX.Element[] = [];
+                          badgeElements.push(
+                            <JobLocation
+                              key="loc"
+                              location={job.location}
+                              locationType={job.locationType}
+                              isRemote={job.isRemote}
+                              testIdPrefix={`browse-job-${job.id}`}
+                            />
+                          );
+                          if (taxonomy) {
                             const trackName = getTrackForCategory(job.roleCategory);
                             const trackMeta = ROLE_TRACKS[trackName];
-                            return (
+                            badgeElements.push(
                               <Badge
+                                key="cat"
                                 variant="outline"
                                 className={`text-[10px] border ${trackMeta.colorClass}`}
                                 title={`${trackName} track — ${trackMeta.description}`}
@@ -1884,43 +1889,69 @@ export default function Jobs() {
                                 {taxonomy.shortName}
                               </Badge>
                             );
-                          })()}
-                          {fitScores[job.id]?.fitScore != null && (
-                            <Badge
-                              variant="outline"
-                              className={`text-[10px] font-semibold gap-0.5 ${
-                                fitScores[job.id].fitScore! >= 80 ? "text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800" :
-                                fitScores[job.id].fitScore! >= 60 ? "text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800" :
-                                fitScores[job.id].fitScore! >= 40 ? "text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800" :
-                                "text-red-600 dark:text-red-400 border-red-200 dark:border-red-800"
-                              }`}
-                              data-testid={`badge-fit-${job.id}`}
-                            >
-                              <Target className="h-2.5 w-2.5" />
-                              {fitScores[job.id].fitScore}% fit
-                            </Badge>
-                          )}
-                          {fitScores[job.id]?.aiIntensity && (
-                            <Badge variant="secondary" className={`text-[10px] gap-0.5 ${
-                              fitScores[job.id].aiIntensity === "high" ? "text-violet-600 dark:text-violet-400" :
-                              fitScores[job.id].aiIntensity === "medium" ? "text-blue-600 dark:text-blue-400" :
-                              "text-slate-500 dark:text-slate-400"
-                            }`} data-testid={`badge-ai-${job.id}`}>
-                              <Zap className="h-2.5 w-2.5" />
-                              {fitScores[job.id].aiIntensity === "high" ? "High AI" : fitScores[job.id].aiIntensity === "medium" ? "Some AI" : "Low AI"}
-                            </Badge>
-                          )}
-                          {fitScores[job.id]?.transitionDifficulty && (
-                            <Badge variant="secondary" className={`text-[10px] gap-0.5 ${
-                              fitScores[job.id].transitionDifficulty === "low" ? "text-emerald-600 dark:text-emerald-400" :
-                              fitScores[job.id].transitionDifficulty === "medium" ? "text-amber-600 dark:text-amber-400" :
-                              "text-red-600 dark:text-red-400"
-                            }`} data-testid={`badge-transition-${job.id}`}>
-                              <TrendingUp className="h-2.5 w-2.5" />
-                              {fitScores[job.id].transitionDifficulty === "low" ? "Easy" : fitScores[job.id].transitionDifficulty === "medium" ? "Moderate" : "Career Pivot"}
-                            </Badge>
-                          )}
-                        </div>
+                          }
+                          if (fitScores[job.id]?.fitScore != null) {
+                            badgeElements.push(
+                              <Badge
+                                key="fit"
+                                variant="outline"
+                                className={`text-[10px] font-semibold gap-0.5 ${
+                                  fitScores[job.id].fitScore! >= 80 ? "text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800" :
+                                  fitScores[job.id].fitScore! >= 60 ? "text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800" :
+                                  fitScores[job.id].fitScore! >= 40 ? "text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800" :
+                                  "text-red-600 dark:text-red-400 border-red-200 dark:border-red-800"
+                                }`}
+                                data-testid={`badge-fit-${job.id}`}
+                                title={`${fitScores[job.id].fitScore}% fit`}
+                              >
+                                <Target className="h-2.5 w-2.5" />
+                                {fitScores[job.id].fitScore}% fit
+                              </Badge>
+                            );
+                          }
+                          if (fitScores[job.id]?.aiIntensity) {
+                            const aiLabel = fitScores[job.id].aiIntensity === "high" ? "High AI" : fitScores[job.id].aiIntensity === "medium" ? "Some AI" : "Low AI";
+                            badgeElements.push(
+                              <Badge key="ai" variant="secondary" className={`text-[10px] gap-0.5 ${
+                                fitScores[job.id].aiIntensity === "high" ? "text-violet-600 dark:text-violet-400" :
+                                fitScores[job.id].aiIntensity === "medium" ? "text-blue-600 dark:text-blue-400" :
+                                "text-slate-500 dark:text-slate-400"
+                              }`} data-testid={`badge-ai-${job.id}`} title={aiLabel}>
+                                <Zap className="h-2.5 w-2.5" />
+                                {aiLabel}
+                              </Badge>
+                            );
+                          }
+                          if (fitScores[job.id]?.transitionDifficulty) {
+                            const transLabel = fitScores[job.id].transitionDifficulty === "low" ? "Easy" : fitScores[job.id].transitionDifficulty === "medium" ? "Moderate" : "Career Pivot";
+                            badgeElements.push(
+                              <Badge key="trans" variant="secondary" className={`text-[10px] gap-0.5 ${
+                                fitScores[job.id].transitionDifficulty === "low" ? "text-emerald-600 dark:text-emerald-400" :
+                                fitScores[job.id].transitionDifficulty === "medium" ? "text-amber-600 dark:text-amber-400" :
+                                "text-red-600 dark:text-red-400"
+                              }`} data-testid={`badge-transition-${job.id}`} title={transLabel}>
+                                <TrendingUp className="h-2.5 w-2.5" />
+                                {transLabel}
+                              </Badge>
+                            );
+                          }
+                          const MOBILE_BADGE_LIMIT = 4;
+                          const overflowCount = badgeElements.length > MOBILE_BADGE_LIMIT ? badgeElements.length - MOBILE_BADGE_LIMIT : 0;
+                          return (
+                            <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                              {badgeElements.map((el, i) => (
+                                <span key={i} className={i >= MOBILE_BADGE_LIMIT ? "hidden sm:inline-flex" : ""}>
+                                  {el}
+                                </span>
+                              ))}
+                              {overflowCount > 0 && (
+                                <span className="sm:hidden text-[10px] text-muted-foreground" data-testid={`badge-overflow-${job.id}`}>
+                                  +{overflowCount} more
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </div>
                     </div>
                   </div>

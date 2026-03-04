@@ -416,7 +416,7 @@ export default function Pricing() {
                     ) : (
                       <X className="h-4 w-4 text-muted-foreground/40 shrink-0" />
                     )}
-                    <span className={feature.included ? "text-foreground" : "text-muted-foreground/60"}>
+                    <span className={feature.included ? "text-foreground" : "text-muted-foreground/60"} title={feature.text}>
                       {feature.text}
                     </span>
                   </li>
@@ -511,7 +511,7 @@ export default function Pricing() {
                   <li key={i} className="flex items-start gap-2.5 text-sm">
                     <Check className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
                     <div>
-                      <span className="text-foreground">{feature.text}</span>
+                      <span className="text-foreground" title={feature.text}>{feature.text}</span>
                       {feature.detail && (
                         <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{feature.detail}</p>
                       )}
@@ -555,7 +555,7 @@ export default function Pricing() {
               >
                 <button
                   onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                  className="w-full flex items-center justify-between gap-4 p-4 text-left hover-elevate"
+                  className="w-full flex items-center justify-between gap-4 p-4 text-left hover-elevate min-h-[44px]"
                   data-testid={`button-faq-${i}`}
                 >
                   <span className="text-sm font-medium text-foreground">{item.q}</span>

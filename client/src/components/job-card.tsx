@@ -230,58 +230,90 @@ export function JobCard({ job, isSaved = false, isAuthenticated = false, fitData
                 <span className="flex-shrink-0 text-xs">{getTimeAgo(job.postedDate)}</span>
               </div>
 
-              <div className="flex flex-wrap items-center gap-1.5 mt-2">
-                <JobLocation
-                  location={job.location}
-                  locationType={job.locationType}
-                  isRemote={job.isRemote}
-                  testIdPrefix={`job-${job.id}`}
-                />
-                {salary && (
-                  <Badge variant="outline" className="gap-0.5 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800" data-testid={`text-salary-${job.id}`}>
-                    <DollarSign className="h-3 w-3" />
-                    {salary}
-                  </Badge>
-                )}
-                {isVerifiedSource(job.source) && (
-                  <Badge variant="secondary" className="gap-0.5 text-xs text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30" data-testid={`badge-verified-${job.id}`}>
-                    <ShieldCheck className="h-3 w-3" />
-                    Verified
-                  </Badge>
-                )}
-                {job.roleSubcategory && (
-                  <Badge variant="secondary" className="bg-primary/5 text-primary/80 border-primary/10 text-xs">
-                    {job.roleSubcategory}
-                  </Badge>
-                )}
-                {fitData?.fitScore != null && (
-                  <TooltipProvider delayDuration={200}>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Badge variant="outline" className={`gap-0.5 text-xs font-semibold ${getFitColor(fitData.fitScore)}`} data-testid={`badge-fit-${job.id}`}>
-                          <Target className="h-3 w-3" />
-                          {fitData.fitScore}% fit
-                        </Badge>
-                      </TooltipTrigger>
-                      <TooltipContent side="top" className="max-w-[200px] text-xs">
-                        {fitData.oneLineReason || "Based on your resume analysis"}
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                )}
-                {fitData?.aiIntensity && (
-                  <Badge variant="secondary" className={`text-xs gap-0.5 ${getAiIntensityLabel(fitData.aiIntensity).color}`} data-testid={`badge-ai-${job.id}`}>
-                    <Zap className="h-3 w-3" />
-                    {getAiIntensityLabel(fitData.aiIntensity).label}
-                  </Badge>
-                )}
-                {fitData?.transitionDifficulty && (
-                  <Badge variant="secondary" className={`text-xs gap-0.5 ${getTransitionLabel(fitData.transitionDifficulty).color}`} data-testid={`badge-transition-${job.id}`}>
-                    <TrendingUp className="h-3 w-3" />
-                    {getTransitionLabel(fitData.transitionDifficulty).label}
-                  </Badge>
-                )}
-              </div>
+              {(() => {
+                const badgeItems: JSX.Element[] = [];
+                badgeItems.push(
+                  <JobLocation
+                    key="loc"
+                    location={job.location}
+                    locationType={job.locationType}
+                    isRemote={job.isRemote}
+                    testIdPrefix={`job-${job.id}`}
+                  />
+                );
+                if (salary) {
+                  badgeItems.push(
+                    <Badge key="sal" variant="outline" className="gap-0.5 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800" data-testid={`text-salary-${job.id}`} title={salary}>
+                      <DollarSign className="h-3 w-3" />
+                      {salary}
+                    </Badge>
+                  );
+                }
+                if (isVerifiedSource(job.source)) {
+                  badgeItems.push(
+                    <Badge key="ver" variant="secondary" className="gap-0.5 text-xs text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30" data-testid={`badge-verified-${job.id}`}>
+                      <ShieldCheck className="h-3 w-3" />
+                      Verified
+                    </Badge>
+                  );
+                }
+                if (job.roleSubcategory) {
+                  badgeItems.push(
+                    <Badge key="sub" variant="secondary" className="bg-primary/5 text-primary/80 border-primary/10 text-xs" title={job.roleSubcategory}>
+                      {job.roleSubcategory}
+                    </Badge>
+                  );
+                }
+                if (fitData?.fitScore != null) {
+                  badgeItems.push(
+                    <TooltipProvider key="fit" delayDuration={200}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Badge variant="outline" className={`gap-0.5 text-xs font-semibold ${getFitColor(fitData.fitScore)}`} data-testid={`badge-fit-${job.id}`}>
+                            <Target className="h-3 w-3" />
+                            {fitData.fitScore}% fit
+                          </Badge>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-[200px] text-xs">
+                          {fitData.oneLineReason || "Based on your resume analysis"}
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  );
+                }
+                if (fitData?.aiIntensity) {
+                  badgeItems.push(
+                    <Badge key="ai" variant="secondary" className={`text-xs gap-0.5 ${getAiIntensityLabel(fitData.aiIntensity).color}`} data-testid={`badge-ai-${job.id}`} title={getAiIntensityLabel(fitData.aiIntensity).label}>
+                      <Zap className="h-3 w-3" />
+                      {getAiIntensityLabel(fitData.aiIntensity).label}
+                    </Badge>
+                  );
+                }
+                if (fitData?.transitionDifficulty) {
+                  badgeItems.push(
+                    <Badge key="trans" variant="secondary" className={`text-xs gap-0.5 ${getTransitionLabel(fitData.transitionDifficulty).color}`} data-testid={`badge-transition-${job.id}`} title={getTransitionLabel(fitData.transitionDifficulty).label}>
+                      <TrendingUp className="h-3 w-3" />
+                      {getTransitionLabel(fitData.transitionDifficulty).label}
+                    </Badge>
+                  );
+                }
+                const MOBILE_LIMIT = 4;
+                const overflowCount = badgeItems.length > MOBILE_LIMIT ? badgeItems.length - MOBILE_LIMIT : 0;
+                return (
+                  <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                    {badgeItems.map((el, i) => (
+                      <span key={i} className={i >= MOBILE_LIMIT ? "hidden sm:inline-flex" : ""}>
+                        {el}
+                      </span>
+                    ))}
+                    {overflowCount > 0 && (
+                      <span className="sm:hidden text-[10px] text-muted-foreground" data-testid={`badge-overflow-${job.id}`}>
+                        +{overflowCount} more
+                      </span>
+                    )}
+                  </div>
+                );
+              })()}
             </Link>
           </div>
         </div>

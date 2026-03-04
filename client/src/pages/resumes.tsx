@@ -200,7 +200,7 @@ function ResumeCard({
             </div>
             <div className="flex items-center gap-2 mt-1.5">
               <ResumeCompletenessRing extracted={extracted} />
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-muted-foreground truncate" title={resume.filename}>
                 {resume.filename}
               </p>
             </div>

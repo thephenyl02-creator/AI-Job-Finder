@@ -89,7 +89,7 @@ export function JobLocation({
   return (
     <span className={`inline-flex flex-wrap items-center gap-1.5 ${className}`}>
       {showLocationText && (
-        <span className="flex items-center gap-1">
+        <span className="flex items-center gap-1" title={location || undefined}>
           {showIcon && <MapPin className={`${iconSize} shrink-0`} />}
           <span data-testid={testIdPrefix ? `${testIdPrefix}-location` : undefined}>{location}</span>
         </span>
@@ -108,7 +108,7 @@ export function JobLocation({
         </Badge>
       )}
       {!showLocationText && !showType && hasLocation && (
-        <span className="flex items-center gap-1">
+        <span className="flex items-center gap-1" title={location || undefined}>
           {showIcon && <MapPin className={`${iconSize} shrink-0`} />}
           <span data-testid={testIdPrefix ? `${testIdPrefix}-location` : undefined}>{location}</span>
         </span>

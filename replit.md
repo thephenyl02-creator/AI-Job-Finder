@@ -18,7 +18,7 @@ Legal Tech Careers is a career intelligence platform designed for legal professi
 - **Styling**: Tailwind CSS with shadcn/ui components (New York style)
 - **Theme**: Light/dark mode with a deep navy/slate palette
 - **Typography**: Playfair Display (serif headings), DM Sans (body), JetBrains Mono (code)
-- **Mobile**: Fully optimized for 375px baseline.
+- **Mobile**: Fully optimized for 375px baseline. Comprehensive truncation audit ensures every `truncate` class has a `title` tooltip. Touch targets meet 44px minimum on key interactive elements. Charts have responsive sizing (smaller containers on mobile). Badge overflow shows "+N more" indicators on mobile to prevent excessive card height.
 
 ### Backend
 - **Runtime**: Node.js with Express
