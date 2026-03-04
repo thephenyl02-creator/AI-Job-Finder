@@ -995,7 +995,7 @@ export default function MarketIntelligence() {
                           "Intellectual Property & Innovation": "IP & Innovation",
                           "Litigation & eDiscovery": "Litigation",
                         };
-                        const displayName = (width < 160 && name && SHORT_NAMES[name]) ? SHORT_NAMES[name] : name;
+                        const displayName = (name && SHORT_NAMES[name]) ? SHORT_NAMES[name] : name;
                         const fontSize = Math.min(12, width / 9);
                         const maxChars = Math.floor(width / (fontSize * 0.62));
                         const truncatedName = displayName && displayName.length > maxChars ? displayName.slice(0, maxChars - 1) + '…' : displayName;
@@ -1004,13 +1004,13 @@ export default function MarketIntelligence() {
                           <g>
                             <rect x={x} y={y} width={width} height={height} rx={4} fill={color} stroke="hsl(var(--card))" strokeWidth={2} />
                             {showName && (
-                              <text x={x + width / 2} y={y + height / 2 - (showValue ? 7 : 0)} textAnchor="middle" dominantBaseline="central" style={{ fontSize, fontWeight: 500, fill: '#fff', textShadow: '0 1px 3px rgba(0,0,0,0.4)', fontFamily: 'var(--font-sans)' }}>
+                              <text x={x + width / 2} y={y + height / 2 - (showValue ? 7 : 0)} textAnchor="middle" dominantBaseline="central" style={{ fontSize, fontWeight: 500, fill: '#fff', textShadow: '0 1px 2px rgba(0,0,0,0.25)', fontFamily: '"DM Sans", "Inter", sans-serif' }}>
                                 <title>{name}</title>
                                 {truncatedName}
                               </text>
                             )}
                             {showValue && (
-                              <text x={x + width / 2} y={y + height / 2 + (showName ? 9 : 0)} textAnchor="middle" dominantBaseline="central" style={{ fontSize: valueFontSize, fontWeight: 500, fill: 'rgba(255,255,255,0.85)', fontFamily: 'var(--font-mono)' }}>
+                              <text x={x + width / 2} y={y + height / 2 + (showName ? 9 : 0)} textAnchor="middle" dominantBaseline="central" style={{ fontSize: valueFontSize, fontWeight: 500, fill: 'rgba(255,255,255,0.85)', fontFamily: '"JetBrains Mono", monospace' }}>
                                 {value} ({pct}%)
                               </text>
                             )}
