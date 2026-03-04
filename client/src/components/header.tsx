@@ -122,16 +122,8 @@ export function Header() {
               <NavLink href="/dashboard" icon={LayoutDashboard} label="Dashboard" isActive={isDashboardActive} testId="link-dashboard" />
               <NavLink href="/jobs" icon={Search} label="Jobs" isActive={isJobsActive} testId="link-jobs" />
               <NavLink href="/diagnostic" icon={Brain} label="Diagnostic" isActive={isDiagnosticActive} testId="link-diagnostic" />
-              <NavLink href="/resumes" icon={FileText} label="Resumes" isActive={isResumesActive} testId="link-resumes" />
-              <NavLink href="/market-intelligence" icon={TrendingUp} label="Trends" isActive={isActive("/market-intelligence")} testId="link-trends" />
             </div>
-          ) : (
-            <div className="hidden md:flex items-center gap-0.5">
-              <NavLink href="/jobs" icon={Search} label="Jobs" isActive={isJobsActive} testId="link-jobs-public" />
-              <NavLink href="/market-intelligence" icon={TrendingUp} label="Trends" isActive={isActive("/market-intelligence")} testId="link-trends-public" />
-              <NavLink href="/pricing" icon={CreditCard} label="Pricing" isActive={isActive("/pricing")} testId="link-pricing-public" />
-            </div>
-          )}
+          ) : null}
         </div>
 
         <div className="flex items-center gap-1.5">
@@ -173,14 +165,15 @@ export function Header() {
                       <MobileNavItem href="/dashboard" icon={LayoutDashboard} label="Dashboard" active={isDashboardActive} testId="link-dashboard-mobile" />
                       <MobileNavItem href="/jobs" icon={Search} label="Jobs" active={isJobsActive} testId="link-jobs-mobile" />
                       <MobileNavItem href="/diagnostic" icon={Brain} label="Diagnostic" active={isDiagnosticActive} testId="link-diagnostic-mobile" />
+                      <div className="h-px bg-border/40 my-2" />
+                      <p className="px-3 py-1 text-xs text-muted-foreground font-medium" data-testid="text-more-section">More</p>
                       <MobileNavItem href="/resumes" icon={FileText} label="Resumes" active={isResumesActive} testId="link-resumes-mobile" />
-                      <MobileNavItem href="/market-intelligence" icon={TrendingUp} label="Trends" active={isActive("/market-intelligence")} testId="link-trends-mobile" />
-                      <div className="h-px bg-border/40 my-2" />
-                      <MobileNavItem href="/opportunity-map" icon={Globe} label="Opportunity Map" active={isActive("/opportunity-map")} testId="link-map-mobile" />
-                      <MobileNavItem href="/events" icon={Calendar} label="Events" active={isActive("/events")} testId="link-events-mobile" />
-                      <div className="h-px bg-border/40 my-2" />
                       <MobileNavItem href="/saved-jobs" icon={Bookmark} label="Saved Jobs" active={isActive("/saved-jobs")} testId="link-saved-jobs-mobile" />
                       <MobileNavItem href="/alerts" icon={Bell} label="Alerts" active={isActive("/alerts")} testId="link-alerts-mobile" />
+                      <MobileNavItem href="/market-intelligence" icon={TrendingUp} label="Trends" active={isActive("/market-intelligence")} testId="link-trends-mobile" />
+                      <MobileNavItem href="/insights" icon={BarChart3} label="Market Insights" active={isActive("/insights")} testId="link-insights-mobile" />
+                      <MobileNavItem href="/opportunity-map" icon={Globe} label="Opportunity Map" active={isActive("/opportunity-map")} testId="link-map-mobile" />
+                      <MobileNavItem href="/events" icon={Calendar} label="Events" active={isActive("/events")} testId="link-events-mobile" />
                       <div className="h-px bg-border/40 my-2" />
                       <MobileNavItem href="/pricing" icon={CreditCard} label="Pricing" active={isActive("/pricing")} testId="link-pricing-mobile" />
                       {isAdmin && (
@@ -229,7 +222,14 @@ export function Header() {
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
+                  <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">Your Stuff</DropdownMenuLabel>
                   <DropdownMenuGroup>
+                    <DropdownMenuItem asChild>
+                      <Link href="/resumes" className="cursor-pointer" data-testid="link-resumes-dropdown">
+                        <FileText className="mr-2 h-4 w-4" />
+                        <span>Resumes</span>
+                      </Link>
+                    </DropdownMenuItem>
                     <DropdownMenuItem asChild>
                       <Link href="/saved-jobs" className="cursor-pointer" data-testid="link-saved-jobs-dropdown">
                         <Bookmark className="mr-2 h-4 w-4" />
@@ -242,16 +242,20 @@ export function Header() {
                         <span>Alerts</span>
                       </Link>
                     </DropdownMenuItem>
+                  </DropdownMenuGroup>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">Explore</DropdownMenuLabel>
+                  <DropdownMenuGroup>
+                    <DropdownMenuItem asChild>
+                      <Link href="/market-intelligence" className="cursor-pointer" data-testid="link-trends-dropdown">
+                        <TrendingUp className="mr-2 h-4 w-4" />
+                        <span>Trends</span>
+                      </Link>
+                    </DropdownMenuItem>
                     <DropdownMenuItem asChild>
                       <Link href="/insights" className="cursor-pointer" data-testid="link-insights">
                         <BarChart3 className="mr-2 h-4 w-4" />
                         <span>Market Insights</span>
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link href="/diagnostic" className="cursor-pointer" data-testid="link-diagnostic-dropdown">
-                        <Brain className="mr-2 h-4 w-4" />
-                        <span>Career Diagnostic</span>
                       </Link>
                     </DropdownMenuItem>
                   </DropdownMenuGroup>

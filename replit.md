@@ -82,8 +82,8 @@ Legal Tech Careers is a career intelligence platform designed for legal professi
 - **Admin Dashboard**: Provides an overview of scraper runs, source health, and rejection reasons.
 
 ### Core Features
-- **Landing Page**: Highlights career intelligence and "Check Your Fit" CTA.
-- **Career Command Center Dashboard**: Personalized home page for authenticated users.
+- **Landing Page**: Single golden-path funnel. Hero has one CTA ("Check Your Fit") + Sign In. No competing nav links (Jobs/Trends/Pricing) in header — footer provides fallback navigation. Career path badges are informational (non-clickable). Global coverage shows stats without interactive map links.
+- **Career Command Center Dashboard**: Simplified single-column layout (max-w-3xl). New users see one dominant CTA card + 3 job cards. Users with diagnostic see Readiness Score + This Week plan + 3 jobs. Pro users additionally see compact Market Pulse summary (3 stats). No sidebar (removed Saved Jobs, Alerts, Engagement, Quick Links sidebar cards).
 - **Smart Search**: AI-powered natural language job search.
 - **Resume Management & Editing**: Upload, parse, manage multiple resumes, AI editor for tailoring and ATS scoring.
 - **Job Matching**: AI-driven resume-job comparison, fit scores, gap analysis.
@@ -114,7 +114,7 @@ Legal Tech Careers is a career intelligence platform designed for legal professi
 - **Diagnostic**: Full role matches visible (titles, companies, fit scores). Strengths/Blockers Pro-only. Weeks 1-2 of 30-day plan visible, Weeks 3-4 locked.
 - **Insights Page**: Stat cards + category chart visible. Salary, seniority, skills, employers, AI chat blurred behind ProGate.
 - **Alerts Page**: Example alert cards shown. Creating alerts requires Pro.
-- **Dashboard**: "New This Week" job cards shown for free users above blurred Pro sections.
+- **Dashboard**: "New This Week" job cards shown for free users. Compact ProGate upsell card at bottom (no blurred multi-column layout).
 
 ### Conversion Engine
 - **Job Signup Gate**: Truncated job details for unauthenticated users with signup CTA.

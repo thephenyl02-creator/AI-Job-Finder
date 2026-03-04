@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LogoMark } from "@/components/logo";
-import { ArrowRight, Search, Target, Globe, Wifi, Clock, BarChart3, Lock, Upload, Check } from "lucide-react";
+import { ArrowRight, Target, Clock, BarChart3, Lock, Upload, Check } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Footer } from "@/components/footer";
 
@@ -91,24 +91,12 @@ export default function Landing() {
             </div>
           </Link>
           <div className="flex items-center gap-1 sm:gap-2">
-            <Link href="/jobs">
-              <Button variant="ghost" size="sm" className="text-muted-foreground hidden sm:inline-flex" data-testid="link-header-jobs">
-                Jobs
-              </Button>
-            </Link>
-            <Link href="/market-intelligence">
-              <Button variant="ghost" size="sm" className="text-muted-foreground hidden sm:inline-flex" data-testid="link-header-trends">
-                Trends
-              </Button>
-            </Link>
-            <Link href="/pricing">
-              <Button variant="ghost" size="sm" className="text-muted-foreground hidden sm:inline-flex" data-testid="link-header-pricing">
-                Pricing
-              </Button>
-            </Link>
+            <Button size="sm" asChild className="hidden sm:inline-flex" data-testid="button-header-diagnostic">
+              <a href="/diagnostic">Check Your Fit</a>
+            </Button>
             <ThemeToggle />
             <Link href="/auth">
-              <Button size="sm" data-testid="button-header-login">
+              <Button variant="outline" size="sm" data-testid="button-header-login">
                 Sign In
               </Button>
             </Link>
@@ -139,7 +127,7 @@ export default function Landing() {
                 Upload your resume. In 60 seconds, see your readiness score, matching career paths, and a plan to get there.
               </p>
 
-              <div className="mt-6 sm:mt-10 flex items-center gap-4 flex-wrap">
+              <div className="mt-6 sm:mt-10">
                 <Button size="lg" asChild data-testid="button-hero-diagnostic">
                   <a href="/diagnostic" onClick={() => {
                     if (!hasDiagnostic) {
@@ -150,9 +138,6 @@ export default function Landing() {
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </a>
                 </Button>
-                <a href="/jobs" className="text-sm text-muted-foreground hover:text-foreground transition-colors" data-testid="link-hero-browse">
-                  or browse {stats?.totalJobs ? `${stats.totalJobs}+` : ""} roles →
-                </a>
               </div>
 
               <div className="mt-5 flex items-center gap-3 text-xs text-muted-foreground flex-wrap" data-testid="text-hero-trust">
@@ -162,13 +147,6 @@ export default function Landing() {
                 <span className="text-border">·</span>
                 <span>No account needed</span>
               </div>
-
-              <p className="mt-4">
-                <a href="/quiz" className="text-sm text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-1.5" data-testid="link-hero-quiz">
-                  <Search className="h-3.5 w-3.5" />
-                  Not sure yet? Take a 30-second career quiz →
-                </a>
-              </p>
             </div>
 
             <div className="w-full max-w-sm mx-auto lg:mx-0 lg:w-[380px] shrink-0">
@@ -257,31 +235,6 @@ export default function Landing() {
           </div>
         </section>
 
-        {stats && (
-          <section className="border-t border-border/30" data-testid="stats-strip-section">
-            <div className="max-w-5xl mx-auto px-4 sm:px-6 py-5 sm:py-6">
-              <div className="flex items-center justify-center gap-4 sm:gap-10 text-xs sm:text-sm text-muted-foreground flex-wrap" data-testid="stats-strip">
-                {stats.totalJobs > 0 && (
-                  <span data-testid="stat-jobs"><span className="font-semibold text-foreground">{stats.totalJobs}+</span> curated roles</span>
-                )}
-                <span className="text-border hidden sm:inline">·</span>
-                {stats.totalCompanies > 0 && (
-                  <span data-testid="stat-companies"><span className="font-semibold text-foreground">{stats.totalCompanies}+</span> companies</span>
-                )}
-                <span className="text-border hidden sm:inline">·</span>
-                {stats.totalCategories > 0 && (
-                  <span data-testid="stat-categories"><span className="font-semibold text-foreground">{stats.totalCategories}</span> career paths</span>
-                )}
-                {(stats.totalUsers || 0) > 10 && (
-                  <>
-                    <span className="text-border hidden sm:inline">·</span>
-                    <span data-testid="stat-users"><span className="font-semibold text-foreground">{stats.totalUsers}+</span> lawyers assessed</span>
-                  </>
-                )}
-              </div>
-            </div>
-          </section>
-        )}
 
         <section className="border-t border-border/30 bg-muted/20">
           <div className="max-w-5xl mx-auto px-4 sm:px-6 py-14 sm:py-24">
@@ -343,18 +296,25 @@ export default function Landing() {
               </div>
               <div className="flex items-center justify-center gap-2.5 sm:gap-3 flex-wrap max-w-2xl mx-auto" data-testid="career-paths-list">
                 {careerPathsWithCounts.map(([path, count], index) => (
-                  <a key={path} href="/diagnostic" className={index >= 8 ? "hidden sm:block" : ""}>
-                    <Badge
-                      variant="outline"
-                      className="text-xs px-3 sm:px-4 py-2 sm:py-2 cursor-pointer no-default-active-elevate hover-elevate"
-                      title={path}
-                      data-testid={`career-path-${path.toLowerCase().replace(/\s+/g, "-")}`}
-                    >
-                      {CAREER_PATH_LABELS[path] || path}
-                      <span className="ml-1.5 text-muted-foreground font-normal">{count}</span>
-                    </Badge>
-                  </a>
+                  <Badge
+                    key={path}
+                    variant="outline"
+                    className={`text-xs px-3 sm:px-4 py-2 sm:py-2 no-default-active-elevate no-default-hover-elevate ${index >= 8 ? "hidden sm:inline-flex" : ""}`}
+                    title={path}
+                    data-testid={`career-path-${path.toLowerCase().replace(/\s+/g, "-")}`}
+                  >
+                    {CAREER_PATH_LABELS[path] || path}
+                    <span className="ml-1.5 text-muted-foreground font-normal">{count}</span>
+                  </Badge>
                 ))}
+              </div>
+              <div className="text-center mt-8">
+                <Button size="lg" asChild data-testid="button-career-paths-cta">
+                  <a href="/diagnostic">
+                    Check Your Fit
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </a>
+                </Button>
               </div>
             </div>
           </section>
@@ -363,72 +323,33 @@ export default function Landing() {
         {density && density.countriesCount > 0 && (
           <section className="border-t border-border/30 bg-muted/20">
             <div className="max-w-5xl mx-auto px-4 sm:px-6 py-14 sm:py-24">
-              <div className="flex flex-col sm:flex-row items-center gap-8 sm:gap-12">
-                <div className="flex-1 text-center sm:text-left">
-                  <p className="text-sm font-semibold text-primary tracking-[0.2em] uppercase mb-3 border-l-2 border-primary pl-3 sm:-ml-3">
-                    Global coverage
-                  </p>
-                  <h2
-                    className="text-xl sm:text-3xl font-serif font-medium text-foreground"
-                    data-testid="text-map-teaser-title"
-                  >
-                    See where legal tech is hiring
-                  </h2>
-                  <p className="text-sm text-muted-foreground mt-3 max-w-md">
-                    Explore opportunities across {density.countriesCount} countries. Click any region to see available roles instantly.
-                  </p>
-                  <div className="flex items-center justify-center sm:justify-start gap-5 sm:gap-6 mt-6">
-                    <div>
-                      <p className="text-xl sm:text-2xl font-semibold text-foreground" data-testid="text-map-teaser-countries">{density.countriesCount}</p>
-                      <p className="text-xs text-muted-foreground">Countries</p>
-                    </div>
-                    <div className="w-px h-8 bg-border/40" />
-                    <div>
-                      <p className="text-xl sm:text-2xl font-semibold text-foreground" data-testid="text-map-teaser-jobs">{density.totalJobs}+</p>
-                      <p className="text-xs text-muted-foreground">Roles</p>
-                    </div>
-                    <div className="w-px h-8 bg-border/40" />
-                    <div>
-                      <p className="text-xl sm:text-2xl font-semibold text-foreground" data-testid="text-map-teaser-remote">{density.remoteShare}%</p>
-                      <p className="text-xs text-muted-foreground">Remote</p>
-                    </div>
+              <div className="text-center">
+                <p className="text-sm font-semibold text-primary tracking-[0.2em] uppercase mb-3">
+                  Global coverage
+                </p>
+                <h2
+                  className="text-xl sm:text-3xl font-serif font-medium text-foreground"
+                  data-testid="text-map-teaser-title"
+                >
+                  Legal tech is hiring worldwide
+                </h2>
+                <p className="text-sm text-muted-foreground mt-3 max-w-md mx-auto">
+                  Opportunities across {density.countriesCount} countries, with {density.remoteShare}% offering remote work.
+                </p>
+                <div className="flex items-center justify-center gap-6 sm:gap-10 mt-8">
+                  <div>
+                    <p className="text-2xl sm:text-3xl font-semibold text-foreground" data-testid="text-map-teaser-countries">{density.countriesCount}</p>
+                    <p className="text-xs text-muted-foreground mt-1">Countries</p>
                   </div>
-                  <div className="mt-6">
-                    <Button asChild data-testid="button-map-teaser-explore">
-                      <a href="/opportunity-map">
-                        <Globe className="mr-2 h-4 w-4" />
-                        Explore the map
-                      </a>
-                    </Button>
+                  <div className="w-px h-10 bg-border/40" />
+                  <div>
+                    <p className="text-2xl sm:text-3xl font-semibold text-foreground" data-testid="text-map-teaser-jobs">{density.totalJobs}+</p>
+                    <p className="text-xs text-muted-foreground mt-1">Curated Roles</p>
                   </div>
-                </div>
-                <div className="w-full sm:w-[280px] lg:w-[340px] shrink-0">
-                  <div className="rounded-md border border-border/50 bg-muted/20 dark:bg-muted/10 p-4">
-                    <p className="text-[10px] font-semibold text-muted-foreground tracking-wide uppercase mb-3">Top hiring regions</p>
-                    <div className="space-y-2">
-                      {density?.byCountry
-                        ?.filter((c) => c.jobCount > 0 && c.countryCode !== "UN" && c.countryName !== "Unknown")
-                        .sort((a, b) => b.jobCount - a.jobCount)
-                        .slice(0, 5)
-                        .map((region) => (
-                          <a
-                            key={region.countryCode}
-                            href={`/jobs?country=${region.countryCode}`}
-                            className="flex items-center justify-between gap-2 text-sm hover-elevate rounded-md px-2 py-1.5 -mx-2 cursor-pointer"
-                            data-testid={`link-region-${region.countryCode}`}
-                          >
-                            <span className="flex items-center gap-2 min-w-0">
-                              {region.countryCode === "WW" ? (
-                                <Wifi className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                              ) : (
-                                <Globe className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                              )}
-                              <span className="text-foreground text-xs truncate" title={region.countryName}>{region.countryName}</span>
-                            </span>
-                            <span className="text-muted-foreground text-xs tabular-nums shrink-0 min-w-[1.5rem] text-right">{region.jobCount}</span>
-                          </a>
-                        ))}
-                    </div>
+                  <div className="w-px h-10 bg-border/40" />
+                  <div>
+                    <p className="text-2xl sm:text-3xl font-semibold text-foreground" data-testid="text-map-teaser-remote">{density.remoteShare}%</p>
+                    <p className="text-xs text-muted-foreground mt-1">Remote</p>
                   </div>
                 </div>
               </div>
