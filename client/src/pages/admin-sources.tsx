@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { usePageTitle } from "@/hooks/use-page-title";
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -18,8 +18,8 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
-  Search, Loader2, ExternalLink, CheckCircle, AlertTriangle,
-  XCircle, Link2, FileText, Play, Ban, Globe, Database,
+  Search, Loader2, CheckCircle, AlertTriangle,
+  XCircle, Link2, FileText, Play, Ban, Globe, Database, Radar, Shield,
 } from "lucide-react";
 
 interface FirmSource {
@@ -37,20 +37,21 @@ interface FirmSource {
   createdAt: string;
 }
 
-interface ATSDetectionResult {
-  atsType: string;
-  config: Record<string, string>;
-  confidence: number;
-  evidence: string;
-  validation?: { valid: boolean; jobCount: number; error?: string };
-}
-
 interface ParsedJob {
   title: string;
   company: string;
   location: string;
   applyUrl: string;
   department?: string;
+}
+
+interface AutoDetectResult {
+  scanned: number;
+  detected: { name: string; careerUrl: string; type: string; atsType: string; config: Record<string, string>; confidence: number; evidence: string; scrapeSupported: boolean; jobCount: number; validated: boolean }[];
+  blocked: { name: string; careerUrl: string; reason: string }[];
+  noAts: { name: string; careerUrl: string }[];
+  errors: { name: string; careerUrl: string; error: string }[];
+  summary: { detected: number; blocked: number; noAts: number; errors: number };
 }
 
 function StatusBadge({ status }: { status: string }) {
@@ -77,6 +78,12 @@ function ATSBadge({ atsType }: { atsType: string }) {
     bamboohr: "bg-lime-700",
     rippling: "bg-pink-600",
     workable: "bg-teal-600",
+    ultipro: "bg-amber-700",
+    virecruit: "bg-rose-700",
+    jobvite: "bg-violet-600",
+    taleo: "bg-sky-700",
+    personio: "bg-fuchsia-600",
+    teamtailor: "bg-emerald-700",
     manual: "bg-slate-600",
     unknown: "bg-gray-500",
   };
@@ -106,9 +113,27 @@ export default function AdminSources() {
   const [portalUrl, setPortalUrl] = useState("");
   const [pastedHtml, setPastedHtml] = useState("");
   const [parsedPreview, setParsedPreview] = useState<ParsedJob[] | null>(null);
+  const [autoDetectResults, setAutoDetectResults] = useState<AutoDetectResult | null>(null);
+  const [showAutoDetectModal, setShowAutoDetectModal] = useState(false);
 
   const { data: sources = [], isLoading } = useQuery<FirmSource[]>({
     queryKey: ["/api/admin/sources"],
+  });
+
+  const autoDetectMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/admin/sources/auto-detect");
+      return res.json() as Promise<AutoDetectResult>;
+    },
+    onSuccess: (data) => {
+      setAutoDetectResults(data);
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/sources"] });
+      toast({
+        title: "Scan Complete",
+        description: `Scanned ${data.scanned} companies: ${data.summary.detected} detected, ${data.summary.blocked} blocked, ${data.summary.errors} errors`,
+      });
+    },
+    onError: () => toast({ title: "Auto-Detect Failed", variant: "destructive" }),
   });
 
   const discoverMutation = useMutation({
@@ -239,6 +264,16 @@ export default function AdminSources() {
                 {s === "all" ? "All" : s === "needs_review" ? "Needs Setup" : s === "active" ? "Active" : "Classification"}
               </Button>
             ))}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => { setShowAutoDetectModal(true); autoDetectMutation.mutate(); }}
+              disabled={autoDetectMutation.isPending}
+              data-testid="button-batch-auto-detect"
+            >
+              {autoDetectMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <Radar className="h-3.5 w-3.5 mr-1" />}
+              Scan All Unconfigured
+            </Button>
           </div>
         </div>
 
@@ -334,6 +369,126 @@ export default function AdminSources() {
         )}
       </div>
 
+      <Dialog open={showAutoDetectModal} onOpenChange={() => setShowAutoDetectModal(false)}>
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Radar className="h-5 w-5" />
+              Batch ATS Auto-Detection
+            </DialogTitle>
+            <DialogDescription>
+              Scanning all unconfigured companies to detect their ATS platforms automatically.
+            </DialogDescription>
+          </DialogHeader>
+
+          {autoDetectMutation.isPending && (
+            <div className="flex flex-col items-center py-12 gap-4">
+              <Loader2 className="h-10 w-10 animate-spin text-primary" />
+              <div className="text-sm text-muted-foreground">Scanning career pages... This may take a few minutes.</div>
+              <div className="text-xs text-muted-foreground">Fetching pages in batches of 3 with delays to avoid rate limiting.</div>
+            </div>
+          )}
+
+          {autoDetectResults && !autoDetectMutation.isPending && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <div className="bg-emerald-50 dark:bg-emerald-950/30 rounded-lg p-3 text-center">
+                  <div className="text-xl font-bold text-emerald-600" data-testid="text-detected-count">{autoDetectResults.summary.detected}</div>
+                  <div className="text-xs text-emerald-700 dark:text-emerald-400">ATS Detected</div>
+                </div>
+                <div className="bg-amber-50 dark:bg-amber-950/30 rounded-lg p-3 text-center">
+                  <div className="text-xl font-bold text-amber-600" data-testid="text-blocked-count">{autoDetectResults.summary.blocked}</div>
+                  <div className="text-xs text-amber-700 dark:text-amber-400">Cloudflare Blocked</div>
+                </div>
+                <div className="bg-gray-50 dark:bg-gray-900/30 rounded-lg p-3 text-center">
+                  <div className="text-xl font-bold text-gray-500" data-testid="text-noats-count">{autoDetectResults.summary.noAts}</div>
+                  <div className="text-xs text-gray-600 dark:text-gray-400">No ATS Found</div>
+                </div>
+                <div className="bg-red-50 dark:bg-red-950/30 rounded-lg p-3 text-center">
+                  <div className="text-xl font-bold text-red-500" data-testid="text-errors-count">{autoDetectResults.summary.errors}</div>
+                  <div className="text-xs text-red-700 dark:text-red-400">Errors</div>
+                </div>
+              </div>
+
+              {autoDetectResults.detected.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <CheckCircle className="h-4 w-4 text-emerald-600" />
+                    <span className="text-sm font-medium">Detected ({autoDetectResults.detected.length})</span>
+                  </div>
+                  <div className="space-y-1.5 max-h-[200px] overflow-y-auto">
+                    {autoDetectResults.detected.map((d, i) => (
+                      <div key={i} className="flex items-center justify-between gap-2 p-2 bg-emerald-50 dark:bg-emerald-950/20 rounded text-sm" data-testid={`detected-item-${i}`}>
+                        <div className="min-w-0 flex-1">
+                          <div className="font-medium truncate">{d.name}</div>
+                          <div className="text-xs text-muted-foreground flex items-center gap-2">
+                            <ATSBadge atsType={d.atsType} />
+                            {d.validated && <span className="text-emerald-600">{d.jobCount} jobs</span>}
+                            {!d.scrapeSupported && <Badge variant="outline" className="text-xs text-amber-600 border-amber-300">No API</Badge>}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {autoDetectResults.blocked.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Shield className="h-4 w-4 text-amber-600" />
+                    <span className="text-sm font-medium">Cloudflare Blocked ({autoDetectResults.blocked.length})</span>
+                  </div>
+                  <div className="space-y-1 max-h-[150px] overflow-y-auto">
+                    {autoDetectResults.blocked.map((b, i) => (
+                      <div key={i} className="flex items-center gap-2 p-2 bg-amber-50 dark:bg-amber-950/20 rounded text-sm" data-testid={`blocked-item-${i}`}>
+                        <AlertTriangle className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+                        <span className="truncate">{b.name}</span>
+                        <a href={b.careerUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline shrink-0">Check manually</a>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {autoDetectResults.errors.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <XCircle className="h-4 w-4 text-red-500" />
+                    <span className="text-sm font-medium">Errors ({autoDetectResults.errors.length})</span>
+                  </div>
+                  <div className="space-y-1 max-h-[150px] overflow-y-auto">
+                    {autoDetectResults.errors.map((e, i) => (
+                      <div key={i} className="flex items-center gap-2 p-2 bg-red-50 dark:bg-red-950/20 rounded text-sm" data-testid={`error-item-${i}`}>
+                        <XCircle className="h-3.5 w-3.5 text-red-500 shrink-0" />
+                        <span className="truncate font-medium">{e.name}</span>
+                        <span className="text-xs text-red-500 truncate" title={e.error}>{e.error}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {autoDetectResults.noAts.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Globe className="h-4 w-4 text-gray-400" />
+                    <span className="text-sm font-medium text-muted-foreground">No ATS Found ({autoDetectResults.noAts.length})</span>
+                  </div>
+                  <div className="text-xs text-muted-foreground max-h-[100px] overflow-y-auto">
+                    {autoDetectResults.noAts.map((n) => n.name).join(", ")}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAutoDetectModal(false)} data-testid="button-close-autodetect">Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={!!discoverModal} onOpenChange={() => { setDiscoverModal(null); setPortalUrl(""); }}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
@@ -367,7 +522,7 @@ export default function AdminSources() {
           <DialogHeader>
             <DialogTitle>Import HTML for {htmlModal?.firmName}</DialogTitle>
             <DialogDescription>
-              Visit <a href={htmlModal?.careerUrl} target="_blank" rel="noopener noreferrer" className="underline text-primary">{htmlModal?.firmName}'s career page</a> in your browser. Right-click → "View Page Source" or press Ctrl+U. Copy all the HTML and paste it below.
+              Visit <a href={htmlModal?.careerUrl} target="_blank" rel="noopener noreferrer" className="underline text-primary">{htmlModal?.firmName}'s career page</a> in your browser. Right-click &rarr; "View Page Source" or press Ctrl+U. Copy all the HTML and paste it below.
             </DialogDescription>
           </DialogHeader>
 

@@ -76,7 +76,10 @@ Legal Tech Careers is a career intelligence platform designed for legal professi
 - **Startup Data Cleanup**: Runs once per version at server startup to unpublish low-relevance jobs, etc.
 - **Admin Data Cleanup**: On-demand cleanup via an admin endpoint.
 - **Public Job Access**: `getPublicJob` enforces `jobStatus='open'`.
-- **Scrapers**: Supports various ATS platforms (Greenhouse, Lever, Ashby, Workday, iCIMS, SmartRecruiters, Workable, BambooHR, Rippling, YC).
+- **Scrapers**: Supports various ATS platforms (Greenhouse, Lever, Ashby, Workday, iCIMS, SmartRecruiters, Workable, BambooHR, Rippling, UltiPro/UKG, YC). Multi-region Workday support allows one company to have multiple regional sites (US, UK, EMEA, APAC).
+- **ATS Detection**: `server/lib/ats-detector.ts` detects 21+ ATS platforms (Greenhouse, Lever, Workday, iCIMS, Ashby, SmartRecruiters, BambooHR, Rippling, Workable, UltiPro, viRecruit/viGlobalCloud, Jobvite, Taleo, SuccessFactors, Recruitee, Personio, JazzHR, Teamtailor, Pinpoint, Applied/BeApplied). `detectEmbeddedATS` scans HTML for embedded markers.
+- **ATS Auto-Discovery**: `POST /api/admin/sources/auto-detect` batch-scans unconfigured companies, handles Cloudflare blocks gracefully, stores detected configs in `firm_sources`.
+- **Global Coverage**: 400+ companies across US, UK, EU, APAC including Magic Circle, Am Law, legal tech startups, and international firms.
 - **Automation**: Scheduled workers manage ingestion, scoring, deduplication, and validation.
 - **Quality Assurance**: Admin review queue for data integrity.
 - **Admin Dashboard**: Provides an overview of scraper runs, source health, and rejection reasons.

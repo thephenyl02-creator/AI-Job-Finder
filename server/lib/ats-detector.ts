@@ -6,9 +6,10 @@ export interface ATSDetectionResult {
   config: Record<string, string>;
   confidence: number;
   evidence: string;
+  scrapeSupported?: boolean;
 }
 
-const ATS_PATTERNS: { pattern: RegExp; atsType: string; extractConfig: (match: RegExpMatchArray) => Record<string, string>; evidence: string }[] = [
+const ATS_PATTERNS: { pattern: RegExp; atsType: string; extractConfig: (match: RegExpMatchArray) => Record<string, string>; evidence: string; scrapeSupported?: boolean }[] = [
   {
     pattern: /(?:boards|job-boards)\.greenhouse\.io\/([a-zA-Z0-9_-]+)/i,
     atsType: 'greenhouse',
@@ -87,10 +88,109 @@ const ATS_PATTERNS: { pattern: RegExp; atsType: string; extractConfig: (match: R
     extractConfig: (m) => ({ company: m[1] }),
     evidence: 'Workable URL detected',
   },
+  {
+    pattern: /recruiting2?\.ultipro\.com\/([A-Z0-9]+)\/JobBoard\/([a-f0-9-]+)/i,
+    atsType: 'ultipro',
+    extractConfig: (m) => ({ companyCode: m[1], boardId: m[2] }),
+    evidence: 'UltiPro job board URL detected',
+  },
+  {
+    pattern: /(?:[a-zA-Z0-9_-]+)?selfapply\.viglobalcloud\.com\/viRecruitSelfApply/i,
+    atsType: 'virecruit',
+    extractConfig: () => ({}),
+    evidence: 'viRecruit/viGlobalCloud self-apply URL detected',
+    scrapeSupported: false,
+  },
+  {
+    pattern: /viglobalcloud\.com/i,
+    atsType: 'virecruit',
+    extractConfig: () => ({}),
+    evidence: 'viGlobalCloud domain detected',
+    scrapeSupported: false,
+  },
+  {
+    pattern: /jobs\.jobvite\.com\/([a-zA-Z0-9_-]+)/i,
+    atsType: 'jobvite',
+    extractConfig: (m) => ({ company: m[1] }),
+    evidence: 'Jobvite jobs URL detected',
+  },
+  {
+    pattern: /([a-zA-Z0-9_-]+)\.taleo\.net/i,
+    atsType: 'taleo',
+    extractConfig: (m) => ({ company: m[1] }),
+    evidence: 'Taleo URL detected',
+  },
+  {
+    pattern: /performancemanager\d*\.successfactors\.com/i,
+    atsType: 'successfactors',
+    extractConfig: () => ({}),
+    evidence: 'SuccessFactors URL detected',
+    scrapeSupported: false,
+  },
+  {
+    pattern: /([a-zA-Z0-9_-]+)\.recruitee\.com/i,
+    atsType: 'recruitee',
+    extractConfig: (m) => ({ company: m[1] }),
+    evidence: 'Recruitee URL detected',
+  },
+  {
+    pattern: /([a-zA-Z0-9_-]+)\.jobs\.personio\.de/i,
+    atsType: 'personio',
+    extractConfig: (m) => ({ company: m[1] }),
+    evidence: 'Personio jobs URL detected',
+  },
+  {
+    pattern: /([a-zA-Z0-9_-]+)\.applytojob\.com/i,
+    atsType: 'jazzhr',
+    extractConfig: (m) => ({ company: m[1] }),
+    evidence: 'JazzHR URL detected',
+  },
+  {
+    pattern: /([a-zA-Z0-9_-]+)\.teamtailor\.com/i,
+    atsType: 'teamtailor',
+    extractConfig: (m) => ({ company: m[1] }),
+    evidence: 'Teamtailor URL detected',
+  },
+  {
+    pattern: /([a-zA-Z0-9_-]+)\.pinpointhq\.com/i,
+    atsType: 'pinpoint',
+    extractConfig: (m) => ({ company: m[1] }),
+    evidence: 'Pinpoint URL detected',
+  },
+  {
+    pattern: /app\.beapplied\.com\/org\/([a-zA-Z0-9_-]+)/i,
+    atsType: 'applied',
+    extractConfig: (m) => ({ company: m[1] }),
+    evidence: 'Applied (BeApplied) URL detected',
+  },
+];
+
+const EMBEDDED_ATS_MARKERS: { pattern: RegExp; atsType: string; evidence: string; scrapeSupported?: boolean }[] = [
+  { pattern: /greenhouse\.io\/embed/i, atsType: 'greenhouse', evidence: 'Greenhouse embed detected in page' },
+  { pattern: /boards\.greenhouse\.io/i, atsType: 'greenhouse', evidence: 'Greenhouse board iframe detected' },
+  { pattern: /lever\.co/i, atsType: 'lever', evidence: 'Lever iframe/link detected in page' },
+  { pattern: /myworkdayjobs\.com/i, atsType: 'workday', evidence: 'Workday iframe/link detected in page' },
+  { pattern: /icims\.com/i, atsType: 'icims', evidence: 'iCIMS iframe/link detected in page' },
+  { pattern: /ashbyhq\.com/i, atsType: 'ashby', evidence: 'Ashby iframe/link detected in page' },
+  { pattern: /smartrecruiters\.com/i, atsType: 'smartrecruiters', evidence: 'SmartRecruiters iframe/link detected' },
+  { pattern: /bamboohr\.com/i, atsType: 'bamboohr', evidence: 'BambooHR iframe/link detected in page' },
+  { pattern: /rippling\.com/i, atsType: 'rippling', evidence: 'Rippling iframe/link detected in page' },
+  { pattern: /workable\.com/i, atsType: 'workable', evidence: 'Workable iframe/link detected in page' },
+  { pattern: /ultipro\.com/i, atsType: 'ultipro', evidence: 'UltiPro iframe/link detected in page' },
+  { pattern: /viglobalcloud\.com/i, atsType: 'virecruit', evidence: 'viRecruit/viGlobalCloud detected in page', scrapeSupported: false },
+  { pattern: /jobvite\.com/i, atsType: 'jobvite', evidence: 'Jobvite iframe/link detected in page' },
+  { pattern: /taleo\.net/i, atsType: 'taleo', evidence: 'Taleo iframe/link detected in page' },
+  { pattern: /successfactors\.com/i, atsType: 'successfactors', evidence: 'SuccessFactors detected in page', scrapeSupported: false },
+  { pattern: /recruitee\.com/i, atsType: 'recruitee', evidence: 'Recruitee iframe/link detected in page' },
+  { pattern: /personio\.de/i, atsType: 'personio', evidence: 'Personio iframe/link detected in page' },
+  { pattern: /applytojob\.com/i, atsType: 'jazzhr', evidence: 'JazzHR iframe/link detected in page' },
+  { pattern: /teamtailor\.com/i, atsType: 'teamtailor', evidence: 'Teamtailor iframe/link detected in page' },
+  { pattern: /pinpointhq\.com/i, atsType: 'pinpoint', evidence: 'Pinpoint iframe/link detected in page' },
+  { pattern: /beapplied\.com/i, atsType: 'applied', evidence: 'Applied (BeApplied) iframe/link detected in page' },
 ];
 
 export function detectATSFromUrl(url: string): ATSDetectionResult {
-  for (const { pattern, atsType, extractConfig, evidence } of ATS_PATTERNS) {
+  for (const { pattern, atsType, extractConfig, evidence, scrapeSupported } of ATS_PATTERNS) {
     const match = url.match(pattern);
     if (match) {
       return {
@@ -98,6 +198,7 @@ export function detectATSFromUrl(url: string): ATSDetectionResult {
         config: extractConfig(match),
         confidence: 0.95,
         evidence,
+        scrapeSupported: scrapeSupported !== undefined ? scrapeSupported : true,
       };
     }
   }
@@ -107,7 +208,38 @@ export function detectATSFromUrl(url: string): ATSDetectionResult {
     config: {},
     confidence: 0,
     evidence: 'No known ATS pattern matched',
+    scrapeSupported: false,
   };
+}
+
+export function detectEmbeddedATS(html: string): ATSDetectionResult | null {
+  for (const { pattern, atsType, evidence, scrapeSupported } of EMBEDDED_ATS_MARKERS) {
+    if (pattern.test(html)) {
+      const urlPatternResult = (() => {
+        for (const p of ATS_PATTERNS) {
+          if (p.atsType === atsType) {
+            const match = html.match(p.pattern);
+            if (match) {
+              return {
+                config: p.extractConfig(match),
+                confidence: 0.85,
+              };
+            }
+          }
+        }
+        return null;
+      })();
+
+      return {
+        atsType,
+        config: urlPatternResult?.config || {},
+        confidence: urlPatternResult?.confidence || 0.6,
+        evidence,
+        scrapeSupported: scrapeSupported !== undefined ? scrapeSupported : true,
+      };
+    }
+  }
+  return null;
 }
 
 export async function validateATSConfig(atsType: string, config: Record<string, string>): Promise<{ valid: boolean; jobCount: number; error?: string }> {
@@ -154,6 +286,23 @@ export async function validateATSConfig(atsType: string, config: Record<string, 
         const resp = await axios.get(`https://apply.workable.com/api/v3/accounts/${config.company}/jobs`, { timeout: 10000, headers: { Accept: 'application/json' } });
         return { valid: true, jobCount: resp.data?.results?.length || 0 };
       }
+      case 'ultipro': {
+        const postUrl = `https://recruiting2.ultipro.com/${config.companyCode}/JobBoard/${config.boardId}/JobBoardView/LoadSearchResults`;
+        const resp = await axios.post(postUrl, { opportunitySearch: { Top: 1, Skip: 0 } }, { timeout: 10000, headers: { 'Content-Type': 'application/json' } });
+        return { valid: true, jobCount: resp.data?.totalCount || resp.data?.opportunities?.length || 0 };
+      }
+      case 'virecruit':
+      case 'successfactors':
+        return { valid: false, jobCount: 0, error: `${atsType} detected but scraping is not supported (no public job listing API)` };
+      case 'jobvite':
+      case 'taleo':
+      case 'recruitee':
+      case 'personio':
+      case 'jazzhr':
+      case 'teamtailor':
+      case 'pinpoint':
+      case 'applied':
+        return { valid: false, jobCount: 0, error: `${atsType} detected but validation not yet implemented` };
       default:
         return { valid: false, jobCount: 0, error: `Unknown ATS type: ${atsType}` };
     }

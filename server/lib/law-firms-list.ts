@@ -9,6 +9,16 @@ export interface LawFirmConfig {
     company: string;
     instance: string;
     site: string;
+    label?: string;
+  } | {
+    company: string;
+    instance: string;
+    site: string;
+    label?: string;
+  }[];
+  ultipro?: {
+    companyCode: string;
+    boardId: string;
   };
   rippling?: string;
   icims?: string;
@@ -142,13 +152,20 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   {
     name: 'LexisNexis',
     careerUrl: 'https://relx.wd3.myworkdayjobs.com/LexisNexisLegal',
-    workday: { company: 'relx', instance: 'wd3', site: 'LexisNexisLegal' },
+    workday: [
+      { company: 'relx', instance: 'wd3', site: 'LexisNexisLegal', label: 'US' },
+      { company: 'relx', instance: 'wd3', site: 'RELXCareers', label: 'Global/RELX' },
+    ],
     type: 'company',
   },
   {
     name: 'Thomson Reuters',
     careerUrl: 'https://careers.thomsonreuters.com/',
-    workday: { company: 'thomsonreuters', instance: 'wd5', site: 'External_Career_Site' },
+    workday: [
+      { company: 'thomsonreuters', instance: 'wd5', site: 'External_Career_Site', label: 'US' },
+      { company: 'thomsonreuters', instance: 'wd5', site: 'External_Career_Site_EMEA', label: 'EMEA' },
+      { company: 'thomsonreuters', instance: 'wd5', site: 'External_Career_Site_APAC', label: 'APAC' },
+    ],
     type: 'company',
   },
   {
@@ -430,7 +447,11 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   {
     name: 'DLA Piper',
     careerUrl: 'https://www.dlapiper.com/en/us/careers/',
-    workday: { company: 'dlapiper', instance: 'wd1', site: 'dlapiper' },
+    workday: [
+      { company: 'dlapiper', instance: 'wd1', site: 'dlapiper', label: 'US' },
+      { company: 'dlapiper', instance: 'wd1', site: 'dlapiperuk', label: 'UK' },
+      { company: 'dlapiper', instance: 'wd1', site: 'dlapiperemea', label: 'EMEA' },
+    ],
     type: 'biglaw',
   },
   {
@@ -442,7 +463,10 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   {
     name: 'Hogan Lovells',
     careerUrl: 'https://www.hoganlovells.com/en/careers',
-    workday: { company: 'hoganlovells', instance: 'wd3', site: 'Search' },
+    workday: [
+      { company: 'hoganlovells', instance: 'wd3', site: 'Search', label: 'US' },
+      { company: 'hoganlovells', instance: 'wd3', site: 'SearchUK', label: 'UK' },
+    ],
     type: 'biglaw',
   },
   {
@@ -543,6 +567,11 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   {
     name: 'Baker McKenzie',
     careerUrl: 'https://www.bakermckenzie.com/en/careers',
+    workday: [
+      { company: 'bakermckenzie', instance: 'wd5', site: 'BakerMcKenzie', label: 'US' },
+      { company: 'bakermckenzie', instance: 'wd5', site: 'BakerMcKenzieUK', label: 'UK' },
+      { company: 'bakermckenzie', instance: 'wd5', site: 'BakerMcKenzieEMEA', label: 'EMEA' },
+    ],
     type: 'biglaw',
   },
   {
@@ -634,6 +663,12 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
     careerUrl: 'https://www.arnoldporter.com/en/careers',
     type: 'biglaw',
   },
+  {
+    name: 'Husch Blackwell',
+    careerUrl: 'https://recruiting2.ultipro.com/HUS1001HUSCH/JobBoard/b6637591-8c8d-49b8-b093-5524b203b157',
+    ultipro: { companyCode: 'HUS1001HUSCH', boardId: 'b6637591-8c8d-49b8-b093-5524b203b157' },
+    type: 'biglaw',
+  },
 
   // ===================================================
   // UK / MAGIC CIRCLE & MAJOR UK FIRMS (ATS-configured)
@@ -669,7 +704,11 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   {
     name: 'Norton Rose Fulbright',
     careerUrl: 'https://www.nortonrosefulbright.com/en/careers',
-    workday: { company: 'nrf', instance: 'wd3', site: 'External' },
+    workday: [
+      { company: 'nrf', instance: 'wd3', site: 'External', label: 'Global' },
+      { company: 'nrf', instance: 'wd3', site: 'NRF_UK', label: 'UK' },
+      { company: 'nrf', instance: 'wd3', site: 'NRF_EMEA', label: 'EMEA' },
+    ],
     type: 'biglaw',
   },
   {
@@ -1291,11 +1330,6 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
     name: 'Pillsbury Winthrop',
     careerUrl: 'https://www.pillsburylaw.com/en/careers.html',
     workday: { company: 'pillsburylaw', instance: 'wd5', site: 'Pillsbury_External' },
-    type: 'biglaw',
-  },
-  {
-    name: 'Husch Blackwell',
-    careerUrl: 'https://www.huschblackwell.com/careers',
     type: 'biglaw',
   },
   {
@@ -1949,5 +1983,406 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
     name: 'SurePoint Technologies',
     careerUrl: 'https://www.surepoint.com/careers',
     type: 'tech-legal',
+  },
+
+  // ===================================================
+  // UK LEGAL TECH STARTUPS
+  // ===================================================
+  {
+    name: 'Luminance',
+    careerUrl: 'https://www.luminance.com/careers.html',
+    type: 'startup',
+  },
+  {
+    name: 'Eigen Technologies',
+    careerUrl: 'https://www.eigentech.com/careers',
+    type: 'startup',
+  },
+  {
+    name: 'Apperio',
+    careerUrl: 'https://www.apperio.com/careers',
+    type: 'startup',
+  },
+  {
+    name: 'Definely',
+    careerUrl: 'https://www.definely.com/careers',
+    type: 'startup',
+  },
+  {
+    name: 'Avvoka',
+    careerUrl: 'https://www.avvoka.com/careers',
+    type: 'startup',
+  },
+  {
+    name: 'Clausematch',
+    careerUrl: 'https://www.clausematch.com/careers',
+    type: 'startup',
+  },
+  {
+    name: 'Legatics',
+    careerUrl: 'https://www.legatics.com/careers',
+    type: 'startup',
+  },
+  {
+    name: 'ThoughtRiver',
+    careerUrl: 'https://www.thoughtriver.com/careers',
+    type: 'startup',
+  },
+  {
+    name: 'Lexoo',
+    careerUrl: 'https://www.lexoo.com/careers',
+    type: 'startup',
+  },
+
+  // ===================================================
+  // EUROPEAN LEGAL TECH STARTUPS
+  // ===================================================
+  {
+    name: 'Legartis',
+    careerUrl: 'https://www.legartis.ai/careers',
+    type: 'startup',
+  },
+  {
+    name: 'Bryter',
+    careerUrl: 'https://bryter.com/careers/',
+    greenhouseId: 'braboryter',
+    type: 'startup',
+  },
+  {
+    name: 'Legal OS',
+    careerUrl: 'https://www.legal-os.io/careers',
+    type: 'startup',
+  },
+
+  // ===================================================
+  // FRENCH LAW FIRMS
+  // ===================================================
+  {
+    name: 'Bredin Prat',
+    careerUrl: 'https://www.bredinprat.com/careers/',
+    type: 'biglaw',
+  },
+  {
+    name: 'Gide Loyrette Nouel',
+    careerUrl: 'https://www.gide.com/en/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'Darrois Villey Maillot Brochier',
+    careerUrl: 'https://www.darroisvilley.com/en/careers/',
+    type: 'biglaw',
+  },
+  {
+    name: 'Lacourte Raquin Tatar',
+    careerUrl: 'https://www.lacourte.fr/en/careers/',
+    type: 'biglaw',
+  },
+
+  // ===================================================
+  // GERMAN LAW FIRMS
+  // ===================================================
+  {
+    name: 'Hengeler Mueller',
+    careerUrl: 'https://www.hengeler.com/en/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'Gleiss Lutz',
+    careerUrl: 'https://www.gleisslutz.com/en/careers.html',
+    type: 'biglaw',
+  },
+  {
+    name: 'Noerr',
+    careerUrl: 'https://www.noerr.com/en/career',
+    type: 'biglaw',
+  },
+  {
+    name: 'Luther Rechtsanwaltsgesellschaft',
+    careerUrl: 'https://www.luther-lawfirm.com/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'Milbank (Germany)',
+    careerUrl: 'https://www.milbank.com/en/careers',
+    type: 'biglaw',
+  },
+
+  // ===================================================
+  // SWISS LAW FIRMS
+  // ===================================================
+  {
+    name: 'Homburger',
+    careerUrl: 'https://www.homburger.ch/en/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'Lenz & Staehelin',
+    careerUrl: 'https://www.lenzstaehelin.com/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'Niederer Kraft Frey',
+    careerUrl: 'https://www.nkf.ch/en/careers/',
+    type: 'biglaw',
+  },
+
+  // ===================================================
+  // NORDIC LAW FIRMS
+  // ===================================================
+  {
+    name: 'Mannheimer Swartling',
+    careerUrl: 'https://www.mannheimerswartling.se/en/careers/',
+    type: 'biglaw',
+  },
+  {
+    name: 'Vinge',
+    careerUrl: 'https://www.vinge.se/en/career/',
+    type: 'biglaw',
+  },
+  {
+    name: 'Roschier',
+    careerUrl: 'https://www.roschier.com/careers/',
+    type: 'biglaw',
+  },
+  {
+    name: 'Krogerus',
+    careerUrl: 'https://www.krogerus.com/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'Hannes Snellman',
+    careerUrl: 'https://www.hannessnellman.com/careers/',
+    type: 'biglaw',
+  },
+  {
+    name: 'Wiersholm',
+    careerUrl: 'https://www.wiersholm.no/en/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'Thommessen',
+    careerUrl: 'https://www.thommessen.no/en/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'BAHR',
+    careerUrl: 'https://www.bahr.no/en/careers/',
+    type: 'biglaw',
+  },
+  {
+    name: 'Plesner',
+    careerUrl: 'https://www.plesner.com/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'Gorrissen Federspiel',
+    careerUrl: 'https://www.gorrissenfederspiel.com/careers',
+    type: 'biglaw',
+  },
+
+  // ===================================================
+  // ADDITIONAL EU LAW FIRMS (IT, AT, BE, PL)
+  // ===================================================
+  {
+    name: 'Bonelli Erede',
+    careerUrl: 'https://www.belex.com/en/careers/',
+    type: 'biglaw',
+  },
+  {
+    name: 'Gianni & Origoni',
+    careerUrl: 'https://www.gop.it/en/careers/',
+    type: 'biglaw',
+  },
+  {
+    name: 'BonelliErede Pappalardo',
+    careerUrl: 'https://www.belex.com/en/careers/',
+    type: 'biglaw',
+  },
+  {
+    name: 'Chiomenti',
+    careerUrl: 'https://www.chiomenti.net/en/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'Dentons Europe (Warsaw)',
+    careerUrl: 'https://www.dentons.com/en/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'Sołtysiński Kawecki & Szlęzak',
+    careerUrl: 'https://www.skslegal.pl/en/career/',
+    type: 'biglaw',
+  },
+  {
+    name: 'Wardyński & Partners',
+    careerUrl: 'https://www.wardynski.com.pl/en/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'Linklaters Belgium',
+    careerUrl: 'https://www.linklaters.com/en/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'Stibbe',
+    careerUrl: 'https://www.stibbe.com/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'Wolf Theiss',
+    careerUrl: 'https://www.wolftheiss.com/careers/',
+    type: 'biglaw',
+  },
+  {
+    name: 'Cerha Hempel',
+    careerUrl: 'https://www.cerhahempel.com/careers',
+    type: 'biglaw',
+  },
+
+  // ===================================================
+  // ADDITIONAL UK LAW FIRMS
+  // ===================================================
+  {
+    name: 'Hogan Lovells (London)',
+    careerUrl: 'https://www.hoganlovells.com/en/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'Lathams (London)',
+    careerUrl: 'https://www.lw.com/en/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'Withers',
+    careerUrl: 'https://www.withersworldwide.com/en-gb/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'Farrer & Co',
+    careerUrl: 'https://www.farrer.co.uk/careers/',
+    type: 'biglaw',
+  },
+  {
+    name: 'Forsters',
+    careerUrl: 'https://www.forsters.co.uk/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'Penningtons Manches Cooper',
+    careerUrl: 'https://www.penningtonslaw.com/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'Boodle Hatfield',
+    careerUrl: 'https://www.boodlehatfield.com/careers/',
+    type: 'biglaw',
+  },
+  {
+    name: 'Fladgate',
+    careerUrl: 'https://www.fladgate.com/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'Howard Kennedy',
+    careerUrl: 'https://www.howardkennedy.com/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'Stephenson Harwood (London)',
+    careerUrl: 'https://www.shlegal.com/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'Kingsley Napley',
+    careerUrl: 'https://www.kingsleynapley.co.uk/careers',
+    type: 'biglaw',
+  },
+
+  // ===================================================
+  // ADDITIONAL APAC LAW FIRMS
+  // ===================================================
+  {
+    name: 'Herbert Smith Freehills (Australia)',
+    careerUrl: 'https://www.herbertsmithfreehills.com/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'Ashurst (Australia)',
+    careerUrl: 'https://www.ashurst.com/en/careers/',
+    type: 'biglaw',
+  },
+  {
+    name: 'Norton Rose Fulbright Australia',
+    careerUrl: 'https://www.nortonrosefulbright.com/en-au/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'Hall & Wilcox',
+    careerUrl: 'https://hallandwilcox.com.au/careers/',
+    type: 'biglaw',
+  },
+  {
+    name: 'Holding Redlich',
+    careerUrl: 'https://www.holdingredlich.com/careers',
+    type: 'biglaw',
+  },
+  {
+    name: 'Johnson Winter Slattery',
+    careerUrl: 'https://www.jws.com.au/en/careers',
+    type: 'biglaw',
+  },
+
+  // ===================================================
+  // ADDITIONAL EUROPEAN LEGAL TECH & REGTECH
+  // ===================================================
+  {
+    name: 'Regnology',
+    careerUrl: 'https://www.regnology.net/en/careers/',
+    type: 'tech-legal',
+  },
+  {
+    name: 'Compliance Solutions Strategies',
+    careerUrl: 'https://www.cssregtech.com/careers/',
+    type: 'tech-legal',
+  },
+  {
+    name: 'Akoma Ntoso (LEX)',
+    careerUrl: 'https://www.akomantoso.org/careers',
+    type: 'tech-legal',
+  },
+  {
+    name: 'Legisway (Wolters Kluwer)',
+    careerUrl: 'https://www.legisway.com/en/careers',
+    type: 'tech-legal',
+  },
+  {
+    name: 'Zendoc',
+    careerUrl: 'https://www.zendoc.io/careers',
+    type: 'startup',
+  },
+  {
+    name: 'Leeway',
+    careerUrl: 'https://www.leeway.tech/careers',
+    type: 'startup',
+  },
+  {
+    name: 'Tomorro',
+    careerUrl: 'https://www.tomorro.com/careers',
+    type: 'startup',
+  },
+  {
+    name: 'Hyperlex',
+    careerUrl: 'https://hyperlex.ai/careers',
+    type: 'startup',
+  },
+  {
+    name: 'Seraphin.legal',
+    careerUrl: 'https://www.seraphin.legal/careers',
+    type: 'startup',
+  },
+  {
+    name: 'Reynen Court',
+    careerUrl: 'https://www.reynencourt.com/careers',
+    type: 'startup',
   },
 ];

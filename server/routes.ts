@@ -3617,6 +3617,140 @@ Rules:
     }
   });
 
+  app.post("/api/admin/sources/auto-detect", isAuthenticated, async (req, res) => {
+    if (!(await isAdminCheck(req))) return res.status(403).json({ error: "Admin access required" });
+    try {
+      const { detectATSFromUrl, detectEmbeddedATS, validateATSConfig } = await import("./lib/ats-detector");
+      const { firmSources } = await import("@shared/schema");
+
+      const existingSources = await db.select({ firmName: firmSources.firmName }).from(firmSources);
+      const existingNames = new Set(existingSources.map(s => s.firmName.toLowerCase()));
+
+      const unconfigured = LAW_FIRMS_AND_COMPANIES.filter(f => {
+        if (existingNames.has(f.name.toLowerCase())) return false;
+        if (f.greenhouseId || f.leverPostingsUrl || f.ashbyUrl || f.workday || f.rippling || f.icims || f.workableId || f.smartrecruitersId || f.bamboohrId || (f as any).ultipro) return false;
+        return true;
+      });
+
+      const detected: any[] = [];
+      const blocked: any[] = [];
+      const noAts: any[] = [];
+      const errors: any[] = [];
+      const BATCH_SIZE = 3;
+      const DELAY_MS = 2000;
+
+      for (let i = 0; i < unconfigured.length; i += BATCH_SIZE) {
+        const batch = unconfigured.slice(i, i + BATCH_SIZE);
+        const batchResults = await Promise.allSettled(
+          batch.map(async (firm) => {
+            try {
+              const controller = new AbortController();
+              const timeout = setTimeout(() => controller.abort(), 15000);
+              let response;
+              try {
+                response = await fetch(firm.careerUrl, {
+                  headers: {
+                    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                    'Accept-Language': 'en-US,en;q=0.9',
+                  },
+                  redirect: 'follow',
+                  signal: controller.signal,
+                });
+              } finally {
+                clearTimeout(timeout);
+              }
+
+              const html = await response.text();
+              const finalUrl = response.url;
+
+              const isCfBlocked = response.status === 403 ||
+                html.includes('cf-browser-verification') ||
+                html.includes('__cf_chl') ||
+                html.includes('challenge-platform') ||
+                html.includes('Just a moment...');
+
+              if (isCfBlocked) {
+                blocked.push({ name: firm.name, careerUrl: firm.careerUrl, reason: 'cloudflare' });
+                return;
+              }
+
+              let detection = detectATSFromUrl(finalUrl);
+              const needsBetterMatch = detection.atsType === 'unknown' ||
+                (detection.atsType === 'workday' && !detection.config.site);
+              if (needsBetterMatch) {
+                const embedded = detectEmbeddedATS(html);
+                if (embedded && (embedded.atsType !== detection.atsType || Object.keys(embedded.config).length > Object.keys(detection.config).length)) {
+                  detection = embedded;
+                }
+              }
+
+              if (detection.atsType !== 'unknown') {
+                let validation = null;
+                if (detection.scrapeSupported !== false && Object.keys(detection.config).length > 0) {
+                  try { validation = await validateATSConfig(detection.atsType, detection.config); } catch {}
+                }
+                detected.push({
+                  name: firm.name,
+                  careerUrl: firm.careerUrl,
+                  type: firm.type,
+                  atsType: detection.atsType,
+                  config: detection.config,
+                  confidence: detection.confidence,
+                  evidence: detection.evidence,
+                  scrapeSupported: detection.scrapeSupported !== false,
+                  jobCount: validation?.valid ? validation.jobCount : 0,
+                  validated: validation?.valid || false,
+                });
+
+                if (detection.scrapeSupported !== false && validation?.valid) {
+                  await db.insert(firmSources).values({
+                    firmName: firm.name,
+                    careerUrl: firm.careerUrl,
+                    discoveredPortalUrl: finalUrl,
+                    atsType: detection.atsType,
+                    fetchMode: 'ats_api',
+                    status: 'needs_review',
+                    atsConfig: detection.config,
+                    jobCount: validation.jobCount > 0 ? validation.jobCount : 0,
+                  }).onConflictDoNothing();
+                }
+              } else {
+                noAts.push({ name: firm.name, careerUrl: firm.careerUrl });
+              }
+            } catch (err: any) {
+              if (err.name === 'AbortError') {
+                errors.push({ name: firm.name, careerUrl: firm.careerUrl, error: 'Timeout (15s)' });
+              } else {
+                errors.push({ name: firm.name, careerUrl: firm.careerUrl, error: err.message?.substring(0, 200) });
+              }
+            }
+          })
+        );
+
+        if (i + BATCH_SIZE < unconfigured.length) {
+          await new Promise(r => setTimeout(r, DELAY_MS));
+        }
+      }
+
+      res.json({
+        scanned: unconfigured.length,
+        detected,
+        blocked,
+        noAts,
+        errors,
+        summary: {
+          detected: detected.length,
+          blocked: blocked.length,
+          noAts: noAts.length,
+          errors: errors.length,
+        },
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Admin: Get list of companies that can be scraped
   app.get("/api/admin/scraper/companies", isAuthenticated, async (req, res) => {
     if (!(await isAdminCheck(req))) {

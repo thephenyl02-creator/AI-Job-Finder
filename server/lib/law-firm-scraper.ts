@@ -383,6 +383,42 @@ export async function scrapeAshby(ashbyUrl: string, companyName: string): Promis
   }
 }
 
+function normalizeWorkdayConfigs(
+  workday: { company: string; instance: string; site: string; label?: string } | { company: string; instance: string; site: string; label?: string }[]
+): { company: string; instance: string; site: string; label?: string }[] {
+  return Array.isArray(workday) ? workday : [workday];
+}
+
+export async function scrapeWorkdayMultiRegion(
+  workday: { company: string; instance: string; site: string; label?: string } | { company: string; instance: string; site: string; label?: string }[],
+  companyName: string,
+  companyType?: string
+): Promise<ScrapedJob[]> {
+  const configs = normalizeWorkdayConfigs(workday);
+  const allJobs: ScrapedJob[] = [];
+  for (const config of configs) {
+    try {
+      const regionLabel = config.label ? ` [${config.label}]` : '';
+      logInfo('WORKDAY', `Scraping ${companyName}${regionLabel} (site: ${config.site})`);
+      const jobs = await scrapeWorkday(config, companyName, companyType);
+      allJobs.push(...jobs);
+      if (configs.length > 1) {
+        await delay(1000);
+      }
+    } catch (error: any) {
+      const regionLabel = config.label || config.site;
+      logWarn('WORKDAY', `Failed to scrape ${companyName} region ${regionLabel}: ${error.message}`);
+    }
+  }
+  const seen = new Set<string>();
+  return allJobs.filter(job => {
+    const key = `${job.title}|${job.location}|${job.applyUrl}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 export async function scrapeWorkday(
   config: { company: string; instance: string; site: string },
   companyName: string,
@@ -1243,6 +1279,136 @@ export async function scrapeSmartRecruiters(srId: string, companyName: string): 
   }
 }
 
+export async function scrapeUltiPro(companyCode: string, boardId: string, companyName: string): Promise<ScrapedJob[]> {
+  const baseUrl = `https://recruiting2.ultipro.com/${companyCode}/JobBoard/${boardId}`;
+  const searchUrl = `${baseUrl}/JobBoardView/LoadSearchResults`;
+  const pageSize = 25;
+  let skip = 0;
+  const allJobs: ScrapedJob[] = [];
+
+  try {
+    let hasMore = true;
+    while (hasMore) {
+      const response = await fetchWithRetry(searchUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        data: {
+          opportunitySearch: {
+            Top: pageSize,
+            Skip: skip,
+            QueryString: '',
+            OrderBy: [{ Value: 'postedDateDesc', PropertyName: 'PostedDate', Ascending: false }],
+            Filters: [],
+          },
+        },
+      });
+
+      const data = response.data;
+      const jobs = data?.opportunities || [];
+      const totalRows = data?.totalCount || 0;
+
+      if (!Array.isArray(jobs) || jobs.length === 0) {
+        hasMore = false;
+        break;
+      }
+
+      for (const job of jobs) {
+        const opportunityId = job.Id || '';
+        const title = job.Title || '';
+        const locations = Array.isArray(job.Locations) ? job.Locations : [];
+        const locationText = locations.map((l: any) => {
+          const addr = l.Address;
+          if (!addr) return l.LocalizedDescription || '';
+          return [addr.City, addr.State?.Code, addr.Country?.Name].filter(Boolean).join(', ');
+        }).join(' | ') || '';
+        const category = job.JobCategoryName || '';
+        const requisition = job.RequisitionNumber || '';
+        const postedDate = job.PostedDate || new Date().toISOString();
+
+        if (!title || !opportunityId) continue;
+
+        const applyUrl = `${baseUrl}/OpportunityDetail?opportunityId=${opportunityId}`;
+
+        let description = '';
+        try {
+          const detailUrl = `${baseUrl}/JobBoardView/LoadOpportunityDetail`;
+          const detailResp = await fetchWithRetry(detailUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+            },
+            data: { opportunityId },
+          });
+          const detail = detailResp.data;
+          description = detail?.Description || detail?.JobDescription || detail?.description || detail?.model?.Description || '';
+          if (description) {
+            description = description
+              .replace(/<[^>]+>/g, '\n')
+              .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+              .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, ' ')
+              .replace(/\n{3,}/g, '\n\n').replace(/[ \t]+/g, ' ').trim();
+          }
+        } catch {
+        }
+
+        if (!description) {
+          try {
+            const htmlResp = await fetchWithRetry(applyUrl, {
+              method: 'GET',
+              headers: { 'Accept': 'text/html', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
+            });
+            const htmlText = typeof htmlResp.data === 'string' ? htmlResp.data : '';
+            const descMatch = htmlText.match(/class="[^"]*(?:job-?description|opportunity-?description|detail-?body)[^"]*"[^>]*>([\s\S]*?)<\/div>/i);
+            if (descMatch) {
+              description = descMatch[1]
+                .replace(/<[^>]+>/g, '\n')
+                .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+                .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, ' ')
+                .replace(/\n{3,}/g, '\n\n').replace(/[ \t]+/g, ' ').trim();
+            }
+          } catch {
+          }
+        }
+
+        const locationType = detectLocationType(locationText + ' ' + title + ' ' + description);
+        const salary = parseSalaryFromText(description);
+
+        allJobs.push({
+          title,
+          company: companyName,
+          location: locationText || 'Not specified',
+          description: description || `${title} at ${companyName}`,
+          applyUrl,
+          postedDate: postedDate ? new Date(postedDate).toISOString() : new Date().toISOString(),
+          source: 'ultipro',
+          externalId: `ultipro_${companyCode}_${opportunityId}`,
+          salaryMin: salary.min,
+          salaryMax: salary.max,
+          locationType,
+          department: category || undefined,
+        });
+      }
+
+      skip += pageSize;
+      if (skip >= totalRows || skip >= 200) {
+        hasMore = false;
+      } else {
+        await delay(1000);
+      }
+    }
+
+    logInfo('ULTIPRO', `${companyName}: Found ${allJobs.length} jobs`);
+    return allJobs;
+  } catch (error: any) {
+    logError('ULTIPRO', `Error scraping ${companyName}`, { error: error.message });
+    return [];
+  }
+}
+
 export function isValidJobUrl(url: string): boolean {
   if (!url || url.trim().length === 0) return false;
 
@@ -1779,7 +1945,7 @@ export async function scrapeAllLawFirms(): Promise<{
     const batch = LAW_FIRMS_AND_COMPANIES.slice(batchStart, batchStart + BATCH_SIZE);
     const batchResults = await Promise.allSettled(
       batch.map(async (firm) => {
-        const atsType = firm.greenhouseId ? `greenhouse` : firm.leverPostingsUrl ? `lever` : firm.ashbyUrl ? `ashby` : firm.workday ? `workday` : firm.rippling ? `rippling` : firm.icims ? `icims` : firm.workableId ? `workable` : firm.smartrecruitersId ? `smartrecruiters` : firm.bamboohrId ? `bamboohr` : `generic`;
+        const atsType = firm.greenhouseId ? `greenhouse` : firm.leverPostingsUrl ? `lever` : firm.ashbyUrl ? `ashby` : firm.workday ? `workday` : firm.ultipro ? `ultipro` : firm.rippling ? `rippling` : firm.icims ? `icims` : firm.workableId ? `workable` : firm.smartrecruitersId ? `smartrecruiters` : firm.bamboohrId ? `bamboohr` : `generic`;
         const circuitKey = `${atsType}:${firm.name}`;
         const companyStart = Date.now();
 
@@ -1794,7 +1960,8 @@ export async function scrapeAllLawFirms(): Promise<{
         }
 
         try {
-          const PER_COMPANY_TIMEOUT = firm.workday ? 90000 : 30000;
+          const isMultiRegionWorkday = firm.workday && Array.isArray(firm.workday);
+          const PER_COMPANY_TIMEOUT = firm.workday ? (isMultiRegionWorkday ? 180000 : 90000) : 30000;
 
           const scrapePromise = (async () => {
             if (firm.greenhouseId) {
@@ -1804,7 +1971,9 @@ export async function scrapeAllLawFirms(): Promise<{
             } else if (firm.ashbyUrl) {
               return await scrapeAshby(firm.ashbyUrl, firm.name);
             } else if (firm.workday) {
-              return await scrapeWorkday(firm.workday, firm.name, firm.type);
+              return await scrapeWorkdayMultiRegion(firm.workday, firm.name, firm.type);
+            } else if (firm.ultipro) {
+              return await scrapeUltiPro(firm.ultipro.companyCode, firm.ultipro.boardId, firm.name);
             } else if (firm.rippling) {
               return await scrapeRippling(firm.rippling, firm.name);
             } else if (firm.icims) {
@@ -1911,6 +2080,7 @@ export async function scrapeAllLawFirms(): Promise<{
           case 'bamboohr': scrapedJobs = await scrapeBambooHR(config.company, source.firmName); break;
           case 'rippling': scrapedJobs = await scrapeRippling(config.company, source.firmName); break;
           case 'workable': scrapedJobs = await scrapeWorkable(config.company, source.firmName); break;
+          case 'ultipro': scrapedJobs = await scrapeUltiPro(config.companyCode, config.boardId, source.firmName); break;
         }
 
         const firmType = 'biglaw';
@@ -1969,7 +2139,9 @@ export async function scrapeSingleCompany(companyName: string): Promise<InsertJo
   } else if (firm.ashbyUrl) {
     scrapedJobs = await scrapeAshby(firm.ashbyUrl, firm.name);
   } else if (firm.workday) {
-    scrapedJobs = await scrapeWorkday(firm.workday, firm.name, firm.type);
+    scrapedJobs = await scrapeWorkdayMultiRegion(firm.workday, firm.name, firm.type);
+  } else if (firm.ultipro) {
+    scrapedJobs = await scrapeUltiPro(firm.ultipro.companyCode, firm.ultipro.boardId, firm.name);
   } else if (firm.rippling) {
     scrapedJobs = await scrapeRippling(firm.rippling, firm.name);
   } else if (firm.icims) {
@@ -2018,7 +2190,9 @@ export async function scrapeAllLawFirmsWithAI(
       } else if (firm.ashbyUrl) {
         scrapedJobs = await scrapeAshby(firm.ashbyUrl, firm.name);
       } else if (firm.workday) {
-        scrapedJobs = await scrapeWorkday(firm.workday, firm.name, firm.type);
+        scrapedJobs = await scrapeWorkdayMultiRegion(firm.workday, firm.name, firm.type);
+      } else if (firm.ultipro) {
+        scrapedJobs = await scrapeUltiPro(firm.ultipro.companyCode, firm.ultipro.boardId, firm.name);
       } else if (firm.rippling) {
         scrapedJobs = await scrapeRippling(firm.rippling, firm.name);
       } else if (firm.icims) {
@@ -2078,7 +2252,7 @@ export async function scrapeAllLawFirmsWithAI(
   return { jobs: allJobs, stats };
 }
 
-type ATSPlatform = 'greenhouse' | 'lever' | 'ashby' | 'workday' | 'smartrecruiters' | 'icims' | 'bamboohr' | 'rippling' | 'jazzhr' | 'recruitee' | 'breezy' | 'linkedin' | 'indeed' | 'myworkdayjobs' | 'applytojob' | 'jobvite' | 'dover' | 'personio' | 'workable' | 'generic';
+type ATSPlatform = 'greenhouse' | 'lever' | 'ashby' | 'workday' | 'smartrecruiters' | 'icims' | 'bamboohr' | 'rippling' | 'jazzhr' | 'recruitee' | 'breezy' | 'linkedin' | 'indeed' | 'myworkdayjobs' | 'applytojob' | 'jobvite' | 'dover' | 'personio' | 'workable' | 'ultipro' | 'generic';
 
 function detectATSPlatform(url: string): ATSPlatform {
   const hostname = new URL(url).hostname.toLowerCase();
@@ -2102,6 +2276,7 @@ function detectATSPlatform(url: string): ATSPlatform {
   if (hostname.includes('jobvite.com') || hostname.includes('jobs.jobvite.com')) return 'jobvite';
   if (hostname.includes('dover.com') || hostname.includes('app.dover.io')) return 'dover';
   if (hostname.includes('personio.de') || hostname.includes('jobs.personio.de')) return 'personio';
+  if (hostname.includes('ultipro.com') || hostname.includes('recruiting2.ultipro.com')) return 'ultipro';
 
   return 'generic';
 }
@@ -2151,6 +2326,9 @@ function detectEmbeddedATS(html: string, pageUrl: string): { platform: ATSPlatfo
     || html.match(/(?:src|href)\s*=\s*["']([^"']*\.jobs\.personio\.com[^"']*)/i);
   if (personioMatch) return { platform: 'personio', url: personioMatch[1] };
 
+  const ultiproMatch = html.match(/(?:src|href)\s*=\s*["']([^"']*recruiting2?\.ultipro\.com[^"']*)/i);
+  if (ultiproMatch) return { platform: 'ultipro', url: ultiproMatch[1] };
+
   if (lower.includes('greenhouse') && lower.includes('grnhse')) return { platform: 'greenhouse', url: pageUrl };
   if (lower.includes('lever_co_embed') || lower.includes('lever-jobs-container')) return { platform: 'lever', url: pageUrl };
   if (lower.includes('workable') && lower.includes('whr(')) return { platform: 'workable', url: pageUrl };
@@ -2177,7 +2355,8 @@ function discoverJobLinksFromPage($: cheerio.CheerioAPI, pageUrl: string): strin
       if (host.includes('greenhouse.io') || host.includes('lever.co') || host.includes('ashbyhq.com') ||
           host.includes('myworkdayjobs.com') || host.includes('smartrecruiters.com') || host.includes('bamboohr.com') ||
           host.includes('jazzhr.com') || host.includes('breezy.hr') || host.includes('jobvite.com') ||
-          host.includes('recruitee.com') || host.includes('icims.com') || host.includes('workday.com')) {
+          host.includes('recruitee.com') || host.includes('icims.com') || host.includes('workday.com') ||
+          host.includes('ultipro.com')) {
         links.add(href);
         return;
       }
@@ -2427,6 +2606,9 @@ function detectATSFromScripts(rawHtml: string): { platform: ATSPlatform; url: st
 
   const jobviteMatch = rawHtml.match(/(https?:\/\/jobs\.jobvite\.com\/[a-zA-Z0-9_/-]+)/i);
   if (jobviteMatch) return { platform: 'jobvite', url: jobviteMatch[1] };
+
+  const ultiproScript = rawHtml.match(/(https?:\/\/recruiting2?\.ultipro\.com\/[^"'\s]+)/i);
+  if (ultiproScript) return { platform: 'ultipro', url: ultiproScript[1] };
 
   return null;
 }
