@@ -1004,17 +1004,33 @@ export default function MarketIntelligence() {
                         return (
                           <g>
                             <rect x={x} y={y} width={width} height={height} rx={4} fill={color} stroke="hsl(var(--card))" strokeWidth={2} />
-                            {showName && (
-                              <text x={x + width / 2} y={y + height / 2 - (showValue ? 7 : 0)} textAnchor="middle" dominantBaseline="central" style={{ fontSize, fontWeight: 500, fill: '#fff', fontFamily: '"DM Sans", "Inter", sans-serif' }}>
-                                <title>{clean}</title>
-                                {truncatedName}
-                              </text>
-                            )}
-                            {showValue && (
-                              <text x={x + width / 2} y={y + height / 2 + (showName ? 9 : 0)} textAnchor="middle" dominantBaseline="central" style={{ fontSize: valueFontSize, fontWeight: 400, fill: 'rgba(255,255,255,0.8)', fontFamily: '"JetBrains Mono", monospace' }}>
-                                {value} ({pct}%)
-                              </text>
-                            )}
+                            <foreignObject x={x} y={y} width={width} height={height}>
+                              <div
+                                title={clean}
+                                style={{
+                                  width: '100%',
+                                  height: '100%',
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  overflow: 'hidden',
+                                  padding: '2px 4px',
+                                  boxSizing: 'border-box',
+                                }}
+                              >
+                                {showName && (
+                                  <span style={{ fontSize, fontWeight: 500, color: '#fff', fontFamily: '"DM Sans", "Inter", sans-serif', lineHeight: 1.2, textAlign: 'center', whiteSpace: 'nowrap' }}>
+                                    {truncatedName}
+                                  </span>
+                                )}
+                                {showValue && (
+                                  <span style={{ fontSize: valueFontSize, fontWeight: 400, color: 'rgba(255,255,255,0.8)', fontFamily: '"JetBrains Mono", monospace', lineHeight: 1.2, textAlign: 'center', whiteSpace: 'nowrap' }}>
+                                    {value} ({pct}%)
+                                  </span>
+                                )}
+                              </div>
+                            </foreignObject>
                           </g>
                         );
                       }}
