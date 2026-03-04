@@ -959,24 +959,41 @@ export default function MarketIntelligence() {
                     <Treemap
                       data={careerPaths.map(cp => ({ name: cp.name, size: cp.jobCount, pct: cp.percentage }))}
                       dataKey="size"
-                      aspectRatio={4 / 3}
                       stroke="hsl(var(--card))"
                       strokeWidth={2}
                       content={({ x, y, width, height, name, value, pct }: any) => {
                         if (!width || !height || width < 2 || height < 2) return null;
                         const color = getCategoryColor(name || '');
-                        const showName = width > 45 && height > 22;
-                        const showValue = width > 30 && height > 16;
+                        const showName = width > 35 && height > 18;
+                        const showValue = width > 25 && height > 14;
+                        const SHORT_NAMES: Record<string, string> = {
+                          "Legal Consulting & Advisory": "Consulting",
+                          "Legal Product Management": "Product",
+                          "Legal Operations": "Legal Ops",
+                          "Legal Engineering": "Engineering",
+                          "Legal Sales & Client Solutions": "Sales",
+                          "Compliance & Privacy": "Compliance",
+                          "Legal AI & Analytics": "AI & Analytics",
+                          "In-House Counsel": "In-House",
+                          "Knowledge Management": "Knowledge",
+                          "Contract Management": "Contracts",
+                          "Intellectual Property & Innovation": "IP & Innovation",
+                          "Litigation & eDiscovery": "Litigation",
+                        };
+                        const displayName = width < 80 && name && SHORT_NAMES[name] ? SHORT_NAMES[name] : name;
+                        const maxChars = Math.floor(width / 7);
+                        const truncatedName = displayName && displayName.length > maxChars ? displayName.slice(0, maxChars) + '…' : displayName;
                         return (
                           <g>
                             <rect x={x} y={y} width={width} height={height} rx={4} fill={color} fillOpacity={0.85} stroke="hsl(var(--card))" strokeWidth={2} />
                             {showName && (
-                              <text x={x + width / 2} y={y + height / 2 - (showValue ? 8 : 0)} textAnchor="middle" dominantBaseline="central" style={{ fontSize: Math.min(11, width / 10), fontWeight: 600, fill: '#fff', textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}>
-                                {name && name.length > width / 7 ? name.slice(0, Math.floor(width / 7)) + '…' : name}
+                              <text x={x + width / 2} y={y + height / 2 - (showValue ? 7 : 0)} textAnchor="middle" dominantBaseline="central" style={{ fontSize: Math.min(10, width / 8), fontWeight: 600, fill: '#fff', textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}>
+                                <title>{name}</title>
+                                {truncatedName}
                               </text>
                             )}
                             {showValue && (
-                              <text x={x + width / 2} y={y + height / 2 + (showName ? 10 : 0)} textAnchor="middle" dominantBaseline="central" style={{ fontSize: 9, fontWeight: 500, fill: 'rgba(255,255,255,0.8)', fontFamily: 'var(--font-mono)' }}>
+                              <text x={x + width / 2} y={y + height / 2 + (showName ? 9 : 0)} textAnchor="middle" dominantBaseline="central" style={{ fontSize: 8, fontWeight: 500, fill: 'rgba(255,255,255,0.8)', fontFamily: 'var(--font-mono)' }}>
                                 {value} ({pct}%)
                               </text>
                             )}
@@ -1269,7 +1286,7 @@ export default function MarketIntelligence() {
                   </div>
                   {workModeTotal > 0 && (
                     <div className="flex flex-col sm:flex-row items-center gap-4">
-                      <div className="w-[100px] h-[100px] sm:w-[140px] sm:h-[140px] shrink-0">
+                      <div className="w-[80px] h-[80px] sm:w-[140px] sm:h-[140px] shrink-0">
                         <ResponsiveContainer width="100%" height="100%">
                           <PieChart>
                             <Pie
@@ -1279,7 +1296,7 @@ export default function MarketIntelligence() {
                                 { name: "On-site", value: safeOnsite.count, fill: WORK_MODE_PALETTE.onsite },
                               ]}
                               cx="50%" cy="50%"
-                              innerRadius={38} outerRadius={58}
+                              innerRadius="55%" outerRadius="85%"
                               dataKey="value"
                               strokeWidth={2}
                               stroke="hsl(var(--card))"
@@ -1292,7 +1309,7 @@ export default function MarketIntelligence() {
                           </PieChart>
                         </ResponsiveContainer>
                       </div>
-                      <div className="space-y-3 flex-1">
+                      <div className="space-y-3 w-full sm:w-auto sm:flex-1">
                         {[
                           { label: "Remote", pct: safeRemote.percentage, count: safeRemote.count, color: WORK_MODE_PALETTE.remote },
                           { label: "Hybrid", pct: safeHybrid.percentage, count: safeHybrid.count, color: WORK_MODE_PALETTE.hybrid },
@@ -1322,7 +1339,7 @@ export default function MarketIntelligence() {
                     <span className="mi-label text-[10px]">AI Intensity</span>
                   </div>
                   <div className="flex flex-col sm:flex-row items-center gap-4">
-                    <div className="w-[100px] h-[70px] sm:w-[140px] sm:h-[100px] shrink-0">
+                    <div className="w-[80px] h-[56px] sm:w-[140px] sm:h-[100px] shrink-0">
                       <ResponsiveContainer width="100%" height="100%">
                         <RadialBarChart cx="50%" cy="100%" innerRadius="30%" outerRadius="100%" startAngle={180} endAngle={0}
                           data={[
@@ -1336,7 +1353,7 @@ export default function MarketIntelligence() {
                         </RadialBarChart>
                       </ResponsiveContainer>
                     </div>
-                    <div className="space-y-2 flex-1">
+                    <div className="space-y-2 w-full sm:w-auto sm:flex-1">
                       {[
                         { label: "Low", data: safeAI.low, color: "bg-emerald-500", textColor: "text-emerald-600 dark:text-emerald-400" },
                         { label: "Medium", data: safeAI.medium, color: "bg-amber-500", textColor: "text-amber-600 dark:text-amber-400" },
@@ -1563,7 +1580,7 @@ export default function MarketIntelligence() {
                         </text>
                       </svg>
                     </div>
-                    <div className="space-y-1 flex-1">
+                    <div className="space-y-1 w-full sm:w-auto sm:flex-1">
                       {communityBenchmarks.readinessDistribution.map((b) => {
                         const maxBucket = Math.max(...communityBenchmarks.readinessDistribution.map(x => x.count)) || 1;
                         return (
