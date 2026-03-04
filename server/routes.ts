@@ -3415,8 +3415,53 @@ Rules:
     if (!(await isAdminCheck(req))) return res.status(403).json({ error: "Admin access required" });
     try {
       const { firmSources } = await import("@shared/schema");
-      const sources = await db.select().from(firmSources).orderBy(firmSources.firmName);
-      res.json(sources);
+      const { LAW_FIRMS_AND_COMPANIES } = await import("./lib/law-firms-list");
+      const dbSources = await db.select().from(firmSources).orderBy(firmSources.firmName);
+      const dbByName = new Map(dbSources.map(s => [s.firmName.toLowerCase(), s]));
+
+      const merged: any[] = [];
+      LAW_FIRMS_AND_COMPANIES.forEach((firm, idx) => {
+        const existing = dbByName.get(firm.name.toLowerCase());
+        if (existing) {
+          merged.push(existing);
+          dbByName.delete(firm.name.toLowerCase());
+        } else {
+          let atsType = 'unknown';
+          let fetchMode = 'manual';
+          const atsConfig: Record<string, string> = {};
+          if (firm.greenhouseId) { atsType = 'greenhouse'; fetchMode = 'api'; atsConfig.boardToken = firm.greenhouseId; }
+          else if (firm.leverPostingsUrl) { atsType = 'lever'; fetchMode = 'api'; atsConfig.company = firm.leverPostingsUrl; }
+          else if (firm.workday) { atsType = 'workday'; fetchMode = 'api'; const w = Array.isArray(firm.workday) ? firm.workday[0] : firm.workday; atsConfig.company = w.company; atsConfig.instance = w.instance; atsConfig.site = w.site; }
+          else if (firm.ultipro) { atsType = 'ultipro'; fetchMode = 'api'; atsConfig.companyCode = firm.ultipro.companyCode; atsConfig.boardId = firm.ultipro.boardId; }
+          else if (firm.ashbyUrl) { atsType = 'ashby'; fetchMode = 'api'; atsConfig.orgSlug = firm.ashbyUrl; }
+          else if (firm.icims) { atsType = 'icims'; fetchMode = 'api'; atsConfig.customerId = firm.icims; }
+          else if (firm.smartrecruitersId) { atsType = 'smartrecruiters'; fetchMode = 'api'; atsConfig.company = firm.smartrecruitersId; }
+          else if (firm.workableId) { atsType = 'workable'; fetchMode = 'api'; atsConfig.subdomain = firm.workableId; }
+          else if (firm.bamboohrId) { atsType = 'bamboohr'; fetchMode = 'api'; atsConfig.subdomain = firm.bamboohrId; }
+          else if (firm.rippling) { atsType = 'rippling'; fetchMode = 'api'; atsConfig.companyId = firm.rippling; }
+
+          merged.push({
+            id: -(idx + 1),
+            firmName: firm.name,
+            careerUrl: firm.careerUrl,
+            discoveredPortalUrl: null,
+            atsType,
+            fetchMode,
+            status: atsType !== 'unknown' ? 'needs_review' : 'classification_only',
+            atsConfig: Object.keys(atsConfig).length > 0 ? atsConfig : null,
+            lastSuccessAt: null,
+            lastErrorMessage: null,
+            jobCount: 0,
+            createdAt: new Date().toISOString(),
+            updatedAt: null,
+          });
+        }
+      });
+      for (const remaining of dbByName.values()) {
+        merged.push(remaining);
+      }
+      merged.sort((a, b) => (a.firmName || '').localeCompare(b.firmName || ''));
+      res.json(merged);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
