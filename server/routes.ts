@@ -143,7 +143,7 @@ async function requirePro(req: any, res: any, next: any) {
   });
 }
 
-import { clearMarketIntelligenceCache, getMarketIntelligenceCache, setMarketIntelligenceCache, clearDataQualityCache, getDataQualityCache, setDataQualityCache, clearAllStatsCaches, getCanonicalStats, setCanonicalStats, getDisplayStats, setDisplayStats, clearDisplayStats } from "./lib/mi-cache";
+import { clearMarketIntelligenceCache, getMarketIntelligenceCache, setMarketIntelligenceCache, clearDataQualityCache, getDataQualityCache, setDataQualityCache, clearAllStatsCaches, getCanonicalStats, setCanonicalStats, getDisplayStats, setDisplayStats, clearDisplayStats, forceRefreshDisplayStats } from "./lib/mi-cache";
 import { getQualityThresholds, isGenericBusinessRole } from "./workers/enrichment-worker";
 export { clearMarketIntelligenceCache, clearAllStatsCaches } from "./lib/mi-cache";
 
@@ -206,7 +206,7 @@ export async function registerRoutes(
     "/api/stats", "/api/stats/social-proof", "/api/market-pulse",
     "/api/job-density", "/api/track", "/api/events",
   ]);
-  const publicApiPrefixes = ["/api/auth/", "/api/stats/", "/api/jobs", "/api/public/", "/api/quiz", "/api/search/", "/api/resume/anonymous"];
+  const publicApiPrefixes = ["/api/auth/", "/api/stats/", "/api/jobs", "/api/public/", "/api/quiz", "/api/search/", "/api/resume/anonymous", "/api/share/"];
 
   async function apiKeyGuard(req: any, res: any, next: any) {
     if (req.user) return next();
@@ -234,6 +234,11 @@ export async function registerRoutes(
     if (isFromApp || hasCookie || acceptsHtml) return next();
 
     const ua = (req.headers["user-agent"] || "").toLowerCase();
+    const isSocialCrawler = ua.includes("linkedinbot") || ua.includes("facebookexternalhit") ||
+                            ua.includes("twitterbot") || ua.includes("slackbot") || ua.includes("whatsapp") ||
+                            ua.includes("telegrambot") || ua.includes("discordbot");
+    if (isSocialCrawler) return next();
+
     const isBotLike = !ua || ua.includes("curl") || ua.includes("wget") || ua.includes("python") ||
                       ua.includes("httpie") || ua.includes("postman") || ua.includes("insomnia") ||
                       ua.includes("bot") || ua.includes("spider") || ua.includes("scraper");
@@ -8912,15 +8917,16 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
       }
 
       const allJobs = await storage.getPublishedJobs();
-      const miCanonical = getCanonicalStats();
-      let totalJobs: number;
       const companies = new Set(allJobs.map(j => j.company));
       const countries = new Set(allJobs.map(j => j.countryCode).filter(c => c && c !== 'WW' && c !== 'UN'));
-      if (miCanonical) {
-        totalJobs = miCanonical.totalJobs;
+      setCanonicalStats(allJobs.length, companies.size, countries.size);
+      setDisplayStats(allJobs.length, companies.size, countries.size);
+      const miDisplay = getDisplayStats() || getCanonicalStats();
+      let totalJobs: number;
+      if (miDisplay) {
+        totalJobs = miDisplay.totalJobs;
       } else {
         totalJobs = allJobs.length;
-        setCanonicalStats(allJobs.length, companies.size, countries.size);
       }
       const now = new Date();
       const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -9094,8 +9100,8 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
       const result = {
         overview: {
           totalJobs,
-          totalCompanies: miCanonical ? miCanonical.totalCompanies : companies.size,
-          countriesCount: miCanonical ? miCanonical.totalCountries : countries.size,
+          totalCompanies: miDisplay ? miDisplay.totalCompanies : companies.size,
+          countriesCount: miDisplay ? miDisplay.totalCountries : countries.size,
           remotePercentage: allJobs.length ? Math.round((remoteJobs.length / allJobs.length) * 100) : 0,
           newJobsThisWeek: newThisWeek.length,
           avgSalaryMin: jobsWithSalMin.length ? Math.round(jobsWithSalMin.reduce((s, j) => s + j.salaryMin!, 0) / jobsWithSalMin.length) : null,
@@ -9928,12 +9934,86 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
     }
   });
 
+  app.get("/api/share/readiness-card.svg", async (req, res) => {
+    const score = Math.min(100, Math.max(0, parseInt(String(req.query.score || "0"))));
+    const path = String(req.query.path || "Legal Tech");
+    const fitLabel = score >= 75 ? "Strong Fit" : score >= 50 ? "Good Fit" : score >= 25 ? "Emerging Fit" : "Early Explorer";
+
+    const scoreColor = score >= 70 ? "#34d399" : score >= 45 ? "#fbbf24" : "#f87171";
+    const barWidth = Math.round((score / 100) * 480);
+
+    const safePath = path.slice(0, 100);
+    const escapedPath = safePath.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
+    res.setHeader("Content-Type", "image/svg+xml");
+    res.setHeader("Cache-Control", "public, max-age=86400");
+    res.send(`<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+    <linearGradient id="scoreGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#60a5fa"/>
+      <stop offset="100%" stop-color="#a78bfa"/>
+    </linearGradient>
+    <linearGradient id="barGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="${scoreColor}"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)" rx="0"/>
+  <rect x="60" y="60" width="1080" height="510" rx="24" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+
+  <text x="120" y="140" fill="#94a3b8" font-family="system-ui, sans-serif" font-size="18" font-weight="500">LEGAL TECH CAREER READINESS</text>
+  <line x1="120" y1="160" x2="400" y2="160" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+
+  <text x="120" y="290" fill="url(#scoreGrad)" font-family="system-ui, sans-serif" font-size="144" font-weight="700">${score}</text>
+  <text x="${score >= 10 ? (score >= 100 ? 420 : 340) : 230}" y="290" fill="#475569" font-family="system-ui, sans-serif" font-size="48" font-weight="300">/100</text>
+
+  <text x="120" y="340" fill="${scoreColor}" font-family="system-ui, sans-serif" font-size="28" font-weight="600">${fitLabel}</text>
+
+  <rect x="120" y="380" width="480" height="8" rx="4" fill="rgba(255,255,255,0.08)"/>
+  <rect x="120" y="380" width="${barWidth}" height="8" rx="4" fill="url(#barGrad)"/>
+
+  <text x="120" y="440" fill="#64748b" font-family="system-ui, sans-serif" font-size="16" font-weight="400">Top career path</text>
+  <text x="120" y="470" fill="#e2e8f0" font-family="system-ui, sans-serif" font-size="24" font-weight="600">${escapedPath}</text>
+
+  <line x1="120" y1="500" x2="1080" y2="500" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+
+  <text x="120" y="540" fill="#3b82f6" font-family="system-ui, sans-serif" font-size="20" font-weight="600">lawjobs.co</text>
+  <text x="308" y="540" fill="#475569" font-family="system-ui, sans-serif" font-size="20" font-weight="400"> — Career intelligence for legal tech</text>
+
+  <rect x="820" y="510" width="260" height="48" rx="8" fill="#3b82f6"/>
+  <text x="950" y="541" fill="#ffffff" font-family="system-ui, sans-serif" font-size="18" font-weight="600" text-anchor="middle">Check Your Fit Free</text>
+</svg>`);
+  });
+
+  app.post("/api/admin/refresh-display-stats", isAuthenticated, async (req: any, res) => {
+    try {
+      if (!req.user?.isAdmin) return res.status(403).json({ error: "Admin access required" });
+      const allJobs = await storage.getPublishedJobs();
+      const companies = new Set(allJobs.map((j: any) => j.company));
+      const countries = new Set(allJobs.map((j: any) => j.countryCode).filter((c: any) => c && c !== 'WW' && c !== 'UN'));
+      forceRefreshDisplayStats(allJobs.length, companies.size, countries.size);
+      clearAllStatsCaches();
+      res.json({
+        success: true,
+        stats: { totalJobs: allJobs.length, totalCompanies: companies.size, totalCountries: countries.size },
+      });
+    } catch (error) {
+      console.error("Error refreshing display stats:", error);
+      res.status(500).json({ error: "Failed to refresh display stats" });
+    }
+  });
+
   app.get("/share/readiness", async (req, res) => {
     const score = parseInt(String(req.query.score || "0"));
     const path = String(req.query.path || "Legal Tech");
     const clampedScore = Math.min(100, Math.max(0, score));
     const fitLabel = clampedScore >= 75 ? "Strong Fit" : clampedScore >= 50 ? "Good Fit" : clampedScore >= 25 ? "Emerging Fit" : "Early Explorer";
     const ogUrl = `https://lawjobs.co/share/readiness?score=${clampedScore}&path=${encodeURIComponent(path)}`;
+    const ogImage = `https://lawjobs.co/api/share/readiness-card.svg?score=${clampedScore}&path=${encodeURIComponent(path)}`;
 
     res.setHeader("Content-Type", "text/html");
     res.send(`<!DOCTYPE html>
@@ -9945,21 +10025,27 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
 <meta property="og:type" content="website">
 <meta property="og:title" content="Legal Tech Readiness: ${clampedScore}/100 — ${fitLabel}">
 <meta property="og:description" content="Top career path: ${path}. Assessed by lawjobs.co — the career intelligence platform for lawyers moving into legal tech. Check your fit free.">
+<meta property="og:image" content="${ogImage}">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
 <meta property="og:url" content="${ogUrl}">
 <meta property="og:site_name" content="lawjobs.co">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Legal Tech Readiness: ${clampedScore}/100 — ${fitLabel}">
 <meta name="twitter:description" content="Top career path: ${path}. Check yours free at lawjobs.co">
+<meta name="twitter:image" content="${ogImage}">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 body{margin:0;font-family:'DM Sans',system-ui,sans-serif;background:#0f172a;color:#fff;display:flex;align-items:center;justify-content:center;min-height:100vh}
 .card{background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%);border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:48px;text-align:center;max-width:480px;width:90%}
-.score{font-size:72px;font-weight:700;background:linear-gradient(135deg,#60a5fa,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;line-height:1}
+.score{font-size:72px;font-weight:700;background:linear-gradient(135deg,#60a5fa,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1}
 .label{font-size:18px;color:#94a3b8;margin:8px 0 24px}
 .path{font-size:14px;color:#cbd5e1;margin:4px 0}
 .path strong{color:#fff}
 .brand{margin-top:32px;font-size:13px;color:#64748b}
 .brand a{color:#60a5fa;text-decoration:none}
-.cta{display:inline-block;margin-top:20px;padding:12px 28px;background:#3b82f6;color:#fff;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px}
+.cta{display:inline-block;margin-top:20px;padding:12px 28px;background:#3b82f6;color:#fff;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;transition:background 0.2s}
+.cta:hover{background:#2563eb}
 </style>
 </head>
 <body>
@@ -9967,7 +10053,7 @@ body{margin:0;font-family:'DM Sans',system-ui,sans-serif;background:#0f172a;colo
 <div class="score">${clampedScore}</div>
 <div class="label">${fitLabel}</div>
 <p class="path">Top career path: <strong>${path}</strong></p>
-<a class="cta" href="https://lawjobs.co/quiz">Check Your Fit Free</a>
+<a class="cta" href="https://lawjobs.co/diagnostic">Check Your Fit Free</a>
 <p class="brand">Assessed by <a href="https://lawjobs.co">lawjobs.co</a> — Career intelligence for legal tech</p>
 </div>
 </body>

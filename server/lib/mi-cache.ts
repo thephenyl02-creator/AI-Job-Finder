@@ -5,7 +5,7 @@ let displayStats: { totalJobs: number; totalCompanies: number; totalCountries: n
 const MI_CACHE_TTL = 3600000;
 const DQ_CACHE_TTL = 3600000;
 const CANONICAL_TTL = 3600000;
-const DISPLAY_TTL = 14400000;
+const DISPLAY_TTL = 43200000;
 
 export function clearMarketIntelligenceCache() {
   marketIntelligenceCache = null;
@@ -60,8 +60,23 @@ export function getDisplayStats() {
 
 export function setDisplayStats(totalJobs: number, totalCompanies: number, totalCountries: number) {
   if (displayStats && Date.now() - displayStats.timestamp < DISPLAY_TTL) {
+    const ratchetedJobs = Math.max(totalJobs, displayStats.totalJobs);
+    const ratchetedCompanies = Math.max(totalCompanies, displayStats.totalCompanies);
+    const ratchetedCountries = Math.max(totalCountries, displayStats.totalCountries);
+    if (ratchetedJobs > displayStats.totalJobs || ratchetedCompanies > displayStats.totalCompanies || ratchetedCountries > displayStats.totalCountries) {
+      displayStats = { totalJobs: ratchetedJobs, totalCompanies: ratchetedCompanies, totalCountries: ratchetedCountries, timestamp: displayStats.timestamp };
+    }
     return;
   }
+  if (displayStats) {
+    totalJobs = Math.max(totalJobs, displayStats.totalJobs);
+    totalCompanies = Math.max(totalCompanies, displayStats.totalCompanies);
+    totalCountries = Math.max(totalCountries, displayStats.totalCountries);
+  }
+  displayStats = { totalJobs, totalCompanies, totalCountries, timestamp: Date.now() };
+}
+
+export function forceRefreshDisplayStats(totalJobs: number, totalCompanies: number, totalCountries: number) {
   displayStats = { totalJobs, totalCompanies, totalCountries, timestamp: Date.now() };
 }
 

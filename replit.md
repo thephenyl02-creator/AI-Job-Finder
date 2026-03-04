@@ -60,6 +60,7 @@ Legal Tech Careers is a career intelligence platform designed for legal professi
 - **Cache-Control**: Stats/analytics endpoints set `Cache-Control: no-cache, no-store, must-revalidate`.
 - **Unified Stats Caching**: All stats endpoints (`/api/stats`, `/api/stats/data-quality`, `/api/market-intelligence`, `/api/market-pulse`, `/api/stats/social-proof`, `/api/stats/historical`, `/api/stats/job-density`, `/api/insights/market-demand`) share caches in `server/lib/mi-cache.ts`. `clearAllStatsCaches()` invalidates MI cache, DQ cache, and canonical stats together and is called from ALL job mutation paths: routes, data-cleanup, scheduled-scraper, enrichment-worker, reliability-worker.
 - **Canonical Stats Snapshot**: `server/lib/mi-cache.ts` stores a single `canonicalStats` object (totalJobs, totalCompanies, totalCountries) with 1hr TTL. Whichever endpoint first computes from SQL sets the snapshot; all other endpoints use that same snapshot. `setCanonicalStats()` is guarded — only the first caller within a TTL window wins, preventing different endpoints from overwriting each other. The MI page frontend also overrides `dataQuality.curation.activeInventory` with `overview.totalJobs` to guarantee the header and curation panel always show the same number.
+- **Display Stats Stabilization**: `displayStats` has a 12hr TTL and ratchet-up logic — numbers only increase within the TTL window, never decrease. All public surfaces (landing, MI overview, social proof, jobs) use `displayStats`. Admin can force-refresh via `POST /api/admin/refresh-display-stats` (bypasses ratchet). `forceRefreshDisplayStats()` in mi-cache.ts resets to exact DB counts.
 
 ### Skill Normalization
 - **SKILLS_SYNONYM_MAP**: Normalizes skill variants.
@@ -121,7 +122,7 @@ Legal Tech Careers is a career intelligence platform designed for legal professi
 - **Pro Upgrade Banner**: Persistent banner for free authenticated users.
 - **Post-Diagnostic Pro Upsell**: Blurred preview with "Unlock Full Report" CTA.
 - **Social Proof Counters**: Displays real data on various pages.
-- **LinkedIn Share Cards**: Generates branded HTML for LinkedIn previews.
+- **LinkedIn Share Cards**: Generates branded SVG image cards via `/api/share/readiness-card.svg` with OG meta tags on `/share/readiness`. Card shows score, fit label, top path, and CTA. Social media crawlers (LinkedIn, Facebook, Twitter, Slack, Discord) are whitelisted in the API guard.
 
 ## External Dependencies
 

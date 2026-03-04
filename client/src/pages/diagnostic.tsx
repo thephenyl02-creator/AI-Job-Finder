@@ -1425,24 +1425,30 @@ export default function DiagnosticPage() {
         <div className="flex items-center gap-2">
           {report && (
             <>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  const topPath = report.topPaths?.[0];
-                  const pathParam = topPath ? topPath.name : "";
-                  const shareUrl = `https://lawjobs.co/share/readiness?score=${report.overallReadinessScore}&path=${encodeURIComponent(pathParam)}`;
-                  trackNow({ eventType: "diagnostic_share", metadata: { score: report.overallReadinessScore, platform: "linkedin" } });
-                  window.open(
-                    "https://www.linkedin.com/sharing/share-offsite/?url=" + encodeURIComponent(shareUrl),
-                    "_blank"
-                  );
-                }}
-                data-testid="button-share-linkedin"
-              >
-                <SiLinkedin className="h-3.5 w-3.5 mr-1.5" />
-                Share
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="border-[#0A66C2]/30 text-[#0A66C2] hover:bg-[#0A66C2]/10 hover:border-[#0A66C2]/50"
+                    onClick={() => {
+                      const topPath = report.topPaths?.[0];
+                      const pathParam = topPath ? topPath.name : "";
+                      const shareUrl = `https://lawjobs.co/share/readiness?score=${report.overallReadinessScore}&path=${encodeURIComponent(pathParam)}`;
+                      trackNow({ eventType: "diagnostic_share", metadata: { score: report.overallReadinessScore, platform: "linkedin" } });
+                      window.open(
+                        "https://www.linkedin.com/sharing/share-offsite/?url=" + encodeURIComponent(shareUrl),
+                        "_blank"
+                      );
+                    }}
+                    data-testid="button-share-linkedin"
+                  >
+                    <SiLinkedin className="h-3.5 w-3.5 mr-1.5" />
+                    Share on LinkedIn
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Share your readiness score with a branded card on LinkedIn</TooltipContent>
+              </Tooltip>
               <Button
                 variant="outline"
                 size="sm"
