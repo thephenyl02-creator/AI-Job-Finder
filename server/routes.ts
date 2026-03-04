@@ -143,7 +143,7 @@ async function requirePro(req: any, res: any, next: any) {
   });
 }
 
-import { clearMarketIntelligenceCache, getMarketIntelligenceCache, setMarketIntelligenceCache, clearDataQualityCache, getDataQualityCache, setDataQualityCache, clearAllStatsCaches, getCanonicalStats, setCanonicalStats } from "./lib/mi-cache";
+import { clearMarketIntelligenceCache, getMarketIntelligenceCache, setMarketIntelligenceCache, clearDataQualityCache, getDataQualityCache, setDataQualityCache, clearAllStatsCaches, getCanonicalStats, setCanonicalStats, getDisplayStats, setDisplayStats, clearDisplayStats } from "./lib/mi-cache";
 import { getQualityThresholds, isGenericBusinessRole } from "./workers/enrichment-worker";
 export { clearMarketIntelligenceCache, clearAllStatsCaches } from "./lib/mi-cache";
 
@@ -376,7 +376,8 @@ export async function registerRoutes(
       res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
 
       const cachedDQ = getDataQualityCache();
-      const statsCanonical = getCanonicalStats();
+      const stableDisplay = getDisplayStats();
+      const statsCanonical = stableDisplay || getCanonicalStats();
       let totalJobs: number;
       let uniqueCompanies: number;
       let uniqueCategories: number;
@@ -403,7 +404,10 @@ export async function registerRoutes(
           }
         }
         if (!statsCanonical) {
-          setCanonicalStats(jobs.length, new Set(jobs.map(j => j.company)).size, new Set(jobs.map(j => j.countryCode).filter(c => c && c !== 'WW' && c !== 'UN')).size);
+          const compCount = new Set(jobs.map(j => j.company)).size;
+          const countryCount = new Set(jobs.map(j => j.countryCode).filter(c => c && c !== 'WW' && c !== 'UN')).size;
+          setCanonicalStats(jobs.length, compCount, countryCount);
+          setDisplayStats(jobs.length, compCount, countryCount);
         }
       }
 
@@ -515,7 +519,8 @@ export async function registerRoutes(
       const uniqueSources = new Set(activeInventory.map(j => j.source).filter(Boolean)).size;
       const uniqueRegions = new Set(activeInventory.map(j => j.locationRegion).filter(Boolean)).size;
 
-      const existingCanonical = getCanonicalStats();
+      const existingDisplay = getDisplayStats();
+      const existingCanonical = existingDisplay || getCanonicalStats();
       if (existingCanonical) {
         uniqueCompanies = existingCanonical.totalCompanies;
         uniqueCountries = existingCanonical.totalCountries;
@@ -523,6 +528,7 @@ export async function registerRoutes(
         uniqueCompanies = new Set(activeInventory.map(j => j.company)).size;
         uniqueCountries = new Set(activeInventory.map(j => j.countryCode).filter(c => c && c !== 'WW' && c !== 'UN')).size;
         setCanonicalStats(activeInventory.length, uniqueCompanies, uniqueCountries);
+        setDisplayStats(activeInventory.length, uniqueCompanies, uniqueCountries);
       }
 
       const entryLevel = activeInventory.filter(j => ['Entry', 'Junior', 'Associate', 'Intern', 'Fellowship', 'Mid'].includes(j.seniorityLevel || '')).length;
@@ -632,7 +638,8 @@ export async function registerRoutes(
       const [{ total: totalUsersCount }] = await db.select({ total: count() }).from(users);
       const [{ total: diagnosticsCount }] = await db.select({ total: count() }).from(diagnosticReports);
 
-      const spCanonical = getCanonicalStats();
+      const spDisplay = getDisplayStats();
+      const spCanonical = spDisplay || getCanonicalStats();
       let jobsCurated: number;
       let companiesTracked: number;
       if (spCanonical) {
@@ -647,7 +654,9 @@ export async function registerRoutes(
           const activeJobs = await storage.getActiveJobs();
           jobsCurated = activeJobs.length;
           companiesTracked = new Set(activeJobs.map(j => j.company)).size;
-          setCanonicalStats(jobsCurated, companiesTracked, new Set(activeJobs.map(j => j.countryCode).filter(c => c && c !== 'WW' && c !== 'UN')).size);
+          const countryCount = new Set(activeJobs.map(j => j.countryCode).filter(c => c && c !== 'WW' && c !== 'UN')).size;
+          setCanonicalStats(jobsCurated, companiesTracked, countryCount);
+          setDisplayStats(jobsCurated, companiesTracked, countryCount);
         }
       }
 
@@ -895,7 +904,8 @@ export async function registerRoutes(
         }
       }
       const pulse = await storage.getMarketPulse(topCategory);
-      const pulseCanonical = getCanonicalStats();
+      const pulseDisplay = getDisplayStats();
+      const pulseCanonical = pulseDisplay || getCanonicalStats();
       if (pulseCanonical) {
         pulse.totalJobs = pulseCanonical.totalJobs;
       } else {
@@ -1085,7 +1095,8 @@ export async function registerRoutes(
       const result = await storage.getPublishedJobsPaginated(page, limit, filters);
       const hasFilters = filters.category || filters.location || filters.locationType || filters.search || filters.seniority || filters.region || filters.country || (filters.workMode && filters.workMode !== 'all') || filters.track;
       if (!hasFilters) {
-        const jobsCanonical = getCanonicalStats();
+        const jobsDisplay = getDisplayStats();
+        const jobsCanonical = jobsDisplay || getCanonicalStats();
         if (jobsCanonical) {
           result.total = jobsCanonical.totalJobs;
           result.totalPages = Math.ceil(result.total / limit);
@@ -4154,6 +4165,7 @@ Rules:
         }
       }
       clearAllStatsCaches();
+      clearDisplayStats();
       res.json({ published, skipped, total: approvedJobs.length });
     } catch (error) {
       console.error("Error bulk publishing:", error);
@@ -4331,6 +4343,7 @@ Rules:
 
       const updated = await storage.publishJob(id);
       clearAllStatsCaches();
+      clearDisplayStats();
       res.json({ job: updated });
     } catch (error) {
       console.error("Error publishing job:", error);
@@ -4347,6 +4360,7 @@ Rules:
       const updated = await storage.unpublishJob(id);
       if (!updated) return res.status(404).json({ error: "Job not found" });
       clearAllStatsCaches();
+      clearDisplayStats();
       res.json({ job: updated });
     } catch (error) {
       console.error("Error unpublishing job:", error);
@@ -4676,6 +4690,7 @@ Rules:
       } as any);
 
       clearAllStatsCaches();
+      clearDisplayStats();
       res.json({
         success: true,
         job: updated,
@@ -4974,7 +4989,7 @@ Rules:
       }
 
       console.log(`[Admin] Publish All Eligible: ${published} published, ${skipped} skipped out of ${candidates.length} candidates`);
-      if (published > 0) clearAllStatsCaches();
+      if (published > 0) { clearAllStatsCaches(); clearDisplayStats(); }
       res.json({ published, skipped, total: candidates.length, publishedJobs: publishedJobs.slice(0, 50) });
     } catch (error: any) {
       console.error("[Admin] Publish All Eligible error:", error);
@@ -5027,7 +5042,7 @@ Rules:
       }
 
       const published = results.filter(r => r.status === 'published').length;
-      if (published > 0) clearAllStatsCaches();
+      if (published > 0) { clearAllStatsCaches(); clearDisplayStats(); }
       res.json({ success: true, published, total: results.length, results });
     } catch (error: any) {
       console.error("[Bulk QA Publish] Error:", error);
@@ -5342,6 +5357,7 @@ Rules:
         statusChangedAt: now,
       });
       clearAllStatsCaches();
+      clearDisplayStats();
       res.json({ success: true });
     } catch (error: any) {
       console.error("Error archiving job:", error);

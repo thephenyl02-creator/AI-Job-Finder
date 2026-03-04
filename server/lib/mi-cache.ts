@@ -1,9 +1,11 @@
 let marketIntelligenceCache: { data: any; timestamp: number } | null = null;
 let dataQualityCache: { data: any; timestamp: number } | null = null;
 let canonicalStats: { totalJobs: number; totalCompanies: number; totalCountries: number; timestamp: number } | null = null;
+let displayStats: { totalJobs: number; totalCompanies: number; totalCountries: number; timestamp: number } | null = null;
 const MI_CACHE_TTL = 3600000;
 const DQ_CACHE_TTL = 3600000;
 const CANONICAL_TTL = 3600000;
+const DISPLAY_TTL = 14400000;
 
 export function clearMarketIntelligenceCache() {
   marketIntelligenceCache = null;
@@ -47,6 +49,24 @@ export function setCanonicalStats(totalJobs: number, totalCompanies: number, tot
     return;
   }
   canonicalStats = { totalJobs, totalCompanies, totalCountries, timestamp: Date.now() };
+}
+
+export function getDisplayStats() {
+  if (displayStats && Date.now() - displayStats.timestamp < DISPLAY_TTL) {
+    return { totalJobs: displayStats.totalJobs, totalCompanies: displayStats.totalCompanies, totalCountries: displayStats.totalCountries };
+  }
+  return null;
+}
+
+export function setDisplayStats(totalJobs: number, totalCompanies: number, totalCountries: number) {
+  if (displayStats && Date.now() - displayStats.timestamp < DISPLAY_TTL) {
+    return;
+  }
+  displayStats = { totalJobs, totalCompanies, totalCountries, timestamp: Date.now() };
+}
+
+export function clearDisplayStats() {
+  displayStats = null;
 }
 
 export function clearAllStatsCaches() {

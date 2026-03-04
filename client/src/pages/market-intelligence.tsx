@@ -30,6 +30,13 @@ import {
   Line,
   Legend,
   CartesianGrid,
+  AreaChart,
+  Area,
+  PieChart,
+  Pie,
+  RadialBarChart,
+  RadialBar,
+  Treemap,
 } from "recharts";
 import { ProGate } from "@/components/pro-gate";
 import {
@@ -416,7 +423,7 @@ export default function MarketIntelligence() {
                 <p className="text-sm text-muted-foreground max-w-xl" data-testid="text-mi-subtitle">
                   {overview.totalJobs.toLocaleString()} roles · {overview.totalCompanies.toLocaleString()} companies · {overview.countriesCount} countries · Updated daily
                 </p>
-                <Badge variant="secondary" className="text-[10px]" data-testid="badge-live-data">Live data</Badge>
+                <Badge variant="secondary" className="text-[10px] gap-1.5" data-testid="badge-live-data"><span className="mi-live-dot" /> Live data</Badge>
               </div>
               {transitionData && (
                 <p className="text-xs text-muted-foreground mt-1.5" data-testid="text-mi-transition-stats">
@@ -489,25 +496,26 @@ export default function MarketIntelligence() {
           </div>
         </section>
 
-        {/* MARKET PULSE GRID */}
+        {/* MARKET PULSE TICKER */}
         <section className="border-t border-border/40" data-testid="section-key-stats">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4">
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
               {[
-                { label: "Active Roles", value: overview.totalJobs.toLocaleString(), sub: `+${overview.newJobsThisWeek} this week`, icon: Briefcase },
-                { label: "Career Changers", value: transitionData ? `${transitionData.transitionFriendlyPct}%` : "—", sub: transitionData ? `${transitionData.totalTransitionFriendly} welcome career changers` : "Pro", icon: Users },
-                { label: "Lawyer-Led", value: `${lawyerLedPct}%`, sub: `${transitionData?.trackSummary.find(t => t.track === "Lawyer-Led")?.jobCount || (dataQuality?.market?.trackDistribution?.find((t: { name: string; count: number }) => t.name === "Lawyer-Led")?.count || 0)} roles`, icon: Shield },
-                { label: "Entry-to-Mid", value: `${entryAccessiblePct}%`, sub: transitionData ? `${transitionData.avgExperience} years average` : "of roles", icon: GraduationCap },
-                { label: "Remote", value: `${overview.remotePercentage}%`, sub: `${safeRemote.count} roles`, icon: Wifi },
-                { label: "Salary Transparency", value: `${overview.totalJobs ? Math.round((overview.jobsWithSalary / overview.totalJobs) * 100) : 0}%`, sub: `${overview.jobsWithSalary} roles with pay data`, icon: TrendingUp },
+                { label: "Active Roles", value: overview.totalJobs.toLocaleString(), sub: `+${overview.newJobsThisWeek} this week`, icon: Briefcase, delta: overview.newJobsThisWeek > 0 ? "up" : "flat" },
+                { label: "Career Changers", value: transitionData ? `${transitionData.transitionFriendlyPct}%` : "—", sub: transitionData ? `${transitionData.totalTransitionFriendly} welcome career changers` : "Pro", icon: Users, delta: "flat" },
+                { label: "Lawyer-Led", value: `${lawyerLedPct}%`, sub: `${transitionData?.trackSummary.find(t => t.track === "Lawyer-Led")?.jobCount || (dataQuality?.market?.trackDistribution?.find((t: { name: string; count: number }) => t.name === "Lawyer-Led")?.count || 0)} roles`, icon: Shield, delta: "flat" },
+                { label: "Entry-to-Mid", value: `${entryAccessiblePct}%`, sub: transitionData ? `${transitionData.avgExperience}y avg exp` : "of roles", icon: GraduationCap, delta: "flat" },
+                { label: "Remote", value: `${overview.remotePercentage}%`, sub: `${safeRemote.count} roles`, icon: Wifi, delta: "flat" },
+                { label: "Salary Data", value: `${overview.totalJobs ? Math.round((overview.jobsWithSalary / overview.totalJobs) * 100) : 0}%`, sub: `${overview.jobsWithSalary} with pay`, icon: TrendingUp, delta: "flat" },
               ].map((stat, i) => (
-                <div key={i} className="mi-panel flex flex-col gap-1" data-testid={`stat-${stat.label.toLowerCase().replace(/\s+/g, "-")}`}>
+                <div key={i} className="mi-ticker flex flex-col gap-1" data-testid={`stat-${stat.label.toLowerCase().replace(/\s+/g, "-")}`}>
                   <div className="flex items-center gap-1.5 mb-0.5">
-                    <stat.icon className="h-3 w-3 text-muted-foreground" />
-                    <span className="mi-label">{stat.label}</span>
+                    <stat.icon className="h-3 w-3 text-muted-foreground/60" />
+                    <span className="mi-label text-[9px]">{stat.label}</span>
+                    {stat.delta === "up" && <span className="mi-delta-up text-[9px]">&#9650;</span>}
                   </div>
                   <span className="mi-metric">{stat.value}</span>
-                  <span className="text-[11px] text-muted-foreground">{stat.sub}</span>
+                  <span className="text-[10px] text-muted-foreground tabular-nums">{stat.sub}</span>
                 </div>
               ))}
             </div>
@@ -764,36 +772,60 @@ export default function MarketIntelligence() {
                 </div>
                 <div className="grid md:grid-cols-2 gap-4">
                   <div className="mi-panel" data-testid="chart-job-volume">
-                    <p className="mi-label mb-3">Job Volume Over Time</p>
-                    <div className="h-[200px]">
+                    <div className="mi-panel-header">
+                      <TrendingUp className="h-3 w-3 text-muted-foreground" />
+                      <span className="mi-label text-[10px]">Job Volume Over Time</span>
+                    </div>
+                    <div className="h-[220px]">
                       <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={volumeData} barGap={2}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.4} />
-                          <XAxis dataKey="month" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
-                          <YAxis tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
+                        <AreaChart data={volumeData}>
+                          <defs>
+                            <linearGradient id="gradDiscovered" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor="hsl(var(--chart-1))" stopOpacity={0.3} />
+                              <stop offset="100%" stopColor="hsl(var(--chart-1))" stopOpacity={0.02} />
+                            </linearGradient>
+                            <linearGradient id="gradPublished" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor="hsl(var(--chart-5))" stopOpacity={0.3} />
+                              <stop offset="100%" stopColor="hsl(var(--chart-5))" stopOpacity={0.02} />
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.3} />
+                          <XAxis dataKey="month" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+                          <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
                           <Tooltip {...SHARED_TOOLTIP_STYLE} />
                           <Legend wrapperStyle={{ fontSize: 10 }} />
-                          <Bar dataKey="discovered" name="Discovered" fill="hsl(var(--chart-1))" radius={[2, 2, 0, 0]} />
-                          <Bar dataKey="published" name="Approved" fill="hsl(var(--chart-5))" radius={[2, 2, 0, 0]} />
-                        </BarChart>
+                          <Area type="monotone" dataKey="discovered" name="Discovered" stroke="hsl(var(--chart-1))" strokeWidth={2} fill="url(#gradDiscovered)" dot={{ r: 2, fill: "hsl(var(--chart-1))" }} />
+                          <Area type="monotone" dataKey="published" name="Approved" stroke="hsl(var(--chart-5))" strokeWidth={2} fill="url(#gradPublished)" dot={{ r: 2, fill: "hsl(var(--chart-5))" }} />
+                        </AreaChart>
                       </ResponsiveContainer>
                     </div>
                   </div>
 
                   <div className="mi-panel" data-testid="chart-skills-trajectory">
-                    <p className="mi-label mb-3">Skills Trajectory</p>
-                    <div className="h-[200px]">
+                    <div className="mi-panel-header">
+                      <Sparkles className="h-3 w-3 text-muted-foreground" />
+                      <span className="mi-label text-[10px]">Skills Trajectory</span>
+                    </div>
+                    <div className="h-[220px]">
                       <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={skillsData}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.4} />
-                          <XAxis dataKey="month" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
-                          <YAxis tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
+                        <AreaChart data={skillsData}>
+                          <defs>
+                            {topSkills.map((_, i) => (
+                              <linearGradient key={`skillGrad${i}`} id={`skillGrad${i}`} x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stopColor={GENERIC_PALETTE[i % GENERIC_PALETTE.length]} stopOpacity={0.15} />
+                                <stop offset="100%" stopColor={GENERIC_PALETTE[i % GENERIC_PALETTE.length]} stopOpacity={0} />
+                              </linearGradient>
+                            ))}
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.3} />
+                          <XAxis dataKey="month" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+                          <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
                           <Tooltip {...SHARED_TOOLTIP_STYLE} />
                           <Legend wrapperStyle={{ fontSize: 10 }} />
                           {topSkills.map((skill, i) => (
-                            <Line key={skill} type="monotone" dataKey={skill} stroke={GENERIC_PALETTE[i % GENERIC_PALETTE.length]} strokeWidth={2} dot={{ r: 2 }} name={skill.length > 18 ? skill.slice(0, 16) + '…' : skill} />
+                            <Area key={skill} type="monotone" dataKey={skill} stroke={GENERIC_PALETTE[i % GENERIC_PALETTE.length]} strokeWidth={2} fill={`url(#skillGrad${i})`} dot={{ r: 2 }} name={skill.length > 18 ? skill.slice(0, 16) + '…' : skill} />
                           ))}
-                        </LineChart>
+                        </AreaChart>
                       </ResponsiveContainer>
                     </div>
                   </div>
@@ -909,6 +941,51 @@ export default function MarketIntelligence() {
                     </div>
                   );
                 })}
+              </div>
+              <p className="text-[10px] text-muted-foreground/50 select-none text-right mt-2" data-testid="text-attribution">Source: lawjobs.co</p>
+            </div>
+          </section>
+        )}
+
+        {/* CAREER PATHS TREEMAP */}
+        {careerPaths.length > 0 && (
+          <section className="border-t border-border/40" data-testid="section-career-treemap">
+            <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
+              <p className="mi-section-title mb-1">Career Landscape</p>
+              <p className="mi-insight mb-4">{careerPaths.length} categories across {overview.totalJobs.toLocaleString()} roles — sized by market share</p>
+              <div className="mi-panel">
+                <div className="h-[320px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <Treemap
+                      data={careerPaths.map(cp => ({ name: cp.name, size: cp.jobCount, pct: cp.percentage }))}
+                      dataKey="size"
+                      aspectRatio={4 / 3}
+                      stroke="hsl(var(--card))"
+                      strokeWidth={2}
+                      content={({ x, y, width, height, name, value, pct }: any) => {
+                        if (!width || !height || width < 2 || height < 2) return null;
+                        const color = getCategoryColor(name || '');
+                        const showName = width > 60 && height > 30;
+                        const showValue = width > 40 && height > 20;
+                        return (
+                          <g>
+                            <rect x={x} y={y} width={width} height={height} rx={4} fill={color} fillOpacity={0.85} stroke="hsl(var(--card))" strokeWidth={2} />
+                            {showName && (
+                              <text x={x + width / 2} y={y + height / 2 - (showValue ? 8 : 0)} textAnchor="middle" dominantBaseline="central" style={{ fontSize: Math.min(11, width / 10), fontWeight: 600, fill: '#fff', textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}>
+                                {name && name.length > width / 7 ? name.slice(0, Math.floor(width / 7)) + '…' : name}
+                              </text>
+                            )}
+                            {showValue && (
+                              <text x={x + width / 2} y={y + height / 2 + (showName ? 10 : 0)} textAnchor="middle" dominantBaseline="central" style={{ fontSize: 9, fontWeight: 500, fill: 'rgba(255,255,255,0.8)', fontFamily: 'var(--font-mono)' }}>
+                                {value} ({pct}%)
+                              </text>
+                            )}
+                          </g>
+                        );
+                      }}
+                    />
+                  </ResponsiveContainer>
+                </div>
               </div>
               <p className="text-[10px] text-muted-foreground/50 select-none text-right mt-2" data-testid="text-attribution">Source: lawjobs.co</p>
             </div>
@@ -1055,59 +1132,79 @@ export default function MarketIntelligence() {
               {hasHardSoftSplit ? (
                 <div className="grid md:grid-cols-2 gap-4">
                   <div className="mi-panel" data-testid="hard-skills-chart">
-                    <p className="mi-label mb-3 flex items-center gap-1.5">
-                      <Wrench className="h-3 w-3" /> Tools & Technical Skills
-                    </p>
-                    <div className="h-[300px] w-full">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={hardSkillsChartData} layout="vertical" margin={{ top: 0, right: 20, left: 0, bottom: 0 }}>
-                          <XAxis type="number" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
-                          <YAxis type="category" dataKey="name" tick={{ fontSize: 10, fill: "hsl(var(--foreground))" }} axisLine={false} tickLine={false} width={120} />
-                          <Tooltip {...SHARED_TOOLTIP_STYLE} cursor={{ fill: "hsl(var(--muted) / 0.2)" }} formatter={(value: number) => [`${value} jobs`, "Demand"]} labelFormatter={(_: string, payload: any[]) => payload?.[0]?.payload?.fullName || _} />
-                          <Bar dataKey="count" radius={[0, 3, 3, 0]} barSize={18} name="Jobs">
-                            {hardSkillsChartData.map((_, index) => (
-                              <Cell key={`hard-cell-${index}`} fill={GENERIC_PALETTE[index % GENERIC_PALETTE.length]} />
-                            ))}
-                          </Bar>
-                        </BarChart>
-                      </ResponsiveContainer>
+                    <div className="mi-panel-header">
+                      <Wrench className="h-3 w-3 text-muted-foreground" />
+                      <span className="mi-label text-[10px]">Tools & Technical Skills</span>
+                    </div>
+                    <div className="space-y-2">
+                      {hardSkillsChartData.map((skill, i) => {
+                        const maxCount = Math.max(...hardSkillsChartData.map(s => s.count), 1);
+                        const pct = (skill.count / maxCount) * 100;
+                        return (
+                          <div key={skill.name} className="group" data-testid={`hard-skill-${i}`}>
+                            <div className="flex items-center justify-between mb-0.5">
+                              <div className="flex items-center gap-2">
+                                <span className="mi-rank">#{i + 1}</span>
+                                <span className="text-[11px] text-foreground font-medium truncate" title={skill.fullName}>{skill.name}</span>
+                              </div>
+                              <span className="mi-bar-label text-foreground">{skill.count}</span>
+                            </div>
+                            <div className="h-1.5 rounded-full bg-muted/40 overflow-hidden">
+                              <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: `linear-gradient(90deg, ${GENERIC_PALETTE[i % GENERIC_PALETTE.length]}, ${GENERIC_PALETTE[i % GENERIC_PALETTE.length]}80)` }} />
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                   <div className="mi-panel" data-testid="soft-skills-chart">
-                    <p className="mi-label mb-3 flex items-center gap-1.5">
-                      <Users className="h-3 w-3" /> Professional Skills
-                    </p>
-                    <div className="h-[300px] w-full">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={softSkillsChartData} layout="vertical" margin={{ top: 0, right: 20, left: 0, bottom: 0 }}>
-                          <XAxis type="number" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
-                          <YAxis type="category" dataKey="name" tick={{ fontSize: 10, fill: "hsl(var(--foreground))" }} axisLine={false} tickLine={false} width={120} />
-                          <Tooltip {...SHARED_TOOLTIP_STYLE} cursor={{ fill: "hsl(var(--muted) / 0.2)" }} formatter={(value: number) => [`${value} jobs`, "Demand"]} labelFormatter={(_: string, payload: any[]) => payload?.[0]?.payload?.fullName || _} />
-                          <Bar dataKey="count" radius={[0, 3, 3, 0]} barSize={18} name="Jobs">
-                            {softSkillsChartData.map((_, index) => (
-                              <Cell key={`soft-cell-${index}`} fill={GENERIC_PALETTE[index % GENERIC_PALETTE.length]} />
-                            ))}
-                          </Bar>
-                        </BarChart>
-                      </ResponsiveContainer>
+                    <div className="mi-panel-header">
+                      <Users className="h-3 w-3 text-muted-foreground" />
+                      <span className="mi-label text-[10px]">Professional Skills</span>
+                    </div>
+                    <div className="space-y-2">
+                      {softSkillsChartData.map((skill, i) => {
+                        const maxCount = Math.max(...softSkillsChartData.map(s => s.count), 1);
+                        const pct = (skill.count / maxCount) * 100;
+                        return (
+                          <div key={skill.name} className="group" data-testid={`soft-skill-${i}`}>
+                            <div className="flex items-center justify-between mb-0.5">
+                              <div className="flex items-center gap-2">
+                                <span className="mi-rank">#{i + 1}</span>
+                                <span className="text-[11px] text-foreground font-medium truncate" title={skill.fullName}>{skill.name}</span>
+                              </div>
+                              <span className="mi-bar-label text-foreground">{skill.count}</span>
+                            </div>
+                            <div className="h-1.5 rounded-full bg-muted/40 overflow-hidden">
+                              <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: `linear-gradient(90deg, ${GENERIC_PALETTE[(i + 2) % GENERIC_PALETTE.length]}, ${GENERIC_PALETTE[(i + 2) % GENERIC_PALETTE.length]}80)` }} />
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
               ) : (
                 <div className="mi-panel">
-                  <div className="h-[300px] w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={skillsChartData} layout="vertical" margin={{ top: 0, right: 20, left: 0, bottom: 0 }}>
-                        <XAxis type="number" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
-                        <YAxis type="category" dataKey="name" tick={{ fontSize: 10, fill: "hsl(var(--foreground))" }} axisLine={false} tickLine={false} width={120} />
-                        <Tooltip {...SHARED_TOOLTIP_STYLE} cursor={{ fill: "hsl(var(--muted) / 0.2)" }} formatter={(value: number) => [`${value} jobs`, "Demand"]} labelFormatter={(_: string, payload: any[]) => payload?.[0]?.payload?.fullName || _} />
-                        <Bar dataKey="count" radius={[0, 3, 3, 0]} barSize={18} name="Jobs">
-                          {skillsChartData.map((_, index) => (
-                            <Cell key={`skill-cell-${index}`} fill={GENERIC_PALETTE[index % GENERIC_PALETTE.length]} />
-                          ))}
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
+                  <div className="space-y-2">
+                    {skillsChartData.map((skill, i) => {
+                      const maxCount = Math.max(...skillsChartData.map(s => s.count), 1);
+                      const pct = (skill.count / maxCount) * 100;
+                      return (
+                        <div key={skill.name} className="group" data-testid={`skill-${i}`}>
+                          <div className="flex items-center justify-between mb-0.5">
+                            <div className="flex items-center gap-2">
+                              <span className="mi-rank">#{i + 1}</span>
+                              <span className="text-[11px] text-foreground font-medium truncate" title={skill.fullName}>{skill.name}</span>
+                            </div>
+                            <span className="mi-bar-label text-foreground">{skill.count}</span>
+                          </div>
+                          <div className="h-1.5 rounded-full bg-muted/40 overflow-hidden">
+                            <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: `linear-gradient(90deg, ${GENERIC_PALETTE[i % GENERIC_PALETTE.length]}, ${GENERIC_PALETTE[i % GENERIC_PALETTE.length]}80)` }} />
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -1120,31 +1217,36 @@ export default function MarketIntelligence() {
         <section className="border-t border-border/40" data-testid="section-salary-work">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
             <div className="grid md:grid-cols-2 gap-4">
-              {/* Salary */}
+              {/* Salary - Lollipop Range Chart */}
               {salaryByPath.length > 0 && (
                 <div className="mi-panel" data-testid="section-salary">
-                  <p className="mi-section-title mb-4">Salary by Career Path</p>
-                  <p className="mi-insight mb-3">Median ranges from {overview.jobsWithSalary} listings with disclosed pay</p>
+                  <div className="mi-panel-header">
+                    <TrendingUp className="h-3 w-3 text-muted-foreground" />
+                    <span className="mi-label text-[10px]">Salary by Career Path</span>
+                    <span className="text-[9px] text-muted-foreground ml-auto">{overview.jobsWithSalary} with pay data</span>
+                  </div>
                   <div className="space-y-3">
-                    {salaryByPath.map((sp) => {
+                    {salaryByPath.map((sp, i) => {
                       const minPct = salaryMax > 0 ? ((sp.medianMin || 0) / salaryMax) * 100 : 0;
                       const maxPct = salaryMax > 0 ? ((sp.medianMax || 0) / salaryMax) * 100 : 0;
-                      const rangePct = maxPct - minPct;
                       const trackColor = getCategoryColor(sp.name);
                       return (
                         <div key={sp.name} data-testid={`salary-path-${sp.name.toLowerCase().replace(/\s+/g, "-")}`}>
-                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-0.5 sm:gap-2 mb-1">
-                            <div className="flex items-center gap-1.5 min-w-0">
-                              <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: trackColor }} />
+                          <div className="flex items-center justify-between mb-1">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="mi-rank">#{i + 1}</span>
                               <span className="text-[11px] text-foreground font-medium truncate" title={sp.name}>{sp.name}</span>
                             </div>
-                            <span className="text-[11px] font-semibold text-foreground tabular-nums shrink-0 pl-3 sm:pl-0">
+                            <span className="mi-bar-label text-foreground shrink-0 pl-2">
                               {formatSalary(sp.medianMin)} – {formatSalary(sp.medianMax)}
                             </span>
                           </div>
-                          <div className="h-2 rounded-full bg-muted/60 overflow-hidden relative">
-                            <div className="absolute h-full rounded-full" style={{ left: `${minPct}%`, width: `${Math.max(rangePct, 2)}%`, backgroundColor: `${trackColor}40` }} />
-                            <div className="absolute h-full rounded-full" style={{ left: `${minPct}%`, width: `${Math.max(rangePct * 0.6, 1)}%`, backgroundColor: trackColor }} />
+                          <div className="h-3 rounded-full bg-muted/30 overflow-hidden relative">
+                            <div className="absolute h-full rounded-full" style={{ left: `${minPct}%`, width: `${Math.max(maxPct - minPct, 2)}%`, background: `linear-gradient(90deg, ${trackColor}30, ${trackColor}60)` }} />
+                            <div className="absolute top-0 h-full w-0.5 rounded-full" style={{ left: `${minPct}%`, backgroundColor: trackColor }} />
+                            <div className="absolute top-0 h-full w-0.5 rounded-full" style={{ left: `${maxPct}%`, backgroundColor: trackColor }} />
+                            <div className="absolute top-1/2 -translate-y-1/2 w-2 h-2 rounded-full border-2 border-background" style={{ left: `${minPct}%`, marginLeft: '-4px', backgroundColor: trackColor }} />
+                            <div className="absolute top-1/2 -translate-y-1/2 w-2 h-2 rounded-full border-2 border-background" style={{ left: `${maxPct}%`, marginLeft: '-4px', backgroundColor: trackColor }} />
                           </div>
                         </div>
                       );
@@ -1153,57 +1255,100 @@ export default function MarketIntelligence() {
                 </div>
               )}
 
-              {/* Work Mode + AI Intensity */}
+              {/* Work Mode Donut + AI Intensity */}
               <div className="space-y-4">
                 <div className="mi-panel" data-testid="section-work-mode">
-                  <p className="mi-section-title mb-3">Work Mode</p>
-                  <div className="h-7 rounded-md overflow-hidden flex" data-testid="chart-work-mode-bar">
-                    {workModeTotal > 0 && [
-                      { label: "Remote", count: safeRemote.count, pct: safeRemote.percentage, color: WORK_MODE_PALETTE.remote },
-                      { label: "Hybrid", count: safeHybrid.count, pct: safeHybrid.percentage, color: WORK_MODE_PALETTE.hybrid },
-                      { label: "On-site", count: safeOnsite.count, pct: safeOnsite.percentage, color: WORK_MODE_PALETTE.onsite },
-                    ].map((wm) => (
-                      <div
-                        key={wm.label}
-                        className="h-full flex items-center justify-center relative group"
-                        style={{ width: `${Math.max(wm.pct, 3)}%`, backgroundColor: wm.color }}
-                        data-testid={`work-mode-${wm.label.toLowerCase().replace(/\s+/g, "-")}`}
-                      >
-                        {wm.pct >= 12 && (
-                          <span className="text-[10px] font-semibold text-white drop-shadow-sm">{wm.label} {wm.pct}%</span>
-                        )}
-                      </div>
-                    ))}
+                  <div className="mi-panel-header">
+                    <Wifi className="h-3 w-3 text-muted-foreground" />
+                    <span className="mi-label text-[10px]">Work Mode</span>
                   </div>
-                  <div className="flex flex-wrap items-center gap-3 sm:gap-4 mt-2">
-                    {[
-                      { label: "Remote", pct: safeRemote.percentage, color: WORK_MODE_PALETTE.remote },
-                      { label: "Hybrid", pct: safeHybrid.percentage, color: WORK_MODE_PALETTE.hybrid },
-                      { label: "On-site", pct: safeOnsite.percentage, color: WORK_MODE_PALETTE.onsite },
-                    ].map(wm => (
-                      <div key={wm.label} className="flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-sm" style={{ backgroundColor: wm.color }} />
-                        <span className="text-[10px] text-muted-foreground">{wm.label}</span>
-                        <span className="text-[10px] text-foreground font-medium tabular-nums">{wm.pct}%</span>
+                  {workModeTotal > 0 && (
+                    <div className="flex items-center gap-4">
+                      <div className="w-[140px] h-[140px] shrink-0">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={[
+                                { name: "Remote", value: safeRemote.count, fill: WORK_MODE_PALETTE.remote },
+                                { name: "Hybrid", value: safeHybrid.count, fill: WORK_MODE_PALETTE.hybrid },
+                                { name: "On-site", value: safeOnsite.count, fill: WORK_MODE_PALETTE.onsite },
+                              ]}
+                              cx="50%" cy="50%"
+                              innerRadius={38} outerRadius={58}
+                              dataKey="value"
+                              strokeWidth={2}
+                              stroke="hsl(var(--card))"
+                            >
+                              <Cell fill={WORK_MODE_PALETTE.remote} />
+                              <Cell fill={WORK_MODE_PALETTE.hybrid} />
+                              <Cell fill={WORK_MODE_PALETTE.onsite} />
+                            </Pie>
+                            <Tooltip {...SHARED_TOOLTIP_STYLE} formatter={(value: number, name: string) => [`${value} roles (${Math.round((value / workModeTotal) * 100)}%)`, name]} />
+                          </PieChart>
+                        </ResponsiveContainer>
                       </div>
-                    ))}
-                  </div>
+                      <div className="space-y-3 flex-1">
+                        {[
+                          { label: "Remote", pct: safeRemote.percentage, count: safeRemote.count, color: WORK_MODE_PALETTE.remote },
+                          { label: "Hybrid", pct: safeHybrid.percentage, count: safeHybrid.count, color: WORK_MODE_PALETTE.hybrid },
+                          { label: "On-site", pct: safeOnsite.percentage, count: safeOnsite.count, color: WORK_MODE_PALETTE.onsite },
+                        ].map(wm => (
+                          <div key={wm.label} data-testid={`work-mode-${wm.label.toLowerCase().replace(/\s+/g, "-")}`}>
+                            <div className="flex items-center justify-between mb-0.5">
+                              <div className="flex items-center gap-1.5">
+                                <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: wm.color }} />
+                                <span className="text-[11px] text-foreground font-medium">{wm.label}</span>
+                              </div>
+                              <span className="mi-bar-label text-foreground">{wm.pct}%</span>
+                            </div>
+                            <div className="h-1 rounded-full bg-muted/40 overflow-hidden">
+                              <div className="h-full rounded-full" style={{ width: `${wm.pct}%`, backgroundColor: wm.color }} />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="mi-panel" data-testid="section-ai-intensity">
-                  <p className="mi-section-title mb-3">AI Intensity</p>
-                  <div className="grid grid-cols-3 gap-3">
-                    {[
-                      { label: "Low", data: safeAI.low, color: "text-emerald-600 dark:text-emerald-400" },
-                      { label: "Medium", data: safeAI.medium, color: "text-amber-600 dark:text-amber-400" },
-                      { label: "High", data: safeAI.high, color: "text-rose-600 dark:text-rose-400" },
-                    ].map(({ label, data: d, color }) => (
-                      <div key={label} className="text-center" data-testid={`ai-intensity-${label.toLowerCase()}`}>
-                        <span className="mi-label">{label}</span>
-                        <p className={`mi-metric-sm ${color}`}>{d.percentage}%</p>
-                        <span className="text-[10px] text-muted-foreground">{d.count} roles</span>
-                      </div>
-                    ))}
+                  <div className="mi-panel-header">
+                    <Sparkles className="h-3 w-3 text-muted-foreground" />
+                    <span className="mi-label text-[10px]">AI Intensity</span>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="w-[140px] h-[100px] shrink-0">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <RadialBarChart cx="50%" cy="100%" innerRadius="30%" outerRadius="100%" startAngle={180} endAngle={0}
+                          data={[
+                            { name: "High", value: safeAI.high.percentage, fill: "hsl(var(--status-danger))" },
+                            { name: "Medium", value: safeAI.medium.percentage, fill: "hsl(var(--status-warning))" },
+                            { name: "Low", value: safeAI.low.percentage, fill: "hsl(var(--status-success))" },
+                          ]}
+                        >
+                          <RadialBar dataKey="value" cornerRadius={4} background={{ fill: "hsl(var(--muted) / 0.2)" }} />
+                          <Tooltip {...SHARED_TOOLTIP_STYLE} formatter={(value: number, name: string) => [`${value}%`, name]} />
+                        </RadialBarChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div className="space-y-2 flex-1">
+                      {[
+                        { label: "Low", data: safeAI.low, color: "bg-emerald-500", textColor: "text-emerald-600 dark:text-emerald-400" },
+                        { label: "Medium", data: safeAI.medium, color: "bg-amber-500", textColor: "text-amber-600 dark:text-amber-400" },
+                        { label: "High", data: safeAI.high, color: "bg-rose-500", textColor: "text-rose-600 dark:text-rose-400" },
+                      ].map(({ label, data: d, color, textColor }) => (
+                        <div key={label} className="flex items-center justify-between" data-testid={`ai-intensity-${label.toLowerCase()}`}>
+                          <div className="flex items-center gap-1.5">
+                            <span className={`w-2 h-2 rounded-sm ${color}`} />
+                            <span className="text-[11px] text-foreground">{label}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className={`mi-bar-label ${textColor}`}>{d.percentage}%</span>
+                            <span className="text-[9px] text-muted-foreground">{d.count}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1213,34 +1358,61 @@ export default function MarketIntelligence() {
         </section>
 
         {/* SENIORITY */}
-        {seniorityDistribution.length > 0 && (
-          <section className="border-t border-border/40" data-testid="section-seniority">
-            <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-4">
-                <p className="mi-section-title">Seniority Landscape</p>
-                <span className="mi-insight">{entryAccessiblePct}% are entry-to-mid level</span>
-              </div>
-              <div className="mi-panel">
-                <div className="h-[220px] w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={seniorityChartData} layout="vertical" margin={{ top: 0, right: 30, left: 0, bottom: 0 }}>
-                      <XAxis type="number" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
-                      <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: "hsl(var(--foreground))" }} axisLine={false} tickLine={false} width={70} />
-                      <Tooltip {...SHARED_TOOLTIP_STYLE} cursor={{ fill: "hsl(var(--muted) / 0.2)" }} />
-                      <Bar dataKey="count" radius={[0, 3, 3, 0]} barSize={16} name="Jobs">
-                        {seniorityChartData.map((entry, index) => {
-                          const isEntry = ["Intern", "Fellowship", "Entry", "Junior", "Mid"].includes(entry.name);
-                          return <Cell key={`cell-${index}`} fill={isEntry ? "hsl(var(--chart-2))" : "hsl(var(--chart-1))"} />;
-                        })}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
+        {seniorityDistribution.length > 0 && (() => {
+          const totalSeniority = seniorityChartData.reduce((sum, s) => sum + s.count, 0) || 1;
+          const entryLevels = ["Intern", "Fellowship", "Entry", "Junior", "Mid"];
+          return (
+            <section className="border-t border-border/40" data-testid="section-seniority">
+              <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-4">
+                  <p className="mi-section-title">Seniority Landscape</p>
+                  <span className="mi-insight">{entryAccessiblePct}% are entry-to-mid level</span>
                 </div>
+                <div className="mi-panel">
+                  <div className="h-8 rounded-md overflow-hidden flex" data-testid="chart-seniority-bar">
+                    {seniorityChartData.map((entry, i) => {
+                      const pct = (entry.count / totalSeniority) * 100;
+                      const isEntry = entryLevels.includes(entry.name);
+                      return (
+                        <div
+                          key={entry.name}
+                          className="h-full flex items-center justify-center relative group cursor-default"
+                          style={{
+                            width: `${pct}%`,
+                            minWidth: pct > 0 ? '4px' : 0,
+                            backgroundColor: isEntry ? "hsl(var(--chart-2))" : "hsl(var(--chart-1))",
+                            opacity: Math.max(1 - (i * 0.06), 0.5),
+                          }}
+                          title={`${entry.name}: ${entry.count} (${Math.round(pct)}%)`}
+                          data-testid={`seniority-${entry.name.toLowerCase()}`}
+                        >
+                          {pct >= 10 && (
+                            <span className="text-[9px] font-semibold text-white drop-shadow-sm truncate px-1">{entry.name} {Math.round(pct)}%</span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-3 mt-3">
+                    {seniorityChartData.map((entry, i) => {
+                      const pct = Math.round((entry.count / totalSeniority) * 100);
+                      const isEntry = entryLevels.includes(entry.name);
+                      return (
+                        <div key={entry.name} className="flex items-center gap-1.5" data-testid={`seniority-legend-${entry.name.toLowerCase()}`}>
+                          <span className="w-2 h-2 rounded-sm" style={{ backgroundColor: isEntry ? "hsl(var(--chart-2))" : "hsl(var(--chart-1))", opacity: Math.max(1 - (i * 0.06), 0.5) }} />
+                          <span className="text-[10px] text-muted-foreground">{entry.name}</span>
+                          <span className="text-[10px] text-foreground font-medium tabular-nums">{pct}%</span>
+                          <span className="text-[9px] text-muted-foreground/60 tabular-nums">({entry.count})</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+                <p className="text-[10px] text-muted-foreground/50 select-none text-right mt-2" data-testid="text-attribution">Source: lawjobs.co</p>
               </div>
-              <p className="text-[10px] text-muted-foreground/50 select-none text-right mt-2" data-testid="text-attribution">Source: lawjobs.co</p>
-            </div>
-          </section>
-        )}
+            </section>
+          );
+        })()}
 
         {/* COMPANIES + GEOGRAPHY */}
         <section className="border-t border-border/40" data-testid="section-companies-geography">
@@ -1249,16 +1421,29 @@ export default function MarketIntelligence() {
               {/* Companies */}
               {companyChartData.length > 0 && (
                 <div className="mi-panel" data-testid="section-companies">
-                  <p className="mi-section-title mb-3">Top Hiring Companies</p>
-                  <div className="h-[280px] w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={companyChartData} layout="vertical" margin={{ top: 0, right: 30, left: 0, bottom: 0 }}>
-                        <XAxis type="number" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
-                        <YAxis type="category" dataKey="name" tick={{ fontSize: 10, fill: "hsl(var(--foreground))" }} axisLine={false} tickLine={false} width={110} />
-                        <Tooltip {...SHARED_TOOLTIP_STYLE} cursor={{ fill: "hsl(var(--muted) / 0.2)" }} formatter={(value: number) => [`${value} jobs`, "Open Roles"]} labelFormatter={(_: string, payload: any[]) => payload?.[0]?.payload?.fullName || _} />
-                        <Bar dataKey="count" radius={[0, 3, 3, 0]} barSize={16} fill="hsl(var(--chart-1))" name="Jobs" />
-                      </BarChart>
-                    </ResponsiveContainer>
+                  <div className="mi-panel-header">
+                    <Building2 className="h-3 w-3 text-muted-foreground" />
+                    <span className="mi-label text-[10px]">Top Hiring Companies</span>
+                  </div>
+                  <div className="space-y-2">
+                    {companyChartData.map((company, i) => {
+                      const maxCount = Math.max(...companyChartData.map(c => c.count), 1);
+                      const pct = (company.count / maxCount) * 100;
+                      return (
+                        <div key={company.name} data-testid={`company-${i}`}>
+                          <div className="flex items-center justify-between mb-0.5">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="mi-rank">#{i + 1}</span>
+                              <span className="text-[11px] text-foreground font-medium truncate" title={company.fullName}>{company.name}</span>
+                            </div>
+                            <span className="mi-bar-label text-foreground shrink-0">{company.count}</span>
+                          </div>
+                          <div className="h-1.5 rounded-full bg-muted/40 overflow-hidden">
+                            <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: `linear-gradient(90deg, hsl(var(--chart-1)), hsl(var(--chart-1) / 0.5))` }} />
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -1266,16 +1451,29 @@ export default function MarketIntelligence() {
               {/* Geography */}
               {geoChartData.length > 0 && (
                 <div className="mi-panel" data-testid="section-geography">
-                  <p className="mi-section-title mb-3">Where They're Hiring</p>
-                  <div className="h-[280px] w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={geoChartData} layout="vertical" margin={{ top: 0, right: 30, left: 0, bottom: 0 }}>
-                        <XAxis type="number" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
-                        <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: "hsl(var(--foreground))" }} axisLine={false} tickLine={false} width={110} />
-                        <Tooltip {...SHARED_TOOLTIP_STYLE} cursor={{ fill: "hsl(var(--muted) / 0.2)" }} formatter={(value: number) => [`${value} jobs`, "Open Roles"]} />
-                        <Bar dataKey="count" radius={[0, 3, 3, 0]} barSize={16} fill="hsl(var(--chart-5))" name="Jobs" />
-                      </BarChart>
-                    </ResponsiveContainer>
+                  <div className="mi-panel-header">
+                    <Globe className="h-3 w-3 text-muted-foreground" />
+                    <span className="mi-label text-[10px]">Where They're Hiring</span>
+                  </div>
+                  <div className="space-y-2">
+                    {geoChartData.map((geo, i) => {
+                      const maxCount = Math.max(...geoChartData.map(g => g.count), 1);
+                      const pct = (geo.count / maxCount) * 100;
+                      return (
+                        <div key={geo.name} data-testid={`geo-${i}`}>
+                          <div className="flex items-center justify-between mb-0.5">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="mi-rank">#{i + 1}</span>
+                              <span className="text-[11px] text-foreground font-medium truncate">{geo.name}</span>
+                            </div>
+                            <span className="mi-bar-label text-foreground shrink-0">{geo.count}</span>
+                          </div>
+                          <div className="h-1.5 rounded-full bg-muted/40 overflow-hidden">
+                            <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: `linear-gradient(90deg, hsl(var(--chart-5)), hsl(var(--chart-5) / 0.5))` }} />
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -1325,39 +1523,80 @@ export default function MarketIntelligence() {
               <p className="mi-insight mb-4">Aggregated insights from career diagnostic assessments</p>
               <div className="grid sm:grid-cols-2 gap-3">
                 <div className="mi-panel" data-testid="panel-avg-readiness">
-                  <p className="mi-label mb-2">Average Readiness</p>
+                  <div className="mi-panel-header">
+                    <Target className="h-3 w-3 text-muted-foreground" />
+                    <span className="mi-label text-[10px]">Average Readiness</span>
+                  </div>
                   <div className="flex items-center gap-4">
                     <div className="relative flex items-center justify-center shrink-0">
-                      <svg className="w-[64px] h-[64px] -rotate-90" viewBox="0 0 100 100">
-                        <circle cx="50" cy="50" r="42" fill="none" stroke="hsl(var(--muted))" strokeWidth="6" />
-                        <circle cx="50" cy="50" r="42" fill="none"
+                      <svg className="w-[80px] h-[48px]" viewBox="0 0 120 65">
+                        {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(i => {
+                          const angle = Math.PI - (i / 10) * Math.PI;
+                          const x1 = 60 + 48 * Math.cos(angle);
+                          const y1 = 55 - 48 * Math.sin(angle);
+                          const x2 = 60 + 44 * Math.cos(angle);
+                          const y2 = 55 - 44 * Math.sin(angle);
+                          return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="hsl(var(--muted-foreground))" strokeWidth="1" strokeOpacity="0.3" />;
+                        })}
+                        <path
+                          d={`M ${60 - 46} 55 A 46 46 0 0 1 ${60 + 46} 55`}
+                          fill="none" stroke="hsl(var(--muted))" strokeWidth="6" strokeLinecap="round"
+                        />
+                        <path
+                          d={`M ${60 - 46} 55 A 46 46 0 0 1 ${60 + 46} 55`}
+                          fill="none"
                           stroke={communityBenchmarks.avgReadiness >= 60 ? "hsl(var(--status-success))" : communityBenchmarks.avgReadiness >= 40 ? "hsl(var(--status-warning))" : "hsl(var(--status-danger))"}
                           strokeWidth="6" strokeLinecap="round"
-                          strokeDasharray={`${2 * Math.PI * 42}`}
-                          strokeDashoffset={`${2 * Math.PI * 42 - (communityBenchmarks.avgReadiness / 100) * 2 * Math.PI * 42}`}
+                          strokeDasharray={`${Math.PI * 46}`}
+                          strokeDashoffset={`${Math.PI * 46 - (communityBenchmarks.avgReadiness / 100) * Math.PI * 46}`}
                         />
+                        <text x="60" y="50" textAnchor="middle" className="fill-foreground" style={{ fontSize: '18px', fontWeight: 700, fontFamily: 'var(--font-mono)' }} data-testid="text-avg-readiness">
+                          {Math.round(communityBenchmarks.avgReadiness)}
+                        </text>
+                        <text x="60" y="62" textAnchor="middle" className="fill-muted-foreground" style={{ fontSize: '7px', letterSpacing: '0.05em' }}>
+                          READINESS
+                        </text>
                       </svg>
-                      <span className="absolute mi-metric-sm" data-testid="text-avg-readiness">{Math.round(communityBenchmarks.avgReadiness)}</span>
                     </div>
-                    <div className="space-y-1">
-                      {communityBenchmarks.readinessDistribution.map((b) => (
-                        <div key={b.bucket} className="flex items-center justify-between gap-3 text-[11px]" data-testid={`readiness-bucket-${b.bucket}`}>
-                          <span className="text-muted-foreground">{b.bucket}</span>
-                          <span className="text-foreground font-medium tabular-nums">{b.count}</span>
-                        </div>
-                      ))}
+                    <div className="space-y-1 flex-1">
+                      {communityBenchmarks.readinessDistribution.map((b) => {
+                        const maxBucket = Math.max(...communityBenchmarks.readinessDistribution.map(x => x.count)) || 1;
+                        return (
+                          <div key={b.bucket} className="flex items-center gap-2 text-[11px]" data-testid={`readiness-bucket-${b.bucket}`}>
+                            <span className="text-muted-foreground w-10 shrink-0">{b.bucket}</span>
+                            <div className="flex-1 h-1 rounded-full bg-muted/40 overflow-hidden">
+                              <div className="h-full rounded-full bg-primary/50" style={{ width: `${(b.count / maxBucket) * 100}%` }} />
+                            </div>
+                            <span className="text-foreground font-medium tabular-nums w-6 text-right">{b.count}</span>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
                 <div className="mi-panel" data-testid="panel-skill-gaps">
-                  <p className="mi-label mb-2">Top Skill Gaps</p>
+                  <div className="mi-panel-header">
+                    <AlertCircle className="h-3 w-3 text-muted-foreground" />
+                    <span className="mi-label text-[10px]">Top Skill Gaps</span>
+                  </div>
                   <div className="space-y-1.5">
-                    {communityBenchmarks.topSkillGaps.slice(0, 6).map((sg) => (
-                      <div key={sg.skill} className="flex items-center justify-between gap-2 text-[11px]" data-testid={`skill-gap-${sg.skill.toLowerCase().replace(/\s+/g, "-")}`}>
-                        <span className="text-foreground truncate" title={sg.skill}>{sg.skill}</span>
-                        <span className="text-muted-foreground tabular-nums shrink-0">{sg.count}</span>
-                      </div>
-                    ))}
+                    {communityBenchmarks.topSkillGaps.slice(0, 6).map((sg, i) => {
+                      const maxGap = communityBenchmarks.topSkillGaps[0]?.count || 1;
+                      return (
+                        <div key={sg.skill} data-testid={`skill-gap-${sg.skill.toLowerCase().replace(/\s+/g, "-")}`}>
+                          <div className="flex items-center justify-between mb-0.5">
+                            <div className="flex items-center gap-2">
+                              <span className="mi-rank">#{i + 1}</span>
+                              <span className="text-[11px] text-foreground truncate" title={sg.skill}>{sg.skill}</span>
+                            </div>
+                            <span className="mi-bar-label text-muted-foreground">{sg.count}</span>
+                          </div>
+                          <div className="h-1 rounded-full bg-muted/40 overflow-hidden">
+                            <div className="h-full rounded-full bg-amber-500/60" style={{ width: `${(sg.count / maxGap) * 100}%` }} />
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                   {communityBenchmarks.topCareerPaths.length > 0 && (
                     <div className="mt-3 pt-3 border-t border-border/40">
