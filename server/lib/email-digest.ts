@@ -11,6 +11,8 @@ export async function generateWeeklyDigest(userId: string): Promise<{ subject: s
   const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
   if (!user) return null;
 
+  const isPro = user.isPro === true || user.subscriptionTier === "pro";
+
   const persona = await storage.getUserPersona(userId);
   const topCategories = persona?.topCategories || [];
 
@@ -48,7 +50,7 @@ export async function generateWeeklyDigest(userId: string): Promise<{ subject: s
     .from(jobs)
     .where(and(...categoryConditions))
     .orderBy(desc(jobs.legalRelevanceScore), desc(jobs.postedDate))
-    .limit(5);
+    .limit(isPro ? 5 : 2);
 
   let pipelineSummary: string | undefined;
   try {
@@ -94,6 +96,7 @@ export async function generateWeeklyDigest(userId: string): Promise<{ subject: s
     })),
     pipelineSummary,
     marketPulse,
+    isPro,
   });
 
   return {

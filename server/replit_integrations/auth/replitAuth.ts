@@ -4,6 +4,8 @@ import connectPg from "connect-pg-simple";
 import bcrypt from "bcryptjs";
 import { randomBytes } from "crypto";
 import { authStorage } from "./storage";
+import { sendEmail, buildWelcomeEmailContent, buildEmailTemplate } from "../../lib/email-service";
+import { storage } from "../../storage";
 
 declare module "express-session" {
   interface SessionData {
@@ -71,6 +73,23 @@ export async function setupAuth(app: Express) {
       });
 
       req.session.userId = user.id;
+
+      (async () => {
+        try {
+          await storage.upsertEmailPreferences(user.id, { weeklyDigest: true, alertEmails: true });
+        } catch (e: any) {
+          console.error("[Welcome] Failed to create email preferences:", e.message);
+        }
+        try {
+          if (user.email) {
+            const content = buildWelcomeEmailContent(user.firstName || null);
+            const html = buildEmailTemplate(content);
+            await sendEmail(user.email, "Welcome to Legal Tech Careers", html);
+          }
+        } catch (e: any) {
+          console.error("[Welcome] Failed to send welcome email:", e.message);
+        }
+      })();
 
       const { password: _, ...safeUser } = user;
       res.status(201).json(safeUser);
@@ -228,8 +247,9 @@ export async function setupAuth(app: Express) {
         }
       }
 
+      let isNewGoogleUser = false;
       if (!user) {
-        // 3. Create new user
+        isNewGoogleUser = true;
         user = await authStorage.upsertUser({
           email,
           googleId,
@@ -238,6 +258,25 @@ export async function setupAuth(app: Express) {
           profileImageUrl: profileImageUrl || null,
           password: null,
         });
+      }
+
+      if (isNewGoogleUser && user) {
+        (async () => {
+          try {
+            await storage.upsertEmailPreferences(user!.id, { weeklyDigest: true, alertEmails: true });
+          } catch (e: any) {
+            console.error("[Welcome] Failed to create email preferences:", e.message);
+          }
+          try {
+            if (user!.email) {
+              const content = buildWelcomeEmailContent(user!.firstName || null);
+              const html = buildEmailTemplate(content);
+              await sendEmail(user!.email, "Welcome to Legal Tech Careers", html);
+            }
+          } catch (e: any) {
+            console.error("[Welcome] Failed to send welcome email:", e.message);
+          }
+        })();
       }
 
       req.session.userId = user.id;

@@ -44,6 +44,7 @@ import { LAW_FIRMS_AND_COMPANIES } from "./lib/law-firms-list";
 import { categorizeJob } from "./lib/job-categorizer";
 import { extractStructuredDescription, validateStructuredDescription } from "./lib/description-extractor";
 import { matchNewJobsAgainstAlerts } from "./lib/alert-matcher";
+import { sendEmail, buildEmailTemplate, buildDigestContent, buildWelcomeEmailContent, buildProUpgradeEmailContent } from "./lib/email-service";
 import { generateDiagnosticReport, computeAIIntensity, computeTransitionDifficulty, computeJobFitScore, batchComputeJobFits, computeJDRequirement } from "./lib/diagnostic-engine";
 import { diagnosticReports, jobFitResults } from "@shared/schema";
 
@@ -6639,6 +6640,108 @@ Rules:
     } catch (error) {
       console.error("Anonymous funnel error:", error);
       res.status(500).json({ error: "Failed to fetch anonymous funnel" });
+    }
+  });
+
+  app.get("/api/admin/email-preview/:type", isAuthenticated, async (req: any, res) => {
+    if (!(await isAdminCheck(req))) return res.status(403).json({ error: "Admin access required" });
+    try {
+      const { type } = req.params;
+      const baseUrl = process.env.REPLIT_DEV_DOMAIN
+        ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+        : "https://lawjobs.co";
+      let html = "";
+
+      if (type === "digest-free" || type === "digest-pro") {
+        const isPro = type === "digest-pro";
+        const content = buildDigestContent({
+          greeting: "Hi Alex,",
+          newJobsCount: 12,
+          topJobs: [
+            { id: 1, title: "Legal Product Manager", company: "Clio", category: "Legal Product Management" },
+            { id: 2, title: "Legal Operations Analyst", company: "Harvey AI", category: "Legal Operations" },
+            ...(isPro ? [
+              { id: 3, title: "Contracts Platform Lead", company: "Ironclad", category: "Contract Technology" },
+              { id: 4, title: "Legal AI Engineer", company: "Anthropic", category: "Legal AI & Machine Learning" },
+              { id: 5, title: "Legal Tech Consultant", company: "Deloitte", category: "Legal Consulting & Advisory" },
+            ] : []),
+          ],
+          pipelineSummary: "Your pipeline: 3 applied, 1 interviewing",
+          marketPulse: { totalJobs: 364, trendingSkill: "Legal Technology" },
+          isPro,
+        });
+        html = buildEmailTemplate(content, `${baseUrl}/api/unsubscribe/preview-token`);
+      } else if (type === "welcome") {
+        const content = buildWelcomeEmailContent("Alex");
+        html = buildEmailTemplate(content);
+      } else if (type === "pro-upgrade") {
+        const content = buildProUpgradeEmailContent("Alex");
+        html = buildEmailTemplate(content);
+      } else {
+        return res.status(400).json({ error: "Invalid type. Use: digest-free, digest-pro, welcome, pro-upgrade" });
+      }
+
+      res.set("Content-Type", "text/html");
+      res.send(html);
+    } catch (error: any) {
+      console.error("Email preview error:", error);
+      res.status(500).json({ error: "Failed to generate email preview" });
+    }
+  });
+
+  app.post("/api/admin/email-test-send", isAuthenticated, async (req: any, res) => {
+    if (!(await isAdminCheck(req))) return res.status(403).json({ error: "Admin access required" });
+    try {
+      const user = req.user as any;
+      if (!user?.email) return res.status(400).json({ error: "No email on your account" });
+
+      const { type } = req.body;
+      if (!type || !["digest-free", "digest-pro", "welcome", "pro-upgrade"].includes(type)) {
+        return res.status(400).json({ error: "Invalid type. Use: digest-free, digest-pro, welcome, pro-upgrade" });
+      }
+
+      const firstName = user.firstName || "Admin";
+      let subject = "";
+      let html = "";
+
+      if (type === "digest-free" || type === "digest-pro") {
+        const isPro = type === "digest-pro";
+        const baseUrl = process.env.REPLIT_DEV_DOMAIN
+          ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+          : "https://lawjobs.co";
+        const content = buildDigestContent({
+          greeting: `Hi ${firstName},`,
+          newJobsCount: 12,
+          topJobs: [
+            { id: 1, title: "Legal Product Manager", company: "Clio", category: "Legal Product Management" },
+            { id: 2, title: "Legal Operations Analyst", company: "Harvey AI", category: "Legal Operations" },
+            ...(isPro ? [
+              { id: 3, title: "Contracts Platform Lead", company: "Ironclad", category: "Contract Technology" },
+              { id: 4, title: "Legal AI Engineer", company: "Anthropic", category: "Legal AI & Machine Learning" },
+              { id: 5, title: "Legal Tech Consultant", company: "Deloitte", category: "Legal Consulting & Advisory" },
+            ] : []),
+          ],
+          pipelineSummary: "Your pipeline: 3 applied, 1 interviewing",
+          marketPulse: { totalJobs: 364, trendingSkill: "Legal Technology" },
+          isPro,
+        });
+        subject = `[TEST] 12 new legal tech roles this week`;
+        html = buildEmailTemplate(content, `${baseUrl}/api/unsubscribe/preview-token`);
+      } else if (type === "welcome") {
+        const content = buildWelcomeEmailContent(firstName);
+        subject = "[TEST] Welcome to Legal Tech Careers";
+        html = buildEmailTemplate(content);
+      } else if (type === "pro-upgrade") {
+        const content = buildProUpgradeEmailContent(firstName);
+        subject = "[TEST] Welcome to Pro — your upgrade is active";
+        html = buildEmailTemplate(content);
+      }
+
+      const success = await sendEmail(user.email, subject, html);
+      res.json({ success, message: success ? `Test email sent to ${user.email}` : "Failed to send email" });
+    } catch (error: any) {
+      console.error("Email test send error:", error);
+      res.status(500).json({ error: "Failed to send test email" });
     }
   });
 

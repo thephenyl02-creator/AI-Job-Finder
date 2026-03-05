@@ -1,6 +1,10 @@
 import Stripe from 'stripe';
 import { getStripeSync, getUncachableStripeClient, getStripeSecretKey } from './stripeClient';
 import { storage } from './storage';
+import { sendEmail, buildEmailTemplate, buildProUpgradeEmailContent } from './lib/email-service';
+import { db } from './db';
+import { users } from '@shared/schema';
+import { eq } from 'drizzle-orm';
 
 async function verifyAndParseEvent(payload: Buffer, signature: string): Promise<Stripe.Event | null> {
   try {
@@ -67,6 +71,19 @@ export async function processWebhook(payload: Buffer, signature: string): Promis
           subscriptionStatus: 'active',
         });
         console.log(`Subscription activated for user ${userId}`);
+
+        try {
+          const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+          if (user?.email) {
+            const firstName = user.firstName || user.email.split('@')[0];
+            const content = buildProUpgradeEmailContent(firstName);
+            const html = buildEmailTemplate(content);
+            await sendEmail(user.email, "Welcome to Pro — Legal Tech Careers", html);
+            console.log(`Pro upgrade email sent to ${user.email}`);
+          }
+        } catch (emailErr: any) {
+          console.error(`Failed to send Pro upgrade email for user ${userId}:`, emailErr.message);
+        }
       }
       break;
     }
