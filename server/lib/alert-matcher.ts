@@ -1,5 +1,9 @@
 import { storage } from "../storage";
+import { db } from "../db";
+import { users } from "@shared/schema";
+import { eq } from "drizzle-orm";
 import type { Job, JobAlert, InsertNotification } from "@shared/schema";
+import { sendEmail, buildEmailTemplate, buildAlertEmailContent } from "./email-service";
 
 function jobMatchesAlert(job: Job, alert: JobAlert): boolean {
   if (alert.isRemoteOnly) {
@@ -85,6 +89,44 @@ export async function matchNewJobsAgainstAlerts(
     console.log(
       `Created ${deduped.length} notifications for ${newJobs.length} new jobs`
     );
+
+    const userJobMap = new Map<string, { id: number; title: string; company: string; location?: string | null }[]>();
+    for (const n of deduped) {
+      if (!n.jobId) continue;
+      const list = userJobMap.get(n.userId) || [];
+      const job = newJobs.find(j => j.id === n.jobId);
+      if (job) {
+        list.push({ id: job.id, title: job.title, company: job.company, location: job.location });
+        userJobMap.set(n.userId, list);
+      }
+    }
+
+    for (const [userId, matchedJobs] of Array.from(userJobMap)) {
+      try {
+        const prefs = await storage.getEmailPreferences(userId);
+        if (!prefs?.alertEmails) continue;
+
+        const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+        if (!user?.email) continue;
+
+        const baseUrl = process.env.REPLIT_DEV_DOMAIN
+          ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+          : "https://lawjobs.co";
+        const unsubscribeUrl = prefs.unsubscribeToken
+          ? `${baseUrl}/api/unsubscribe/${prefs.unsubscribeToken}`
+          : undefined;
+
+        const content = buildAlertEmailContent(matchedJobs);
+        const html = buildEmailTemplate(content, unsubscribeUrl);
+        await sendEmail(
+          user.email,
+          `${matchedJobs.length} new job${matchedJobs.length !== 1 ? "s" : ""} matched your alerts`,
+          html
+        );
+      } catch (err: any) {
+        console.error(`[ALERT EMAIL] Failed for user ${userId}:`, err.message);
+      }
+    }
   }
 
   return deduped.length;

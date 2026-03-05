@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   LogOut, BarChart3, Bell, FileText, Globe,
-  Bookmark, LayoutDashboard, Menu, Calendar, Settings, Activity, Search, CreditCard, Brain, TrendingUp, X,
+  Bookmark, LayoutDashboard, Menu, Calendar, Settings, Activity, Search, CreditCard, Brain, TrendingUp, X, Kanban,
 } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { Link, useLocation } from "wouter";
@@ -104,6 +104,7 @@ export function Header() {
   const isDashboardActive = isActive("/dashboard");
   const isResumesActive = isActive("/resumes") || isActive("/resume-builder") || location.startsWith("/resume-editor/");
   const isDiagnosticActive = isActive("/diagnostic");
+  const isPipelineActive = isActive("/pipeline");
 
   return (
     <>
@@ -122,6 +123,7 @@ export function Header() {
               <NavLink href="/dashboard" icon={LayoutDashboard} label="Dashboard" isActive={isDashboardActive} testId="link-dashboard" />
               <NavLink href="/jobs" icon={Search} label="Jobs" isActive={isJobsActive} testId="link-jobs" />
               <NavLink href="/diagnostic" icon={Brain} label="Diagnostic" isActive={isDiagnosticActive} testId="link-diagnostic" />
+              <NavLink href="/pipeline" icon={Kanban} label="Pipeline" isActive={isPipelineActive} testId="link-pipeline" />
               <NavLink href="/resumes" icon={FileText} label="Resumes" isActive={isResumesActive} testId="link-resumes" />
               <NavLink href="/market-intelligence" icon={TrendingUp} label="Trends" isActive={isActive("/market-intelligence")} testId="link-trends" />
             </div>
@@ -173,6 +175,7 @@ export function Header() {
                       <MobileNavItem href="/dashboard" icon={LayoutDashboard} label="Dashboard" active={isDashboardActive} testId="link-dashboard-mobile" />
                       <MobileNavItem href="/jobs" icon={Search} label="Jobs" active={isJobsActive} testId="link-jobs-mobile" />
                       <MobileNavItem href="/diagnostic" icon={Brain} label="Diagnostic" active={isDiagnosticActive} testId="link-diagnostic-mobile" />
+                      <MobileNavItem href="/pipeline" icon={Kanban} label="Pipeline" active={isPipelineActive} testId="link-pipeline-mobile" />
                       <MobileNavItem href="/resumes" icon={FileText} label="Resumes" active={isResumesActive} testId="link-resumes-mobile" />
                       <MobileNavItem href="/market-intelligence" icon={TrendingUp} label="Trends" active={isActive("/market-intelligence")} testId="link-trends-mobile" />
                       <div className="h-px bg-border/40 my-2" />
@@ -230,6 +233,12 @@ export function Header() {
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuGroup>
+                    <DropdownMenuItem asChild>
+                      <Link href="/pipeline" className="cursor-pointer" data-testid="link-pipeline-dropdown">
+                        <Kanban className="mr-2 h-4 w-4" />
+                        <span>Pipeline</span>
+                      </Link>
+                    </DropdownMenuItem>
                     <DropdownMenuItem asChild>
                       <Link href="/saved-jobs" className="cursor-pointer" data-testid="link-saved-jobs-dropdown">
                         <Bookmark className="mr-2 h-4 w-4" />

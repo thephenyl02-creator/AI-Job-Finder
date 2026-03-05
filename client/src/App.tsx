@@ -41,6 +41,7 @@ import Diagnostic from "@/pages/diagnostic";
 import Quiz from "@/pages/quiz";
 import MarketIntelligence from "@/pages/market-intelligence";
 import Trust from "@/pages/trust";
+import Pipeline from "@/pages/pipeline";
 
 import { AssistantWidget } from "@/components/assistant-widget";
 import { OnboardingDialog } from "@/components/onboarding-dialog";
@@ -104,6 +105,7 @@ function AppRouter() {
       <Route path="/resume-review/:id" component={ResumeReviewRedirect} />
       <Route path="/resume-editor/:resumeId" component={ResumeEditor} />
       <Route path="/saved-jobs">{isAuthenticated ? <SavedJobs /> : <Landing />}</Route>
+      <Route path="/pipeline">{isAuthenticated ? <Pipeline /> : <Landing />}</Route>
       <Route path="/diagnostic" component={Diagnostic} />
       <Route path="/quiz" component={Quiz} />
       <Route path="/dashboard">{isAuthenticated ? <Dashboard /> : <Landing />}</Route>

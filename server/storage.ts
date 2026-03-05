@@ -1,5 +1,6 @@
 import { db } from "./db";
-import { jobs, users, userPreferences, jobCategories, jobSubmissions, jobAlerts, notifications, resumes, builtResumes, userActivities, userPersonas, savedJobs, jobApplications, events, scrapeRuns, scrapeRunSources, jobRejections, jobReports, anonymousEvents, reportLeads, publishedReports, type Job, type InsertJob, type User, type UserPreferences, type InsertUserPreferences, type ResumeExtractedData, type JobCategory, type JobSubmission, type InsertJobSubmission, type JobAlert, type InsertJobAlert, type Notification, type InsertNotification, type Resume, type InsertResume, type BuiltResume, type InsertBuiltResume, type UserActivity, type InsertUserActivity, type UserPersona, type InsertUserPersona, type SavedJob, type InsertSavedJob, type JobApplication, type InsertJobApplication, type JobApplicationWithJob, type Event, type InsertEvent, type ScrapeRun, type InsertScrapeRun, type ScrapeRunSource, type InsertScrapeRunSource, type JobRejection, type InsertJobRejection, type JobReport, type InsertJobReport, JOB_TAXONOMY } from "@shared/schema";
+import { jobs, users, userPreferences, jobCategories, jobSubmissions, jobAlerts, notifications, resumes, builtResumes, userActivities, userPersonas, savedJobs, jobApplications, events, scrapeRuns, scrapeRunSources, jobRejections, jobReports, anonymousEvents, reportLeads, publishedReports, emailPreferences, type Job, type InsertJob, type User, type UserPreferences, type InsertUserPreferences, type ResumeExtractedData, type JobCategory, type JobSubmission, type InsertJobSubmission, type JobAlert, type InsertJobAlert, type Notification, type InsertNotification, type Resume, type InsertResume, type BuiltResume, type InsertBuiltResume, type UserActivity, type InsertUserActivity, type UserPersona, type InsertUserPersona, type SavedJob, type InsertSavedJob, type JobApplication, type InsertJobApplication, type JobApplicationWithJob, type Event, type InsertEvent, type ScrapeRun, type InsertScrapeRun, type ScrapeRunSource, type InsertScrapeRunSource, type JobRejection, type InsertJobRejection, type JobReport, type InsertJobReport, type EmailPreferences, type InsertEmailPreferences, JOB_TAXONOMY } from "@shared/schema";
+import crypto from "crypto";
 import { eq, desc, asc, and, sql, inArray, lt, gte, count } from "drizzle-orm";
 import { cleanJobDescription } from "./lib/description-cleaner";
 import { deriveSourceInfo } from "./lib/url-utils";
@@ -120,6 +121,8 @@ export interface IStorage {
   deactivatePublishedReport(id: number): Promise<void>;
   // User Dashboard
   getUserDashboard(userId: string, days?: number): Promise<any>;
+  getRecentlyViewedJobs(userId: string, limit?: number): Promise<{ id: number; title: string; company: string; companyLogo: string | null; location: string | null; roleCategory: string | null; viewedAt: string }[]>;
+  getNewJobsSinceLastVisit(userId: string): Promise<{ count: number; jobs: { id: number; title: string; company: string; companyLogo: string | null; roleCategory: string | null; postedDate: string }[] }>;
   // Saved Jobs
   saveJob(userId: string, jobId: number, notes?: string): Promise<SavedJob>;
   unsaveJob(userId: string, jobId: number): Promise<void>;
@@ -134,6 +137,9 @@ export interface IStorage {
   updateJobApplication(id: number, userId: string, data: Partial<InsertJobApplication>): Promise<JobApplication | undefined>;
   deleteJobApplication(id: number, userId: string): Promise<void>;
   getApplicationByUserAndJob(userId: string, jobId: number): Promise<JobApplication | undefined>;
+  // Social Signals
+  getJobSocialSignals(jobIds: number[]): Promise<Record<number, { viewCount: number; savedCount: number }>>;
+  getDailyBriefing(userId: string): Promise<{ newMatchCount: number; topNewJob: { id: number; title: string; company: string; category: string } | null; returningCompany: string | null; pipelineCount: number; streakDays: number }>;
   // Similar Jobs
   getSimilarJobs(jobId: number, limit?: number): Promise<Job[]>;
   // Usage limits
@@ -178,6 +184,10 @@ export interface IStorage {
     totalJobs: number;
     salaryInsight: { category: string; avgMin: number; avgMax: number } | null;
   }>;
+  getEmailPreferences(userId: string): Promise<EmailPreferences | null>;
+  upsertEmailPreferences(userId: string, prefs: Partial<InsertEmailPreferences>): Promise<EmailPreferences>;
+  getEmailPreferenceByUnsubscribeToken(token: string): Promise<EmailPreferences | null>;
+  getUsersForWeeklyDigest(): Promise<EmailPreferences[]>;
 }
 
 class DatabaseStorage implements IStorage {
@@ -2090,6 +2100,88 @@ class DatabaseStorage implements IStorage {
     };
   }
 
+  async getRecentlyViewedJobs(userId: string, limit: number = 8): Promise<{ id: number; title: string; company: string; companyLogo: string | null; location: string | null; roleCategory: string | null; viewedAt: string }[]> {
+    const results = await db.execute(sql`
+      SELECT DISTINCT ON (j.id)
+        j.id, j.title, j.company, j.company_logo as "companyLogo", j.location, j.role_category as "roleCategory",
+        ua.created_at as "viewedAt"
+      FROM user_activities ua
+      INNER JOIN jobs j ON (ua.metadata->>'jobId')::int = j.id
+      WHERE ua.user_id = ${userId}
+        AND ua.event_type = 'job_view'
+        AND ua.metadata->>'jobId' IS NOT NULL
+        AND j.is_published = true
+        AND j.is_active = true
+      ORDER BY j.id, ua.created_at DESC
+    `);
+    const rows = (results as any).rows || results;
+    const sorted = rows.sort((a: any, b: any) => new Date(b.viewedAt).getTime() - new Date(a.viewedAt).getTime());
+    return sorted.slice(0, limit).map((r: any) => ({
+      id: r.id,
+      title: r.title,
+      company: r.company,
+      companyLogo: r.companyLogo || null,
+      location: r.location || null,
+      roleCategory: r.roleCategory || null,
+      viewedAt: new Date(r.viewedAt).toISOString(),
+    }));
+  }
+
+  async getNewJobsSinceLastVisit(userId: string): Promise<{ count: number; jobs: { id: number; title: string; company: string; companyLogo: string | null; roleCategory: string | null; postedDate: string }[] }> {
+    const previousVisits = await db.select({
+      createdAt: userActivities.createdAt,
+    }).from(userActivities)
+      .where(and(
+        eq(userActivities.userId, userId),
+        eq(userActivities.eventType, 'page_view'),
+        sql`${userActivities.pagePath} LIKE '%/dashboard%'`,
+      ))
+      .orderBy(desc(userActivities.createdAt))
+      .limit(2);
+
+    let sinceDate: Date;
+    if (previousVisits.length >= 2 && previousVisits[1].createdAt) {
+      sinceDate = new Date(previousVisits[1].createdAt);
+    } else {
+      sinceDate = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    }
+
+    const conditions = [
+      eq(jobs.isPublished, true),
+      eq(jobs.isActive, true),
+      eq(jobs.pipelineStatus, 'ready'),
+      eq(jobs.jobStatus, 'open'),
+      gte(jobs.postedDate, sinceDate),
+    ];
+
+    const [{ total }] = await db.select({ total: count() }).from(jobs).where(and(...conditions));
+    const newCount = Number(total);
+
+    const newJobs = await db.select({
+      id: jobs.id,
+      title: jobs.title,
+      company: jobs.company,
+      companyLogo: jobs.companyLogo,
+      roleCategory: jobs.roleCategory,
+      postedDate: jobs.postedDate,
+    }).from(jobs)
+      .where(and(...conditions))
+      .orderBy(desc(jobs.postedDate))
+      .limit(5);
+
+    return {
+      count: newCount,
+      jobs: newJobs.map(j => ({
+        id: j.id,
+        title: j.title,
+        company: j.company,
+        companyLogo: j.companyLogo || null,
+        roleCategory: j.roleCategory || null,
+        postedDate: j.postedDate ? new Date(j.postedDate).toISOString() : new Date().toISOString(),
+      })),
+    };
+  }
+
   async getUserDashboard(userId: string, days: number = 30): Promise<any> {
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - days);
@@ -2390,6 +2482,123 @@ class DatabaseStorage implements IStorage {
       .from(jobApplications)
       .where(and(eq(jobApplications.userId, userId), eq(jobApplications.jobId, jobId)));
     return result;
+  }
+
+  async getJobSocialSignals(jobIds: number[]): Promise<Record<number, { viewCount: number; savedCount: number }>> {
+    if (jobIds.length === 0) return {};
+
+    const result: Record<number, { viewCount: number; savedCount: number }> = {};
+
+    const jobRows = await db
+      .select({ id: jobs.id, viewCount: jobs.viewCount })
+      .from(jobs)
+      .where(inArray(jobs.id, jobIds));
+
+    for (const row of jobRows) {
+      result[row.id] = { viewCount: row.viewCount ?? 0, savedCount: 0 };
+    }
+
+    const savedRows = await db
+      .select({ jobId: savedJobs.jobId, cnt: count() })
+      .from(savedJobs)
+      .where(inArray(savedJobs.jobId, jobIds))
+      .groupBy(savedJobs.jobId);
+
+    for (const row of savedRows) {
+      if (result[row.jobId]) {
+        result[row.jobId].savedCount = Number(row.cnt);
+      } else {
+        result[row.jobId] = { viewCount: 0, savedCount: Number(row.cnt) };
+      }
+    }
+
+    return result;
+  }
+
+  async getDailyBriefing(userId: string): Promise<{ newMatchCount: number; topNewJob: { id: number; title: string; company: string; category: string } | null; returningCompany: string | null; pipelineCount: number; streakDays: number }> {
+    const now = new Date();
+    const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    const activeFilter = [
+      eq(jobs.isPublished, true),
+      eq(jobs.isActive, true),
+      eq(jobs.pipelineStatus, 'ready'),
+      eq(jobs.jobStatus, 'open'),
+    ];
+
+    const persona = await db.select().from(userPersonas).where(eq(userPersonas.userId, userId)).limit(1);
+    const topCategories = persona[0]?.topCategories || [];
+
+    let newMatchCount = 0;
+    let topNewJob: { id: number; title: string; company: string; category: string } | null = null;
+
+    const categoryFilter = topCategories.length > 0
+      ? inArray(jobs.roleCategory, topCategories as string[])
+      : undefined;
+
+    const newJobsQuery = db.select({
+      id: jobs.id,
+      title: jobs.title,
+      company: jobs.company,
+      roleCategory: jobs.roleCategory,
+      legalRelevanceScore: jobs.legalRelevanceScore,
+    }).from(jobs).where(and(
+      ...activeFilter,
+      gte(jobs.postedDate, oneDayAgo),
+      ...(categoryFilter ? [categoryFilter] : []),
+    )).orderBy(desc(jobs.legalRelevanceScore)).limit(10);
+
+    const newJobs = await newJobsQuery;
+    newMatchCount = newJobs.length;
+    if (newJobs.length > 0) {
+      topNewJob = {
+        id: newJobs[0].id,
+        title: newJobs[0].title,
+        company: newJobs[0].company,
+        category: newJobs[0].roleCategory || "Legal Tech",
+      };
+    }
+
+    let returningCompany: string | null = null;
+    const viewedCompanies = persona[0]?.viewedCompanies || [];
+    if (viewedCompanies.length > 0) {
+      const recentFromViewed = await db.select({ company: jobs.company }).from(jobs).where(and(
+        ...activeFilter,
+        gte(jobs.postedDate, sevenDaysAgo),
+        inArray(jobs.company, viewedCompanies as string[]),
+      )).limit(1);
+      if (recentFromViewed.length > 0) {
+        returningCompany = recentFromViewed[0].company;
+      }
+    }
+
+    const pipelineRows = await db.select({ cnt: count() }).from(jobApplications).where(and(
+      eq(jobApplications.userId, userId),
+      sql`${jobApplications.status} != 'rejected'`,
+    ));
+    const pipelineCount = Number(pipelineRows[0]?.cnt ?? 0);
+
+    let streakDays = 0;
+    try {
+      const streakRows = await db.execute(sql`
+        WITH daily AS (
+          SELECT DISTINCT DATE(timestamp) as d
+          FROM user_activities
+          WHERE user_id = ${userId}
+          AND timestamp >= NOW() - INTERVAL '30 days'
+          ORDER BY d DESC
+        ),
+        numbered AS (
+          SELECT d, d - (ROW_NUMBER() OVER (ORDER BY d DESC))::int * INTERVAL '1 day' AS grp
+          FROM daily
+        )
+        SELECT COUNT(*) as streak FROM numbered WHERE grp = (SELECT grp FROM numbered LIMIT 1)
+      `);
+      streakDays = Number((streakRows as any).rows?.[0]?.streak ?? 0);
+    } catch { }
+
+    return { newMatchCount, topNewJob, returningCompany, pipelineCount, streakDays };
   }
 
   async getSimilarJobs(jobId: number, limit: number = 4): Promise<Job[]> {
@@ -3284,6 +3493,44 @@ class DatabaseStorage implements IStorage {
       totalJobs,
       salaryInsight,
     };
+  }
+
+  async getEmailPreferences(userId: string): Promise<EmailPreferences | null> {
+    const [prefs] = await db.select().from(emailPreferences).where(eq(emailPreferences.userId, userId)).limit(1);
+    return prefs || null;
+  }
+
+  async upsertEmailPreferences(userId: string, prefs: Partial<InsertEmailPreferences>): Promise<EmailPreferences> {
+    const existing = await this.getEmailPreferences(userId);
+    if (existing) {
+      const [updated] = await db
+        .update(emailPreferences)
+        .set({ ...prefs, updatedAt: new Date() })
+        .where(eq(emailPreferences.userId, userId))
+        .returning();
+      return updated;
+    }
+    const token = crypto.randomBytes(32).toString("hex");
+    const [created] = await db
+      .insert(emailPreferences)
+      .values({
+        userId,
+        weeklyDigest: prefs.weeklyDigest ?? true,
+        alertEmails: prefs.alertEmails ?? true,
+        unsubscribeToken: token,
+        ...prefs,
+      })
+      .returning();
+    return created;
+  }
+
+  async getEmailPreferenceByUnsubscribeToken(token: string): Promise<EmailPreferences | null> {
+    const [prefs] = await db.select().from(emailPreferences).where(eq(emailPreferences.unsubscribeToken, token)).limit(1);
+    return prefs || null;
+  }
+
+  async getUsersForWeeklyDigest(): Promise<EmailPreferences[]> {
+    return db.select().from(emailPreferences).where(eq(emailPreferences.weeklyDigest, true));
   }
 }
 

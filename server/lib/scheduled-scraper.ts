@@ -4,6 +4,7 @@ import type { InsertJob, Job } from '../../shared/schema';
 import { logInfo, logWarn, logError, logSuccess, cleanupOldLogs } from './logger';
 import { matchNewJobsAgainstAlerts } from './alert-matcher';
 import { clearAllStatsCaches } from './mi-cache';
+import { runWeeklyDigestBatch } from './email-digest';
 import { scrapeAllLawFirms, isLegalTechRole, transformToJobSchema, type SourceResult } from './law-firm-scraper';
 import { LAW_FIRMS_AND_COMPANIES } from './law-firms-list';
 
@@ -579,6 +580,22 @@ export function startScheduler(): void {
       logError('SCHEDULER', 'Scheduled scrape failed', { error: error.message });
     }
   }, SCRAPE_INTERVAL_MS);
+
+  const WEEKLY_DIGEST_INTERVAL_MS = 7 * 24 * 60 * 60 * 1000;
+  const now = new Date();
+  const nextSunday = new Date(now);
+  nextSunday.setUTCDate(now.getUTCDate() + ((7 - now.getUTCDay()) % 7 || 7));
+  nextSunday.setUTCHours(18, 0, 0, 0);
+  const msUntilNextSunday = nextSunday.getTime() - now.getTime();
+
+  setTimeout(() => {
+    runWeeklyDigestBatch().catch(err => logError('DIGEST', 'Weekly digest failed', { error: err.message }));
+    setInterval(() => {
+      runWeeklyDigestBatch().catch(err => logError('DIGEST', 'Weekly digest failed', { error: err.message }));
+    }, WEEKLY_DIGEST_INTERVAL_MS);
+  }, msUntilNextSunday);
+
+  logInfo('SCHEDULER', `Weekly digest scheduled for Sunday 6pm UTC (in ${Math.round(msUntilNextSunday / 3600000)}h)`);
 }
 
 export function stopScheduler(): void {

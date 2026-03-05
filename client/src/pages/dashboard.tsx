@@ -1,5 +1,5 @@
-import { useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { usePageTitle } from "@/hooks/use-page-title";
 import { useActivityTracker } from "@/hooks/use-activity-tracker";
 import { useSubscription } from "@/hooks/use-subscription";
@@ -12,14 +12,41 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "wouter";
 import { formatSalary } from "@/lib/format-salary";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   FileText, Bell, Bookmark, ArrowRight, TrendingUp,
   Building2, ChevronRight, Briefcase,
   Brain, Target, Wifi, Clock, CheckCircle,
   Upload, Search, Map, DollarSign, Sparkles,
-  RefreshCw, Zap, Flame, BarChart3, Globe,
+  RefreshCw, Zap, Flame, BarChart3, Globe, Eye, Mail,
 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import { ProGate } from "@/components/pro-gate";
+
+interface RecentlyViewedJob {
+  id: number;
+  title: string;
+  company: string;
+  companyLogo: string | null;
+  location: string | null;
+  roleCategory: string | null;
+  viewedAt: string;
+}
+
+interface NewSinceLastVisit {
+  count: number;
+  jobs: { id: number; title: string; company: string; companyLogo: string | null; roleCategory: string | null; postedDate: string }[];
+}
+
+interface DailyBriefing {
+  newMatchCount: number;
+  topNewJob: { id: number; title: string; company: string; category: string } | null;
+  returningCompany: string | null;
+  pipelineCount: number;
+  streakDays: number;
+}
 
 interface DashboardData {
   activityMetrics: {
@@ -39,6 +66,9 @@ interface DashboardData {
   totalActiveJobs: number;
   persona: { topCategories: string[] | null; topSkills: string[] | null; careerStage: string | null; engagementLevel: string | null; summary: string | null } | null;
   recommendations: { type: string; title: string; description: string; action: string; priority: number }[];
+  recentlyViewed?: RecentlyViewedJob[];
+  newSinceLastVisit?: NewSinceLastVisit;
+  briefing?: DailyBriefing;
 }
 
 interface MarketPulseData {
@@ -168,6 +198,21 @@ const stepColors = [
   "bg-chart-4 text-white dark:text-black",
 ];
 
+function relativeTime(dateStr: string): string {
+  const now = Date.now();
+  const then = new Date(dateStr).getTime();
+  const diffMs = now - then;
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return "yesterday";
+  if (days < 7) return `${days}d ago`;
+  return `${Math.floor(days / 7)}w ago`;
+}
+
 function DashboardSkeleton() {
   return (
     <>
@@ -195,6 +240,88 @@ function DashboardSkeleton() {
         </div>
       </main>
     </>
+  );
+}
+
+interface EmailPrefs {
+  weeklyDigest: boolean;
+  alertEmails: boolean;
+}
+
+function EmailPreferencesCard() {
+  const { toast } = useToast();
+  const { user } = useAuth();
+
+  const { data: emailPrefs, isLoading } = useQuery<EmailPrefs>({
+    queryKey: ["/api/user/email-preferences"],
+  });
+
+  const mutation = useMutation({
+    mutationFn: async (prefs: Partial<EmailPrefs>) => {
+      const res = await apiRequest("PATCH", "/api/user/email-preferences", prefs);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/user/email-preferences"] });
+      toast({ title: "Preferences updated" });
+    },
+    onError: () => {
+      toast({ title: "Failed to update preferences", variant: "destructive" });
+    },
+  });
+
+  if (isLoading) {
+    return (
+      <Card className="card-elev-static" data-testid="card-email-preferences">
+        <CardContent className="p-4 sm:p-5">
+          <Skeleton className="h-20 w-full" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="card-elev-static" data-testid="card-email-preferences">
+      <CardContent className="p-4 sm:p-5">
+        <div className="flex items-center gap-2 mb-4">
+          <div className="p-1.5 rounded-md bg-chart-4/10 text-chart-4">
+            <Mail className="h-3.5 w-3.5" />
+          </div>
+          <p className="text-sm font-semibold text-foreground">Email Notifications</p>
+        </div>
+
+        {user?.email && (
+          <p className="text-xs text-muted-foreground mb-3 truncate" data-testid="text-email-address">{user.email}</p>
+        )}
+
+        <div className="space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm text-foreground">Weekly Digest</p>
+              <p className="text-xs text-muted-foreground">Top new roles + market pulse every Sunday</p>
+            </div>
+            <Switch
+              checked={emailPrefs?.weeklyDigest ?? true}
+              onCheckedChange={(checked) => mutation.mutate({ weeklyDigest: checked })}
+              disabled={mutation.isPending}
+              data-testid="switch-weekly-digest"
+            />
+          </div>
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm text-foreground">Job Alert Emails</p>
+              <p className="text-xs text-muted-foreground">Get emailed when alerts match new jobs</p>
+            </div>
+            <Switch
+              checked={emailPrefs?.alertEmails ?? true}
+              onCheckedChange={(checked) => mutation.mutate({ alertEmails: checked })}
+              disabled={mutation.isPending}
+              data-testid="switch-alert-emails"
+            />
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -284,6 +411,72 @@ export default function DashboardPage() {
               {getWelcomeSubtitle(dashData, marketPulse, hasDiagnostic)}
             </p>
           </div>
+
+          {dashData.newSinceLastVisit && dashData.newSinceLastVisit.count > 0 && (
+            <Link href="/jobs?sort=newest">
+              <div className="mb-6 sm:mb-8 flex items-center gap-2.5 p-3 sm:p-4 rounded-md bg-primary/[0.06] dark:bg-primary/[0.12] hover-elevate cursor-pointer" data-testid="banner-new-since-last-visit">
+                <div className="p-1.5 rounded-md bg-primary/15 text-primary shrink-0">
+                  <Sparkles className="h-4 w-4" />
+                </div>
+                <p className="text-sm font-medium text-foreground">
+                  <span className="font-bold tabular-nums" data-testid="text-new-jobs-count">{dashData.newSinceLastVisit.count}</span>
+                  {" "}new {dashData.newSinceLastVisit.count === 1 ? "job" : "jobs"} since your last visit
+                </p>
+                <ArrowRight className="h-3.5 w-3.5 text-muted-foreground ml-auto shrink-0" />
+              </div>
+            </Link>
+          )}
+
+          {dashData.briefing && (
+            <Card className="mb-6 sm:mb-8 border-primary/20 dark:border-primary/30 card-elev-static" data-testid="card-daily-briefing">
+              <CardContent className="p-4 sm:p-5">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="p-1.5 rounded-md bg-chart-2/15 text-chart-2">
+                    <Zap className="h-4 w-4" />
+                  </div>
+                  <h3 className="text-sm font-semibold text-foreground">Today's Briefing</h3>
+                </div>
+                <div className="space-y-1.5 text-sm text-muted-foreground">
+                  {dashData.briefing.newMatchCount > 0 ? (
+                    <p data-testid="text-briefing-matches">
+                      <span className="font-medium text-foreground">{dashData.briefing.newMatchCount}</span> new{" "}
+                      {dashData.briefing.topNewJob ? dashData.briefing.topNewJob.category : "legal tech"} role{dashData.briefing.newMatchCount !== 1 ? "s" : ""} today
+                      {dashData.briefing.topNewJob && (
+                        <span> — <Link href={`/jobs/${dashData.briefing.topNewJob.id}`} className="text-primary hover:underline">{dashData.briefing.topNewJob.company}</Link> is hiring</span>
+                      )}
+                    </p>
+                  ) : (
+                    <p data-testid="text-briefing-quiet">No new matches today — market is quiet</p>
+                  )}
+                  {dashData.briefing.returningCompany && (
+                    <p data-testid="text-briefing-returning">
+                      <Building2 className="h-3.5 w-3.5 inline mr-1 text-chart-3" />
+                      <span className="font-medium text-foreground">{dashData.briefing.returningCompany}</span> is hiring again
+                    </p>
+                  )}
+                  {dashData.briefing.pipelineCount > 0 && (
+                    <p data-testid="text-briefing-pipeline">
+                      <Target className="h-3.5 w-3.5 inline mr-1 text-chart-4" />
+                      You're tracking <Link href="/pipeline" className="font-medium text-primary hover:underline">{dashData.briefing.pipelineCount} application{dashData.briefing.pipelineCount !== 1 ? "s" : ""}</Link>
+                    </p>
+                  )}
+                  {dashData.briefing.streakDays > 2 && (
+                    <p data-testid="text-briefing-streak">
+                      <Flame className="h-3.5 w-3.5 inline mr-1 text-orange-500" />
+                      <span className="font-medium text-foreground">{dashData.briefing.streakDays}-day streak</span> — keep it going!
+                    </p>
+                  )}
+                </div>
+                {dashData.briefing.newMatchCount > 0 && (
+                  <Link href={`/jobs${dashData.briefing.topNewJob ? `?category=${encodeURIComponent(dashData.briefing.topNewJob.category)}` : "?sort=newest"}`}>
+                    <Button size="sm" variant="outline" className="mt-3 gap-1.5 text-xs" data-testid="button-see-new-matches">
+                      See new matches <ArrowRight className="h-3 w-3" />
+                    </Button>
+                  </Link>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5 mb-8 sm:mb-10">
             <Card className={`card-elev-prominent ${heroCardConfigs[0].bg} overflow-visible`} data-testid="card-hero-readiness">
@@ -392,6 +585,59 @@ export default function DashboardPage() {
                   </CardContent>
                 </Card>
               </>
+            )}
+          </div>
+
+          <div className="mb-8 sm:mb-10" data-testid="section-recently-viewed">
+            <div className="flex items-center justify-between gap-2 mb-4 flex-wrap">
+              <div className="flex items-center gap-2">
+                <Eye className="h-4 w-4 text-muted-foreground" />
+                <h2 className="text-base font-semibold text-foreground">Recently Viewed</h2>
+              </div>
+              {dashData.recentlyViewed && dashData.recentlyViewed.length > 0 && (
+                <Link href="/jobs">
+                  <Button variant="ghost" size="sm" className="text-xs gap-1" data-testid="button-browse-more-jobs">
+                    Browse jobs <ArrowRight className="h-3 w-3" />
+                  </Button>
+                </Link>
+              )}
+            </div>
+            {dashData.recentlyViewed && dashData.recentlyViewed.length > 0 ? (
+              <div className="flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory scrollbar-thin" data-testid="list-recently-viewed">
+                {dashData.recentlyViewed.map((job) => (
+                  <Link key={job.id} href={`/jobs/${job.id}`}>
+                    <Card className="card-elev-interactive cursor-pointer min-w-[200px] max-w-[220px] snap-start shrink-0" data-testid={`card-recently-viewed-${job.id}`}>
+                      <CardContent className="p-3.5">
+                        <div className="flex items-start gap-2.5 mb-2">
+                          <Avatar className="h-8 w-8 shrink-0 rounded-md">
+                            {job.companyLogo ? (
+                              <AvatarImage src={job.companyLogo} alt={job.company} />
+                            ) : null}
+                            <AvatarFallback className="rounded-md text-[10px] font-medium">
+                              {job.company.slice(0, 2).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-medium text-foreground line-clamp-2 leading-tight" title={job.title} data-testid={`text-viewed-title-${job.id}`}>{job.title}</p>
+                            <p className="text-[11px] text-muted-foreground mt-0.5 truncate" title={job.company} data-testid={`text-viewed-company-${job.id}`}>{job.company}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between gap-1.5 flex-wrap">
+                          {job.roleCategory && (
+                            <Badge variant="secondary" className="text-[10px]" data-testid={`badge-viewed-category-${job.id}`}>{job.roleCategory}</Badge>
+                          )}
+                          <span className="text-[10px] text-muted-foreground flex items-center gap-0.5" data-testid={`text-viewed-time-${job.id}`}>
+                            <Clock className="h-2.5 w-2.5" />
+                            {relativeTime(job.viewedAt)}
+                          </span>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground" data-testid="text-no-recently-viewed">No recently viewed jobs yet. Start exploring to see your history here.</p>
             )}
           </div>
 
@@ -1031,6 +1277,8 @@ export default function DashboardPage() {
                   </div>
                 </CardContent>
               </Card>
+
+              <EmailPreferencesCard />
             </div>
           </div>
           )}

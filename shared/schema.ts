@@ -698,6 +698,26 @@ export type InsertJobApplication = z.infer<typeof insertJobApplicationSchema>;
 
 export type JobApplicationWithJob = JobApplication & { job: Job };
 
+export const emailPreferences = pgTable("email_preferences", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id", { length: 255 }).notNull().unique(),
+  weeklyDigest: boolean("weekly_digest").notNull().default(true),
+  alertEmails: boolean("alert_emails").notNull().default(true),
+  unsubscribeToken: varchar("unsubscribe_token", { length: 255 }).unique(),
+  lastDigestSentAt: timestamp("last_digest_sent_at"),
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: timestamp("updated_at").default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const insertEmailPreferencesSchema = createInsertSchema(emailPreferences).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type EmailPreferences = typeof emailPreferences.$inferSelect;
+export type InsertEmailPreferences = z.infer<typeof insertEmailPreferencesSchema>;
+
 export interface ResumeSections {
   contact: {
     fullName: string;

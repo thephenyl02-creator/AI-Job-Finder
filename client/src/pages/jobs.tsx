@@ -46,6 +46,9 @@ import {
   Briefcase,
   Brain,
   ShieldCheck,
+  Eye,
+  Bookmark as BookmarkIcon,
+  Flame,
 } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -189,12 +192,7 @@ export default function Jobs() {
 
   const hasResume = userResumes.length > 0;
 
-  const { data: fitScoresData } = useQuery<{ scores: Record<number, { fitScore: number | null; aiIntensity: string | null; transitionDifficulty: string | null; oneLineReason: string | null }> }>({
-    queryKey: ["/api/user/fit-scores"],
-    enabled: isAuthenticated && hasResume,
-    staleTime: 1000 * 60 * 5,
-  });
-  const fitScores = fitScoresData?.scores || {};
+  const fitScoresAll: Record<number, any> = {};
 
   const { data: diagnosticData } = useQuery<any>({
     queryKey: ["/api/diagnostic/latest"],
@@ -671,6 +669,32 @@ export default function Jobs() {
   const allJobs = jobsResponse?.jobs ?? [];
   const totalJobCount = jobsResponse?.total ?? 0;
   const totalPages = jobsResponse?.totalPages ?? 1;
+
+  const socialSignalJobIds = useMemo(() => {
+    return allJobs.map(j => j.id).slice(0, 50);
+  }, [allJobs]);
+
+  const { data: socialSignalsData } = useQuery<{ signals: Record<number, { viewCount: number; savedCount: number }> }>({
+    queryKey: ["/api/jobs/social-signals", socialSignalJobIds.join(",")],
+    queryFn: () => socialSignalJobIds.length > 0 ? fetch(`/api/jobs/social-signals?ids=${socialSignalJobIds.join(",")}`, { credentials: "include" }).then(r => r.json()) : Promise.resolve({ signals: {} }),
+    enabled: isAuthenticated && socialSignalJobIds.length > 0,
+    staleTime: 1000 * 60 * 30,
+  });
+  const socialSignals = socialSignalsData?.signals || {};
+
+  const fitScoreJobIds = useMemo(() => {
+    return allJobs.map(j => j.id).slice(0, 25);
+  }, [allJobs]);
+
+  const fitScoresBatchParam = fitScoreJobIds.length > 0 ? `?jobIds=${fitScoreJobIds.join(",")}` : "";
+  const { data: fitScoresBatchData } = useQuery<{ scores: Record<number, { fitScore: number | null; aiIntensity: string | null; transitionDifficulty: string | null; oneLineReason: string | null }> }>({
+    queryKey: ["/api/user/fit-scores", fitScoreJobIds],
+    queryFn: () => fetch(`/api/user/fit-scores${fitScoresBatchParam}`, { credentials: "include" }).then(r => r.json()),
+    enabled: isAuthenticated && hasResume && fitScoreJobIds.length > 0,
+    staleTime: 1000 * 60 * 5,
+  });
+
+  const fitScores = fitScoresBatchData?.scores || {};
 
   const { data: statsData } = useQuery<{ totalJobs: number; categoryCounts: Record<string, number> }>({
     queryKey: ["/api/stats"],
@@ -1947,6 +1971,36 @@ export default function Jobs() {
                               {overflowCount > 0 && (
                                 <span className="sm:hidden text-[10px] text-muted-foreground" data-testid={`badge-overflow-${job.id}`}>
                                   +{overflowCount} more
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })()}
+                        {(() => {
+                          const sig = socialSignals[job.id];
+                          if (!sig) return null;
+                          const showViews = sig.viewCount > 5;
+                          const showSaved = sig.savedCount > 0;
+                          const isPopular = sig.viewCount > 20;
+                          if (!showViews && !showSaved && !isPopular) return null;
+                          return (
+                            <div className="flex items-center gap-2.5 mt-1.5" data-testid={`social-signals-${job.id}`}>
+                              {isPopular && (
+                                <span className="inline-flex items-center gap-0.5 text-[10px] font-medium text-orange-600 dark:text-orange-400" data-testid={`badge-popular-${job.id}`}>
+                                  <Flame className="h-3 w-3" />
+                                  Popular
+                                </span>
+                              )}
+                              {showViews && (
+                                <span className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground" data-testid={`signal-views-${job.id}`}>
+                                  <Eye className="h-3 w-3" />
+                                  {sig.viewCount} viewed
+                                </span>
+                              )}
+                              {showSaved && (
+                                <span className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground" data-testid={`signal-saved-${job.id}`}>
+                                  <BookmarkIcon className="h-3 w-3" />
+                                  {sig.savedCount} saved
                                 </span>
                               )}
                             </div>

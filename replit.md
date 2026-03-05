@@ -102,6 +102,15 @@ Legal Tech Careers is a career intelligence platform designed for legal professi
 - **Market Evolution (Free Tier)**: Trend charts with limited history for free users, full history for Pro.
 - **Pro Feature Gates**: Backend and frontend checks to gate premium features.
 
+### Engagement Features
+- **Recently Viewed Jobs**: Dashboard shows horizontally scrollable cards of recently viewed jobs from user_activities. Shows company logo, title, category badge, and relative time ("2h ago"). Available to all users.
+- **New Since Last Visit**: Dashboard banner showing count of jobs published since user's last dashboard visit. Links to jobs page sorted by newest.
+- **Smart Daily Briefing**: Dashboard card with personalized sentences — new matches in user's categories, returning companies, pipeline count, activity streak. CTA to filtered jobs page.
+- **Application Pipeline Tracker**: Full pipeline page at `/pipeline` with column-based layout (Applied/Interviewing/Offer/Rejected). Auto-tracks applications from apply clicks. Status changes via dropdown, inline notes, delete with confirmation. Pipeline link in main navigation.
+- **Peer Activity Signals**: Job cards show view counts, saved counts, and "Popular" badges. Data from `GET /api/jobs/social-signals` endpoint with 30-min cache. Authenticated only.
+- **Inline Fit Scores Enhancement**: Batch-loads fit scores for visible jobs on the jobs page via `GET /api/user/fit-scores?jobIds=...` (capped at 25). Merges with cached scores for seamless display.
+- **Email Digest System**: `email_preferences` table with weekly digest + alert email toggles. Branded HTML email templates in `server/lib/email-service.ts`. Weekly digest worker (`server/lib/email-digest.ts`) runs Sundays 6pm UTC. Alert emails sent alongside in-app notifications. Console-log preview in dev, real SMTP when SMTP_HOST configured. Unsubscribe via token-based URL. Preferences UI on dashboard sidebar.
+
 ### Data Moat & API Security
 - **Rate Limiting**: Tiered limits for unauthenticated and authenticated users.
 - **API Key Guard**: Blocks programmatic access without an admin-issued API key.

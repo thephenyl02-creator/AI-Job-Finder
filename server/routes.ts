@@ -65,7 +65,7 @@ import { generateMarketIntelligencePDF } from "./lib/market-intelligence-pdf";
 import { generateMarketIntelligenceDocx } from "./lib/market-intelligence-docx";
 import { db } from "./db";
 import { jobs, users, resumes, resumeEditorVersions } from "@shared/schema";
-import { eq, and, sql, desc, count, or } from "drizzle-orm";
+import { eq, and, sql, desc, count, or, inArray } from "drizzle-orm";
 import { JOB_TAXONOMY, CATEGORY_TO_TRACK, getTrackForCategory } from "@shared/schema";
 import {
   startScheduler,
@@ -1111,6 +1111,47 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error fetching jobs:", error);
       res.status(500).json({ error: "Failed to fetch jobs" });
+    }
+  });
+
+  const socialSignalsCache = new Map<string, { data: Record<number, { viewCount: number; savedCount: number }>; expiresAt: number }>();
+  const SOCIAL_SIGNALS_TTL = 30 * 60 * 1000;
+
+  app.get("/api/jobs/social-signals", isAuthenticated, async (req: any, res) => {
+    try {
+      const idsParam = req.query.ids as string;
+      if (!idsParam) {
+        return res.status(400).json({ error: "Missing ids parameter" });
+      }
+      const jobIds = idsParam.split(",").map(Number).filter(n => !isNaN(n) && n > 0).slice(0, 50);
+      if (jobIds.length === 0) {
+        return res.json({ signals: {} });
+      }
+
+      const cacheKey = jobIds.sort((a, b) => a - b).join(",");
+      const cached = socialSignalsCache.get(cacheKey);
+      if (cached && cached.expiresAt > Date.now()) {
+        res.set("Cache-Control", "private, max-age=1800");
+        return res.json({ signals: cached.data });
+      }
+
+      const signals = await storage.getJobSocialSignals(jobIds);
+      socialSignalsCache.set(cacheKey, { data: signals, expiresAt: Date.now() + SOCIAL_SIGNALS_TTL });
+
+      if (socialSignalsCache.size > 200) {
+        const now = Date.now();
+        const keys = Array.from(socialSignalsCache.keys());
+        for (const key of keys) {
+          const val = socialSignalsCache.get(key);
+          if (val && val.expiresAt < now) socialSignalsCache.delete(key);
+        }
+      }
+
+      res.set("Cache-Control", "private, max-age=1800");
+      res.json({ signals });
+    } catch (error) {
+      console.error("Error fetching social signals:", error);
+      res.status(500).json({ error: "Failed to fetch social signals" });
     }
   });
 
@@ -6429,14 +6470,63 @@ Rules:
     try {
       const userId = req.user!.id;
       const days = parseInt(req.query.days as string) || 30;
-      const data = await storage.getUserDashboard(userId, Math.min(days, 90));
-      const dashAdminCheck = await storage.isUserAdmin(userId);
-      const subData = await storage.getUserSubscription(userId);
+      const [data, recentlyViewed, newSinceLastVisit, briefing, dashAdminCheck, subData] = await Promise.all([
+        storage.getUserDashboard(userId, Math.min(days, 90)),
+        storage.getRecentlyViewedJobs(userId, 8),
+        storage.getNewJobsSinceLastVisit(userId),
+        storage.getDailyBriefing(userId),
+        storage.isUserAdmin(userId),
+        storage.getUserSubscription(userId),
+      ]);
       const isPro = dashAdminCheck || (subData?.subscriptionTier === "pro" && subData?.subscriptionStatus === "active");
-      res.json({ ...data, isPro });
+      res.json({ ...data, isPro, recentlyViewed, newSinceLastVisit, briefing });
     } catch (error) {
       console.error("Error fetching user dashboard:", error);
       res.status(500).json({ error: "Failed to load dashboard" });
+    }
+  });
+
+  app.get("/api/user/email-preferences", isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      let prefs = await storage.getEmailPreferences(userId);
+      if (!prefs) {
+        prefs = await storage.upsertEmailPreferences(userId, {});
+      }
+      res.json(prefs);
+    } catch (error) {
+      console.error("Error fetching email preferences:", error);
+      res.status(500).json({ error: "Failed to fetch email preferences" });
+    }
+  });
+
+  app.patch("/api/user/email-preferences", isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { weeklyDigest, alertEmails } = req.body;
+      const updateData: any = {};
+      if (typeof weeklyDigest === "boolean") updateData.weeklyDigest = weeklyDigest;
+      if (typeof alertEmails === "boolean") updateData.alertEmails = alertEmails;
+      const prefs = await storage.upsertEmailPreferences(userId, updateData);
+      res.json(prefs);
+    } catch (error) {
+      console.error("Error updating email preferences:", error);
+      res.status(500).json({ error: "Failed to update email preferences" });
+    }
+  });
+
+  app.get("/api/unsubscribe/:token", async (req, res) => {
+    try {
+      const { token } = req.params;
+      const prefs = await storage.getEmailPreferenceByUnsubscribeToken(token);
+      if (!prefs) {
+        return res.status(404).send(`<!DOCTYPE html><html><head><title>Not Found</title></head><body style="font-family:sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;background:#f4f6f8"><div style="text-align:center;padding:40px;background:white;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.1)"><h1 style="color:#1e293b">Link Not Found</h1><p style="color:#64748b">This unsubscribe link is invalid or expired.</p></div></body></html>`);
+      }
+      await storage.upsertEmailPreferences(prefs.userId, { weeklyDigest: false });
+      res.send(`<!DOCTYPE html><html><head><title>Unsubscribed</title></head><body style="font-family:sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;background:#f4f6f8"><div style="text-align:center;padding:40px;background:white;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.1)"><h1 style="color:#1e293b">Unsubscribed</h1><p style="color:#64748b">You've been unsubscribed from weekly digest emails.</p><p style="color:#94a3b8;font-size:14px">You can re-enable emails anytime from your dashboard.</p></div></body></html>`);
+    } catch (error) {
+      console.error("Unsubscribe error:", error);
+      res.status(500).send("Something went wrong");
     }
   });
 
@@ -7388,6 +7478,17 @@ ${platformContext}`;
             storage.trackJobView(jobId).catch(() => {});
           } else if (evt.eventType === "apply_click") {
             storage.trackApplyClick(jobId).catch(() => {});
+            storage.getApplicationByUserAndJob(userId, jobId).then(existing => {
+              if (!existing) {
+                storage.createJobApplication({
+                  userId,
+                  jobId,
+                  status: "applied",
+                  notes: null,
+                  appliedDate: new Date(),
+                }).catch(err => console.error("Auto-track application error:", err));
+              }
+            }).catch(() => {});
           }
         }
       }
@@ -8114,6 +8215,92 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
     } catch (error) {
       console.error("Optimize for job error:", error);
       res.status(500).json({ error: "Failed to optimize resume" });
+    }
+  });
+
+  // --- Job Applications / Pipeline ---
+
+  app.get("/api/applications/stats", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const apps = await storage.getUserApplications(userId);
+      const stats: Record<string, number> = { applied: 0, interviewing: 0, offer: 0, rejected: 0 };
+      for (const app of apps) {
+        const s = app.status || "applied";
+        stats[s] = (stats[s] || 0) + 1;
+      }
+      res.json(stats);
+    } catch (error) {
+      console.error("Application stats error:", error);
+      res.status(500).json({ error: "Failed to get application stats" });
+    }
+  });
+
+  app.get("/api/applications", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const apps = await storage.getUserApplications(userId);
+      res.json(apps);
+    } catch (error) {
+      console.error("Get applications error:", error);
+      res.status(500).json({ error: "Failed to get applications" });
+    }
+  });
+
+  app.post("/api/applications", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const { jobId, status, notes } = req.body;
+      if (!jobId) return res.status(400).json({ error: "jobId is required" });
+      const existing = await storage.getApplicationByUserAndJob(userId, Number(jobId));
+      if (existing) return res.status(409).json({ error: "Application already exists", application: existing });
+      const app = await storage.createJobApplication({
+        userId,
+        jobId: Number(jobId),
+        status: status || "applied",
+        notes: notes || null,
+        appliedDate: new Date(),
+      });
+      res.json(app);
+    } catch (error) {
+      console.error("Create application error:", error);
+      res.status(500).json({ error: "Failed to create application" });
+    }
+  });
+
+  app.patch("/api/applications/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ error: "Invalid ID" });
+      const { status, notes, appliedDate } = req.body;
+      const allowedStatuses = ["saved", "applied", "interviewing", "offer", "rejected"];
+      if (status !== undefined && !allowedStatuses.includes(status)) {
+        return res.status(400).json({ error: "Invalid status. Allowed: " + allowedStatuses.join(", ") });
+      }
+      const data: any = {};
+      if (status !== undefined) data.status = status;
+      if (notes !== undefined) data.notes = notes;
+      if (appliedDate !== undefined) data.appliedDate = new Date(appliedDate);
+      const updated = await storage.updateJobApplication(id, userId, data);
+      if (!updated) return res.status(404).json({ error: "Application not found" });
+      res.json(updated);
+    } catch (error) {
+      console.error("Update application error:", error);
+      res.status(500).json({ error: "Failed to update application" });
+    }
+  });
+
+  app.delete("/api/applications/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ error: "Invalid ID" });
+      await storage.deleteJobApplication(id, userId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Delete application error:", error);
+      res.status(500).json({ error: "Failed to delete application" });
     }
   });
 
@@ -8934,6 +9121,21 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
       const resume = userResumes.find((r: any) => r.isPrimary) || userResumes[0];
       if (!resume) return res.json({ scores: {} });
 
+      const jobIdsParam = req.query.jobIds as string | undefined;
+      let filterJobIds: number[] | null = null;
+      if (jobIdsParam) {
+        filterJobIds = jobIdsParam.split(",").map(Number).filter(n => !isNaN(n)).slice(0, 25);
+        if (filterJobIds.length === 0) return res.json({ scores: {} });
+      }
+
+      const conditions = [
+        eq(jobFitResults.userId, userId),
+        eq(jobFitResults.resumeId, resume.id),
+      ];
+      if (filterJobIds) {
+        conditions.push(inArray(jobFitResults.jobId, filterJobIds));
+      }
+
       const results = await db.select({
         jobId: jobFitResults.jobId,
         fitScore: jobFitResults.fitScore,
@@ -8941,10 +9143,7 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
         transitionDifficulty: jobFitResults.transitionDifficulty,
         oneLineReason: jobFitResults.oneLineReason,
       }).from(jobFitResults)
-        .where(and(
-          eq(jobFitResults.userId, userId),
-          eq(jobFitResults.resumeId, resume.id),
-        ));
+        .where(and(...conditions));
 
       const scores: Record<number, any> = {};
       for (const r of results) {

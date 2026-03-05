@@ -47,6 +47,7 @@ import {
   Lock,
   Eye,
   Compass,
+  Kanban,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -487,6 +488,28 @@ export default function JobDetail() {
 
   const jobIsSaved = job ? savedJobIds.includes(job.id) : false;
 
+  const { data: existingApplication } = useQuery<any>({
+    queryKey: ["/api/applications"],
+    enabled: isAuthenticated && !!job,
+    select: (apps: any[]) => apps?.find((a: any) => a.jobId === job?.id),
+  });
+
+  const trackApplicationMutation = useMutation({
+    mutationFn: async () => {
+      if (!job) return;
+      await apiRequest("POST", "/api/applications", { jobId: job.id, status: "applied" });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/applications"] });
+      toast({ title: "Application tracked", description: "Added to your pipeline." });
+    },
+    onError: (error: any) => {
+      if (error?.message?.includes("409")) {
+        toast({ title: "Already tracking", description: "This application is already in your pipeline." });
+      }
+    },
+  });
+
   const { data: userResumes = [] } = useQuery<Resume[]>({
     queryKey: ["/api/resumes"],
     enabled: isAuthenticated,
@@ -910,6 +933,32 @@ export default function JobDetail() {
                 </Button>
               )}
             </div>
+            {isAuthenticated && (
+              existingApplication ? (
+                <Link href="/pipeline">
+                  <Badge
+                    variant="secondary"
+                    className="gap-1 cursor-pointer"
+                    data-testid="badge-tracking-status"
+                  >
+                    <Kanban className="h-3 w-3" />
+                    Tracking: {existingApplication.status?.charAt(0).toUpperCase() + existingApplication.status?.slice(1)}
+                  </Badge>
+                </Link>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 text-xs"
+                  onClick={() => trackApplicationMutation.mutate()}
+                  disabled={trackApplicationMutation.isPending}
+                  data-testid="button-track-application"
+                >
+                  <Kanban className="h-3.5 w-3.5" />
+                  Track Application
+                </Button>
+              )
+            )}
             {isAuthenticated ? (
               <Button
                 variant="ghost"
