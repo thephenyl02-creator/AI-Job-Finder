@@ -417,6 +417,25 @@ export async function registerRoutes(
         }
       }
 
+      const catSum = Object.values(categoryCounts).reduce((a, b) => a + b, 0);
+      if (catSum > 0 && catSum !== totalJobs) {
+        const entries = Object.entries(categoryCounts).sort((a, b) => b[1] - a[1]);
+        let scaled: Record<string, number> = {};
+        let allocated = 0;
+        for (const [cat, cnt] of entries) {
+          scaled[cat] = Math.max(1, Math.floor((cnt / catSum) * totalJobs));
+          allocated += scaled[cat];
+        }
+        let remainder = totalJobs - allocated;
+        const fractionals = entries.map(([cat, cnt]) => ({ cat, frac: ((cnt / catSum) * totalJobs) - Math.floor((cnt / catSum) * totalJobs) })).sort((a, b) => b.frac - a.frac);
+        for (const { cat } of fractionals) {
+          if (remainder <= 0) break;
+          scaled[cat]++;
+          remainder--;
+        }
+        categoryCounts = scaled;
+      }
+
       const allEvents = await storage.getEvents();
       const upcomingEvents = allEvents.filter(e => new Date(e.startDate) >= new Date()).length;
       const [{ total: totalUsersCount }] = await db.select({ total: count() }).from(users);
@@ -742,7 +761,8 @@ export async function registerRoutes(
 
       const [{ total: totalScreenedCount }] = await db.select({ total: count() }).from(jobs);
 
-      const histCanonical = getCanonicalStats();
+      const histDisplay = getDisplayStats();
+      const histCanonical = histDisplay || getCanonicalStats();
       const cachedDQ = getDataQualityCache();
       const totalTracked = histCanonical ? histCanonical.totalJobs : (cachedDQ ? cachedDQ.curation.activeInventory : allJobs.length);
       const totalActive = totalTracked;
@@ -920,6 +940,28 @@ export async function registerRoutes(
         if (cachedDQ) {
           pulse.totalJobs = cachedDQ.curation.activeInventory;
         }
+      }
+      const wmsSum = pulse.workModeSplit.remote + pulse.workModeSplit.hybrid + pulse.workModeSplit.onsite;
+      if (wmsSum > 0 && wmsSum !== pulse.totalJobs) {
+        const raw = [
+          { key: 'remote' as const, val: pulse.workModeSplit.remote },
+          { key: 'hybrid' as const, val: pulse.workModeSplit.hybrid },
+          { key: 'onsite' as const, val: pulse.workModeSplit.onsite },
+        ].sort((a, b) => b.val - a.val);
+        const result: Record<string, number> = {};
+        let allocated = 0;
+        for (const { key, val } of raw) {
+          result[key] = Math.max(0, Math.floor((val / wmsSum) * pulse.totalJobs));
+          allocated += result[key];
+        }
+        let remainder = pulse.totalJobs - allocated;
+        const byFrac = raw.map(({ key, val }) => ({ key, frac: ((val / wmsSum) * pulse.totalJobs) - Math.floor((val / wmsSum) * pulse.totalJobs) })).sort((a, b) => b.frac - a.frac);
+        for (const { key } of byFrac) {
+          if (remainder <= 0) break;
+          result[key]++;
+          remainder--;
+        }
+        pulse.workModeSplit = { remote: result.remote, hybrid: result.hybrid, onsite: result.onsite };
       }
       res.json(pulse);
     } catch (error) {
@@ -9589,7 +9631,7 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
           totalJobs,
           totalCompanies: miDisplay ? miDisplay.totalCompanies : companies.size,
           countriesCount: miDisplay ? miDisplay.totalCountries : countries.size,
-          remotePercentage: allJobs.length ? Math.round((remoteJobs.length / allJobs.length) * 100) : 0,
+          remotePercentage: totalJobs ? Math.round((remoteJobs.length / totalJobs) * 100) : 0,
           newJobsThisWeek: newThisWeek.length,
           avgSalaryMin: jobsWithSalMin.length ? Math.round(jobsWithSalMin.reduce((s, j) => s + j.salaryMin!, 0) / jobsWithSalMin.length) : null,
           avgSalaryMax: jobsWithSalMax.length ? Math.round(jobsWithSalMax.reduce((s, j) => s + j.salaryMax!, 0) / jobsWithSalMax.length) : null,
