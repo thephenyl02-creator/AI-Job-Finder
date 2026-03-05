@@ -25,6 +25,7 @@ import {
   Trash2,
   ChevronDown,
   ChevronUp,
+  ChevronRight,
   ExternalLink,
   Kanban,
 } from "lucide-react";
@@ -261,11 +262,33 @@ export default function Pipeline() {
           ) : applications.length === 0 ? (
             <Card data-testid="card-pipeline-empty">
               <CardContent className="p-8 text-center">
-                <Kanban className="h-10 w-10 text-muted-foreground/40 mx-auto mb-3" />
+                <Kanban className="h-10 w-10 text-muted-foreground/40 mx-auto mb-4" />
                 <h3 className="text-base font-medium text-foreground mb-1">No applications tracked yet</h3>
-                <p className="text-sm text-muted-foreground mb-4 max-w-sm mx-auto">
+                <p className="text-sm text-muted-foreground mb-6 max-w-sm mx-auto">
                   Apply to jobs and they'll appear here automatically. You can also manually track applications from any job detail page.
                 </p>
+                <div className="flex items-center justify-center gap-3 sm:gap-4 mb-6 max-w-md mx-auto" data-testid="section-pipeline-steps">
+                  <div className="flex flex-col items-center gap-1.5 flex-1">
+                    <div className="p-2.5 rounded-md bg-blue-500/10 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400">
+                      <Briefcase className="h-5 w-5" />
+                    </div>
+                    <p className="text-xs font-medium text-foreground">Apply to a job</p>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground/50 shrink-0" />
+                  <div className="flex flex-col items-center gap-1.5 flex-1">
+                    <div className="p-2.5 rounded-md bg-amber-500/10 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400">
+                      <Kanban className="h-5 w-5" />
+                    </div>
+                    <p className="text-xs font-medium text-foreground">It appears here</p>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground/50 shrink-0" />
+                  <div className="flex flex-col items-center gap-1.5 flex-1">
+                    <div className="p-2.5 rounded-md bg-green-500/10 dark:bg-green-500/20 text-green-600 dark:text-green-400">
+                      <Award className="h-5 w-5" />
+                    </div>
+                    <p className="text-xs font-medium text-foreground">Track progress</p>
+                  </div>
+                </div>
                 <Link href="/jobs">
                   <Button data-testid="button-browse-jobs">Browse Jobs</Button>
                 </Link>

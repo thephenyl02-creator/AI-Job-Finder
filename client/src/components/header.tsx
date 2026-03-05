@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { Container } from "@/components/container";
 import {
   DropdownMenu,
@@ -14,12 +16,22 @@ import {
   DropdownMenuGroup,
 } from "@/components/ui/dropdown-menu";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
+import {
   LogOut, BarChart3, Bell, FileText, Globe,
-  Bookmark, LayoutDashboard, Menu, Calendar, Settings, Activity, Search, CreditCard, Brain, TrendingUp, X, Kanban,
+  Bookmark, LayoutDashboard, Menu, Calendar, Settings, Activity, Search, CreditCard, Brain, TrendingUp, X, Kanban, Mail,
 } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { Link, useLocation } from "wouter";
 import { NotificationBell } from "@/components/notification-bell";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import {
   Sheet,
   SheetContent,
@@ -30,12 +42,84 @@ import {
   SheetDescription,
 } from "@/components/ui/sheet";
 
-function NavLink({ href, icon: Icon, label, isActive, testId }: {
+interface EmailPrefs {
+  weeklyDigest: boolean;
+  alertEmails: boolean;
+}
+
+function EmailPreferencesDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+  const { toast } = useToast();
+  const { user } = useAuth();
+
+  const { data: emailPrefs } = useQuery<EmailPrefs>({
+    queryKey: ["/api/user/email-preferences"],
+    enabled: open,
+  });
+
+  const mutation = useMutation({
+    mutationFn: async (prefs: Partial<EmailPrefs>) => {
+      const res = await apiRequest("PATCH", "/api/user/email-preferences", prefs);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/user/email-preferences"] });
+      toast({ title: "Preferences updated" });
+    },
+    onError: () => {
+      toast({ title: "Failed to update preferences", variant: "destructive" });
+    },
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Email Preferences</DialogTitle>
+          <DialogDescription>
+            Manage your email notification settings
+          </DialogDescription>
+        </DialogHeader>
+        {user?.email && (
+          <p className="text-xs text-muted-foreground truncate" data-testid="text-email-address">{user.email}</p>
+        )}
+        <div className="space-y-4 pt-2">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm text-foreground">Weekly Digest</p>
+              <p className="text-xs text-muted-foreground">Top new roles + market pulse every Sunday</p>
+            </div>
+            <Switch
+              checked={emailPrefs?.weeklyDigest ?? true}
+              onCheckedChange={(checked) => mutation.mutate({ weeklyDigest: checked })}
+              disabled={mutation.isPending}
+              data-testid="switch-weekly-digest"
+            />
+          </div>
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm text-foreground">Job Alert Emails</p>
+              <p className="text-xs text-muted-foreground">Get emailed when alerts match new jobs</p>
+            </div>
+            <Switch
+              checked={emailPrefs?.alertEmails ?? true}
+              onCheckedChange={(checked) => mutation.mutate({ alertEmails: checked })}
+              disabled={mutation.isPending}
+              data-testid="switch-alert-emails"
+            />
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function NavLink({ href, icon: Icon, label, isActive, testId, badgeCount }: {
   href: string;
   icon: typeof Search;
   label: string;
   isActive: boolean;
   testId: string;
+  badgeCount?: number;
 }) {
   return (
     <Link href={href}>
@@ -47,10 +131,25 @@ function NavLink({ href, icon: Icon, label, isActive, testId }: {
       >
         <Icon className="h-3.5 w-3.5 mr-1" />
         {label}
-        {isActive && <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-primary rounded-full" />}
+        {badgeCount != null && badgeCount > 0 && (
+          <Badge variant="secondary" className="ml-1 px-1.5 py-0 text-[10px] leading-4 no-default-active-elevate" data-testid="badge-pipeline-count">
+            {badgeCount}
+          </Badge>
+        )}
+        {isActive && <span className="absolute bottom-0 left-2 right-2 h-[2px] bg-primary rounded-full" />}
       </Button>
     </Link>
   );
+}
+
+function usePipelineCount(isAuthenticated: boolean) {
+  const { data } = useQuery<{ id: number; status: string }[]>({
+    queryKey: ["/api/applications"],
+    enabled: isAuthenticated,
+    staleTime: 60_000,
+  });
+  if (!data) return 0;
+  return data.filter((a) => a.status !== "rejected").length;
 }
 
 const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
@@ -88,6 +187,8 @@ export function Header() {
   const { user, isAuthenticated, isPro, isAdmin, logout } = useAuth();
   const [location] = useLocation();
   const nudge = useProNudgeBanner(isAuthenticated, isPro, isAdmin);
+  const pipelineCount = usePipelineCount(isAuthenticated);
+  const [emailPrefsOpen, setEmailPrefsOpen] = useState(false);
 
   const getInitials = () => {
     if (user?.firstName && user?.lastName) {
@@ -123,7 +224,7 @@ export function Header() {
               <NavLink href="/dashboard" icon={LayoutDashboard} label="Dashboard" isActive={isDashboardActive} testId="link-dashboard" />
               <NavLink href="/jobs" icon={Search} label="Jobs" isActive={isJobsActive} testId="link-jobs" />
               <NavLink href="/diagnostic" icon={Brain} label="Diagnostic" isActive={isDiagnosticActive} testId="link-diagnostic" />
-              <NavLink href="/pipeline" icon={Kanban} label="Pipeline" isActive={isPipelineActive} testId="link-pipeline" />
+              <NavLink href="/pipeline" icon={Kanban} label="Pipeline" isActive={isPipelineActive} testId="link-pipeline" badgeCount={pipelineCount} />
               <NavLink href="/resumes" icon={FileText} label="Resumes" isActive={isResumesActive} testId="link-resumes" />
               <NavLink href="/market-intelligence" icon={TrendingUp} label="Trends" isActive={isActive("/market-intelligence")} testId="link-trends" />
             </div>
@@ -175,7 +276,7 @@ export function Header() {
                       <MobileNavItem href="/dashboard" icon={LayoutDashboard} label="Dashboard" active={isDashboardActive} testId="link-dashboard-mobile" />
                       <MobileNavItem href="/jobs" icon={Search} label="Jobs" active={isJobsActive} testId="link-jobs-mobile" />
                       <MobileNavItem href="/diagnostic" icon={Brain} label="Diagnostic" active={isDiagnosticActive} testId="link-diagnostic-mobile" />
-                      <MobileNavItem href="/pipeline" icon={Kanban} label="Pipeline" active={isPipelineActive} testId="link-pipeline-mobile" />
+                      <MobileNavItem href="/pipeline" icon={Kanban} label="Pipeline" active={isPipelineActive} testId="link-pipeline-mobile" badgeCount={pipelineCount} />
                       <MobileNavItem href="/resumes" icon={FileText} label="Resumes" active={isResumesActive} testId="link-resumes-mobile" />
                       <MobileNavItem href="/market-intelligence" icon={TrendingUp} label="Trends" active={isActive("/market-intelligence")} testId="link-trends-mobile" />
                       <div className="h-px bg-border/40 my-2" />
@@ -186,6 +287,19 @@ export function Header() {
                       <MobileNavItem href="/alerts" icon={Bell} label="Alerts" active={isActive("/alerts")} testId="link-alerts-mobile" />
                       <div className="h-px bg-border/40 my-2" />
                       <MobileNavItem href="/pricing" icon={CreditCard} label="Pricing" active={isActive("/pricing")} testId="link-pricing-mobile" />
+                      <div className="h-px bg-border/40 my-2" />
+                      <SheetClose asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="w-full justify-start gap-2 min-h-[44px] text-muted-foreground"
+                          onClick={() => setEmailPrefsOpen(true)}
+                          data-testid="button-email-preferences-mobile"
+                        >
+                          <Mail className="h-4 w-4" />
+                          Email Preferences
+                        </Button>
+                      </SheetClose>
                       {isAdmin && (
                         <MobileNavItem href="/admin" icon={Settings} label="Admin" active={isActive("/admin")} testId="link-admin-mobile" />
                       )}
@@ -266,6 +380,14 @@ export function Header() {
                   </DropdownMenuGroup>
                   <DropdownMenuSeparator />
                   <DropdownMenuGroup>
+                    <DropdownMenuItem
+                      className="cursor-pointer"
+                      data-testid="button-email-preferences"
+                      onClick={() => setEmailPrefsOpen(true)}
+                    >
+                      <Mail className="mr-2 h-4 w-4" />
+                      <span>Email Preferences</span>
+                    </DropdownMenuItem>
                     <DropdownMenuItem asChild>
                       <Link href="/pricing" className="cursor-pointer" data-testid="link-pricing">
                         <CreditCard className="mr-2 h-4 w-4" />
@@ -355,16 +477,18 @@ export function Header() {
         </div>
       </div>
     )}
+    {isAuthenticated && <EmailPreferencesDialog open={emailPrefsOpen} onOpenChange={setEmailPrefsOpen} />}
     </>
   );
 }
 
-function MobileNavItem({ href, icon: Icon, label, active, testId }: {
+function MobileNavItem({ href, icon: Icon, label, active, testId, badgeCount }: {
   href: string;
   icon: typeof Search;
   label: string;
   active: boolean;
   testId: string;
+  badgeCount?: number;
 }) {
   return (
     <SheetClose asChild>
@@ -377,6 +501,11 @@ function MobileNavItem({ href, icon: Icon, label, active, testId }: {
         >
           <Icon className="h-4 w-4" />
           {label}
+          {badgeCount != null && badgeCount > 0 && (
+            <Badge variant="secondary" className="ml-auto px-1.5 py-0 text-[10px] leading-4 no-default-active-elevate" data-testid="badge-pipeline-count-mobile">
+              {badgeCount}
+            </Badge>
+          )}
         </Button>
       </Link>
     </SheetClose>

@@ -817,7 +817,7 @@ export default function Jobs() {
 
             <div data-testid="card-smart-search" className="max-w-3xl mx-auto">
               <div
-                className="rounded-xl border border-foreground/15 bg-muted/20 px-3 py-3 sm:px-6 sm:py-5 transition-colors focus-within:border-primary/40 focus-within:bg-muted/30 card-elev-static cursor-text"
+                className="rounded-lg border border-foreground/15 bg-muted/20 px-3 py-3 sm:px-6 sm:py-5 transition-colors focus-within:border-primary/40 focus-within:bg-muted/30 card-elev-static cursor-text"
                 onClick={(e) => {
                   if (!(e.target as HTMLElement).closest('button, a, [role="button"]')) {
                     searchInputRef.current?.focus();
@@ -1914,7 +1914,7 @@ export default function Jobs() {
                               </Badge>
                             );
                           }
-                          if (fitScores[job.id]?.fitScore != null) {
+                          if (fitScores[job.id]?.fitScore != null && !matchData) {
                             badgeElements.push(
                               <Badge
                                 key="fit"
@@ -1959,10 +1959,30 @@ export default function Jobs() {
                               </Badge>
                             );
                           }
-                          const MOBILE_BADGE_LIMIT = 4;
+                          const sig = socialSignals[job.id];
+                          const isPopular = sig && sig.viewCount > 20;
+                          const showViews = sig && sig.viewCount > 5;
+                          const showSaved = sig && sig.savedCount > 0;
+                          const hasSocialSignals = isPopular || showViews || showSaved;
+
+                          if (isPopular) {
+                            badgeElements.push(
+                              <Badge
+                                key="popular"
+                                variant="secondary"
+                                className="text-[10px] gap-0.5 text-orange-600 dark:text-orange-400"
+                                data-testid={`badge-popular-${job.id}`}
+                              >
+                                <Flame className="h-2.5 w-2.5" />
+                                Popular
+                              </Badge>
+                            );
+                          }
+
+                          const MOBILE_BADGE_LIMIT = hasSocialSignals ? 3 : 4;
                           const overflowCount = badgeElements.length > MOBILE_BADGE_LIMIT ? badgeElements.length - MOBILE_BADGE_LIMIT : 0;
                           return (
-                            <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                            <div className="flex flex-wrap items-center gap-1.5 mt-1.5" data-testid={`social-signals-${job.id}`}>
                               {badgeElements.map((el, i) => (
                                 <span key={i} className={i >= MOBILE_BADGE_LIMIT ? "hidden sm:inline-flex" : ""}>
                                   {el}
@@ -1973,32 +1993,14 @@ export default function Jobs() {
                                   +{overflowCount} more
                                 </span>
                               )}
-                            </div>
-                          );
-                        })()}
-                        {(() => {
-                          const sig = socialSignals[job.id];
-                          if (!sig) return null;
-                          const showViews = sig.viewCount > 5;
-                          const showSaved = sig.savedCount > 0;
-                          const isPopular = sig.viewCount > 20;
-                          if (!showViews && !showSaved && !isPopular) return null;
-                          return (
-                            <div className="flex items-center gap-2.5 mt-1.5" data-testid={`social-signals-${job.id}`}>
-                              {isPopular && (
-                                <span className="inline-flex items-center gap-0.5 text-[10px] font-medium text-orange-600 dark:text-orange-400" data-testid={`badge-popular-${job.id}`}>
-                                  <Flame className="h-3 w-3" />
-                                  Popular
-                                </span>
-                              )}
                               {showViews && (
-                                <span className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground" data-testid={`signal-views-${job.id}`}>
+                                <span className="hidden sm:inline-flex items-center gap-0.5 text-[10px] text-muted-foreground" data-testid={`signal-views-${job.id}`}>
                                   <Eye className="h-3 w-3" />
                                   {sig.viewCount} viewed
                                 </span>
                               )}
                               {showSaved && (
-                                <span className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground" data-testid={`signal-saved-${job.id}`}>
+                                <span className="hidden sm:inline-flex items-center gap-0.5 text-[10px] text-muted-foreground" data-testid={`signal-saved-${job.id}`}>
                                   <BookmarkIcon className="h-3 w-3" />
                                   {sig.savedCount} saved
                                 </span>

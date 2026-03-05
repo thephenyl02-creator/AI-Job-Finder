@@ -86,7 +86,7 @@ Legal Tech Careers is a career intelligence platform designed for legal professi
 
 ### Core Features
 - **Landing Page**: Highlights career intelligence and "Check Your Fit" CTA.
-- **Career Command Center Dashboard**: Personalized home page for authenticated users.
+- **Career Command Center Dashboard**: Personalized home page for authenticated users. Sidebar consolidated to 2 cards: "At a Glance" (saved jobs, alerts, quick links) and "Pipeline" mini-widget. Consistent `mb-6 sm:mb-8` spacing rhythm. Pipeline count badge in header nav.
 - **Smart Search**: AI-powered natural language job search.
 - **Resume Management & Editing**: Upload, parse, manage multiple resumes, AI editor for tailoring and ATS scoring.
 - **Job Matching**: AI-driven resume-job comparison, fit scores, gap analysis.
@@ -109,7 +109,7 @@ Legal Tech Careers is a career intelligence platform designed for legal professi
 - **Application Pipeline Tracker**: Full pipeline page at `/pipeline` with column-based layout (Applied/Interviewing/Offer/Rejected). Auto-tracks applications from apply clicks. Status changes via dropdown, inline notes, delete with confirmation. Pipeline link in main navigation.
 - **Peer Activity Signals**: Job cards show view counts, saved counts, and "Popular" badges. Data from `GET /api/jobs/social-signals` endpoint with 30-min cache. Authenticated only.
 - **Inline Fit Scores Enhancement**: Batch-loads fit scores for visible jobs on the jobs page via `GET /api/user/fit-scores?jobIds=...` (capped at 25). Merges with cached scores for seamless display.
-- **Email Digest System**: `email_preferences` table with weekly digest + alert email toggles. Branded HTML email templates in `server/lib/email-service.ts`. Weekly digest worker (`server/lib/email-digest.ts`) runs Sundays 6pm UTC. Alert emails sent alongside in-app notifications. Console-log preview in dev, real SMTP when SMTP_HOST configured. Unsubscribe via token-based URL. Preferences UI on dashboard sidebar.
+- **Email Digest System**: `email_preferences` table with weekly digest + alert email toggles. Branded HTML email templates in `server/lib/email-service.ts`. Weekly digest worker (`server/lib/email-digest.ts`) runs Sundays 6pm UTC. Alert emails sent alongside in-app notifications. Console-log preview in dev, real SMTP when SMTP_HOST configured. Unsubscribe via token-based URL. Preferences UI in user dropdown dialog (header), not on dashboard sidebar.
 
 ### Data Moat & API Security
 - **Rate Limiting**: Tiered limits for unauthenticated and authenticated users.

@@ -13,6 +13,12 @@ export function Footer() {
           <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-xs text-muted-foreground">
             <span>Legal Tech Careers</span>
             <span className="hidden sm:inline">&middot;</span>
+            <Link href="/pipeline" className="hover:text-foreground transition-colors" data-testid="footer-link-pipeline">
+              Pipeline
+            </Link>
+            <Link href="/opportunity-map" className="hover:text-foreground transition-colors" data-testid="footer-link-map">
+              Map
+            </Link>
             <Link href="/trust" className="hover:text-foreground transition-colors" data-testid="footer-link-trust">
               How We Curate
             </Link>

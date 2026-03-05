@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { usePageTitle } from "@/hooks/use-page-title";
 import { useActivityTracker } from "@/hooks/use-activity-tracker";
 import { useSubscription } from "@/hooks/use-subscription";
@@ -18,11 +18,8 @@ import {
   Building2, ChevronRight, Briefcase,
   Brain, Target, Wifi, Clock, CheckCircle,
   Upload, Search, Map, DollarSign, Sparkles,
-  RefreshCw, Zap, Flame, BarChart3, Globe, Eye, Mail,
+  RefreshCw, Zap, Flame, BarChart3, Globe, Eye, Kanban,
 } from "lucide-react";
-import { Switch } from "@/components/ui/switch";
-import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
 import { ProGate } from "@/components/pro-gate";
 
 interface RecentlyViewedJob {
@@ -166,23 +163,6 @@ function getStreakLabel(streak: number): string {
   return "Start Today";
 }
 
-function getEngagementColor(level: string | null | undefined): string {
-  switch (level) {
-    case "Power User": return "text-green-600 dark:text-green-400";
-    case "Active": return "text-blue-600 dark:text-blue-400";
-    case "Casual": return "text-amber-600 dark:text-amber-400";
-    default: return "text-muted-foreground";
-  }
-}
-
-function getEngagementBg(level: string | null | undefined): string {
-  switch (level) {
-    case "Power User": return "bg-green-500/10 text-green-700 dark:text-green-300";
-    case "Active": return "bg-blue-500/10 text-blue-700 dark:text-blue-300";
-    case "Casual": return "bg-amber-500/10 text-amber-700 dark:text-amber-300";
-    default: return "bg-muted/40 text-muted-foreground";
-  }
-}
 
 const heroCardConfigs = [
   { bg: "bg-primary/[0.08] dark:bg-primary/[0.15]", accent: "bg-primary", iconBg: "bg-primary/15 text-primary" },
@@ -223,7 +203,7 @@ function DashboardSkeleton() {
             <Skeleton className="h-8 w-56 mb-2" />
             <Skeleton className="h-5 w-80" />
           </div>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5 mb-8 sm:mb-10">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5 mb-6 sm:mb-8">
             {[...Array(4)].map((_, i) => (
               <Card key={i} className="card-elev-static"><CardContent className="p-3.5 sm:p-6"><Skeleton className="h-28 w-full" /></CardContent></Card>
             ))}
@@ -243,36 +223,21 @@ function DashboardSkeleton() {
   );
 }
 
-interface EmailPrefs {
-  weeklyDigest: boolean;
-  alertEmails: boolean;
+interface PipelineStats {
+  applied: number;
+  interviewing: number;
+  offer: number;
+  rejected: number;
 }
 
-function EmailPreferencesCard() {
-  const { toast } = useToast();
-  const { user } = useAuth();
-
-  const { data: emailPrefs, isLoading } = useQuery<EmailPrefs>({
-    queryKey: ["/api/user/email-preferences"],
-  });
-
-  const mutation = useMutation({
-    mutationFn: async (prefs: Partial<EmailPrefs>) => {
-      const res = await apiRequest("PATCH", "/api/user/email-preferences", prefs);
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/user/email-preferences"] });
-      toast({ title: "Preferences updated" });
-    },
-    onError: () => {
-      toast({ title: "Failed to update preferences", variant: "destructive" });
-    },
+function PipelineMiniWidget() {
+  const { data: stats, isLoading } = useQuery<PipelineStats>({
+    queryKey: ["/api/applications/stats"],
   });
 
   if (isLoading) {
     return (
-      <Card className="card-elev-static" data-testid="card-email-preferences">
+      <Card className="card-elev-static" data-testid="card-pipeline-sidebar">
         <CardContent className="p-4 sm:p-5">
           <Skeleton className="h-20 w-full" />
         </CardContent>
@@ -280,46 +245,47 @@ function EmailPreferencesCard() {
     );
   }
 
+  const activeCount = (stats?.applied ?? 0) + (stats?.interviewing ?? 0) + (stats?.offer ?? 0);
+  const hasApplications = activeCount > 0 || (stats?.rejected ?? 0) > 0;
+
   return (
-    <Card className="card-elev-static" data-testid="card-email-preferences">
+    <Card className="card-elev-static" data-testid="card-pipeline-sidebar">
       <CardContent className="p-4 sm:p-5">
         <div className="flex items-center gap-2 mb-4">
-          <div className="p-1.5 rounded-md bg-chart-4/10 text-chart-4">
-            <Mail className="h-3.5 w-3.5" />
+          <div className="p-1.5 rounded-md bg-chart-3/10 text-chart-3">
+            <Kanban className="h-3.5 w-3.5" />
           </div>
-          <p className="text-sm font-semibold text-foreground">Email Notifications</p>
+          <p className="text-sm font-semibold text-foreground">Pipeline</p>
         </div>
-
-        {user?.email && (
-          <p className="text-xs text-muted-foreground mb-3 truncate" data-testid="text-email-address">{user.email}</p>
+        {hasApplications ? (
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground" data-testid="text-pipeline-summary">
+              {[
+                stats?.applied ? `${stats.applied} Applied` : null,
+                stats?.interviewing ? `${stats.interviewing} Interviewing` : null,
+                stats?.offer ? `${stats.offer} Offer` : null,
+              ].filter(Boolean).join(" \u00B7 ") || "No active applications"}
+            </p>
+            <Link href="/pipeline">
+              <Button variant="outline" size="sm" className="w-full gap-1" data-testid="button-view-pipeline">
+                View Pipeline
+                <ArrowRight className="h-3 w-3" />
+              </Button>
+            </Link>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <p className="text-xs text-muted-foreground" data-testid="text-pipeline-empty">
+              Apply to jobs and track your progress here
+            </p>
+            <Link href="/jobs">
+              <Button variant="outline" size="sm" className="w-full gap-1" data-testid="button-browse-to-apply">
+                Browse Jobs
+                <ArrowRight className="h-3 w-3" />
+              </Button>
+            </Link>
+          </div>
         )}
-
-        <div className="space-y-3">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-sm text-foreground">Weekly Digest</p>
-              <p className="text-xs text-muted-foreground">Top new roles + market pulse every Sunday</p>
-            </div>
-            <Switch
-              checked={emailPrefs?.weeklyDigest ?? true}
-              onCheckedChange={(checked) => mutation.mutate({ weeklyDigest: checked })}
-              disabled={mutation.isPending}
-              data-testid="switch-weekly-digest"
-            />
-          </div>
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-sm text-foreground">Job Alert Emails</p>
-              <p className="text-xs text-muted-foreground">Get emailed when alerts match new jobs</p>
-            </div>
-            <Switch
-              checked={emailPrefs?.alertEmails ?? true}
-              onCheckedChange={(checked) => mutation.mutate({ alertEmails: checked })}
-              disabled={mutation.isPending}
-              data-testid="switch-alert-emails"
-            />
-          </div>
-        </div>
       </CardContent>
     </Card>
   );
@@ -446,7 +412,10 @@ export default function DashboardPage() {
                       )}
                     </p>
                   ) : (
-                    <p data-testid="text-briefing-quiet">No new matches today — market is quiet</p>
+                    <p data-testid="text-briefing-quiet">
+                      No new matches today — market is quiet.{" "}
+                      <Link href="/jobs" className="text-primary hover:underline font-medium" data-testid="link-explore-all-roles">Explore all roles</Link>
+                    </p>
                   )}
                   {dashData.briefing.returningCompany && (
                     <p data-testid="text-briefing-returning">
@@ -478,7 +447,7 @@ export default function DashboardPage() {
             </Card>
           )}
 
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5 mb-8 sm:mb-10">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5 mb-6 sm:mb-8">
             <Card className={`card-elev-prominent ${heroCardConfigs[0].bg} overflow-visible`} data-testid="card-hero-readiness">
               <CardContent className="p-3.5 sm:p-6">
                 <div className="flex items-center gap-1.5 sm:gap-2 mb-2 sm:mb-3 flex-wrap">
@@ -588,7 +557,7 @@ export default function DashboardPage() {
             )}
           </div>
 
-          <div className="mb-8 sm:mb-10" data-testid="section-recently-viewed">
+          <div className="mb-6 sm:mb-8" data-testid="section-recently-viewed">
             <div className="flex items-center justify-between gap-2 mb-4 flex-wrap">
               <div className="flex items-center gap-2">
                 <Eye className="h-4 w-4 text-muted-foreground" />
@@ -637,12 +606,29 @@ export default function DashboardPage() {
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground" data-testid="text-no-recently-viewed">No recently viewed jobs yet. Start exploring to see your history here.</p>
+              <Card className="card-elev-static" data-testid="card-no-recently-viewed">
+                <CardContent className="p-5 flex flex-col items-center text-center gap-3">
+                  <div className="p-3 rounded-md bg-muted/40">
+                    <Eye className="h-6 w-6 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-foreground mb-1">No recently viewed jobs yet</p>
+                    <p className="text-xs text-muted-foreground">Start exploring to see your history here.</p>
+                  </div>
+                  <Link href="/jobs">
+                    <Button variant="outline" size="sm" className="gap-1.5" data-testid="button-browse-jobs-empty">
+                      <Search className="h-3 w-3" />
+                      Browse Jobs
+                      <ArrowRight className="h-3 w-3" />
+                    </Button>
+                  </Link>
+                </CardContent>
+              </Card>
             )}
           </div>
 
           {!hasDiagnostic && (
-            <Card className="mb-8 sm:mb-10 border-dashed card-elev-static" data-testid="card-diagnostic-cta">
+            <Card className="mb-6 sm:mb-8 border-dashed card-elev-static" data-testid="card-diagnostic-cta">
               <CardContent className="p-5 sm:p-9">
                 <div className="flex flex-col sm:flex-row items-center gap-5 text-center sm:text-left">
                   <div className="p-4 rounded-md bg-primary/10 text-primary shrink-0">
@@ -666,7 +652,7 @@ export default function DashboardPage() {
           )}
 
           {!isPro && recentJobsData?.jobs && recentJobsData.jobs.length > 0 && (
-            <div className="mb-8 sm:mb-10" data-testid="section-new-this-week">
+            <div className="mb-6 sm:mb-8" data-testid="section-new-this-week">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                   <Briefcase className="h-4 w-4 text-primary" />
@@ -711,7 +697,7 @@ export default function DashboardPage() {
                 "Top hiring companies & trending skills",
               ]}
             >
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8 mb-8 sm:mb-10">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8 mb-6 sm:mb-8">
                 <div className="lg:col-span-2 space-y-6 sm:space-y-8">
                   <Card className="card-elev-static">
                     <CardContent className="p-4 sm:p-6">
@@ -750,7 +736,7 @@ export default function DashboardPage() {
           )}
 
           {isPro && hasDiagnostic && (
-            <Card className="mb-8 sm:mb-10 card-elev-prominent" data-testid="card-career-snapshot">
+            <Card className="mb-6 sm:mb-8 card-elev-prominent" data-testid="card-career-snapshot">
               <CardContent className="p-4 sm:p-7">
                 <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5">
                   <div className="w-1 self-stretch rounded-full bg-gradient-to-b from-primary to-chart-3 hidden sm:block shrink-0" />
@@ -812,7 +798,7 @@ export default function DashboardPage() {
           )}
 
           {isPro && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8 mb-8 sm:mb-10">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8 mb-6 sm:mb-8">
             <div className="lg:col-span-2 space-y-6 sm:space-y-8">
               <Card className="card-elev-static" data-testid="card-this-week">
                 <CardHeader className="pb-3">
@@ -1155,130 +1141,85 @@ export default function DashboardPage() {
             </div>
 
             <div className="space-y-4 sm:space-y-6">
-              <Card className="card-elev-static" data-testid="card-saved-jobs-sidebar">
+              <Card className="card-elev-static" data-testid="card-at-a-glance">
                 <CardContent className="p-4 sm:p-5">
-                  <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
-                    <div className="flex items-center gap-2">
-                      <div className="p-1.5 rounded-md bg-chart-4/10 text-chart-4">
-                        <Bookmark className="h-3.5 w-3.5" />
-                      </div>
-                      <p className="text-sm font-semibold text-foreground">Saved Jobs</p>
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="p-1.5 rounded-md bg-primary/10 text-primary">
+                      <Zap className="h-3.5 w-3.5" />
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="secondary">{readiness.savedJobsCount}</Badge>
-                      {readiness.expiringSoonCount > 0 && (
-                        <Badge variant="destructive" className="text-[10px]">
-                          {readiness.expiringSoonCount} expiring
-                        </Badge>
-                      )}
-                    </div>
+                    <p className="text-sm font-semibold text-foreground">At a Glance</p>
                   </div>
-                  {readiness.savedJobsCount > 0 && readiness.expiringSoonCount > 0 && (
-                    <div className="mb-3 p-2.5 rounded-md bg-destructive/10 dark:bg-destructive/20">
-                      <p className="text-xs text-destructive-foreground dark:text-red-300 flex items-center gap-1.5">
-                        <Clock className="h-3 w-3" />
-                        {readiness.expiringSoonCount} job{readiness.expiringSoonCount > 1 ? "s" : ""} expiring soon
-                      </p>
-                    </div>
-                  )}
-                  <Link href="/saved-jobs">
-                    <Button variant="outline" size="sm" className="w-full gap-1" data-testid="button-view-saved-jobs">
-                      View Saved Jobs
-                      <ArrowRight className="h-3 w-3" />
-                    </Button>
-                  </Link>
-                </CardContent>
-              </Card>
-
-              <Card className="card-elev-static" data-testid="card-alerts-sidebar">
-                <CardContent className="p-4 sm:p-5">
-                  <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
-                    <div className="flex items-center gap-2">
-                      <div className="p-1.5 rounded-md bg-chart-2/10 text-chart-2">
-                        <Bell className="h-3.5 w-3.5" />
-                      </div>
-                      <p className="text-sm font-semibold text-foreground">Active Alerts</p>
-                    </div>
-                    <Badge variant={readiness.activeAlertsCount > 0 ? "secondary" : "outline"}>
-                      {readiness.activeAlertsCount}
-                    </Badge>
-                  </div>
-                  {readiness.activeAlertsCount === 0 && (
-                    <p className="text-xs text-muted-foreground mb-3">Set up alerts to get notified about new roles</p>
-                  )}
-                  <Link href="/alerts">
-                    <Button variant="outline" size="sm" className="w-full gap-1" data-testid="button-manage-alerts">
-                      {readiness.activeAlertsCount > 0 ? "Manage Alerts" : "Create Alert"}
-                      <ArrowRight className="h-3 w-3" />
-                    </Button>
-                  </Link>
-                </CardContent>
-              </Card>
-
-              <Card className="card-elev-static" data-testid="card-engagement-sidebar">
-                <CardContent className="p-4 sm:p-5">
-                  <div className="flex items-center justify-between gap-2 mb-4">
-                    <div className="flex items-center gap-2">
-                      <div className="p-1.5 rounded-md bg-chart-3/10 text-chart-3">
-                        <Sparkles className="h-3.5 w-3.5" />
-                      </div>
-                      <p className="text-sm font-semibold text-foreground">Engagement</p>
-                    </div>
-                    <Badge className={`text-[10px] font-semibold no-default-hover-elevate no-default-active-elevate ${getEngagementBg(dashData.persona?.engagementLevel)}`}>
-                      {dashData.persona?.engagementLevel || "New"}
-                    </Badge>
-                  </div>
-                  <div className="space-y-3">
-                    <div>
-                      <div className="flex items-center justify-between gap-2 mb-1">
-                        <span className="text-xs text-muted-foreground">Jobs viewed</span>
-                        <span className="text-xs font-semibold text-foreground tabular-nums">{activityMetrics.period.jobViews}</span>
-                      </div>
-                      <ProgressBar value={activityMetrics.period.jobViews} max={Math.max(activityMetrics.period.jobViews, 20)} />
-                    </div>
-                    <div>
-                      <div className="flex items-center justify-between gap-2 mb-1">
-                        <span className="text-xs text-muted-foreground">Searches</span>
-                        <span className="text-xs font-semibold text-foreground tabular-nums">{activityMetrics.period.searches}</span>
-                      </div>
-                      <ProgressBar value={activityMetrics.period.searches} max={Math.max(activityMetrics.period.searches, 10)} />
-                    </div>
-                    <div>
-                      <div className="flex items-center justify-between gap-2 mb-1">
-                        <span className="text-xs text-muted-foreground">Apply clicks</span>
-                        <span className="text-xs font-semibold text-foreground tabular-nums">{activityMetrics.period.applyClicks}</span>
-                      </div>
-                      <ProgressBar value={activityMetrics.period.applyClicks} max={Math.max(activityMetrics.period.applyClicks, 5)} />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="card-elev-static" data-testid="card-quick-links">
-                <CardContent className="p-4 sm:p-5">
-                  <p className="text-sm font-semibold text-foreground mb-3">Quick Links</p>
-                  <div className="space-y-1.5">
-                    {[
-                      { label: "Browse Jobs", href: "/jobs", icon: Search, color: "bg-primary/10 text-primary" },
-                      { label: "Run Diagnostic", href: "/diagnostic", icon: Brain, color: "bg-chart-3/10 text-chart-3" },
-                      { label: "My Resumes", href: "/resumes", icon: FileText, color: "bg-chart-2/10 text-chart-2" },
-                      { label: "Opportunity Map", href: "/opportunity-map", icon: Map, color: "bg-chart-4/10 text-chart-4" },
-                    ].map((link) => (
-                      <Link href={link.href} key={link.label}>
-                        <div className="flex items-center gap-2.5 p-2.5 rounded-md hover-elevate cursor-pointer" data-testid={`link-quick-${link.label.toLowerCase().replace(/\s+/g, '-')}`}>
-                          <div className={`p-1.5 rounded-md ${link.color}`}>
-                            <link.icon className="h-3.5 w-3.5" />
-                          </div>
-                          <span className="text-sm text-foreground">{link.label}</span>
-                          <ChevronRight className="h-3 w-3 text-muted-foreground ml-auto" />
+                  <div className="space-y-1">
+                    <Link href="/saved-jobs">
+                      <div className="flex items-center gap-2.5 p-2.5 rounded-md hover-elevate cursor-pointer" data-testid="link-glance-saved-jobs">
+                        <div className="p-1.5 rounded-md bg-chart-4/10 text-chart-4">
+                          <Bookmark className="h-3.5 w-3.5" />
                         </div>
-                      </Link>
-                    ))}
+                        <span className="text-sm text-foreground flex-1">Saved Jobs</span>
+                        <div className="flex items-center gap-1.5">
+                          <Badge variant="secondary">{readiness.savedJobsCount}</Badge>
+                          {readiness.expiringSoonCount > 0 && (
+                            <Badge variant="destructive" className="text-[10px]">
+                              {readiness.expiringSoonCount} expiring
+                            </Badge>
+                          )}
+                        </div>
+                        <ChevronRight className="h-3 w-3 text-muted-foreground" />
+                      </div>
+                    </Link>
+                    <Link href="/alerts">
+                      <div className="flex items-center gap-2.5 p-2.5 rounded-md hover-elevate cursor-pointer" data-testid="link-glance-alerts">
+                        <div className="p-1.5 rounded-md bg-chart-2/10 text-chart-2">
+                          <Bell className="h-3.5 w-3.5" />
+                        </div>
+                        <span className="text-sm text-foreground flex-1">Active Alerts</span>
+                        <Badge variant={readiness.activeAlertsCount > 0 ? "secondary" : "outline"}>
+                          {readiness.activeAlertsCount}
+                        </Badge>
+                        <ChevronRight className="h-3 w-3 text-muted-foreground" />
+                      </div>
+                    </Link>
+                    <Link href="/jobs">
+                      <div className="flex items-center gap-2.5 p-2.5 rounded-md hover-elevate cursor-pointer" data-testid="link-glance-browse-jobs">
+                        <div className="p-1.5 rounded-md bg-primary/10 text-primary">
+                          <Search className="h-3.5 w-3.5" />
+                        </div>
+                        <span className="text-sm text-foreground flex-1">Browse Jobs</span>
+                        <ChevronRight className="h-3 w-3 text-muted-foreground" />
+                      </div>
+                    </Link>
+                    <Link href="/diagnostic">
+                      <div className="flex items-center gap-2.5 p-2.5 rounded-md hover-elevate cursor-pointer" data-testid="link-glance-diagnostic">
+                        <div className="p-1.5 rounded-md bg-chart-3/10 text-chart-3">
+                          <Brain className="h-3.5 w-3.5" />
+                        </div>
+                        <span className="text-sm text-foreground flex-1">Run Diagnostic</span>
+                        <ChevronRight className="h-3 w-3 text-muted-foreground" />
+                      </div>
+                    </Link>
+                    <Link href="/resumes">
+                      <div className="flex items-center gap-2.5 p-2.5 rounded-md hover-elevate cursor-pointer" data-testid="link-glance-resumes">
+                        <div className="p-1.5 rounded-md bg-chart-2/10 text-chart-2">
+                          <FileText className="h-3.5 w-3.5" />
+                        </div>
+                        <span className="text-sm text-foreground flex-1">My Resumes</span>
+                        <ChevronRight className="h-3 w-3 text-muted-foreground" />
+                      </div>
+                    </Link>
+                    <Link href="/opportunity-map">
+                      <div className="flex items-center gap-2.5 p-2.5 rounded-md hover-elevate cursor-pointer" data-testid="link-glance-opportunity-map">
+                        <div className="p-1.5 rounded-md bg-chart-4/10 text-chart-4">
+                          <Map className="h-3.5 w-3.5" />
+                        </div>
+                        <span className="text-sm text-foreground flex-1">Opportunity Map</span>
+                        <ChevronRight className="h-3 w-3 text-muted-foreground" />
+                      </div>
+                    </Link>
                   </div>
                 </CardContent>
               </Card>
 
-              <EmailPreferencesCard />
+              <PipelineMiniWidget />
             </div>
           </div>
           )}
