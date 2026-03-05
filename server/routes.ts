@@ -551,7 +551,8 @@ export async function registerRoutes(
       const publishedPct = Math.round((pipelinePassed.length / total) * 100);
       const rejectedPct = Math.round((rejected.length / total) * 100);
       const inReviewPct = Math.round((inReview.length / total) * 100);
-      const canonicalCount = existingCanonical ? existingCanonical.totalJobs : activeInventory.length;
+      const displayStatsCount = getDisplayStats();
+      const canonicalCount = displayStatsCount ? displayStatsCount.totalJobs : (existingCanonical ? existingCanonical.totalJobs : activeInventory.length);
       const activeLen = canonicalCount || 1;
 
       const result = {
@@ -1247,7 +1248,8 @@ export async function registerRoutes(
         .slice(0, 5)
         .map(([name, count]) => ({ name, count }));
 
-      const densityCanonical = getCanonicalStats();
+      const densityDisplay = getDisplayStats();
+      const densityCanonical = densityDisplay || getCanonicalStats();
       const totalJobsCount = densityCanonical ? densityCanonical.totalJobs : allMatchingJobs.length;
       const countriesCountVal = densityCanonical ? densityCanonical.totalCountries : countriesData.filter(c => c.countryCode !== 'WW' && c.countryCode !== 'UN').length;
       res.json({

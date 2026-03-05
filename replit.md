@@ -48,6 +48,10 @@ Legal Tech Careers is a career intelligence platform designed for legal professi
 ### Analytics & Tracking
 - **User Activity**: Tracks authenticated user actions and anonymous events.
 - **Cache Management**: Extensive caching with specific TTLs and invalidation strategies for various statistical data to ensure performance and data consistency.
+- **Display Stats Persistence**: `displayStats` (24hr TTL, ratchet-up-only logic) is persisted to `platform_settings` DB table, surviving deployments. Loaded on startup via `loadDisplayStatsFromDB()`. All public-facing endpoints (`/api/stats`, `/api/stats/social-proof`, `/api/job-density`, `/api/stats/data-quality`, `/api/jobs`, `/api/market-pulse`) use displayStats for consistent counts.
+- **Publish Guard**: Company-type-aware relevance thresholds (startup≥6, general-tech≥7, law-firm≥8) via `server/lib/quality-thresholds.ts`.
+- **Stuck-Job Recovery**: Retry cap of 3 via `enrichmentRetries` column; permanently failed jobs get `pipelineStatus='failed'`.
+- **Link Validation**: 403 responses inspected for dead-link signals (small body, "not found" phrases); two consecutive soft failures unpublish.
 
 ### Job Curation Pipeline
 - **Process**: A two-layer pipeline (ingestion → AI enrichment → trust gate → published inventory) ensures quality, deduplication, and link validation.

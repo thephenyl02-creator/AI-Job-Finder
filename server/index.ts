@@ -5,6 +5,7 @@ import { createServer } from "http";
 import { startEventLinkValidation } from "./lib/event-link-validator";
 import { startEnrichmentWorker, recoverStuckReadyJobs } from "./workers/enrichment-worker";
 import { startReliabilityWorker } from "./workers/reliability-worker";
+import { loadDisplayStatsFromDB } from "./lib/mi-cache";
 import { runScheduledScrape } from "./lib/scheduled-scraper";
 import { storage } from "./storage";
 import { runMigrations } from 'stripe-replit-sync';
@@ -156,9 +157,16 @@ app.use((req, res, next) => {
         }
       })();
 
-      startEventLinkValidation();
-      startEnrichmentWorker();
-      startReliabilityWorker();
+      loadDisplayStatsFromDB().then(() => {
+        startEventLinkValidation();
+        startEnrichmentWorker();
+        startReliabilityWorker();
+      }).catch(err => {
+        console.error('[DisplayStats] Load failed, starting workers anyway:', err.message);
+        startEventLinkValidation();
+        startEnrichmentWorker();
+        startReliabilityWorker();
+      });
 
       setTimeout(async () => {
         try {
