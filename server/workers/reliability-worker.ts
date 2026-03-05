@@ -37,7 +37,19 @@ function isGenericPortalUrl(url: string): boolean {
   return GENERIC_PORTAL_PATTERNS.some(p => p.test(url));
 }
 
-function checkApplyUrl(url: string, maxRedirects = 5): Promise<{ ok: boolean; finalCode: number; finalUrl: string }> {
+const DEAD_LINK_PHRASES = [
+  /page\s*(not|no longer)\s*found/i,
+  /no longer (available|accepting|active)/i,
+  /position\s*(has been|was)\s*(filled|closed|removed)/i,
+  /this job (has been|was) (removed|closed|filled)/i,
+  /job\s*(not|no longer)\s*(found|available|exists)/i,
+  /listing\s*(has been|was)\s*(removed|expired)/i,
+  /404/,
+  /we couldn'?t find/i,
+  /does not exist/i,
+];
+
+function checkApplyUrl(url: string, maxRedirects = 5): Promise<{ ok: boolean; finalCode: number; finalUrl: string; softFail403: boolean }> {
   return new Promise((resolve) => {
     function followUrl(targetUrl: string, remaining: number) {
       try {
@@ -51,23 +63,38 @@ function checkApplyUrl(url: string, maxRedirects = 5): Promise<{ ok: boolean; fi
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
           },
         }, (r) => {
-          r.resume();
           const code = r.statusCode || 0;
 
           if ((code === 301 || code === 302 || code === 307 || code === 308) && r.headers.location && remaining > 0) {
+            r.resume();
             const nextUrl = new URL(r.headers.location, targetUrl).toString();
             followUrl(nextUrl, remaining - 1);
             return;
           }
 
-          const ok = code >= 200 && code < 400 || code === 403;
-          resolve({ ok, finalCode: code, finalUrl: targetUrl });
+          if (code === 403) {
+            const chunks: Buffer[] = [];
+            r.on('data', (chunk: Buffer) => chunks.push(chunk));
+            r.on('end', () => {
+              const body = Buffer.concat(chunks).toString('utf-8');
+              const isSmallBody = body.length < 500;
+              const hasDeadSignal = DEAD_LINK_PHRASES.some(p => p.test(body));
+              const softFail403 = isSmallBody || hasDeadSignal;
+              resolve({ ok: !softFail403, finalCode: code, finalUrl: targetUrl, softFail403 });
+            });
+            r.on('error', () => resolve({ ok: true, finalCode: code, finalUrl: targetUrl, softFail403: false }));
+            return;
+          }
+
+          r.resume();
+          const ok = code >= 200 && code < 400;
+          resolve({ ok, finalCode: code, finalUrl: targetUrl, softFail403: false });
         });
-        req.on('error', () => resolve({ ok: false, finalCode: 0, finalUrl: targetUrl }));
-        req.on('timeout', () => { req.destroy(); resolve({ ok: false, finalCode: 0, finalUrl: targetUrl }); });
+        req.on('error', () => resolve({ ok: false, finalCode: 0, finalUrl: targetUrl, softFail403: false }));
+        req.on('timeout', () => { req.destroy(); resolve({ ok: false, finalCode: 0, finalUrl: targetUrl, softFail403: false }); });
         req.end();
       } catch {
-        resolve({ ok: false, finalCode: 0, finalUrl: targetUrl });
+        resolve({ ok: false, finalCode: 0, finalUrl: targetUrl, softFail403: false });
       }
     }
 
@@ -144,7 +171,7 @@ async function runApplyLinkValidation(): Promise<{ checked: number; broken: numb
       })
     );
 
-    for (const { job, ok, finalCode } of results) {
+    for (const { job, ok, finalCode, softFail403 } of results) {
       if (!ok) {
         const failCount = (job as any).linkFailCount || 0;
 
@@ -156,17 +183,17 @@ async function runApplyLinkValidation(): Promise<{ checked: number; broken: numb
             closedAt: now,
             statusChangedAt: now,
             deactivatedAt: now,
-            reviewReasonCode: 'BROKEN_APPLY_LINK',
+            reviewReasonCode: softFail403 ? 'DEAD_403_LINK' : 'BROKEN_APPLY_LINK',
             lastCheckedAt: now,
           });
           broken++;
-          console.log(`[Reliability] Broken apply link confirmed (HTTP ${finalCode}, fails: ${failCount + 1}), unpublishing job ${job.id} "${job.title}" -> ${job.applyUrl}`);
+          console.log(`[Reliability] Broken apply link confirmed (HTTP ${finalCode}${softFail403 ? ' soft-fail 403' : ''}, fails: ${failCount + 1}), unpublishing job ${job.id} "${job.title}" -> ${job.applyUrl}`);
         } else {
           await storage.updateJobWorkerFields(job.id, {
             lastCheckedAt: new Date(),
             linkFailCount: 1,
           });
-          console.log(`[Reliability] First link failure for job ${job.id} "${job.title}" (HTTP ${finalCode}) — will re-check next cycle`);
+          console.log(`[Reliability] First link failure for job ${job.id} "${job.title}" (HTTP ${finalCode}${softFail403 ? ' soft-fail 403' : ''}) — will re-check next cycle`);
         }
       } else {
         await storage.updateJobWorkerFields(job.id, {

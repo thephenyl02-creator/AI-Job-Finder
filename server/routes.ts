@@ -1100,15 +1100,19 @@ export async function registerRoutes(
 
       const result = await storage.getPublishedJobsPaginated(page, limit, filters);
       const hasFilters = filters.category || filters.location || filters.locationType || filters.search || filters.seniority || filters.region || filters.country || (filters.workMode && filters.workMode !== 'all') || filters.track;
+      const jobsDisplay = getDisplayStats();
+      const jobsCanonical = jobsDisplay || getCanonicalStats();
       if (!hasFilters) {
-        const jobsDisplay = getDisplayStats();
-        const jobsCanonical = jobsDisplay || getCanonicalStats();
         if (jobsCanonical) {
           result.total = jobsCanonical.totalJobs;
           result.totalPages = Math.ceil(result.total / limit);
         }
       }
-      res.json(result);
+      const response: any = result;
+      if (jobsCanonical) {
+        response.stabilizedTotal = jobsCanonical.totalJobs;
+      }
+      res.json(response);
     } catch (error) {
       console.error("Error fetching jobs:", error);
       res.status(500).json({ error: "Failed to fetch jobs" });

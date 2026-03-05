@@ -5,7 +5,7 @@ let displayStats: { totalJobs: number; totalCompanies: number; totalCountries: n
 const MI_CACHE_TTL = 3600000;
 const DQ_CACHE_TTL = 3600000;
 const CANONICAL_TTL = 3600000;
-const DISPLAY_TTL = 43200000;
+const DISPLAY_TTL = 86400000;
 
 export function clearMarketIntelligenceCache() {
   marketIntelligenceCache = null;

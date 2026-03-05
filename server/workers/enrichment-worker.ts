@@ -7,6 +7,7 @@ import { generateJobHash, generateFuzzyJobHash } from '../lib/job-hash';
 import { LAW_FIRMS_AND_COMPANIES } from '../lib/law-firms-list';
 import { normalizeLocation } from '../lib/location-normalizer';
 import { clearAllStatsCaches } from '../lib/mi-cache';
+import { getCompanyCategory as getCompanyCategoryShared, getQualityThresholds as getQualityThresholdsShared } from '../lib/quality-thresholds';
 import { normalizeSkill, toTitleCase } from '../lib/skills-normalization';
 import type { Job } from '@shared/schema';
 import { jobs, getTrackForCategory } from '@shared/schema';
@@ -88,21 +89,7 @@ const ALL_TRACKED_COMPANIES = new Set(
 
 type CompanyCategory = 'legal-tech-startup' | 'law-firm' | 'general-tech';
 
-const COMPANY_TYPE_MAP = new Map<string, CompanyCategory>();
-for (const firm of LAW_FIRMS_AND_COMPANIES) {
-  const key = normalizeCompanyName(firm.name);
-  if (firm.type === 'startup' || firm.type === 'alsp' || firm.type === 'tech-legal') {
-    COMPANY_TYPE_MAP.set(key, 'legal-tech-startup');
-  } else if (firm.type === 'biglaw') {
-    COMPANY_TYPE_MAP.set(key, 'law-firm');
-  } else {
-    COMPANY_TYPE_MAP.set(key, 'general-tech');
-  }
-}
-
-function getCompanyCategory(company: string): CompanyCategory {
-  return COMPANY_TYPE_MAP.get(normalizeCompanyName(company)) || 'general-tech';
-}
+export const getCompanyCategory = getCompanyCategoryShared;
 
 interface QualityThresholds {
   minRelevance: number;
@@ -110,17 +97,7 @@ interface QualityThresholds {
   minConfidence: number;
 }
 
-export function getQualityThresholds(company: string): QualityThresholds {
-  const category = getCompanyCategory(company);
-  switch (category) {
-    case 'legal-tech-startup':
-      return { minRelevance: 6, qualityThreshold: 35, minConfidence: 40 };
-    case 'law-firm':
-      return { minRelevance: 8, qualityThreshold: 40, minConfidence: 50 };
-    case 'general-tech':
-      return { minRelevance: 7, qualityThreshold: 40, minConfidence: 50 };
-  }
-}
+export const getQualityThresholds = getQualityThresholdsShared;
 
 const BACK_OFFICE_TITLE_PATTERNS = [
   /\bprocurement\b/i,
@@ -775,7 +752,9 @@ function isStructuredDescriptionComplete(sd: any): boolean {
   return hasAboutCompany && hasResponsibilities && hasQualifications && hasSkills;
 }
 
-async function recoverStuckJobs(): Promise<number> {
+const MAX_ENRICHMENT_RETRIES = 3;
+
+async function recoverStuckJobs(): Promise<{ recovered: number; permanentlyFailed: number }> {
   try {
     const stuckJobs = await db.select().from(jobs)
       .where(and(
@@ -784,16 +763,34 @@ async function recoverStuckJobs(): Promise<number> {
         sql`(${jobs.lastEnrichedAt} < NOW() - INTERVAL '30 minutes' OR ${jobs.lastEnrichedAt} IS NULL)`
       ));
 
+    let recovered = 0;
+    let permanentlyFailed = 0;
+
     if (stuckJobs.length > 0) {
-      console.log(`[Enrichment] Found ${stuckJobs.length} stuck jobs in 'enriching' state, resetting to 'raw'`);
       for (const job of stuckJobs) {
-        await storage.updateJobWorkerFields(job.id, { pipelineStatus: 'raw' });
+        const retries = (job.enrichmentRetries ?? 0) + 1;
+        if (retries >= MAX_ENRICHMENT_RETRIES) {
+          await storage.updateJobWorkerFields(job.id, {
+            pipelineStatus: 'failed',
+            reviewReasonCode: 'ENRICHMENT_MAX_RETRIES',
+            enrichmentRetries: retries,
+          });
+          permanentlyFailed++;
+          console.log(`[Enrichment] Job ${job.id} "${job.title}" permanently failed after ${retries} enrichment attempts`);
+        } else {
+          await storage.updateJobWorkerFields(job.id, {
+            pipelineStatus: 'raw',
+            enrichmentRetries: retries,
+          });
+          recovered++;
+        }
       }
+      console.log(`[Enrichment] Stuck job recovery: ${recovered} reset to raw, ${permanentlyFailed} permanently failed (max retries exceeded)`);
     }
-    return stuckJobs.length;
+    return { recovered, permanentlyFailed };
   } catch (err: any) {
     console.error('[Enrichment] Failed to recover stuck jobs:', err.message);
-    return 0;
+    return { recovered: 0, permanentlyFailed: 0 };
   }
 }
 

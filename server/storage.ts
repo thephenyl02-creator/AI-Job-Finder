@@ -6,6 +6,7 @@ import { cleanJobDescription } from "./lib/description-cleaner";
 import { deriveSourceInfo } from "./lib/url-utils";
 import { generateJobHash } from "./lib/job-hash";
 import { normalizeCountry } from "./lib/country-normalizer";
+import { getCompanyQualityThresholds } from "./lib/quality-thresholds";
 
 export interface IStorage {
   // Jobs
@@ -249,8 +250,10 @@ class DatabaseStorage implements IStorage {
       if (existing) {
         const relevance = (cleaned as any).legalRelevanceScore ?? existing.legalRelevanceScore ?? 0;
         const category = (cleaned as any).roleCategory ?? existing.roleCategory;
-        if (relevance < 6) {
-          console.warn(`[PublishGuard] Blocked updateJob publish for job ${id}: relevance ${relevance} < 6`);
+        const company = (cleaned as any).company ?? existing.company ?? '';
+        const { minRelevance } = getCompanyQualityThresholds(company);
+        if (relevance < minRelevance) {
+          console.warn(`[PublishGuard] Blocked updateJob publish for job ${id}: relevance ${relevance} < ${minRelevance} (company: ${company})`);
           delete (cleaned as any).isPublished;
         } else if (!category) {
           console.warn(`[PublishGuard] Blocked updateJob publish for job ${id}: no roleCategory`);
@@ -446,8 +449,9 @@ class DatabaseStorage implements IStorage {
     const [existing] = await db.select().from(jobs).where(eq(jobs.id, id));
     if (!existing) return undefined;
 
-    if ((existing.legalRelevanceScore ?? 0) < 6) {
-      console.warn(`[PublishGuard] Blocked publish for job ${id}: relevance ${existing.legalRelevanceScore} < 6`);
+    const { minRelevance } = getCompanyQualityThresholds(existing.company ?? '');
+    if ((existing.legalRelevanceScore ?? 0) < minRelevance) {
+      console.warn(`[PublishGuard] Blocked publish for job ${id}: relevance ${existing.legalRelevanceScore} < ${minRelevance} (company: ${existing.company})`);
       return existing;
     }
     if (!existing.roleCategory) {

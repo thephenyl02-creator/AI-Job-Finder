@@ -659,7 +659,7 @@ export default function Jobs() {
     return params.toString();
   }, [currentPage, selectedCategory, selectedLevel, selectedLocation, selectedRegion, selectedCountry, selectedTrack, debouncedFilterText, sortBy]);
 
-  const { data: jobsResponse, isLoading: jobsLoading } = useQuery<{ jobs: Job[]; total: number; page: number; totalPages: number }>({
+  const { data: jobsResponse, isLoading: jobsLoading } = useQuery<{ jobs: Job[]; total: number; page: number; totalPages: number; stabilizedTotal?: number }>({
     queryKey: ["/api/jobs", jobsQueryParams],
     queryFn: () => fetch(`/api/jobs?${jobsQueryParams}`).then(r => r.json()),
     placeholderData: (prev) => prev,
@@ -668,6 +668,7 @@ export default function Jobs() {
   });
   const allJobs = jobsResponse?.jobs ?? [];
   const totalJobCount = jobsResponse?.total ?? 0;
+  const stabilizedTotal = jobsResponse?.stabilizedTotal ?? totalJobCount;
   const totalPages = jobsResponse?.totalPages ?? 1;
 
   const socialSignalJobIds = useMemo(() => {
@@ -778,7 +779,7 @@ export default function Jobs() {
               Find your next role in legal tech
             </h1>
             <p className="text-sm text-muted-foreground mb-1" data-testid="text-page-subtitle">
-              {statsData?.totalJobs ?? totalJobCount} curated roles across legal technology
+              {statsData?.totalJobs ?? stabilizedTotal} curated roles across legal technology
             </p>
             {refreshMeta && (
               <p className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground/70 mb-5" data-testid="text-freshness-header">
