@@ -56,7 +56,7 @@ Legal Tech Careers is a career intelligence platform designed for legal professi
 ### Job Curation Pipeline
 - **Process**: A two-layer pipeline (ingestion → AI enrichment → trust gate → published inventory) ensures quality, deduplication, and link validation.
 - **Quality Gates**: Company-type-aware thresholds and AI negative signal filters ensure high data quality.
-- **Scrapers**: Supports various ATS platforms (Greenhouse, Lever, Ashby, Workday, etc.) with multi-region capabilities and ATS auto-detection.
+- **Scrapers**: Supports various ATS platforms (Greenhouse, Lever, Ashby, Workday, etc.) with multi-region capabilities and ATS auto-detection. Expanded keyword coverage for Legal Transformation, Legal Innovation, Legal Project Management, Legal Data & Analytics, Legal Automation, Legal Workflow, AI Governance, and emerging AI + Legal roles.
 - **Global Coverage**: Gathers data from 400+ companies across US, UK, EU, APAC.
 - **Automation & QA**: Scheduled workers manage ingestion, scoring, deduplication, and validation, supported by an admin review queue and dashboard.
 

@@ -1507,6 +1507,33 @@ export function isLegalTechRole(title: string, companyType?: string): boolean {
     /\bcustomer\s+engineer\b/i, /\bfield\s+engineer\b/i,
     /\bpre-?sales?\s+engineer\b/i, /\bdata\s+security.*engineer\b/i,
     /\bai\s+safety\b/i,
+    /\blegal\s+transformation\b/i,
+    /\blegal\s+automation\s*(engineer)?\b/i,
+    /\blegal\s+workflow\b/i,
+    /\blegal\s+program\s+manager\b/i,
+    /\blegal\s+strategy\b/i,
+    /\blegal\s+project\s+manager\b/i,
+    /\blegal\s+(data\s+)?(analyst|scientist)\b/i,
+    /\blegal\s+intelligence\b/i,
+    /\blegal\s+knowledge\b/i,
+    /\blegal\s+content\s+engineer\b/i,
+    /\blegal\s+innovation\b/i,
+    /\blegal\s+product\s+(manager|owner|director)\b/i,
+    /\blegal\s+technology\s+manager\b/i,
+    /\blegal\s+solutions\s+engineer\b/i,
+    /\bcontract\s+automation\b/i,
+    /\bai\s+governance\b/i,
+    /\bai\s+policy\b/i,
+    /\bai\s+compliance\b/i,
+    /\bresponsible\s+ai\b/i,
+    /\bai\s+risk\s+manager\b/i,
+    /\blegal\s+process\s+(improvement|manager)\b/i,
+    /\blegal\s+efficiency\b/i,
+    /\bmatter\s+management\b/i,
+    /\blpm\s+manager\b/i,
+    /\blegal\s+insights\b/i,
+    /\bdata\s+protection\s+officer\b/i,
+    /\bchief\s+privacy\s+officer\b/i,
   ];
   const isWhitelisted = SCRAPER_LEGAL_WHITELIST.some(p => p.test(title));
 
@@ -1623,6 +1650,17 @@ export function isLegalTechRole(title: string, companyType?: string): boolean {
     'innovation', 'knowledge manager',
     'practice support', 'legal project manager', 'legal process',
     'in-house', 'general counsel', 'deputy general counsel',
+    'legal transformation', 'legal strategy', 'legal efficiency',
+    'legal program', 'legal automation', 'legal workflow',
+    'legal data', 'legal analytics', 'legal intelligence',
+    'legal insights', 'matter management', 'client operations',
+    'ai governance', 'ai policy', 'ai compliance',
+    'responsible ai', 'ai risk',
+    'legal ai', 'legal product',
+    'data protection officer', 'chief privacy',
+    'legal solutions consultant', 'lpm manager', 'legal project management',
+    'contract automation', 'legal knowledge',
+    'litigation data', 'legal tech',
   ];
   if (legalTechInclude.some(k => t.includes(k))) return true;
 
@@ -1630,6 +1668,7 @@ export function isLegalTechRole(title: string, companyType?: string): boolean {
     'technology', 'tech', 'innovation', 'automation', 'digital',
     'platform', 'product', 'software', 'ai ', 'data', 'analytics',
     'implementation', 'solutions', 'saas', 'workflow',
+    'intelligence', 'transformation', 'efficiency',
   ];
   const hasTechSignal = techSignals.some(k => t.includes(k));
 
@@ -1641,6 +1680,8 @@ export function isLegalTechRole(title: string, companyType?: string): boolean {
     'governance', 'audit', 'risk',
     'government affairs', 'public policy', 'legislative', 'policy',
     'tax counsel',
+    'legal transformation', 'legal strategy', 'legal program',
+    'matter management',
   ];
   const hasLegalSignal = legalSignals.some(k => t.includes(k));
 

@@ -439,11 +439,26 @@ function fallbackCategorization(
   const keySkills: string[] = [];
   const matchKeywords: string[] = [];
 
-  if (text.includes("legal engineer")) {
+  if (text.includes("legal automation engineer") || text.includes("contract automation engineer") || text.includes("legal solutions engineer")) {
+    category = "Legal Engineering";
+    subcategory = "Legal Automation Engineer";
+    keySkills.push("Legal Tech", "Automation", "Engineering");
+    matchKeywords.push("legal automation", "engineering");
+  } else if (text.includes("legal engineer")) {
     category = "Legal Engineering";
     subcategory = "Legal Engineer";
     keySkills.push("Legal Tech", "Legal Workflows", "Automation");
     matchKeywords.push("legal engineer", "legal tech", "automation");
+  } else if (text.includes("ai governance") || text.includes("ai policy") || text.includes("ai compliance") || text.includes("responsible ai") || text.includes("ai risk manager")) {
+    category = "Compliance & Privacy";
+    subcategory = "AI Governance Counsel";
+    keySkills.push("AI Governance", "Risk Management", "Compliance");
+    matchKeywords.push("ai governance", "ai policy", "responsible ai");
+  } else if (text.includes("data protection officer") || text.includes("chief privacy officer")) {
+    category = "Compliance & Privacy";
+    subcategory = "Data Protection Officer";
+    keySkills.push("Data Protection", "Privacy", "GDPR");
+    matchKeywords.push("data protection", "privacy", "gdpr");
   } else if (text.includes("counsel") || text.includes("attorney") || text.includes("lawyer")) {
     if (text.includes("compliance") || text.includes("privacy") || text.includes("regulatory")) {
       category = "Compliance & Privacy";
@@ -454,6 +469,9 @@ function fallbackCategorization(
     } else if (text.includes("product")) {
       category = "Legal Product Management";
       subcategory = "Product Counsel";
+    } else if (text.includes("innovation")) {
+      category = "Legal Product Management";
+      subcategory = "Legal Innovation Counsel";
     } else if (text.includes("trademark") || text.includes("ip") || text.includes("patent")) {
       category = "Intellectual Property & Innovation";
       subcategory = "Trademark Attorney";
@@ -463,6 +481,16 @@ function fallbackCategorization(
     }
     keySkills.push("Legal Analysis", "Legal Advisory");
     matchKeywords.push("counsel", "legal", "attorney");
+  } else if (text.includes("legal data") || text.includes("legal analytics") || text.includes("legal intelligence") || text.includes("legal insights") || text.includes("litigation data")) {
+    category = "Legal AI & Analytics";
+    subcategory = "Legal Data Analyst";
+    keySkills.push("Data Analytics", "Legal Intelligence", "Data Science");
+    matchKeywords.push("legal data", "analytics", "intelligence");
+  } else if (text.includes("legal innovation") || text.includes("legal product owner") || text.includes("legal technology manager")) {
+    category = "Legal Product Management";
+    subcategory = "Legal Innovation Manager";
+    keySkills.push("Legal Innovation", "Product Strategy", "Technology");
+    matchKeywords.push("innovation", "legal product", "technology");
   } else if (text.includes("product manager") || text.includes("product lead")) {
     if (text.includes("ai")) {
       category = "Legal AI & Analytics";
@@ -473,11 +501,31 @@ function fallbackCategorization(
     }
     keySkills.push("Product Management", "Strategy", "User Research");
     matchKeywords.push("product", "roadmap", "strategy");
+  } else if (text.includes("legal knowledge engineer") || text.includes("legal content engineer")) {
+    category = "Knowledge Management";
+    subcategory = "Legal Knowledge Engineer";
+    keySkills.push("Knowledge Engineering", "Legal Content", "Taxonomy");
+    matchKeywords.push("knowledge", "legal content", "engineering");
+  } else if (text.includes("legal transformation") || text.includes("legal process improvement") || text.includes("legal efficiency") || text.includes("legal strategy") || text.includes("legal workflow")) {
+    category = "Legal Operations";
+    subcategory = "Legal Transformation Manager";
+    keySkills.push("Legal Operations", "Process Improvement", "Transformation");
+    matchKeywords.push("legal transformation", "process improvement", "efficiency");
+  } else if (text.includes("legal project manager") || text.includes("lpm") || text.includes("matter management") || text.includes("legal program")) {
+    category = "Legal Operations";
+    subcategory = "Legal Project Manager";
+    keySkills.push("Legal Project Management", "Matter Management");
+    matchKeywords.push("legal project", "lpm", "matter management");
   } else if (text.includes("legal ops") || text.includes("legal operations") || text.includes("legal project")) {
     category = "Legal Operations";
     subcategory = "Legal Operations Manager";
     keySkills.push("Legal Operations", "Process Improvement");
     matchKeywords.push("legal ops", "operations");
+  } else if (text.includes("contract automation")) {
+    category = "Legal Engineering";
+    subcategory = "Contract Automation Engineer";
+    keySkills.push("Contract Automation", "CLM", "Engineering");
+    matchKeywords.push("contract automation", "clm");
   } else if (text.includes("contract") || text.includes("clm") || text.includes("isda")) {
     category = "Contract Management";
     subcategory = "Contracts Manager";
