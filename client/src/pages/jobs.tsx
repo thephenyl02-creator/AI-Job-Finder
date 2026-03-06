@@ -862,6 +862,7 @@ export default function Jobs() {
                   )}
                   <Input
                     ref={searchInputRef}
+                    autoFocus
                     placeholder={searchPlaceholder}
                     className="!border-0 shadow-none h-12 sm:h-16 text-lg sm:text-xl focus-visible:ring-0 !bg-transparent placeholder:text-muted-foreground/40 px-0 !ring-0 !ring-offset-0"
                     value={smartQuery}
