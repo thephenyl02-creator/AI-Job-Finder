@@ -48,7 +48,7 @@ Include these in a "generatedBullets" array (separate from the "bullets" array w
       : "";
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-4o-mini",
       messages: [
         {
           role: "system",

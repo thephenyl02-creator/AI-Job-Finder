@@ -1715,7 +1715,7 @@ Return a JSON object with these fields:
 Return ONLY the JSON object, no other text.`;
 
       const response = await openai.chat.completions.create({
-        model: 'gpt-4o',
+        model: 'gpt-4o-mini',
         messages: [
           { role: 'system', content: 'You are a legal technology events expert. Extract and structure event information accurately. Today is ' + new Date().toISOString().split('T')[0] },
           { role: 'user', content: prompt },
@@ -1933,7 +1933,7 @@ Only include jobs with a score above 40. Sort by score descending.`;
       let response;
       try {
         response = await getOpenAIClient().chat.completions.create({
-          model: "gpt-4o",
+          model: "gpt-4o-mini",
           messages: [
             { role: "system", content: systemPrompt },
             { 
@@ -2026,7 +2026,7 @@ Return ONLY valid JSON in this format:
       let profileResponse;
       try {
         profileResponse = await getOpenAIClient().chat.completions.create({
-          model: "gpt-4o",
+          model: "gpt-4o-mini",
           messages: [
             { role: "system", content: extractionPrompt },
             { role: "user", content: text.substring(0, 8000) },
@@ -2089,7 +2089,7 @@ Only include jobs scoring above 40. Sort by score descending. Max 15 results.`;
       let matchResponse;
       try {
         matchResponse = await getOpenAIClient().chat.completions.create({
-          model: "gpt-4o",
+          model: "gpt-4o-mini",
           messages: [
             { role: "system", content: matchPrompt },
             { role: "user", content: `Available jobs:\n${JSON.stringify(jobSummaries, null, 2)}` },
@@ -2220,7 +2220,7 @@ Return ONLY valid JSON in this format:
 }`;
 
       const response = await getOpenAIClient().chat.completions.create({
-        model: "gpt-4o",
+        model: "gpt-4o-mini",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: `Search query: "${query}"${userContext}` },
@@ -2334,7 +2334,7 @@ Return ONLY valid JSON:
 Sort by score descending. Include maximum 15 jobs.`;
 
       const response = await getOpenAIClient().chat.completions.create({
-        model: "gpt-4o",
+        model: "gpt-4o-mini",
         messages: [
           { role: "system", content: systemPrompt },
           { 
@@ -2519,7 +2519,7 @@ ${JSON.stringify(jobSummaries, null, 2)}`
       const experienceSummary = extractedData?.experience?.map(e => `${e.title} at ${e.company}`).join("; ") || "Not extracted";
 
       const completion = await getOpenAIClient().chat.completions.create({
-        model: "gpt-4o",
+        model: "gpt-4o-mini",
         messages: [
           {
             role: "system",
@@ -2982,7 +2982,7 @@ Rules:
 
       const { getOpenAIClient } = await import("./lib/openai-client");
       const completion = await getOpenAIClient().chat.completions.create({
-        model: "gpt-4o",
+        model: "gpt-4o-mini",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
@@ -7053,7 +7053,7 @@ If this doesn't appear to be a job posting, return:
 }`;
 
       const completion = await getOpenAIClient().chat.completions.create({
-        model: "gpt-4o",
+        model: "gpt-4o-mini",
         messages: [
           { role: "system", content: "You are a job posting parser. Extract job information from webpage content accurately." },
           { role: "user", content: extractionPrompt },
@@ -7201,7 +7201,7 @@ Return a JSON response with this exact structure:
 }`;
 
       const completion = await getOpenAIClient().chat.completions.create({
-        model: "gpt-4o",
+        model: "gpt-4o-mini",
         messages: [
           { role: "system", content: systemPrompt },
           {
@@ -8241,7 +8241,7 @@ Return JSON: { "mustHave": ["<keyword>", ...], "niceToHave": ["<keyword>", ...],
 Return JSON: { "suggestion": "<improved content>", "tips": ["<tip>"] }`;
 
       const completion = await getOpenAIClient().chat.completions.create({
-        model: "gpt-4o",
+        model: "gpt-4o-mini",
         messages: [
           { role: "system", content: "You are an expert legal tech resume writer and career coach. Provide specific, actionable advice optimized for ATS systems. Always return valid JSON." },
           { role: "user", content: prompt }
@@ -8296,7 +8296,7 @@ Return JSON: { "suggestion": "<improved content>", "tips": ["<tip>"] }`;
 
 
       const completion = await getOpenAIClient().chat.completions.create({
-        model: "gpt-4o",
+        model: "gpt-4o-mini",
         messages: [
           {
             role: "system",
@@ -8384,7 +8384,7 @@ Return valid JSON:
 
 
       const completion = await getOpenAIClient().chat.completions.create({
-        model: "gpt-4o",
+        model: "gpt-4o-mini",
         messages: [
           {
             role: "system",
@@ -8449,7 +8449,7 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
 
 
       const completion = await getOpenAIClient().chat.completions.create({
-        model: "gpt-4o",
+        model: "gpt-4o-mini",
         messages: [
           {
             role: "system",

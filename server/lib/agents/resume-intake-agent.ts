@@ -243,7 +243,7 @@ async function parseResumeTextWithAI(text: string, toConfirm: ToConfirmItem[]): 
   try {
     const openai = getOpenAIClient();
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-4o-mini",
       messages: [
         {
           role: "system",
