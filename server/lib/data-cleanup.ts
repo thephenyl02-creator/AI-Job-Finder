@@ -5,7 +5,7 @@ import { clearAllStatsCaches } from "./mi-cache";
 import { normalizeSkill, toTitleCase } from "./skills-normalization";
 import { isGenericBusinessRole, hasNegativeAiSignal } from "./job-quality-patterns";
 
-const CLEANUP_VERSION = "v5c_company_name_merge";
+const CLEANUP_VERSION = "v5d_reactivate_false_deactivations";
 
 async function hasRunCleanup(version: string): Promise<boolean> {
   try {
@@ -227,6 +227,17 @@ export async function runDataCleanup(force = false): Promise<{
     `);
     results.unpublishedNegativeAi = Number((r3 as any).rowCount || 0);
     console.log(`[DataCleanup] Unpublished ${results.unpublishedNegativeAi} negative-AI-signal jobs`);
+
+    const rReactivate = await db.execute(sql`
+      UPDATE jobs
+      SET is_active = true, deactivated_at = NULL, link_fail_count = 0
+      WHERE is_published = true
+        AND is_active = false
+        AND (review_reason_code IS NULL OR review_reason_code IN ('LOW_QUALITY_SCORE', 'MANUAL_REVIEW', 'IRRELEVANT_TITLE'))
+        AND job_status = 'open'
+    `);
+    const reactivatedCount = Number((rReactivate as any).rowCount || 0);
+    console.log(`[DataCleanup] Re-activated ${reactivatedCount} falsely deactivated jobs`);
 
     const r4 = await db.execute(sql`
       UPDATE jobs

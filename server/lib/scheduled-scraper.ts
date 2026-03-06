@@ -86,29 +86,44 @@ export function getValidationStatus() {
   };
 }
 
+const LINK_CHECK_HEADERS = {
+  'User-Agent': 'Mozilla/5.0 (compatible; LegalTechCareers/1.0; +https://lawjobs.co)',
+  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+};
+
 async function checkSingleJobLink(job: Job): Promise<boolean> {
   try {
     const response = await axios.head(job.applyUrl, {
       timeout: LINK_CHECK_TIMEOUT,
       maxRedirects: 5,
       validateStatus: (status) => status < 500,
+      headers: LINK_CHECK_HEADERS,
     });
-    if (response.status >= 400) return false;
+    if (response.status === 403) return true;
+    if (response.status >= 400) {
+      return await checkWithGet(job.applyUrl);
+    }
     return true;
   } catch (error: any) {
     if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') return true;
-    try {
-      const getResponse = await axios.get(job.applyUrl, {
-        timeout: LINK_CHECK_TIMEOUT,
-        maxRedirects: 5,
-        validateStatus: (status) => status < 500,
-        headers: { 'Range': 'bytes=0-0' },
-      });
-      if (getResponse.status >= 400) return false;
-      return true;
-    } catch {
-      return false;
-    }
+    return await checkWithGet(job.applyUrl);
+  }
+}
+
+async function checkWithGet(url: string): Promise<boolean> {
+  try {
+    const getResponse = await axios.get(url, {
+      timeout: LINK_CHECK_TIMEOUT,
+      maxRedirects: 5,
+      validateStatus: (status) => status < 500,
+      headers: LINK_CHECK_HEADERS,
+    });
+    if (getResponse.status === 403) return true;
+    if (getResponse.status >= 400) return false;
+    return true;
+  } catch (error: any) {
+    if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') return true;
+    return false;
   }
 }
 
@@ -155,16 +170,32 @@ export async function startContinuousValidation(): Promise<void> {
 
       if (isValid) {
         validationState.validCount++;
+        if ((job as any).linkFailCount > 0) {
+          await storage.updateJob(job.id, { linkFailCount: 0 } as any);
+        }
       } else {
-        validationState.brokenCount++;
-        validationState.brokenIds.push(job.id);
-        logWarn('VALIDATE', `Broken link found: ${job.company} - ${job.title}`, {
-          jobId: job.id,
-          url: job.applyUrl,
-          progress: `${i + 1}/${jobs.length}`,
-        });
-        await storage.updateJob(job.id, { isActive: false });
-        logInfo('VALIDATE', `Deactivated job ${job.id} due to broken link`);
+        const failCount = (job as any).linkFailCount || 0;
+        if (failCount >= 1) {
+          validationState.brokenCount++;
+          validationState.brokenIds.push(job.id);
+          logWarn('VALIDATE', `Broken link confirmed (fail #${failCount + 1}): ${job.company} - ${job.title}`, {
+            jobId: job.id,
+            url: job.applyUrl,
+            progress: `${i + 1}/${jobs.length}`,
+          });
+          const now = new Date();
+          await storage.updateJob(job.id, {
+            isActive: false,
+            isPublished: false,
+            jobStatus: 'closed',
+            deactivatedAt: now,
+            reviewReasonCode: 'BROKEN_APPLY_LINK',
+          } as any);
+          logInfo('VALIDATE', `Deactivated job ${job.id} due to confirmed broken link`);
+        } else {
+          await storage.updateJob(job.id, { linkFailCount: 1 } as any);
+          logInfo('VALIDATE', `First link failure for job ${job.id} "${job.title}" — will re-check next cycle`);
+        }
       }
 
       if ((i + 1) % 10 === 0) {
