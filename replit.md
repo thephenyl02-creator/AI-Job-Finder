@@ -34,6 +34,7 @@ Legal Tech Careers is a career intelligence platform designed for legal professi
 - **Session Management**: PostgreSQL-backed sessions.
 
 ### AI Integration
+- **Models**: User-facing features (search, resume parsing, diagnostics, chat, resume builder, market insights) use `gpt-4o`. Background/batch processing (job categorization, description extraction, scraping) stays on `gpt-4o-mini` for cost efficiency.
 - **Capabilities**: Powers Guided Search, Job Categorization, Resume Parsing, Resume-Job Comparison, Conversational Assistant, ATS Resume Review, AI-assisted resume builder, Market Insights Q&A, Career Diagnostic Engine, and per-job fit scoring.
 - **Skill Extraction**: AI categorizes `hardSkills` and `softSkills`.
 - **Categorization Boundaries**: Explicit rules prevent over-bucketing into Legal Operations and Legal Consulting.

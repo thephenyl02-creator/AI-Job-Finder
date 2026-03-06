@@ -117,7 +117,7 @@ async function runHonestyCheck(
   if (changes.length === 0) return [];
 
   const response = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
+    model: "gpt-4o",
     messages: [
       {
         role: "system",

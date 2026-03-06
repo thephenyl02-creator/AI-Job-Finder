@@ -17,7 +17,7 @@ export async function requirementMappingAgent(
     const jobText = `${jobDescription}\n\nRequirements: ${jobRequirements || "Not specified"}`;
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "gpt-4o",
       messages: [
         {
           role: "system",

@@ -205,7 +205,7 @@ ${JSON.stringify(jobSummaries, null, 2)}`;
 
   try {
     const response = await getOpenAIClient().chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "gpt-4o",
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
@@ -392,7 +392,7 @@ ${(job.requirements || "").substring(0, 2000)}`;
 
   try {
     const response = await getOpenAIClient().chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "gpt-4o",
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },

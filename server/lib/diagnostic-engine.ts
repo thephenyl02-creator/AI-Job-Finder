@@ -244,7 +244,7 @@ RULES:
 - Be honest. Don't inflate scores.`;
 
   const response = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
+    model: "gpt-4o",
     messages: [{ role: "user", content: prompt }],
     response_format: { type: "json_object" },
     temperature: 0.2,
@@ -324,7 +324,7 @@ Respond with JSON array:
 fitScore = 35% skills + 30% experience + 20% domain + 15% seniority. Be honest, don't inflate.`;
 
   const response = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
+    model: "gpt-4o",
     messages: [{ role: "user", content: prompt }],
     response_format: { type: "json_object" },
     temperature: 0.2,

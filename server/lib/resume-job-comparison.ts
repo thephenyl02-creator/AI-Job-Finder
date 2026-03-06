@@ -115,7 +115,7 @@ Requirements: ${jobRequirements.substring(0, 1000) || 'Not specified'}`;
 
   try {
     const response = await getOpenAIClient().chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "gpt-4o",
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt }

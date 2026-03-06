@@ -101,7 +101,7 @@ Examples of good suggestions:
 - risks: "Avoid overstating 'data analytics' unless you've worked with dashboards, SQL, or reporting tools."`;
 
   const response = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
+    model: "gpt-4o",
     messages: [
       { role: "system", content: systemPrompt },
       { role: "user", content: userPrompt },
