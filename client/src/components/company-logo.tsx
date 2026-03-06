@@ -1,5 +1,4 @@
 import { useState, useCallback, useEffect } from "react";
-import trellisLawLogo from "@assets/image_1772773143740.png";
 
 const COMPANY_DOMAINS: Record<string, string> = {
   "9fin": "9fin.com",
@@ -402,7 +401,7 @@ const COMPANY_DOMAINS: Record<string, string> = {
   "SpotDraft": "spotdraft.com",
   "T. Rowe Price": "troweprice.com",
   "Toyota Tsusho": "toyota-tsusho.co.jp",
-  "Trellis Law": "trellislaw.com",
+  "Trellis Law": "trellis.law",
   "Troutman Pepper Locke": "troutman.com",
   "Vercel": "vercel.com",
   "August": "august.com",
@@ -448,12 +447,7 @@ function resolveDomain(logo: string | null | undefined, company: string): string
   return company.toLowerCase().replace(/[^a-z0-9]+/g, '') + '.com';
 }
 
-const LOGO_OVERRIDES: Record<string, string> = {
-  "Trellis Law": trellisLawLogo,
-};
-
 function getLogoUrl(logo: string | null | undefined, company: string): string {
-  if (LOGO_OVERRIDES[company]) return LOGO_OVERRIDES[company];
   if (logo && logo.trim() && !logo.includes('logo.clearbit.com') && !logo.includes('google.com/s2/favicons')) {
     return logo;
   }
