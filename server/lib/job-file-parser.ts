@@ -160,7 +160,7 @@ export async function parseMultipleJobsFromText(rawText: string): Promise<Insert
     results.push({
       title: jobData.title.substring(0, 255),
       company: jobData.company.substring(0, 255),
-      companyLogo: companySlug ? `https://logo.clearbit.com/${companySlug}.com` : null,
+      companyLogo: companySlug ? `https://www.google.com/s2/favicons?domain=${companySlug}.com&sz=128` : null,
       location: jobData.location || "Not specified",
       isRemote: jobData.isRemote,
       salaryMin: jobData.salaryMin,
@@ -255,7 +255,7 @@ export async function parseJobFile(
   return {
     title: jobData.title.substring(0, 255),
     company: jobData.company.substring(0, 255),
-    companyLogo: companySlug ? `https://logo.clearbit.com/${companySlug}.com` : null,
+    companyLogo: companySlug ? `https://www.google.com/s2/favicons?domain=${companySlug}.com&sz=128` : null,
     location: jobData.location || "Not specified",
     isRemote: jobData.isRemote,
     salaryMin: jobData.salaryMin,

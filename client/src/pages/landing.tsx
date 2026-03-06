@@ -327,7 +327,7 @@ export default function Landing() {
                             <img
                               src={company.logo}
                               alt={company.name}
-                              className="w-5 h-5 sm:w-6 sm:h-6 object-contain relative z-10"
+                              className="w-6 h-6 sm:w-7 sm:h-7 object-contain relative z-10"
                               loading="lazy"
                               onError={(e) => { e.currentTarget.style.display = 'none'; }}
                             />
@@ -365,7 +365,7 @@ export default function Landing() {
                             <img
                               src={company.logo}
                               alt={company.name}
-                              className="w-5 h-5 sm:w-6 sm:h-6 object-contain relative z-10"
+                              className="w-6 h-6 sm:w-7 sm:h-7 object-contain relative z-10"
                               loading="lazy"
                               onError={(e) => { e.currentTarget.style.display = 'none'; }}
                             />

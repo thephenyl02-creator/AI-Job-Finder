@@ -40,7 +40,7 @@ async function scrapeLever(name: string, url: string): Promise<InsertJob[]> {
       jobs.push({
         title: job.text,
         company: name,
-        companyLogo: `https://logo.clearbit.com/${name.toLowerCase().replace(/[^a-z]/g, '')}.com`,
+        companyLogo: `https://www.google.com/s2/favicons?domain=${name.toLowerCase().replace(/[^a-z]/g, '')}.com&sz=128`,
         location: job.categories?.location || 'Remote',
         isRemote: (job.categories?.location || '').toLowerCase().includes('remote'),
         description: cleanDesc,

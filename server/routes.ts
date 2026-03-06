@@ -1289,13 +1289,6 @@ export async function registerRoutes(
         .sort((a, b) => b[1] - a[1])
         .slice(0, 15);
 
-      const companyLogos: Record<string, string> = {};
-      for (const job of allMatchingJobs) {
-        if (job.company && job.companyLogo && job.companyLogo.trim() && !companyLogos[job.company]) {
-          companyLogos[job.company] = job.companyLogo.trim();
-        }
-      }
-
       const COMPANY_DOMAINS: Record<string, string> = {
         'Harvey AI': 'harvey.ai',
         'Anthropic': 'anthropic.com',
@@ -1324,11 +1317,8 @@ export async function registerRoutes(
       };
 
       const topCompanies = topCompaniesRaw.map(([name, count]) => {
-        let logo = companyLogos[name] || null;
-        if (!logo || logo.includes('legoraformerlyleya')) {
-          const domain = COMPANY_DOMAINS[name] || `${name.toLowerCase().replace(/[^a-z0-9]+/g, '')}.com`;
-          logo = `https://logo.clearbit.com/${domain}`;
-        }
+        const domain = COMPANY_DOMAINS[name] || `${name.toLowerCase().replace(/[^a-z0-9]+/g, '')}.com`;
+        const logo = `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
         return { name, count, logo };
       });
 
@@ -4699,7 +4689,7 @@ Rules:
       const insertData: any = {
         title: jobData.title?.substring(0, 255),
         company: jobData.company?.substring(0, 255),
-        companyLogo: companySlug ? `https://logo.clearbit.com/${companySlug}.com` : null,
+        companyLogo: companySlug ? `https://www.google.com/s2/favicons?domain=${companySlug}.com&sz=128` : null,
         location: jobData.location || "Not specified",
         isRemote: Boolean(jobData.isRemote),
         locationType: jobData.locationType || (jobData.isRemote ? 'remote' : 'onsite'),
@@ -5418,7 +5408,7 @@ Rules:
           const insertData: any = {
             title: job.title?.substring(0, 255),
             company: job.company?.substring(0, 255),
-            companyLogo: companySlug ? `https://logo.clearbit.com/${companySlug}.com` : null,
+            companyLogo: companySlug ? `https://www.google.com/s2/favicons?domain=${companySlug}.com&sz=128` : null,
             location: job.location || null,
             isRemote: Boolean(job.isRemote),
             locationType: job.locationType || (job.isRemote ? 'remote' : 'onsite'),

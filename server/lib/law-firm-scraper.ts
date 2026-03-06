@@ -1919,7 +1919,7 @@ export function transformToJobSchema(job: ScrapedJob, categorization?: JobCatego
   return {
     title: decodeHtmlEntities(job.title.trim()),
     company: companyClean,
-    companyLogo: `https://logo.clearbit.com/${companySlug}.com`,
+    companyLogo: `https://www.google.com/s2/favicons?domain=${companySlug}.com&sz=128`,
     location: locationText,
     isRemote: isRemoteDetected,
     locationType,

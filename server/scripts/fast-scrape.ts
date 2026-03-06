@@ -41,7 +41,7 @@ async function scrapeGreenhouse(name: string, id: string, orgType: string): Prom
       jobs.push({
         title: job.title || 'Untitled',
         company: name,
-        companyLogo: `https://logo.clearbit.com/${name.toLowerCase().replace(/[^a-z]/g, '')}.com`,
+        companyLogo: `https://www.google.com/s2/favicons?domain=${name.toLowerCase().replace(/[^a-z]/g, '')}.com&sz=128`,
         location: job.location?.name || 'Remote',
         isRemote: (job.location?.name || '').toLowerCase().includes('remote'),
         description: cleanDescription,

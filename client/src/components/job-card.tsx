@@ -73,6 +73,18 @@ const COMPANY_DESCRIPTORS: Record<string, string> = {
   "Legatics": "Legal Transaction Management",
 };
 
+function getReliableLogoUrl(companyLogo: string | null | undefined, company: string): string | undefined {
+  if (companyLogo && companyLogo.includes('logo.clearbit.com')) {
+    const match = companyLogo.match(/clearbit\.com\/(.+)/);
+    if (match) {
+      return `https://www.google.com/s2/favicons?domain=${match[1]}&sz=128`;
+    }
+  }
+  if (companyLogo && companyLogo.trim()) return companyLogo;
+  const slug = company.toLowerCase().replace(/[^a-z0-9]+/g, '');
+  return `https://www.google.com/s2/favicons?domain=${slug}.com&sz=128`;
+}
+
 function getCompanyColor(company: string): string {
   let hash = 0;
   for (let i = 0; i < company.length; i++) {
@@ -169,7 +181,7 @@ export function JobCard({ job, isSaved = false, isAuthenticated = false, fitData
         <div className="flex items-start gap-3 sm:gap-4">
           <Link to={`/jobs/${job.id}`} className="flex-shrink-0">
             <Avatar className="h-10 w-10 sm:h-12 sm:w-12 rounded-lg">
-              <AvatarImage src={job.companyLogo || undefined} alt={job.company} />
+              <AvatarImage src={getReliableLogoUrl(job.companyLogo, job.company)} alt={job.company} className="object-contain p-1" />
               <AvatarFallback className={`rounded-lg font-semibold text-sm ${avatarColor}`}>
                 {job.company.substring(0, 2).toUpperCase()}
               </AvatarFallback>
