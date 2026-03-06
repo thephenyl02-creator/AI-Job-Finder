@@ -231,6 +231,42 @@
     animation: scale-in 0.3s ease-out forwards;
   }
 
+  @keyframes marquee-left {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+
+  @keyframes marquee-right {
+    0% { transform: translateX(-50%); }
+    100% { transform: translateX(0); }
+  }
+
+  .marquee-track {
+    display: flex;
+    width: max-content;
+  }
+
+  .marquee-left {
+    animation: marquee-left 40s linear infinite;
+  }
+
+  .marquee-right {
+    animation: marquee-right 40s linear infinite;
+  }
+
+  @media (hover: hover) {
+    .marquee-hover-pause:hover .marquee-track {
+      animation-play-state: paused;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .marquee-left,
+    .marquee-right {
+      animation-play-state: paused;
+    }
+  }
+
   @keyframes slide-in-right {
     from { opacity: 0; transform: translateX(16px); }
     to { opacity: 1; transform: translateX(0); }

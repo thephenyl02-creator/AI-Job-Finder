@@ -1285,10 +1285,36 @@ export async function registerRoutes(
         .slice(0, 5)
         .map(([name, count]) => ({ name, count }));
 
-      const topCompanies = Object.entries(companyCount)
+      const topCompaniesRaw = Object.entries(companyCount)
         .sort((a, b) => b[1] - a[1])
-        .slice(0, 5)
-        .map(([name, count]) => ({ name, count }));
+        .slice(0, 15);
+
+      const companyLogos: Record<string, string> = {};
+      for (const job of allMatchingJobs) {
+        if (job.company && job.companyLogo && job.companyLogo.trim() && !companyLogos[job.company]) {
+          companyLogos[job.company] = job.companyLogo.trim();
+        }
+      }
+
+      const COMPANY_DOMAINS: Record<string, string> = {
+        'Harvey AI': 'harvey.ai',
+        'Anthropic': 'anthropic.com',
+        'Thomson Reuters': 'thomsonreuters.com',
+        'Rocket Lawyer': 'rocketlawyer.com',
+        'Eve Legal': 'evelegal.com',
+        'McDermott Will & Emery': 'mwe.com',
+        'LexisNexis': 'lexisnexis.com',
+        'NetDocuments': 'netdocuments.com',
+      };
+
+      const topCompanies = topCompaniesRaw.map(([name, count]) => {
+        let logo = companyLogos[name] || null;
+        if (!logo) {
+          const domain = COMPANY_DOMAINS[name] || `${name.toLowerCase().replace(/[^a-z0-9]+/g, '')}.com`;
+          logo = `https://logo.clearbit.com/${domain}`;
+        }
+        return { name, count, logo };
+      });
 
       const densityDisplay = getDisplayStats();
       const densityCanonical = densityDisplay || getCanonicalStats();

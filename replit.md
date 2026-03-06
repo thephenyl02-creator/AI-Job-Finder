@@ -61,7 +61,7 @@ Legal Tech Careers is a career intelligence platform designed for legal professi
 - **Automation & QA**: Scheduled workers manage ingestion, scoring, deduplication, and validation, supported by an admin review queue and dashboard.
 
 ### Core Features
-- **Landing Page**: Highlights career intelligence.
+- **Landing Page**: Highlights career intelligence. Includes a two-row flowing company logo marquee ("Who's Hiring in Legal Tech") powered by `/api/job-density` returning top 15 companies with Clearbit logos and job counts. Rows scroll in opposite directions with gradient edge fades and reduced-motion accessibility support.
 - **Career Command Center Dashboard**: Personalized dashboard for authenticated users.
 - **Smart Search**: AI-powered natural language job search.
 - **Resume Management & Editing**: Upload, parse, and AI-assisted editing of resumes.

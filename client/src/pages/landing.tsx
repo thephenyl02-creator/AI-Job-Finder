@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LogoMark } from "@/components/logo";
-import { ArrowRight, Search, Target, Globe, Wifi, Clock, BarChart3, Lock, Upload, Check } from "lucide-react";
+import { ArrowRight, Search, Target, Globe, Wifi, Clock, BarChart3, Lock, Upload, Check, Building2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Footer } from "@/components/footer";
 
@@ -67,7 +67,7 @@ export default function Landing() {
     queryKey: ["/api/stats/social-proof"],
   });
 
-  const { data: density } = useQuery<{ totalJobs: number; countriesCount: number; remoteShare: number; byCountry: { countryCode: string; countryName: string; jobCount: number; topCategories: string[] }[] }>({
+  const { data: density } = useQuery<{ totalJobs: number; countriesCount: number; remoteShare: number; byCountry: { countryCode: string; countryName: string; jobCount: number; topCategories: string[] }[]; topCompanies?: { name: string; count: number; logo: string | null }[] }>({
     queryKey: ["/api/job-density"],
   });
 
@@ -77,6 +77,10 @@ export default function Landing() {
         .sort((a, b) => b[1] - a[1])
     : [];
   const careerPaths = careerPathsWithCounts.map(([name]) => name);
+
+  const topCompanies = density?.topCompanies?.filter(c => c.count > 0) || [];
+  const marqueeRow1 = topCompanies.slice(0, Math.ceil(topCompanies.length / 2));
+  const marqueeRow2 = topCompanies.slice(Math.ceil(topCompanies.length / 2));
 
   return (
     <div className="min-h-screen bg-background flex flex-col overflow-x-hidden">
@@ -278,6 +282,120 @@ export default function Landing() {
                     <span data-testid="stat-users"><span className="font-semibold text-foreground">{stats.totalUsers}+</span> lawyers assessed</span>
                   </>
                 )}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {topCompanies.length > 4 && (
+          <section className="border-t border-border/30" data-testid="section-top-companies">
+            <div className="py-14 sm:py-20">
+              <div className="text-center mb-8 sm:mb-10">
+                <p className="text-xs font-semibold text-muted-foreground tracking-[0.2em] uppercase mb-3">
+                  Market Intelligence
+                </p>
+                <h2 className="text-xl sm:text-3xl font-serif font-medium text-foreground">
+                  Who's hiring in legal tech
+                </h2>
+              </div>
+
+              <div className="space-y-4">
+                <div className="relative overflow-hidden marquee-hover-pause">
+                  <div className="absolute left-0 top-0 bottom-0 w-16 sm:w-20 z-10 bg-gradient-to-r from-background to-transparent pointer-events-none" />
+                  <div className="absolute right-0 top-0 bottom-0 w-16 sm:w-20 z-10 bg-gradient-to-l from-background to-transparent pointer-events-none" />
+                  <div className="marquee-track marquee-left" data-testid="marquee-row-1">
+                    {[...marqueeRow1, ...marqueeRow1].map((company, i) => (
+                      <div
+                        key={`r1-${i}`}
+                        className="flex items-center gap-2.5 px-4 py-2 mx-2 rounded-xl border border-border/30 bg-card shrink-0"
+                        data-testid={i < marqueeRow1.length ? `company-logo-${i}` : undefined}
+                      >
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white dark:bg-white/90 border border-border/20 flex items-center justify-center overflow-hidden shrink-0">
+                          {company.logo ? (
+                            <img
+                              src={company.logo}
+                              alt={company.name}
+                              className="w-5 h-5 sm:w-6 sm:h-6 object-contain"
+                              onError={(e) => {
+                                const target = e.currentTarget;
+                                target.style.display = 'none';
+                                const fallback = target.nextElementSibling as HTMLElement;
+                                if (fallback) fallback.style.display = 'flex';
+                              }}
+                            />
+                          ) : null}
+                          <span
+                            className="text-[10px] sm:text-xs font-semibold text-primary/70 items-center justify-center"
+                            style={{ display: company.logo ? 'none' : 'flex' }}
+                          >
+                            {company.name.slice(0, 2).toUpperCase()}
+                          </span>
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs sm:text-sm font-medium text-foreground whitespace-nowrap">{company.name}</p>
+                          <p className="text-[10px] sm:text-xs text-muted-foreground whitespace-nowrap flex items-center gap-1">
+                            <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                            {company.count} {company.count === 1 ? 'role' : 'roles'}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="relative overflow-hidden marquee-hover-pause">
+                  <div className="absolute left-0 top-0 bottom-0 w-16 sm:w-20 z-10 bg-gradient-to-r from-background to-transparent pointer-events-none" />
+                  <div className="absolute right-0 top-0 bottom-0 w-16 sm:w-20 z-10 bg-gradient-to-l from-background to-transparent pointer-events-none" />
+                  <div className="marquee-track marquee-right" data-testid="marquee-row-2">
+                    {[...marqueeRow2, ...marqueeRow2].map((company, i) => (
+                      <div
+                        key={`r2-${i}`}
+                        className="flex items-center gap-2.5 px-4 py-2 mx-2 rounded-xl border border-border/30 bg-card shrink-0"
+                        data-testid={i < marqueeRow2.length ? `company-logo-${marqueeRow1.length + i}` : undefined}
+                      >
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white dark:bg-white/90 border border-border/20 flex items-center justify-center overflow-hidden shrink-0">
+                          {company.logo ? (
+                            <img
+                              src={company.logo}
+                              alt={company.name}
+                              className="w-5 h-5 sm:w-6 sm:h-6 object-contain"
+                              onError={(e) => {
+                                const target = e.currentTarget;
+                                target.style.display = 'none';
+                                const fallback = target.nextElementSibling as HTMLElement;
+                                if (fallback) fallback.style.display = 'flex';
+                              }}
+                            />
+                          ) : null}
+                          <span
+                            className="text-[10px] sm:text-xs font-semibold text-primary/70 items-center justify-center"
+                            style={{ display: company.logo ? 'none' : 'flex' }}
+                          >
+                            {company.name.slice(0, 2).toUpperCase()}
+                          </span>
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs sm:text-sm font-medium text-foreground whitespace-nowrap">{company.name}</p>
+                          <p className="text-[10px] sm:text-xs text-muted-foreground whitespace-nowrap flex items-center gap-1">
+                            <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                            {company.count} {company.count === 1 ? 'role' : 'roles'}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="text-center mt-8">
+                <a
+                  href="/jobs"
+                  className="text-sm text-primary hover:underline inline-flex items-center gap-1.5 transition-colors"
+                  data-testid="link-marquee-explore"
+                >
+                  Explore all roles
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </a>
               </div>
             </div>
           </section>
