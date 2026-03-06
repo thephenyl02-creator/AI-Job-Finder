@@ -82,6 +82,18 @@ export default function Landing() {
   const marqueeRow1 = topCompanies.slice(0, Math.ceil(topCompanies.length / 2));
   const marqueeRow2 = topCompanies.slice(Math.ceil(topCompanies.length / 2));
 
+  const FALLBACK_COLORS = [
+    'bg-slate-600', 'bg-blue-700', 'bg-indigo-600', 'bg-violet-600',
+    'bg-teal-600', 'bg-cyan-700', 'bg-emerald-700', 'bg-sky-700',
+    'bg-purple-600', 'bg-rose-700', 'bg-amber-700', 'bg-fuchsia-700',
+    'bg-blue-800', 'bg-teal-700', 'bg-indigo-700',
+  ];
+  const getCompanyFallbackColor = (name: string) => {
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    return FALLBACK_COLORS[Math.abs(hash) % FALLBACK_COLORS.length];
+  };
+
   return (
     <div className="min-h-screen bg-background flex flex-col overflow-x-hidden">
       <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border/40">
@@ -307,26 +319,21 @@ export default function Landing() {
                     {[...marqueeRow1, ...marqueeRow1].map((company, i) => (
                       <div
                         key={`r1-${i}`}
-                        className="flex items-center gap-2.5 px-4 py-2 mx-2 rounded-xl border border-border/30 bg-card shrink-0"
+                        className="flex items-center gap-2.5 px-4 py-2.5 mx-2 rounded-xl border border-border/30 bg-card shadow-sm shrink-0"
                         data-testid={i < marqueeRow1.length ? `company-logo-${i}` : undefined}
                       >
-                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white dark:bg-white/90 border border-border/20 flex items-center justify-center overflow-hidden shrink-0">
-                          {company.logo ? (
+                        <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white dark:bg-white/95 ring-1 ring-border/10 flex items-center justify-center overflow-hidden shrink-0 relative">
+                          {company.logo && (
                             <img
                               src={company.logo}
                               alt={company.name}
-                              className="w-5 h-5 sm:w-6 sm:h-6 object-contain"
-                              onError={(e) => {
-                                const target = e.currentTarget;
-                                target.style.display = 'none';
-                                const fallback = target.nextElementSibling as HTMLElement;
-                                if (fallback) fallback.style.display = 'flex';
-                              }}
+                              className="w-5 h-5 sm:w-6 sm:h-6 object-contain relative z-10"
+                              loading="lazy"
+                              onError={(e) => { e.currentTarget.style.display = 'none'; }}
                             />
-                          ) : null}
+                          )}
                           <span
-                            className="text-[10px] sm:text-xs font-semibold text-primary/70 items-center justify-center"
-                            style={{ display: company.logo ? 'none' : 'flex' }}
+                            className={`absolute inset-0 text-[10px] sm:text-xs font-bold text-white flex items-center justify-center rounded-full ${getCompanyFallbackColor(company.name)}`}
                           >
                             {company.name.slice(0, 2).toUpperCase()}
                           </span>
@@ -350,26 +357,21 @@ export default function Landing() {
                     {[...marqueeRow2, ...marqueeRow2].map((company, i) => (
                       <div
                         key={`r2-${i}`}
-                        className="flex items-center gap-2.5 px-4 py-2 mx-2 rounded-xl border border-border/30 bg-card shrink-0"
+                        className="flex items-center gap-2.5 px-4 py-2.5 mx-2 rounded-xl border border-border/30 bg-card shadow-sm shrink-0"
                         data-testid={i < marqueeRow2.length ? `company-logo-${marqueeRow1.length + i}` : undefined}
                       >
-                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white dark:bg-white/90 border border-border/20 flex items-center justify-center overflow-hidden shrink-0">
-                          {company.logo ? (
+                        <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white dark:bg-white/95 ring-1 ring-border/10 flex items-center justify-center overflow-hidden shrink-0 relative">
+                          {company.logo && (
                             <img
                               src={company.logo}
                               alt={company.name}
-                              className="w-5 h-5 sm:w-6 sm:h-6 object-contain"
-                              onError={(e) => {
-                                const target = e.currentTarget;
-                                target.style.display = 'none';
-                                const fallback = target.nextElementSibling as HTMLElement;
-                                if (fallback) fallback.style.display = 'flex';
-                              }}
+                              className="w-5 h-5 sm:w-6 sm:h-6 object-contain relative z-10"
+                              loading="lazy"
+                              onError={(e) => { e.currentTarget.style.display = 'none'; }}
                             />
-                          ) : null}
+                          )}
                           <span
-                            className="text-[10px] sm:text-xs font-semibold text-primary/70 items-center justify-center"
-                            style={{ display: company.logo ? 'none' : 'flex' }}
+                            className={`absolute inset-0 text-[10px] sm:text-xs font-bold text-white flex items-center justify-center rounded-full ${getCompanyFallbackColor(company.name)}`}
                           >
                             {company.name.slice(0, 2).toUpperCase()}
                           </span>

@@ -1301,15 +1301,31 @@ export async function registerRoutes(
         'Anthropic': 'anthropic.com',
         'Thomson Reuters': 'thomsonreuters.com',
         'Rocket Lawyer': 'rocketlawyer.com',
-        'Eve Legal': 'evelegal.com',
+        'Eve Legal': 'eve.legal',
         'McDermott Will & Emery': 'mwe.com',
         'LexisNexis': 'lexisnexis.com',
         'NetDocuments': 'netdocuments.com',
+        'Axiom': 'axiomlaw.com',
+        'Legora': 'legora.com',
+        'Celonis': 'celonis.com',
+        'Everlaw': 'everlaw.com',
+        'Exiger': 'exiger.com',
+        'Clio': 'clio.com',
+        'Appian': 'appian.com',
+        'Mitratech': 'mitratech.com',
+        'PandaDoc': 'pandadoc.com',
+        'Filevine': 'filevine.com',
+        'Factor': 'factor.law',
+        'Conga': 'conga.com',
+        'Ironclad': 'ironcladapp.com',
+        'SimpleLegal': 'simplelegal.com',
+        'Brightflag': 'brightflag.com',
+        'Onit': 'onit.com',
       };
 
       const topCompanies = topCompaniesRaw.map(([name, count]) => {
         let logo = companyLogos[name] || null;
-        if (!logo) {
+        if (!logo || logo.includes('legoraformerlyleya')) {
           const domain = COMPANY_DOMAINS[name] || `${name.toLowerCase().replace(/[^a-z0-9]+/g, '')}.com`;
           logo = `https://logo.clearbit.com/${domain}`;
         }
