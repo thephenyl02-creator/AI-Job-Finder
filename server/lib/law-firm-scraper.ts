@@ -1881,9 +1881,30 @@ function sanitizeLocation(location: string, company: string): string | null {
   return loc;
 }
 
-export function transformToJobSchema(job: ScrapedJob, categorization?: JobCategorizationResult): InsertJob {
+export function extractDomainFromUrl(url: string): string | null {
+  try {
+    const hostname = new URL(url).hostname.replace(/^www\./, '');
+    const thirdPartyAts = [
+      'job-boards.greenhouse.io', 'boards.greenhouse.io',
+      'jobs.lever.co', 'jobs.ashbyhq.com', 'api.ashbyhq.com',
+      'jobs.smartrecruiters.com', 'api.smartrecruiters.com',
+      'app.bamboohr.com', 'api.bamboohr.com',
+      'apply.workable.com', 'jobs.workable.com',
+      'api.lever.co',
+    ];
+    if (thirdPartyAts.some(ats => hostname === ats || hostname.endsWith('.' + ats))) return null;
+    const stripped = hostname.replace(/^(jobs|careers|career|apply|recruiting|hire)\./i, '');
+    if (stripped !== hostname && stripped.includes('.')) return stripped;
+    return hostname || null;
+  } catch {
+    return null;
+  }
+}
+
+export function transformToJobSchema(job: ScrapedJob, categorization?: JobCategorizationResult, companyDomain?: string): InsertJob {
   const companyClean = cleanCompanyName(job.company);
   const companySlug = companyClean.toLowerCase().replace(/\s+/g, '').replace(/[^a-z0-9]/g, '');
+  const logoDomain = companyDomain || `${companySlug}.com`;
   
   const cleanDescription = cleanDescriptionText(job.description || '') || `${job.title} position at ${companyClean}`;
   
@@ -1919,7 +1940,7 @@ export function transformToJobSchema(job: ScrapedJob, categorization?: JobCatego
   return {
     title: decodeHtmlEntities(job.title.trim()),
     company: companyClean,
-    companyLogo: `https://www.google.com/s2/favicons?domain=${companySlug}.com&sz=128`,
+    companyLogo: `https://www.google.com/s2/favicons?domain=${logoDomain}&sz=128`,
     location: locationText,
     isRemote: isRemoteDetected,
     locationType,
@@ -2042,7 +2063,8 @@ export async function scrapeAllLawFirms(): Promise<{
             .filter(job => isLegalTechRole(job.title, firm.type))
             .filter(job => isValidJobUrl(job.applyUrl));
 
-          const transformedJobs = legalTechJobs.map(job => transformToJobSchema(job));
+          const firmDomain = extractDomainFromUrl(firm.careerUrl) || undefined;
+          const transformedJobs = legalTechJobs.map(job => transformToJobSchema(job, undefined, firmDomain));
 
           logInfo('SCRAPE', `Found ${scrapedJobs.length} jobs, ${legalTechJobs.length} legal tech roles at ${firm.name} (${firm.type})`);
 
@@ -2200,7 +2222,8 @@ export async function scrapeSingleCompany(companyName: string): Promise<InsertJo
   const legalTechJobs = scrapedJobs
     .filter(job => isLegalTechRole(job.title, firm.type))
     .filter(job => isValidJobUrl(job.applyUrl));
-  return legalTechJobs.map(job => transformToJobSchema(job));
+  const firmDomain = extractDomainFromUrl(firm.careerUrl) || undefined;
+  return legalTechJobs.map(job => transformToJobSchema(job, undefined, firmDomain));
 }
 
 export async function scrapeAllLawFirmsWithAI(
@@ -2252,18 +2275,19 @@ export async function scrapeAllLawFirmsWithAI(
         .filter(job => isLegalTechRole(job.title, firm.type))
         .filter(job => isValidJobUrl(job.applyUrl));
       
+      const firmDomain = extractDomainFromUrl(firm.careerUrl) || undefined;
       let categorizedCount = 0;
       for (const job of legalTechJobs) {
         try {
           const categorization = await categorizeJob(job.title, job.description, job.company);
-          const transformedJob = transformToJobSchema(job, categorization);
+          const transformedJob = transformToJobSchema(job, categorization, firmDomain);
           allJobs.push(transformedJob);
           categorizedCount++;
           
           await delay(500);
         } catch (catError) {
           logError('SCRAPE', `Categorization failed for ${job.title}`, { error: (catError as any)?.message || 'unknown' });
-          const transformedJob = transformToJobSchema(job);
+          const transformedJob = transformToJobSchema(job, undefined, firmDomain);
           allJobs.push(transformedJob);
         }
       }

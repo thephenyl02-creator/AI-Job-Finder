@@ -62,7 +62,7 @@ Legal Tech Careers is a career intelligence platform designed for legal professi
 
 ### Core Features
 - **Landing Page**: Highlights career intelligence. Includes a two-row flowing company logo marquee ("Who's Hiring in Legal Tech") powered by `/api/job-density` returning top 15 companies with job counts. Rows scroll in opposite directions with gradient edge fades and reduced-motion accessibility support.
-- **Company Logo System**: All company logos use the shared `CompanyLogo` component (`client/src/components/company-logo.tsx`) with a server-side favicon proxy (`/api/company-logo?domain=X`). A comprehensive `COMPANY_DOMAINS` map ensures accurate domain resolution for 51+ companies. The proxy fetches from Google Favicon API, caches in-memory for 1 week, and serves from same-origin to avoid CORS issues. Fallback shows colored initials with smooth opacity transition when favicon loads.
+- **Company Logo System**: All company logos use the shared `CompanyLogo` component (`client/src/components/company-logo.tsx`) with three sizes: `xs` (20px, inline), `sm` (36-40px, cards/marquee), `md` (40-48px, job cards). Server-side favicon proxy (`/api/company-logo?domain=X`) fetches from Google Favicon API, caches in-memory for 1 week, and serves from same-origin. Frontend `COMPANY_DOMAINS` map ensures accurate domain resolution for 51+ known companies. Scraper-side `extractDomainFromUrl()` extracts real company domains from `careerUrl` for new companies, stripping ATS subdomains (Greenhouse, Lever, Ashby, etc.). Fallback shows colored initials with smooth opacity transition when favicon loads.
 - **Career Command Center Dashboard**: Personalized dashboard for authenticated users.
 - **Smart Search**: AI-powered natural language job search.
 - **Resume Management & Editing**: Upload, parse, and AI-assisted editing of resumes.
@@ -83,6 +83,7 @@ Legal Tech Careers is a career intelligence platform designed for legal professi
 - **Data Truncation**: Unauthenticated users see truncated job descriptions.
 - **Attribution**: All intelligence API responses include `_attribution`.
 - **Anti-Indexing**: API responses are marked `noindex, nofollow`.
+- **Security Headers**: X-Frame-Options (DENY), X-Content-Type-Options (nosniff), Referrer-Policy, Permissions-Policy, HSTS (production only).
 
 ### Free Tier Limits
 - **Feature Restrictions**: Limits on guided searches, chat messages, saved jobs, diagnostic report details, and market insights access to drive Pro conversions.

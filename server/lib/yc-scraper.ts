@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { transformToJobSchema, isLegalTechRole } from './law-firm-scraper';
+import { transformToJobSchema, isLegalTechRole, extractDomainFromUrl } from './law-firm-scraper';
 import { categorizeJob, parseSalaryFromText, type JobCategorizationResult } from './job-categorizer';
 import { LAW_FIRMS_AND_COMPANIES } from './law-firms-list';
 import type { InsertJob } from '@shared/schema';
@@ -425,16 +425,17 @@ export async function scrapeYCCompanies(
         onProgress(i + 1, total, company.name, 'categorizing');
       }
 
+      const ycDomain = company.website ? (extractDomainFromUrl(company.website) || undefined) : undefined;
       let categorizedCount = 0;
       for (const job of relevantJobs) {
         try {
           const categorization = await categorizeJob(job.title, job.description, job.company);
-          const transformedJob = transformToJobSchema(job, categorization);
+          const transformedJob = transformToJobSchema(job, categorization, ycDomain);
           allJobs.push(transformedJob);
           categorizedCount++;
           await delay(300);
         } catch (catError) {
-          const transformedJob = transformToJobSchema(job);
+          const transformedJob = transformToJobSchema(job, undefined, ycDomain);
           allJobs.push(transformedJob);
         }
       }
