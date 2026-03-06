@@ -292,7 +292,7 @@ function MatchJobCard({
             </div>
             <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5 flex-wrap">
               <span className="flex items-center gap-1">
-                <CompanyLogo company={match.company} logo={null} size="sm" shape="rounded" className="!w-3.5 !h-3.5 !ring-0" />
+                <CompanyLogo company={match.company} logo={null} size="xs" />
                 {match.company}
               </span>
               {match.location && (

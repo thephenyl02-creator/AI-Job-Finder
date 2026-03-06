@@ -765,7 +765,7 @@ export default function JobDetail() {
 
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm text-muted-foreground mt-3">
             <span className="flex items-center gap-1.5">
-              <CompanyLogo company={job.company} logo={job.companyLogo} size="sm" shape="rounded" className="!w-4 !h-4 !ring-0" />
+              <CompanyLogo company={job.company} logo={job.companyLogo} size="xs" />
               <span className="font-medium text-foreground/80" data-testid="text-job-detail-company">{cleanStructuredText(job.company)}</span>
             </span>
             <JobLocation
@@ -1377,7 +1377,7 @@ export default function JobDetail() {
                         </h3>
                         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1.5 text-xs text-muted-foreground">
                           <span className="flex items-center gap-1" title={cleanStructuredText(sj.company)}>
-                            <CompanyLogo company={sj.company} logo={sj.companyLogo} size="sm" shape="rounded" className="!w-3.5 !h-3.5 !ring-0" />
+                            <CompanyLogo company={sj.company} logo={sj.companyLogo} size="xs" />
                             {cleanStructuredText(sj.company)}
                           </span>
                           <JobLocation

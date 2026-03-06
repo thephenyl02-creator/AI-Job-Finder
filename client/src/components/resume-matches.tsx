@@ -450,7 +450,7 @@ function MatchCard({
               </div>
               <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2 flex-wrap">
                 <span className="flex items-center gap-1">
-                  <CompanyLogo company={match.company} logo={null} size="sm" shape="rounded" className="!w-4 !h-4 !ring-0" />
+                  <CompanyLogo company={match.company} logo={null} size="xs" />
                   {match.company}
                 </span>
                 {(match.isRemote || (match.location && match.location !== 'Not specified')) && (

@@ -419,7 +419,7 @@ export default function DashboardPage() {
                   )}
                   {dashData.briefing.returningCompany && (
                     <p data-testid="text-briefing-returning">
-                      <CompanyLogo company={dashData.briefing.returningCompany} logo={null} size="sm" shape="rounded" className="!w-4 !h-4 !ring-0 inline-block mr-1 align-text-bottom" />
+                      <CompanyLogo company={dashData.briefing.returningCompany} logo={null} size="xs" className="inline-block mr-1 align-text-bottom" />
                       <span className="font-medium text-foreground">{dashData.briefing.returningCompany}</span> is hiring again
                     </p>
                   )}
@@ -956,7 +956,7 @@ export default function DashboardPage() {
                           )}
                           {marketPulse.topHiringCompanies?.[0] && (
                             <div className="flex items-center gap-3 p-2.5">
-                              <CompanyLogo company={marketPulse.topHiringCompanies[0].name} logo={null} size="sm" shape="rounded" className="!w-7 !h-7 !ring-0" />
+                              <CompanyLogo company={marketPulse.topHiringCompanies[0].name} logo={null} size="sm" />
                               <p className="text-sm text-muted-foreground">
                                 <span className="font-medium text-foreground" title={marketPulse.topHiringCompanies[0].name}>{marketPulse.topHiringCompanies[0].name}</span> is hiring the most
                               </p>
@@ -1012,7 +1012,7 @@ export default function DashboardPage() {
                             </p>
                           </div>
                           {marketPulse.topHiringCompanies?.[0] ? (
-                            <CompanyLogo company={marketPulse.topHiringCompanies[0].name} logo={null} size="sm" shape="rounded" className="!w-8 !h-8" />
+                            <CompanyLogo company={marketPulse.topHiringCompanies[0].name} logo={null} size="sm" />
                           ) : (
                             <div className="p-2.5 rounded-md bg-chart-1/10 dark:bg-chart-1/20 text-chart-1">
                               <Building2 className="h-5 w-5" />

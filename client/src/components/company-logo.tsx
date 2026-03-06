@@ -103,7 +103,7 @@ function hashColor(name: string): string {
 interface CompanyLogoProps {
   company: string;
   logo?: string | null;
-  size?: 'sm' | 'md';
+  size?: 'xs' | 'sm' | 'md';
   shape?: 'circle' | 'rounded';
   className?: string;
 }
@@ -121,17 +121,25 @@ export function CompanyLogo({ company, logo, size = 'md', shape = 'rounded', cla
   const initials = company.substring(0, 2).toUpperCase();
   const color = hashColor(company);
 
-  const sizeClasses = size === 'sm'
-    ? 'w-9 h-9 sm:w-10 sm:h-10'
-    : 'h-10 w-10 sm:h-12 sm:w-12';
+  const sizeClasses = size === 'xs'
+    ? 'w-5 h-5'
+    : size === 'sm'
+      ? 'w-9 h-9 sm:w-10 sm:h-10'
+      : 'h-10 w-10 sm:h-12 sm:w-12';
 
-  const shapeClass = shape === 'circle' ? 'rounded-full' : 'rounded-lg';
+  const shapeClass = size === 'xs'
+    ? 'rounded'
+    : shape === 'circle' ? 'rounded-full' : 'rounded-lg';
 
-  const textSize = size === 'sm' ? 'text-[10px] sm:text-xs' : 'text-sm';
+  const textSize = size === 'xs' ? 'text-[7px]' : size === 'sm' ? 'text-[10px] sm:text-xs' : 'text-sm';
+
+  const ringClass = size === 'xs' ? '' : 'ring-1 ring-border/10';
+
+  const imgPadding = size === 'xs' ? 'p-0.5' : 'p-1.5';
 
   return (
     <div
-      className={`${sizeClasses} ${shapeClass} relative overflow-hidden shrink-0 ring-1 ring-border/10 ${className}`}
+      className={`${sizeClasses} ${shapeClass} ${ringClass} relative overflow-hidden shrink-0 ${className}`}
       data-testid={`logo-${company.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
     >
       <div className={`absolute inset-0 ${color} flex items-center justify-center transition-opacity duration-200 ${status === 'loaded' ? 'opacity-0' : 'opacity-100'}`}>
@@ -144,7 +152,7 @@ export function CompanyLogo({ company, logo, size = 'md', shape = 'rounded', cla
           alt={company}
           onLoad={handleLoad}
           onError={handleError}
-          className={`absolute inset-0 w-full h-full object-contain p-1.5 bg-white transition-opacity duration-200 ${status === 'loaded' ? 'opacity-100' : 'opacity-0'}`}
+          className={`absolute inset-0 w-full h-full object-contain ${imgPadding} bg-white transition-opacity duration-200 ${status === 'loaded' ? 'opacity-100' : 'opacity-0'}`}
         />
       )}
     </div>
