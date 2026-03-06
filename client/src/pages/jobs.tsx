@@ -834,7 +834,7 @@ export default function Jobs() {
                           data-testid="button-career-gear"
                           title="Career intelligence"
                         >
-                          <Compass className="h-4.5 w-4.5" />
+                          <Compass className="h-5 w-5" />
                           {intelligenceResult && (
                             <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-primary" />
                           )}
