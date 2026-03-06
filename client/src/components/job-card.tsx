@@ -1,7 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { CompanyLogo } from "@/components/company-logo";
 import { ExternalLink, Bookmark, DollarSign, Zap, TrendingUp, Target, ShieldCheck } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { JobLocation } from "./job-location";
@@ -73,35 +73,6 @@ const COMPANY_DESCRIPTORS: Record<string, string> = {
   "Legatics": "Legal Transaction Management",
 };
 
-function getReliableLogoUrl(companyLogo: string | null | undefined, company: string): string | undefined {
-  if (companyLogo && companyLogo.includes('logo.clearbit.com')) {
-    const match = companyLogo.match(/clearbit\.com\/(.+)/);
-    if (match) {
-      return `https://www.google.com/s2/favicons?domain=${match[1]}&sz=128`;
-    }
-  }
-  if (companyLogo && companyLogo.trim()) return companyLogo;
-  const slug = company.toLowerCase().replace(/[^a-z0-9]+/g, '');
-  return `https://www.google.com/s2/favicons?domain=${slug}.com&sz=128`;
-}
-
-function getCompanyColor(company: string): string {
-  let hash = 0;
-  for (let i = 0; i < company.length; i++) {
-    hash = company.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  const colors = [
-    "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
-    "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
-    "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300",
-    "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
-    "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300",
-    "bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300",
-    "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300",
-    "bg-slate-100 text-slate-700 dark:bg-slate-900/40 dark:text-slate-300",
-  ];
-  return colors[Math.abs(hash) % colors.length];
-}
 
 function getFitColor(score: number): string {
   if (score >= 80) return "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800";
@@ -140,7 +111,6 @@ export function JobCard({ job, isSaved = false, isAuthenticated = false, fitData
   const { toast } = useToast();
   const salary = formatSalary(job.salaryMin, job.salaryMax, job.salaryCurrency);
   const companyDescriptor = COMPANY_DESCRIPTORS[job.company] || null;
-  const avatarColor = getCompanyColor(job.company);
 
   const getTimeAgo = (date?: Date | string | null) => {
     if (!date) return "Recently";
@@ -180,12 +150,7 @@ export function JobCard({ job, isSaved = false, isAuthenticated = false, fitData
       <CardContent className="p-4 sm:p-5">
         <div className="flex items-start gap-3 sm:gap-4">
           <Link to={`/jobs/${job.id}`} className="flex-shrink-0">
-            <Avatar className="h-10 w-10 sm:h-12 sm:w-12 rounded-lg">
-              <AvatarImage src={getReliableLogoUrl(job.companyLogo, job.company)} alt={job.company} className="object-contain p-1" />
-              <AvatarFallback className={`rounded-lg font-semibold text-sm ${avatarColor}`}>
-                {job.company.substring(0, 2).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
+            <CompanyLogo company={job.company} logo={job.companyLogo} size="md" shape="rounded" />
           </Link>
 
           <div className="flex-1 min-w-0">

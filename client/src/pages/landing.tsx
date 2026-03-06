@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LogoMark } from "@/components/logo";
+import { CompanyLogo } from "@/components/company-logo";
 import { ArrowRight, Search, Target, Globe, Wifi, Clock, BarChart3, Lock, Upload, Check, Building2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Footer } from "@/components/footer";
@@ -82,17 +83,6 @@ export default function Landing() {
   const marqueeRow1 = topCompanies.slice(0, Math.ceil(topCompanies.length / 2));
   const marqueeRow2 = topCompanies.slice(Math.ceil(topCompanies.length / 2));
 
-  const FALLBACK_COLORS = [
-    'bg-slate-600', 'bg-blue-700', 'bg-indigo-600', 'bg-violet-600',
-    'bg-teal-600', 'bg-cyan-700', 'bg-emerald-700', 'bg-sky-700',
-    'bg-purple-600', 'bg-rose-700', 'bg-amber-700', 'bg-fuchsia-700',
-    'bg-blue-800', 'bg-teal-700', 'bg-indigo-700',
-  ];
-  const getCompanyFallbackColor = (name: string) => {
-    let hash = 0;
-    for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-    return FALLBACK_COLORS[Math.abs(hash) % FALLBACK_COLORS.length];
-  };
 
   return (
     <div className="min-h-screen bg-background flex flex-col overflow-x-hidden">
@@ -322,22 +312,7 @@ export default function Landing() {
                         className="flex items-center gap-2.5 px-4 py-2.5 mx-2 rounded-xl border border-border/30 bg-card shadow-sm shrink-0"
                         data-testid={i < marqueeRow1.length ? `company-logo-${i}` : undefined}
                       >
-                        <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white dark:bg-white/95 ring-1 ring-border/10 flex items-center justify-center overflow-hidden shrink-0 relative">
-                          {company.logo && (
-                            <img
-                              src={company.logo}
-                              alt={company.name}
-                              className="w-6 h-6 sm:w-7 sm:h-7 object-contain relative z-10"
-                              loading="lazy"
-                              onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                            />
-                          )}
-                          <span
-                            className={`absolute inset-0 text-[10px] sm:text-xs font-bold text-white flex items-center justify-center rounded-full ${getCompanyFallbackColor(company.name)}`}
-                          >
-                            {company.name.slice(0, 2).toUpperCase()}
-                          </span>
-                        </div>
+                        <CompanyLogo company={company.name} logo={company.logo} size="sm" shape="circle" />
                         <div className="min-w-0">
                           <p className="text-xs sm:text-sm font-medium text-foreground whitespace-nowrap">{company.name}</p>
                           <p className="text-[10px] sm:text-xs text-muted-foreground whitespace-nowrap flex items-center gap-1">
@@ -360,22 +335,7 @@ export default function Landing() {
                         className="flex items-center gap-2.5 px-4 py-2.5 mx-2 rounded-xl border border-border/30 bg-card shadow-sm shrink-0"
                         data-testid={i < marqueeRow2.length ? `company-logo-${marqueeRow1.length + i}` : undefined}
                       >
-                        <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white dark:bg-white/95 ring-1 ring-border/10 flex items-center justify-center overflow-hidden shrink-0 relative">
-                          {company.logo && (
-                            <img
-                              src={company.logo}
-                              alt={company.name}
-                              className="w-6 h-6 sm:w-7 sm:h-7 object-contain relative z-10"
-                              loading="lazy"
-                              onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                            />
-                          )}
-                          <span
-                            className={`absolute inset-0 text-[10px] sm:text-xs font-bold text-white flex items-center justify-center rounded-full ${getCompanyFallbackColor(company.name)}`}
-                          >
-                            {company.name.slice(0, 2).toUpperCase()}
-                          </span>
-                        </div>
+                        <CompanyLogo company={company.name} logo={company.logo} size="sm" shape="circle" />
                         <div className="min-w-0">
                           <p className="text-xs sm:text-sm font-medium text-foreground whitespace-nowrap">{company.name}</p>
                           <p className="text-[10px] sm:text-xs text-muted-foreground whitespace-nowrap flex items-center gap-1">
