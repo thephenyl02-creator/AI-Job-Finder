@@ -27,12 +27,8 @@ import {
   Tooltip,
   ResponsiveContainer,
   Cell,
-  LineChart,
-  Line,
   Legend,
   CartesianGrid,
-  AreaChart,
-  Area,
   PieChart,
   Pie,
   RadialBarChart,
@@ -746,19 +742,12 @@ export default function MarketIntelligence() {
             return m === currentYM ? `${label} *` : label;
           };
 
-          const volumeData = months.map((m, i) => {
-            const d = historicalData.jobsByMonth[m] || 0;
-            const p = historicalData.publishedByMonth?.[m] || 0;
-            const isLast = i === months.length - 1 && isPartialMonth;
-            const isPrevToLast = i === months.length - 2 && isPartialMonth;
-            return {
-              month: formatMonth(m),
-              discovered: isLast ? null : d,
-              published: isLast ? null : p,
-              discoveredMtd: isLast || isPrevToLast ? d : null,
-              publishedMtd: isLast || isPrevToLast ? p : null,
-            };
-          });
+          const volumeData = months.map((m) => ({
+            month: formatMonth(m),
+            discovered: historicalData.jobsByMonth[m] || 0,
+            published: historicalData.publishedByMonth?.[m] || 0,
+            isPartial: m === currentYM,
+          }));
 
           const allSkills = new Map<string, number>();
           for (const skills of Object.values(historicalData.skillTrends || {})) {
@@ -766,21 +755,16 @@ export default function MarketIntelligence() {
           }
           const topSkills = Array.from(allSkills.entries()).sort(([,a], [,b]) => b - a).slice(0, 5).map(([name]) => name);
 
-          const skillsData = months.map((m, i) => {
-            const row: Record<string, any> = { month: formatMonth(m) };
-            const monthSkills = historicalData.skillTrends?.[m] || [];
-            const isLast = i === months.length - 1 && isPartialMonth;
-            const isPrevToLast = i === months.length - 2 && isPartialMonth;
-            for (const skill of topSkills) {
-              const found = monthSkills.find(s => s.name === skill);
-              const val = found?.count || 0;
-              row[skill] = isLast ? null : val;
-              if (isLast || isPrevToLast) {
-                row[`${skill}_mtd`] = val;
-              }
-            }
-            return row;
-          });
+          const latestMonthKey = months[months.length - 1];
+          const prevMonthKey = months.length >= 2 ? months[months.length - 2] : null;
+          const latestSkills = historicalData.skillTrends?.[latestMonthKey] || [];
+          const prevSkills = prevMonthKey ? (historicalData.skillTrends?.[prevMonthKey] || []) : [];
+          const skillBarData = topSkills.map(name => {
+            const current = latestSkills.find(s => s.name === name)?.count || 0;
+            const prev = prevSkills.find(s => s.name === name)?.count || 0;
+            const change = prevMonthKey ? current - prev : 0;
+            return { name: name.length > 22 ? name.slice(0, 20) + '…' : name, fullName: name, current, prev, change };
+          }).sort((a, b) => b.current - a.current);
 
           return (
             <section className="border-t border-border/60" data-testid="section-market-evolution">
@@ -795,49 +779,27 @@ export default function MarketIntelligence() {
                   <div className="mi-panel" data-testid="chart-job-volume">
                     <div className="mi-panel-header">
                       <TrendingUp className="h-3 w-3 text-muted-foreground" />
-                      <span className="mi-label text-[10px]">Job Volume Over Time</span>
+                      <span className="mi-label text-[10px]">Job Volume by Month</span>
                     </div>
                     <div className="h-[220px]">
                       <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={volumeData}>
-                          <defs>
-                            <linearGradient id="gradDiscovered" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="0%" stopColor="hsl(var(--chart-1))" stopOpacity={0.3} />
-                              <stop offset="100%" stopColor="hsl(var(--chart-1))" stopOpacity={0.02} />
-                            </linearGradient>
-                            <linearGradient id="gradPublished" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="0%" stopColor="hsl(var(--chart-5))" stopOpacity={0.3} />
-                              <stop offset="100%" stopColor="hsl(var(--chart-5))" stopOpacity={0.02} />
-                            </linearGradient>
-                          </defs>
-                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.3} />
+                        <BarChart data={volumeData} barGap={2} barCategoryGap="20%">
+                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.3} vertical={false} />
                           <XAxis dataKey="month" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))", fontFamily: "var(--font-sans)" }} axisLine={false} tickLine={false} />
                           <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))", fontFamily: "var(--font-sans)" }} axisLine={false} tickLine={false} />
-                          <Tooltip {...SHARED_TOOLTIP_STYLE} filterNull={false} content={({ active, payload, label }: any) => {
-                            if (!active || !payload) return null;
-                            const main = payload.filter((p: any) => !String(p.dataKey).includes('Mtd'));
-                            if (!main.length) return null;
-                            const mtdMap = new Map(payload.filter((p: any) => String(p.dataKey).includes('Mtd')).map((p: any) => [String(p.dataKey).replace('Mtd', ''), p.value]));
-                            return (
-                              <div className="rounded-md border bg-popover px-3 py-2 text-xs shadow-md">
-                                <p className="font-medium mb-1">{label}</p>
-                                {main.map((p: any) => {
-                                  const val = p.value ?? mtdMap.get(p.dataKey) ?? null;
-                                  return val != null ? <p key={p.dataKey} style={{ color: p.color }}>{p.name}: {val}</p> : null;
-                                })}
-                              </div>
-                            );
-                          }} />
+                          <Tooltip {...SHARED_TOOLTIP_STYLE} cursor={{ fill: "hsl(var(--muted-foreground) / 0.06)" }} />
                           <Legend wrapperStyle={{ fontSize: 10, fontFamily: "var(--font-sans)" }} />
-                          <Area type="monotone" dataKey="discovered" name="Discovered" stroke="hsl(var(--chart-1))" strokeWidth={2} fill="url(#gradDiscovered)" dot={{ r: 2, fill: "hsl(var(--chart-1))" }} connectNulls={false} />
-                          <Area type="monotone" dataKey="published" name="Approved" stroke="hsl(var(--chart-5))" strokeWidth={2} fill="url(#gradPublished)" dot={{ r: 2, fill: "hsl(var(--chart-5))" }} connectNulls={false} />
-                          {isPartialMonth && (
-                            <>
-                              <Area type="monotone" dataKey="discoveredMtd" stroke="hsl(var(--chart-1))" strokeWidth={2} strokeDasharray="4 4" fill="none" dot={{ r: 2, fill: "hsl(var(--chart-1))", strokeDasharray: "0" }} connectNulls legendType="none" name="discoveredMtd" />
-                              <Area type="monotone" dataKey="publishedMtd" stroke="hsl(var(--chart-5))" strokeWidth={2} strokeDasharray="4 4" fill="none" dot={{ r: 2, fill: "hsl(var(--chart-5))", strokeDasharray: "0" }} connectNulls legendType="none" name="publishedMtd" />
-                            </>
-                          )}
-                        </AreaChart>
+                          <Bar dataKey="discovered" name="Discovered" radius={[3, 3, 0, 0]}>
+                            {volumeData.map((entry, idx) => (
+                              <Cell key={idx} fill="hsl(var(--chart-1))" fillOpacity={entry.isPartial ? 0.4 : 0.85} stroke={entry.isPartial ? "hsl(var(--chart-1))" : "none"} strokeWidth={entry.isPartial ? 1.5 : 0} strokeDasharray={entry.isPartial ? "4 3" : "0"} />
+                            ))}
+                          </Bar>
+                          <Bar dataKey="published" name="Approved" radius={[3, 3, 0, 0]}>
+                            {volumeData.map((entry, idx) => (
+                              <Cell key={idx} fill="hsl(var(--chart-5))" fillOpacity={entry.isPartial ? 0.4 : 0.85} stroke={entry.isPartial ? "hsl(var(--chart-5))" : "none"} strokeWidth={entry.isPartial ? 1.5 : 0} strokeDasharray={entry.isPartial ? "4 3" : "0"} />
+                            ))}
+                          </Bar>
+                        </BarChart>
                       </ResponsiveContainer>
                     </div>
                   </div>
@@ -845,45 +807,35 @@ export default function MarketIntelligence() {
                   <div className="mi-panel" data-testid="chart-skills-trajectory">
                     <div className="mi-panel-header">
                       <Sparkles className="h-3 w-3 text-muted-foreground" />
-                      <span className="mi-label text-[10px]">Skills Trajectory</span>
+                      <span className="mi-label text-[10px]">Top Skills — {formatMonth(latestMonthKey)}</span>
                     </div>
                     <div className="h-[220px]">
                       <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={skillsData}>
-                          <defs>
-                            {topSkills.map((_, i) => (
-                              <linearGradient key={`skillGrad${i}`} id={`skillGrad${i}`} x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stopColor={GENERIC_PALETTE[i % GENERIC_PALETTE.length]} stopOpacity={0.15} />
-                                <stop offset="100%" stopColor={GENERIC_PALETTE[i % GENERIC_PALETTE.length]} stopOpacity={0} />
-                              </linearGradient>
-                            ))}
-                          </defs>
-                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.3} />
-                          <XAxis dataKey="month" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))", fontFamily: "var(--font-sans)" }} axisLine={false} tickLine={false} />
-                          <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))", fontFamily: "var(--font-sans)" }} axisLine={false} tickLine={false} />
-                          <Tooltip {...SHARED_TOOLTIP_STYLE} filterNull={false} content={({ active, payload, label }: any) => {
-                            if (!active || !payload) return null;
-                            const main = payload.filter((p: any) => !String(p.dataKey).includes('_mtd'));
-                            if (!main.length) return null;
-                            const mtdMap = new Map(payload.filter((p: any) => String(p.dataKey).includes('_mtd')).map((p: any) => [String(p.dataKey).replace('_mtd', ''), p.value]));
+                        <BarChart data={skillBarData} layout="vertical" barSize={16} margin={{ left: 8, right: 40, top: 4, bottom: 4 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.3} horizontal={false} />
+                          <XAxis type="number" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))", fontFamily: "var(--font-sans)" }} axisLine={false} tickLine={false} />
+                          <YAxis type="category" dataKey="name" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))", fontFamily: "var(--font-sans)" }} axisLine={false} tickLine={false} width={120} />
+                          <Tooltip {...SHARED_TOOLTIP_STYLE} cursor={{ fill: "hsl(var(--muted-foreground) / 0.06)" }} content={({ active, payload }: any) => {
+                            if (!active || !payload?.[0]) return null;
+                            const d = payload[0].payload;
                             return (
                               <div className="rounded-md border bg-popover px-3 py-2 text-xs shadow-md">
-                                <p className="font-medium mb-1">{label}</p>
-                                {main.map((p: any) => {
-                                  const val = p.value ?? mtdMap.get(p.dataKey) ?? null;
-                                  return val != null ? <p key={p.dataKey} style={{ color: p.color }}>{p.name}: {val}</p> : null;
-                                })}
+                                <p className="font-medium mb-1">{d.fullName}</p>
+                                <p style={{ color: payload[0].color }}>{d.current} mentions{isPartialMonth ? ' (MTD)' : ''}</p>
+                                {prevMonthKey && d.change !== 0 && (
+                                  <p className={d.change > 0 ? 'text-emerald-500' : 'text-rose-500'}>
+                                    {d.change > 0 ? '↑' : '↓'} {Math.abs(d.change)} vs prev month
+                                  </p>
+                                )}
                               </div>
                             );
                           }} />
-                          <Legend wrapperStyle={{ fontSize: 10, fontFamily: "var(--font-sans)" }} />
-                          {topSkills.map((skill, i) => (
-                            <Area key={skill} type="monotone" dataKey={skill} stroke={GENERIC_PALETTE[i % GENERIC_PALETTE.length]} strokeWidth={2} fill={`url(#skillGrad${i})`} dot={{ r: 2 }} name={skill.length > 18 ? skill.slice(0, 16) + '…' : skill} connectNulls={false} />
-                          ))}
-                          {isPartialMonth && topSkills.map((skill, i) => (
-                            <Area key={`${skill}_mtd`} type="monotone" dataKey={`${skill}_mtd`} stroke={GENERIC_PALETTE[i % GENERIC_PALETTE.length]} strokeWidth={2} strokeDasharray="4 4" fill="none" dot={{ r: 2, strokeDasharray: "0" }} connectNulls legendType="none" name={`${skill}_mtd`} />
-                          ))}
-                        </AreaChart>
+                          <Bar dataKey="current" name="Mentions" radius={[0, 3, 3, 0]}>
+                            {skillBarData.map((_, idx) => (
+                              <Cell key={idx} fill={GENERIC_PALETTE[idx % GENERIC_PALETTE.length]} fillOpacity={isPartialMonth ? 0.5 : 0.85} stroke={isPartialMonth ? GENERIC_PALETTE[idx % GENERIC_PALETTE.length] : "none"} strokeWidth={isPartialMonth ? 1.5 : 0} strokeDasharray={isPartialMonth ? "4 3" : "0"} />
+                            ))}
+                          </Bar>
+                        </BarChart>
                       </ResponsiveContainer>
                     </div>
                   </div>
