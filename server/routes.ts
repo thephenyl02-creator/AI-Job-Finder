@@ -205,7 +205,7 @@ export async function registerRoutes(
 
   const publicApiPaths = new Set([
     "/api/stats", "/api/stats/social-proof", "/api/market-pulse",
-    "/api/job-density", "/api/track", "/api/events",
+    "/api/job-density", "/api/track", "/api/events", "/api/company-logo",
   ]);
   const publicApiPrefixes = ["/api/auth/", "/api/stats/", "/api/jobs", "/api/public/", "/api/quiz", "/api/search/", "/api/resume/anonymous", "/api/share/"];
 
@@ -214,6 +214,7 @@ export async function registerRoutes(
     if (publicApiPaths.has(req.path)) return next();
     if (publicApiPrefixes.some(p => req.path.startsWith(p))) return next();
     if (req.path === "/api/market-intelligence") return next();
+    if (req.path === "/api/company-logo" || req.path === "/company-logo") return next();
 
     const apiKey = req.headers["x-api-key"];
     if (apiKey) {
@@ -452,6 +453,50 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error fetching stats:", error);
       res.status(500).json({ error: "Failed to fetch stats" });
+    }
+  });
+
+  const logoCache = new Map<string, { data: Buffer; contentType: string; fetchedAt: number }>();
+
+  app.get("/api/company-logo", async (req, res) => {
+    try {
+      const domain = req.query.domain as string;
+      if (!domain || !/^[a-z0-9.-]+$/i.test(domain)) {
+        return res.status(400).send("Invalid domain");
+      }
+
+      const cached = logoCache.get(domain);
+      if (cached && Date.now() - cached.fetchedAt < 7 * 24 * 60 * 60 * 1000) {
+        res.setHeader("Content-Type", cached.contentType);
+        res.setHeader("Cache-Control", "public, max-age=604800, immutable");
+        return res.send(cached.data);
+      }
+
+      const faviconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
+      const response = await fetch(faviconUrl, {
+        headers: { "User-Agent": "Mozilla/5.0" },
+        signal: AbortSignal.timeout(5000),
+      });
+
+      if (!response.ok) {
+        return res.status(404).send("Not found");
+      }
+
+      const buffer = Buffer.from(await response.arrayBuffer());
+      const contentType = response.headers.get("Content-Type") || "image/png";
+
+      logoCache.set(domain, { data: buffer, contentType, fetchedAt: Date.now() });
+
+      if (logoCache.size > 500) {
+        const oldest = [...logoCache.entries()].sort((a, b) => a[1].fetchedAt - b[1].fetchedAt);
+        for (let i = 0; i < 100; i++) logoCache.delete(oldest[i][0]);
+      }
+
+      res.setHeader("Content-Type", contentType);
+      res.setHeader("Cache-Control", "public, max-age=604800, immutable");
+      res.send(buffer);
+    } catch (error) {
+      res.status(404).send("Not found");
     }
   });
 

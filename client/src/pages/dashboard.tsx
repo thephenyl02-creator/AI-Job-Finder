@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "wouter";
 import { formatSalary } from "@/lib/format-salary";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { CompanyLogo } from "@/components/company-logo";
 import {
   FileText, Bell, Bookmark, ArrowRight, TrendingUp,
   Building2, ChevronRight, Briefcase,
@@ -578,14 +578,7 @@ export default function DashboardPage() {
                     <Card className="card-elev-interactive cursor-pointer min-w-[200px] max-w-[220px] snap-start shrink-0" data-testid={`card-recently-viewed-${job.id}`}>
                       <CardContent className="p-3.5">
                         <div className="flex items-start gap-2.5 mb-2">
-                          <Avatar className="h-8 w-8 shrink-0 rounded-md">
-                            {job.companyLogo ? (
-                              <AvatarImage src={job.companyLogo} alt={job.company} />
-                            ) : null}
-                            <AvatarFallback className="rounded-md text-[10px] font-medium">
-                              {job.company.slice(0, 2).toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
+                          <CompanyLogo company={job.company} logo={job.companyLogo} size="sm" shape="rounded" />
                           <div className="min-w-0 flex-1">
                             <p className="text-xs font-medium text-foreground line-clamp-2 leading-tight" title={job.title} data-testid={`text-viewed-title-${job.id}`}>{job.title}</p>
                             <p className="text-[11px] text-muted-foreground mt-0.5 truncate" title={job.company} data-testid={`text-viewed-company-${job.id}`}>{job.company}</p>

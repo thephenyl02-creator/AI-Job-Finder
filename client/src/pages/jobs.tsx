@@ -50,7 +50,7 @@ import {
   Bookmark as BookmarkIcon,
   Flame,
 } from "lucide-react";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { CompanyLogo } from "@/components/company-logo";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { queryClient } from "@/lib/queryClient";
 import { Footer } from "@/components/footer";
@@ -1858,12 +1858,7 @@ export default function Jobs() {
                     }}
                   >
                     <div className="flex gap-3">
-                      <Avatar className="h-8 w-8 rounded-md shrink-0 mt-0.5">
-                        <AvatarImage src={job.companyLogo || undefined} alt={job.company} />
-                        <AvatarFallback className="rounded-md bg-primary/10 text-primary text-[10px] font-semibold">
-                          {job.company.substring(0, 2).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
+                      <CompanyLogo company={job.company} logo={job.companyLogo} size="md" shape="rounded" />
                       <div className="min-w-0 flex-1">
                         <div className="flex items-start justify-between gap-2 flex-wrap">
                           <h3 className="font-medium text-foreground text-sm sm:text-base leading-snug line-clamp-2 sm:line-clamp-2" data-testid={`text-job-title-${job.id}`} title={cleanStructuredText(job.title)}>

@@ -61,7 +61,8 @@ Legal Tech Careers is a career intelligence platform designed for legal professi
 - **Automation & QA**: Scheduled workers manage ingestion, scoring, deduplication, and validation, supported by an admin review queue and dashboard.
 
 ### Core Features
-- **Landing Page**: Highlights career intelligence. Includes a two-row flowing company logo marquee ("Who's Hiring in Legal Tech") powered by `/api/job-density` returning top 15 companies with Clearbit logos and job counts. Rows scroll in opposite directions with gradient edge fades and reduced-motion accessibility support.
+- **Landing Page**: Highlights career intelligence. Includes a two-row flowing company logo marquee ("Who's Hiring in Legal Tech") powered by `/api/job-density` returning top 15 companies with job counts. Rows scroll in opposite directions with gradient edge fades and reduced-motion accessibility support.
+- **Company Logo System**: All company logos use the shared `CompanyLogo` component (`client/src/components/company-logo.tsx`) with a server-side favicon proxy (`/api/company-logo?domain=X`). A comprehensive `COMPANY_DOMAINS` map ensures accurate domain resolution for 51+ companies. The proxy fetches from Google Favicon API, caches in-memory for 1 week, and serves from same-origin to avoid CORS issues. Fallback shows colored initials with smooth opacity transition when favicon loads.
 - **Career Command Center Dashboard**: Personalized dashboard for authenticated users.
 - **Smart Search**: AI-powered natural language job search.
 - **Resume Management & Editing**: Upload, parse, and AI-assisted editing of resumes.

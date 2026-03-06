@@ -5,7 +5,7 @@ import { Header } from "@/components/header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { CompanyLogo } from "@/components/company-logo";
 import { useAuth } from "@/hooks/use-auth";
 import { useSubscription } from "@/hooks/use-subscription";
 import { useActivityTracker } from "@/hooks/use-activity-tracker";
@@ -71,12 +71,7 @@ function CompareView({ jobs, onClose }: { jobs: Job[]; onClose: () => void }) {
       label: "Company",
       render: (job) => (
         <div className="flex items-center gap-2">
-          <Avatar className="h-6 w-6 rounded-md">
-            <AvatarImage src={job.companyLogo || undefined} alt={job.company} />
-            <AvatarFallback className="rounded-md bg-primary/10 text-primary text-[10px] font-semibold">
-              {job.company.substring(0, 2).toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
+          <CompanyLogo company={job.company} logo={job.companyLogo} size="sm" shape="rounded" />
           <span className="text-sm font-medium text-foreground">{job.company}</span>
         </div>
       ),
@@ -418,12 +413,7 @@ export default function SavedJobs() {
                         </button>
                       )}
 
-                      <Avatar className="h-11 w-11 rounded-lg flex-shrink-0">
-                        <AvatarImage src={sj.job.companyLogo || undefined} alt={sj.job.company} />
-                        <AvatarFallback className="rounded-lg bg-primary/10 text-primary font-semibold text-sm">
-                          {sj.job.company.substring(0, 2).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
+                      <CompanyLogo company={sj.job.company} logo={sj.job.companyLogo} size="md" shape="rounded" />
 
                       <div className="flex-1 min-w-0">
                         <div className="flex flex-col sm:flex-row sm:items-start gap-1.5 sm:gap-2">

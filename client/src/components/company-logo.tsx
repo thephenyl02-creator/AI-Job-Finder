@@ -1,15 +1,82 @@
 import { useState, useCallback, useEffect } from "react";
 
-function getLogoUrl(logo: string | null | undefined, company: string): string {
+const COMPANY_DOMAINS: Record<string, string> = {
+  "ABBYY": "abbyy.com",
+  "ACLU": "aclu.org",
+  "Aderant": "aderant.com",
+  "Agiloft": "agiloft.com",
+  "Alston & Bird": "alston.com",
+  "Anthropic": "anthropic.com",
+  "Appian": "appian.com",
+  "Axiom": "axiomlaw.com",
+  "Brightflag": "brightflag.com",
+  "Celonis": "celonis.com",
+  "Checkbox": "checkbox.ai",
+  "Clio": "clio.com",
+  "Conga": "conga.com",
+  "Cooley": "cooley.com",
+  "DISCO": "csdisco.com",
+  "DLA Piper": "dlapiper.com",
+  "Dennemeyer": "dennemeyer.com",
+  "Epiq Global": "epiqglobal.com",
+  "Eve Legal": "eve.legal",
+  "Everlaw": "everlaw.com",
+  "Exiger": "exiger.com",
+  "Factor": "factor.law",
+  "Filevine": "filevine.com",
+  "Gibson Dunn": "gibsondunn.com",
+  "Goodwin Procter": "goodwinlaw.com",
+  "Greenberg Traurig": "gtlaw.com",
+  "Harvey AI": "harvey.ai",
+  "Hebbia": "hebbia.ai",
+  "Holland & Knight": "hklaw.com",
+  "Hyperproof": "hyperproof.io",
+  "Kodex": "kodex.com",
+  "Lawhive": "lawhive.co.uk",
+  "Legora": "legora.com",
+  "LexisNexis": "lexisnexis.com",
+  "Litify": "litify.com",
+  "LogicGate": "logicgate.com",
+  "MarqVision": "marqvision.com",
+  "McDermott Will & Emery": "mwe.com",
+  "Mitratech": "mitratech.com",
+  "NetDocuments": "netdocuments.com",
+  "OneSpan": "onespan.com",
+  "OneTrust": "onetrust.com",
+  "Onit": "onit.com",
+  "Palantir": "palantir.com",
+  "PandaDoc": "pandadoc.com",
+  "Rocket Lawyer": "rocketlawyer.com",
+  "SAI360": "sai360.com",
+  "Skadden": "skadden.com",
+  "Spellbook": "spellbook.legal",
+  "Thomson Reuters": "thomsonreuters.com",
+  "Wolters Kluwer": "wolterskluwer.com",
+};
+
+function resolveDomain(logo: string | null | undefined, company: string): string {
   if (logo && logo.includes('logo.clearbit.com')) {
     const match = logo.match(/clearbit\.com\/(.+)/);
-    if (match) {
-      return `https://www.google.com/s2/favicons?domain=${match[1]}&sz=128`;
-    }
+    if (match) return match[1];
   }
-  if (logo && logo.trim()) return logo;
-  const slug = company.toLowerCase().replace(/[^a-z0-9]+/g, '');
-  return `https://www.google.com/s2/favicons?domain=${slug}.com&sz=128`;
+
+  if (logo && logo.includes('google.com/s2/favicons')) {
+    const match = logo.match(/domain=([^&]+)/);
+    if (match) return match[1];
+  }
+
+  const mapped = COMPANY_DOMAINS[company];
+  if (mapped) return mapped;
+
+  return company.toLowerCase().replace(/[^a-z0-9]+/g, '') + '.com';
+}
+
+function getLogoUrl(logo: string | null | undefined, company: string): string {
+  if (logo && logo.trim() && !logo.includes('logo.clearbit.com') && !logo.includes('google.com/s2/favicons')) {
+    return logo;
+  }
+  const domain = resolveDomain(logo, company);
+  return `/api/company-logo?domain=${encodeURIComponent(domain)}`;
 }
 
 const COLORS = [
@@ -75,8 +142,6 @@ export function CompanyLogo({ company, logo, size = 'md', shape = 'rounded', cla
         <img
           src={url}
           alt={company}
-          loading="lazy"
-          referrerPolicy="no-referrer"
           onLoad={handleLoad}
           onError={handleError}
           className={`absolute inset-0 w-full h-full object-contain p-1.5 bg-white transition-opacity duration-200 ${status === 'loaded' ? 'opacity-100' : 'opacity-0'}`}

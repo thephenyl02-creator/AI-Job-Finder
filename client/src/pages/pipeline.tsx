@@ -7,7 +7,7 @@ import { Container } from "@/components/container";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { CompanyLogo } from "@/components/company-logo";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -72,12 +72,7 @@ function ApplicationCard({ app, onStatusChange, onNotesChange, onDelete }: {
       <CardContent className="p-3">
         <div className="flex items-start gap-2.5">
           <Link href={`/jobs/${app.jobId}`}>
-            <Avatar className="h-8 w-8 shrink-0 cursor-pointer">
-              <AvatarImage src={app.job?.companyLogo || undefined} alt={app.job?.company} />
-              <AvatarFallback className="bg-muted text-muted-foreground text-[10px] font-medium">
-                {getInitials(app.job?.company || "?")}
-              </AvatarFallback>
-            </Avatar>
+            <CompanyLogo company={app.job?.company || "?"} logo={app.job?.companyLogo} size="sm" shape="rounded" />
           </Link>
           <div className="flex-1 min-w-0">
             <Link href={`/jobs/${app.jobId}`}>
