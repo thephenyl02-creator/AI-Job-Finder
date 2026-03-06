@@ -818,14 +818,14 @@ export default function Jobs() {
 
             <div data-testid="card-smart-search" className="max-w-4xl mx-auto">
               <div
-                className="rounded-xl border border-foreground/15 bg-muted/20 px-4 py-4 sm:px-8 sm:py-6 transition-colors focus-within:border-primary/40 focus-within:bg-muted/30 card-elev-static cursor-text"
+                className="rounded-xl border border-foreground/15 bg-muted/20 px-5 py-5 sm:px-8 sm:py-6 transition-colors focus-within:border-primary/40 focus-within:bg-muted/30 card-elev-static cursor-text"
                 onClick={(e) => {
                   if (!(e.target as HTMLElement).closest('button, a, [role="button"]')) {
                     searchInputRef.current?.focus();
                   }
                 }}
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3.5">
                   {isAuthenticated && (
                     <Popover open={gearOpen} onOpenChange={setGearOpen}>
                       <PopoverTrigger asChild>
@@ -876,7 +876,7 @@ export default function Jobs() {
                     }}
                     data-testid="input-smart-search"
                   />
-                  <div className="flex items-center gap-1.5 shrink-0">
+                  <div className="flex items-center gap-2 shrink-0">
                     <Button
                       variant="ghost"
                       size="icon"
@@ -900,10 +900,6 @@ export default function Jobs() {
                     >
                       {isSearching ? <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin" /> : <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5" />}
                     </Button>
-                    <kbd
-                      className={`hidden sm:inline-flex h-5 items-center rounded border border-foreground/10 bg-muted/50 px-1.5 text-[10px] text-muted-foreground/60 font-mono transition-opacity ${smartQuery ? "opacity-0 pointer-events-none" : "opacity-100"}`}
-                      data-testid="kbd-search-hint"
-                    >/</kbd>
                   </div>
                 </div>
               </div>
