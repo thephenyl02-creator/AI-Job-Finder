@@ -569,6 +569,8 @@ export async function runDataCleanup(force = false): Promise<{
       ['solveintelligence', 'Solve Intelligence'],
       ['monday.com', 'Monday.com'],
       ['dunnhumby', 'Dunnhumby'],
+      ['Greenberg Gross LLP', 'Greenberg Gross'],
+      ['Hecker Fink LLP', 'Hecker Fink'],
     ];
 
     let mergedCount = 0;

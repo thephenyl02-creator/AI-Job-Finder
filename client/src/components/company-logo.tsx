@@ -407,11 +407,35 @@ const COMPANY_DOMAINS: Record<string, string> = {
   "Troutman Pepper Locke": "troutman.com",
   "Vercel": "vercel.com",
   "Wachtell Lipton": "wlrk.com",
+  "August": "august.com",
+  "BCLP": "bclplaw.com",
+  "EvenUp": "evenuplaw.com",
+  "Greenberg Gross LLP": "greenberggross.com",
+  "Hecker Fink LLP": "heckerfink.com",
 };
+
+const SUFFIX_PATTERNS = [
+  /,?\s+LLP$/i,
+  /,?\s+LLC$/i,
+  /,?\s+Inc\.?$/i,
+  /,?\s+P\.?C\.?$/i,
+  /,?\s+P\.?A\.?$/i,
+  /,?\s+PLLC$/i,
+  /,?\s+and Affiliates$/i,
+  /\s+\(US\)$/i,
+];
 
 function resolveDomain(logo: string | null | undefined, company: string): string {
   const mapped = COMPANY_DOMAINS[company];
   if (mapped) return mapped;
+
+  for (const pattern of SUFFIX_PATTERNS) {
+    const stripped = company.replace(pattern, '').trim();
+    if (stripped !== company) {
+      const mappedStripped = COMPANY_DOMAINS[stripped];
+      if (mappedStripped) return mappedStripped;
+    }
+  }
 
   if (logo && logo.includes('logo.clearbit.com')) {
     const match = logo.match(/clearbit\.com\/(.+)/);
