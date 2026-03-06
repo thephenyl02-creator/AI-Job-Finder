@@ -467,7 +467,9 @@ export async function registerRoutes(
     }
   });
 
-  const logoCache = new Map<string, { data: Buffer; contentType: string; fetchedAt: number }>();
+  const logoCache = new Map<string, { data: Buffer; contentType: string; fetchedAt: number; is404?: boolean }>();
+  const LOGO_TTL = 7 * 24 * 60 * 60 * 1000;
+  const LOGO_404_TTL = 60 * 60 * 1000;
 
   app.get("/api/company-logo", async (req, res) => {
     try {
@@ -477,24 +479,53 @@ export async function registerRoutes(
       }
 
       const cached = logoCache.get(domain);
-      if (cached && Date.now() - cached.fetchedAt < 7 * 24 * 60 * 60 * 1000) {
-        res.setHeader("Content-Type", cached.contentType);
-        res.setHeader("Cache-Control", "public, max-age=604800, immutable");
-        return res.send(cached.data);
+      if (cached) {
+        const ttl = cached.is404 ? LOGO_404_TTL : LOGO_TTL;
+        if (Date.now() - cached.fetchedAt < ttl) {
+          if (cached.is404) return res.status(404).send("Not found");
+          res.setHeader("Content-Type", cached.contentType);
+          res.setHeader("Cache-Control", "public, max-age=604800, immutable");
+          return res.send(cached.data);
+        }
       }
 
-      const faviconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
-      const response = await fetch(faviconUrl, {
-        headers: { "User-Agent": "Mozilla/5.0" },
-        signal: AbortSignal.timeout(5000),
-      });
+      let buffer: Buffer | null = null;
+      let contentType = "image/png";
 
-      if (!response.ok) {
+      try {
+        const faviconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
+        const response = await fetch(faviconUrl, {
+          headers: { "User-Agent": "Mozilla/5.0" },
+          signal: AbortSignal.timeout(5000),
+        });
+        if (response.ok) {
+          buffer = Buffer.from(await response.arrayBuffer());
+          contentType = response.headers.get("Content-Type") || "image/png";
+        }
+      } catch {}
+
+      if (!buffer) {
+        try {
+          const directUrl = `https://${domain}/favicon.ico`;
+          const directResponse = await fetch(directUrl, {
+            headers: { "User-Agent": "Mozilla/5.0" },
+            signal: AbortSignal.timeout(5000),
+            redirect: "follow",
+          });
+          if (directResponse.ok) {
+            const ct = directResponse.headers.get("Content-Type") || "";
+            if (ct.includes("image") || ct.includes("icon") || ct.includes("octet-stream")) {
+              buffer = Buffer.from(await directResponse.arrayBuffer());
+              contentType = ct.includes("icon") ? "image/x-icon" : ct || "image/x-icon";
+            }
+          }
+        } catch {}
+      }
+
+      if (!buffer) {
+        logoCache.set(domain, { data: Buffer.alloc(0), contentType: "", fetchedAt: Date.now(), is404: true });
         return res.status(404).send("Not found");
       }
-
-      const buffer = Buffer.from(await response.arrayBuffer());
-      const contentType = response.headers.get("Content-Type") || "image/png";
 
       logoCache.set(domain, { data: buffer, contentType, fetchedAt: Date.now() });
 

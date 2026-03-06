@@ -5,7 +5,7 @@ import { clearAllStatsCaches } from "./mi-cache";
 import { normalizeSkill, toTitleCase } from "./skills-normalization";
 import { isGenericBusinessRole, hasNegativeAiSignal } from "./job-quality-patterns";
 
-const CLEANUP_VERSION = "v5b_company_name_normalize";
+const CLEANUP_VERSION = "v5c_company_name_merge";
 
 async function hasRunCleanup(version: string): Promise<boolean> {
   try {
@@ -531,6 +531,44 @@ export async function runDataCleanup(force = false): Promise<{
     const COMPANY_NAME_MERGES: Array<[string, string]> = [
       ['Diligent Corporation', 'Diligent'],
       ['CS Disco', 'DISCO'],
+      ['Cooley LLP', 'Cooley'],
+      ['DLA Piper LLP (US)', 'DLA Piper'],
+      ['Fenwick & West LLP', 'Fenwick & West'],
+      ['Goodwin Procter LLP', 'Goodwin Procter'],
+      ['Greenberg Traurig, LLP', 'Greenberg Traurig'],
+      ['Holland & Knight LLP', 'Holland & Knight'],
+      ['Hogan Lovells US LLP', 'Hogan Lovells'],
+      ['King & Spalding LLP', 'King & Spalding'],
+      ['Morgan, Lewis & Bockius LLP', 'Morgan Lewis'],
+      ['Ropes & Gray LLP', 'Ropes & Gray'],
+      ['Skadden, Arps, Slate, Meagher & Flom LLP and Affiliates', 'Skadden'],
+      ['Skadden, Arps...LLP', 'Skadden'],
+      ['Thomson Reuters (Court Solutions)', 'Thomson Reuters'],
+      ['Norm ai', 'Norm AI'],
+      ['checkr', 'Checkr'],
+      ['Davis Polk & Wardwell LLP', 'Davis Polk & Wardwell'],
+      ['Haynes and Boone, LLP', 'Haynes and Boone'],
+      ['Morrison & Foerster, LLP', 'Morrison & Foerster'],
+      ['Osler, Hoskin & Harcourt LLP', 'Osler Hoskin & Harcourt'],
+      ['Wachtell, Lipton, Rosen & Katz', 'Wachtell Lipton'],
+      ['Salesforce, Inc.', 'Salesforce'],
+      ['Raymond James & Associates, Inc.', 'Raymond James'],
+      ['Toyota Tsusho America, Inc.', 'Toyota Tsusho'],
+      ['Proskauer Rose LLP', 'Proskauer Rose'],
+      ['Troutman Pepper Locke LLP', 'Troutman Pepper Locke'],
+      ['Husch Blackwell LLP', 'Husch Blackwell'],
+      ['Akin Gump Strauss Hauer & Feld LLP', 'Akin Gump'],
+      ['McDermott Will & Schulte LLP', 'McDermott Will & Emery'],
+      ['Simpson Thacher & Bartlett LLP', 'Simpson Thacher'],
+      ['Ankura Consulting Group LLC', 'Ankura'],
+      ['Factor', 'Factor (Axiom)'],
+      ['Evisort AI', 'Evisort'],
+      ['Atrium (Legal AI)', 'Atrium'],
+      ['Openai', 'OpenAI'],
+      ['ivo', 'Ivo'],
+      ['solveintelligence', 'Solve Intelligence'],
+      ['monday.com', 'Monday.com'],
+      ['dunnhumby', 'Dunnhumby'],
     ];
 
     let mergedCount = 0;
@@ -538,7 +576,20 @@ export async function runDataCleanup(force = false): Promise<{
       const rMerge = await db.execute(sql`
         UPDATE jobs SET company = ${newName} WHERE company = ${oldName}
       `);
-      mergedCount += Number((rMerge as any).rowCount || 0);
+      const cnt = Number((rMerge as any).rowCount || 0);
+      if (cnt > 0) {
+        console.log(`[DataCleanup] Merged "${oldName}" → "${newName}" (${cnt} jobs)`);
+      }
+      mergedCount += cnt;
+    }
+
+    const rTrim = await db.execute(sql`
+      UPDATE jobs SET company = TRIM(company) WHERE company != TRIM(company)
+    `);
+    const trimCount = Number((rTrim as any).rowCount || 0);
+    if (trimCount > 0) {
+      console.log(`[DataCleanup] Trimmed trailing spaces from ${trimCount} company names`);
+      mergedCount += trimCount;
     }
 
     const COMPANY_LOGO_FIXES: Record<string, string> = {
