@@ -5,7 +5,7 @@ import { clearAllStatsCaches } from "./mi-cache";
 import { normalizeSkill, toTitleCase } from "./skills-normalization";
 import { isGenericBusinessRole, hasNegativeAiSignal } from "./job-quality-patterns";
 
-const CLEANUP_VERSION = "v5_company_name_normalize";
+const CLEANUP_VERSION = "v5b_company_name_normalize";
 
 async function hasRunCleanup(version: string): Promise<boolean> {
   try {
@@ -502,29 +502,31 @@ export async function runDataCleanup(force = false): Promise<{
     console.log(`[DataCleanup] Negative AI signal unpublished: ${negativeAiUnpublished}`);
     console.log(`[DataCleanup] Null quality/low relevance unpublished: ${nullQualityLowRelUnpublished}`);
 
-    console.log(`[DataCleanup] Starting v5 company name normalization...`);
+    console.log(`[DataCleanup] Starting v5b company name normalization...`);
 
-    const formerlyPattern = '\\s*\\(formerly\\s+[^)]+\\)';
-    const fkaPattern = '\\s*\\(fka\\s+[^)]+\\)';
-    const prevPattern = '\\s*\\(previously\\s+[^)]+\\)';
+    const suffixPatterns = [
+      { label: 'formerly', like: '%(formerly%', regex: /\s*\(formerly\s+[^)]+\)/gi },
+      { label: 'fka', like: '%(fka%', regex: /\s*\(fka\s+[^)]+\)/gi },
+      { label: 'previously', like: '%(previously%', regex: /\s*\(previously\s+[^)]+\)/gi },
+    ];
 
-    const rFormerly = await db.execute(sql`
-      UPDATE jobs SET company = TRIM(regexp_replace(company, ${formerlyPattern}, '', 'gi'))
-      WHERE company ~* '\\(formerly\\s+'
-    `);
-    const formerlyFixed = Number((rFormerly as any).rowCount || 0);
-
-    const rFka = await db.execute(sql`
-      UPDATE jobs SET company = TRIM(regexp_replace(company, ${fkaPattern}, '', 'gi'))
-      WHERE company ~* '\\(fka\\s+'
-    `);
-    const fkaFixed = Number((rFka as any).rowCount || 0);
-
-    const rPrev = await db.execute(sql`
-      UPDATE jobs SET company = TRIM(regexp_replace(company, ${prevPattern}, '', 'gi'))
-      WHERE company ~* '\\(previously\\s+'
-    `);
-    const prevFixed = Number((rPrev as any).rowCount || 0);
+    const suffixCounts: Record<string, number> = {};
+    for (const { label, like, regex } of suffixPatterns) {
+      const matchingJobs = await db.execute(sql`
+        SELECT id, company FROM jobs WHERE company LIKE ${like}
+      `);
+      const rows = (matchingJobs as any).rows || [];
+      let count = 0;
+      for (const row of rows) {
+        const cleaned = row.company.replace(regex, '').trim();
+        if (cleaned !== row.company) {
+          await db.execute(sql`UPDATE jobs SET company = ${cleaned} WHERE id = ${row.id}`);
+          console.log(`[DataCleanup] Renamed "${row.company}" → "${cleaned}"`);
+          count++;
+        }
+      }
+      suffixCounts[label] = count;
+    }
 
     const COMPANY_NAME_MERGES: Array<[string, string]> = [
       ['Diligent Corporation', 'Diligent'],
@@ -559,16 +561,23 @@ export async function runDataCleanup(force = false): Promise<{
       logoFixCount += Number((rLogo as any).rowCount || 0);
     }
 
-    console.log(`[DataCleanup] Company name normalization: ${formerlyFixed} formerly, ${fkaFixed} fka, ${prevFixed} previously stripped`);
+    console.log(`[DataCleanup] Company name normalization: ${suffixCounts.formerly || 0} formerly, ${suffixCounts.fka || 0} fka, ${suffixCounts.previously || 0} previously stripped`);
     console.log(`[DataCleanup] Company merges: ${mergedCount} jobs renamed`);
     console.log(`[DataCleanup] Company logos fixed: ${logoFixCount}`);
 
     try {
-      const rFirmFormerly = await db.execute(sql`
-        UPDATE firm_sources SET firm_name = TRIM(regexp_replace(firm_name, ${formerlyPattern}, '', 'gi'))
-        WHERE firm_name ~* '\\(formerly\\s+'
+      const firmMatches = await db.execute(sql`
+        SELECT id, firm_name FROM firm_sources WHERE firm_name LIKE '%(formerly%'
       `);
-      const firmFixed = Number((rFirmFormerly as any).rowCount || 0);
+      const firmRows = (firmMatches as any).rows || [];
+      let firmFixed = 0;
+      for (const row of firmRows) {
+        const cleaned = row.firm_name.replace(/\s*\(formerly\s+[^)]+\)/gi, '').trim();
+        if (cleaned !== row.firm_name) {
+          await db.execute(sql`UPDATE firm_sources SET firm_name = ${cleaned} WHERE id = ${row.id}`);
+          firmFixed++;
+        }
+      }
       if (firmFixed > 0) console.log(`[DataCleanup] Firm sources normalized: ${firmFixed}`);
     } catch {}
 
