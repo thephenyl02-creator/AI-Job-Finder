@@ -5,7 +5,7 @@ import { clearAllStatsCaches } from "./mi-cache";
 import { normalizeSkill, toTitleCase } from "./skills-normalization";
 import { isGenericBusinessRole, hasNegativeAiSignal } from "./job-quality-patterns";
 
-const CLEANUP_VERSION = "v4d_generic_role_cleanup";
+const CLEANUP_VERSION = "v5_company_name_normalize";
 
 async function hasRunCleanup(version: string): Promise<boolean> {
   try {
@@ -501,6 +501,76 @@ export async function runDataCleanup(force = false): Promise<{
     console.log(`[DataCleanup] Generic business roles unpublished: ${genericRolesUnpublished}`);
     console.log(`[DataCleanup] Negative AI signal unpublished: ${negativeAiUnpublished}`);
     console.log(`[DataCleanup] Null quality/low relevance unpublished: ${nullQualityLowRelUnpublished}`);
+
+    console.log(`[DataCleanup] Starting v5 company name normalization...`);
+
+    const formerlyPattern = '\\s*\\(formerly\\s+[^)]+\\)';
+    const fkaPattern = '\\s*\\(fka\\s+[^)]+\\)';
+    const prevPattern = '\\s*\\(previously\\s+[^)]+\\)';
+
+    const rFormerly = await db.execute(sql`
+      UPDATE jobs SET company = TRIM(regexp_replace(company, ${formerlyPattern}, '', 'gi'))
+      WHERE company ~* '\\(formerly\\s+'
+    `);
+    const formerlyFixed = Number((rFormerly as any).rowCount || 0);
+
+    const rFka = await db.execute(sql`
+      UPDATE jobs SET company = TRIM(regexp_replace(company, ${fkaPattern}, '', 'gi'))
+      WHERE company ~* '\\(fka\\s+'
+    `);
+    const fkaFixed = Number((rFka as any).rowCount || 0);
+
+    const rPrev = await db.execute(sql`
+      UPDATE jobs SET company = TRIM(regexp_replace(company, ${prevPattern}, '', 'gi'))
+      WHERE company ~* '\\(previously\\s+'
+    `);
+    const prevFixed = Number((rPrev as any).rowCount || 0);
+
+    const COMPANY_NAME_MERGES: Array<[string, string]> = [
+      ['Diligent Corporation', 'Diligent'],
+      ['CS Disco', 'DISCO'],
+    ];
+
+    let mergedCount = 0;
+    for (const [oldName, newName] of COMPANY_NAME_MERGES) {
+      const rMerge = await db.execute(sql`
+        UPDATE jobs SET company = ${newName} WHERE company = ${oldName}
+      `);
+      mergedCount += Number((rMerge as any).rowCount || 0);
+    }
+
+    const COMPANY_LOGO_FIXES: Record<string, string> = {
+      'Legora': 'https://www.google.com/s2/favicons?domain=legora.com&sz=128',
+      'Diligent': 'https://www.google.com/s2/favicons?domain=diligent.com&sz=128',
+      'DISCO': 'https://www.google.com/s2/favicons?domain=csdisco.com&sz=128',
+      'PwC NewLaw': 'https://www.google.com/s2/favicons?domain=pwc.com&sz=128',
+      'Ironclad': 'https://www.google.com/s2/favicons?domain=ironcladapp.com&sz=128',
+      'Vanta': 'https://www.google.com/s2/favicons?domain=vanta.com&sz=128',
+      'Kira Systems': 'https://www.google.com/s2/favicons?domain=kirasystems.com&sz=128',
+      'Ontra': 'https://www.google.com/s2/favicons?domain=ontra.ai&sz=128',
+    };
+
+    let logoFixCount = 0;
+    for (const [company, logoUrl] of Object.entries(COMPANY_LOGO_FIXES)) {
+      const rLogo = await db.execute(sql`
+        UPDATE jobs SET company_logo = ${logoUrl}
+        WHERE company = ${company} AND (company_logo IS NULL OR company_logo LIKE '%clearbit%' OR company_logo LIKE '%formerly%' OR company_logo LIKE '%leya%')
+      `);
+      logoFixCount += Number((rLogo as any).rowCount || 0);
+    }
+
+    console.log(`[DataCleanup] Company name normalization: ${formerlyFixed} formerly, ${fkaFixed} fka, ${prevFixed} previously stripped`);
+    console.log(`[DataCleanup] Company merges: ${mergedCount} jobs renamed`);
+    console.log(`[DataCleanup] Company logos fixed: ${logoFixCount}`);
+
+    try {
+      const rFirmFormerly = await db.execute(sql`
+        UPDATE firm_sources SET firm_name = TRIM(regexp_replace(firm_name, ${formerlyPattern}, '', 'gi'))
+        WHERE firm_name ~* '\\(formerly\\s+'
+      `);
+      const firmFixed = Number((rFirmFormerly as any).rowCount || 0);
+      if (firmFixed > 0) console.log(`[DataCleanup] Firm sources normalized: ${firmFixed}`);
+    } catch {}
 
     if (!force) {
       await markCleanupComplete(CLEANUP_VERSION);
