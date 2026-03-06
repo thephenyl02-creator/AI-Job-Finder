@@ -835,7 +835,6 @@ export default function Jobs() {
                           title="Career intelligence"
                         >
                           <Compass className="h-4.5 w-4.5" />
-                          <span className="text-xs font-medium hidden sm:inline">Career Paths</span>
                           {intelligenceResult && (
                             <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-primary" />
                           )}
@@ -861,7 +860,6 @@ export default function Jobs() {
                       </PopoverContent>
                     </Popover>
                   )}
-                  <Search className="h-5 w-5 sm:h-6 sm:w-6 text-foreground/40 shrink-0" />
                   <Input
                     ref={searchInputRef}
                     placeholder={searchPlaceholder}
