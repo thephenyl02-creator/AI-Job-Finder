@@ -4,6 +4,7 @@ import { usePageTitle } from "@/hooks/use-page-title";
 import { useLocation, Link, useSearch } from "wouter";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
+import { CompanyLogo } from "@/components/company-logo";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -30,7 +31,6 @@ import {
   TrendingUp,
   Briefcase,
   MapPin,
-  Building2,
   Eye,
   ChevronDown,
   ChevronRight,
@@ -292,7 +292,7 @@ function MatchJobCard({
             </div>
             <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5 flex-wrap">
               <span className="flex items-center gap-1">
-                <Building2 className="h-3 w-3" />
+                <CompanyLogo company={match.company} logo={null} size="sm" shape="rounded" className="!w-3.5 !h-3.5 !ring-0" />
                 {match.company}
               </span>
               {match.location && (

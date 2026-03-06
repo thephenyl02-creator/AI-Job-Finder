@@ -4,6 +4,7 @@ import { usePageTitle } from "@/hooks/use-page-title";
 import { useLocation, useParams } from "wouter";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
+import { CompanyLogo } from "@/components/company-logo";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -764,7 +765,7 @@ export default function JobDetail() {
 
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm text-muted-foreground mt-3">
             <span className="flex items-center gap-1.5">
-              <Building2 className="h-3.5 w-3.5 shrink-0" />
+              <CompanyLogo company={job.company} logo={job.companyLogo} size="sm" shape="rounded" className="!w-4 !h-4 !ring-0" />
               <span className="font-medium text-foreground/80" data-testid="text-job-detail-company">{cleanStructuredText(job.company)}</span>
             </span>
             <JobLocation
@@ -1376,7 +1377,7 @@ export default function JobDetail() {
                         </h3>
                         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1.5 text-xs text-muted-foreground">
                           <span className="flex items-center gap-1" title={cleanStructuredText(sj.company)}>
-                            <Building2 className="h-3 w-3" />
+                            <CompanyLogo company={sj.company} logo={sj.companyLogo} size="sm" shape="rounded" className="!w-3.5 !h-3.5 !ring-0" />
                             {cleanStructuredText(sj.company)}
                           </span>
                           <JobLocation

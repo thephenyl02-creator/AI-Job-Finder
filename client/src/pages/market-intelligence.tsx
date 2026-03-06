@@ -6,6 +6,7 @@ import { useSubscription } from "@/hooks/use-subscription";
 import { useActivityTracker } from "@/hooks/use-activity-tracker";
 import { useToast } from "@/hooks/use-toast";
 import { Header } from "@/components/header";
+import { CompanyLogo } from "@/components/company-logo";
 import { Footer } from "@/components/footer";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -1490,6 +1491,7 @@ export default function MarketIntelligence() {
                           <div className="flex items-center justify-between mb-0.5">
                             <div className="flex items-center gap-2 min-w-0">
                               <span className="mi-rank">#{i + 1}</span>
+                              <CompanyLogo company={company.fullName || company.name} logo={null} size="sm" shape="rounded" className="!w-4 !h-4 !ring-0" />
                               <span className="text-[11px] text-foreground font-medium truncate" title={company.fullName}>{company.name}</span>
                             </div>
                             <span className="mi-bar-label text-foreground shrink-0">{company.count}</span>

@@ -3,6 +3,7 @@ import { usePageTitle } from "@/hooks/use-page-title";
 import { getCategoryColor } from "@/lib/chart-theme";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
+import { CompanyLogo } from "@/components/company-logo";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -645,6 +646,7 @@ export default function Insights() {
                       <span className="text-xs font-medium text-muted-foreground w-5 text-right tabular-nums shrink-0">
                         {i + 1}
                       </span>
+                      <CompanyLogo company={c.company} logo={null} size="sm" shape="rounded" className="!w-5 !h-5 !ring-0" />
                       <span className="text-sm text-foreground truncate" title={c.company} data-testid={`text-company-name-${i}`}>{c.company}</span>
                     </div>
                     <Badge variant="secondary" className="shrink-0 tabular-nums" data-testid={`text-company-count-${i}`}>

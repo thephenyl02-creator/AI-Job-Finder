@@ -3,6 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CompanyLogo } from "@/components/company-logo";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -36,7 +37,6 @@ import {
   Zap,
   Eye,
   MapPin,
-  Building2,
   MessageCircle,
   Send,
 } from "lucide-react";
@@ -450,7 +450,7 @@ function MatchCard({
               </div>
               <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2 flex-wrap">
                 <span className="flex items-center gap-1">
-                  <Building2 className="h-3.5 w-3.5" />
+                  <CompanyLogo company={match.company} logo={null} size="sm" shape="rounded" className="!w-4 !h-4 !ring-0" />
                   {match.company}
                 </span>
                 {(match.isRemote || (match.location && match.location !== 'Not specified')) && (

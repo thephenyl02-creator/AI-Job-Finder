@@ -55,6 +55,9 @@ const COMPANY_DOMAINS: Record<string, string> = {
 };
 
 function resolveDomain(logo: string | null | undefined, company: string): string {
+  const mapped = COMPANY_DOMAINS[company];
+  if (mapped) return mapped;
+
   if (logo && logo.includes('logo.clearbit.com')) {
     const match = logo.match(/clearbit\.com\/(.+)/);
     if (match) return match[1];
@@ -64,9 +67,6 @@ function resolveDomain(logo: string | null | undefined, company: string): string
     const match = logo.match(/domain=([^&]+)/);
     if (match) return match[1];
   }
-
-  const mapped = COMPANY_DOMAINS[company];
-  if (mapped) return mapped;
 
   return company.toLowerCase().replace(/[^a-z0-9]+/g, '') + '.com';
 }
