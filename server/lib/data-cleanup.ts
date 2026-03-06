@@ -1,7 +1,7 @@
 import { db } from "../db";
 import { jobs, firmSources } from "@shared/schema";
 import { eq, and, lt, lte, isNull, sql, or, like, ne } from "drizzle-orm";
-import { clearAllStatsCaches } from "./mi-cache";
+import { clearAllStatsCaches, clearDisplayStats, forceRefreshDisplayStats } from "./mi-cache";
 import { normalizeSkill, toTitleCase } from "./skills-normalization";
 import { isGenericBusinessRole, hasNegativeAiSignal } from "./job-quality-patterns";
 
@@ -238,6 +238,25 @@ export async function runDataCleanup(force = false): Promise<{
     `);
     const reactivatedCount = Number((rReactivate as any).rowCount || 0);
     console.log(`[DataCleanup] Re-activated ${reactivatedCount} falsely deactivated jobs`);
+
+    if (reactivatedCount > 0) {
+      const freshCount = await db.execute(sql`
+        SELECT
+          COUNT(*) FILTER (WHERE is_published = true AND is_active = true) as total_jobs,
+          COUNT(DISTINCT company) FILTER (WHERE is_published = true AND is_active = true) as total_companies,
+          COUNT(DISTINCT country_code) FILTER (WHERE is_published = true AND is_active = true AND country_code IS NOT NULL) as total_countries
+        FROM jobs
+      `);
+      const row = (freshCount as any).rows?.[0];
+      if (row) {
+        const tj = Number(row.total_jobs || 0);
+        const tc = Number(row.total_companies || 0);
+        const tcn = Number(row.total_countries || 0);
+        forceRefreshDisplayStats(tj, tc, tcn);
+        clearDisplayStats();
+        console.log(`[DataCleanup] Force-refreshed displayStats: ${tj} jobs, ${tc} companies, ${tcn} countries`);
+      }
+    }
 
     const r4 = await db.execute(sql`
       UPDATE jobs

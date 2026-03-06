@@ -816,9 +816,9 @@ export default function Jobs() {
             )}
             {!refreshMeta && <div className="mb-5" />}
 
-            <div data-testid="card-smart-search" className="max-w-3xl mx-auto">
+            <div data-testid="card-smart-search" className="max-w-4xl mx-auto">
               <div
-                className="rounded-lg border border-foreground/15 bg-muted/20 px-3 py-3 sm:px-6 sm:py-5 transition-colors focus-within:border-primary/40 focus-within:bg-muted/30 card-elev-static cursor-text"
+                className="rounded-xl border border-foreground/15 bg-muted/20 px-4 py-4 sm:px-8 sm:py-6 transition-colors focus-within:border-primary/40 focus-within:bg-muted/30 card-elev-static cursor-text"
                 onClick={(e) => {
                   if (!(e.target as HTMLElement).closest('button, a, [role="button"]')) {
                     searchInputRef.current?.focus();
@@ -865,7 +865,7 @@ export default function Jobs() {
                   <Input
                     ref={searchInputRef}
                     placeholder={searchPlaceholder}
-                    className="!border-0 shadow-none h-10 sm:h-14 text-base sm:text-lg focus-visible:ring-0 !bg-transparent placeholder:text-muted-foreground/40 px-0 !ring-0 !ring-offset-0"
+                    className="!border-0 shadow-none h-12 sm:h-16 text-lg sm:text-xl focus-visible:ring-0 !bg-transparent placeholder:text-muted-foreground/40 px-0 !ring-0 !ring-offset-0"
                     value={smartQuery}
                     onChange={(e) => setSmartQuery(e.target.value)}
                     onKeyDown={(e) => {
