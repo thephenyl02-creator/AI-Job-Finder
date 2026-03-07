@@ -5,7 +5,7 @@ import { clearAllStatsCaches, clearDisplayStats, forceRefreshDisplayStats } from
 import { normalizeSkill, toTitleCase } from "./skills-normalization";
 import { isGenericBusinessRole, hasNegativeAiSignal } from "./job-quality-patterns";
 
-const CLEANUP_VERSION = "v6_recover_overculled_jobs";
+const CLEANUP_VERSION = "v6b_recover_overculled_jobs";
 
 async function hasRunCleanup(version: string): Promise<boolean> {
   try {
@@ -669,15 +669,20 @@ export async function runDataCleanup(force = false): Promise<{
       SET is_active = true,
           pipeline_status = 'ready',
           is_published = true,
-          published_at = COALESCE(published_at, NOW()),
+          published_at = NOW() - INTERVAL '30 days',
           review_reason_code = NULL
       WHERE is_active = false
         AND quality_score >= 7
+        AND legal_relevance_score >= 6
         AND role_category IS NOT NULL
         AND apply_url IS NOT NULL
         AND apply_url != ''
         AND job_status = 'open'
-        AND (review_reason_code IS NULL OR review_reason_code NOT IN ('AUDIT_TITLE_REJECT', 'AUDIT_COMPANY_REJECT', 'AUDIT_DUPLICATE', 'GENERIC_APPLY_URL', 'DUPLICATE_JOB'))
+        AND (review_reason_code IS NULL OR review_reason_code NOT IN (
+          'AUDIT_TITLE_REJECT', 'AUDIT_COMPANY_REJECT', 'AUDIT_DUPLICATE',
+          'GENERIC_APPLY_URL', 'DUPLICATE_JOB', 'BACK_OFFICE_TITLE',
+          'AI_FLAGGED_IRRELEVANT', 'GENERIC_BUSINESS_ROLE'
+        ))
     `);
     const reactivated = Number((rRecoverInactive as any).rowCount || 0);
     console.log(`[DataCleanup] v6: Reactivated and republished ${reactivated} over-culled jobs`);
@@ -685,17 +690,22 @@ export async function runDataCleanup(force = false): Promise<{
     const rRecoverUnpublished = await db.execute(sql`
       UPDATE jobs
       SET is_published = true,
-          published_at = COALESCE(published_at, NOW()),
+          published_at = NOW() - INTERVAL '30 days',
           review_reason_code = NULL
       WHERE pipeline_status = 'ready'
         AND is_published = false
         AND is_active = true
         AND job_status = 'open'
         AND quality_score >= 7
+        AND legal_relevance_score >= 6
         AND role_category IS NOT NULL
         AND apply_url IS NOT NULL
         AND apply_url != ''
-        AND (review_reason_code IS NULL OR review_reason_code NOT IN ('AUDIT_TITLE_REJECT', 'AUDIT_COMPANY_REJECT', 'AUDIT_DUPLICATE', 'GENERIC_APPLY_URL', 'DUPLICATE_JOB'))
+        AND (review_reason_code IS NULL OR review_reason_code NOT IN (
+          'AUDIT_TITLE_REJECT', 'AUDIT_COMPANY_REJECT', 'AUDIT_DUPLICATE',
+          'GENERIC_APPLY_URL', 'DUPLICATE_JOB', 'BACK_OFFICE_TITLE',
+          'AI_FLAGGED_IRRELEVANT', 'GENERIC_BUSINESS_ROLE'
+        ))
     `);
     const republished = Number((rRecoverUnpublished as any).rowCount || 0);
     console.log(`[DataCleanup] v6: Republished ${republished} ready-but-unpublished jobs`);
