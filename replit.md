@@ -94,7 +94,6 @@ Legal Tech Careers is a career intelligence platform designed for legal professi
 - **Strategic CTAs**: Signup gates, view-count soft gates, Pro upgrade banners, and post-diagnostic upsells.
 - **Diagnostic Free Tier Tightening**: Free users see readiness score but NOT career path names (locked with icon). Skill gap teasers show top 2 gaps. Urgency CTA shows "X new this week" from market pulse data. Salary teaser shows range for top path without revealing path name.
 - **Post-Diagnostic Engagement**: "While you're here" section below ProGate offers 3 free actions (browse roles, save roles, explore market trends) to keep users engaged even without upgrading.
-- **Welcome-Back Banner**: Landing page shows personalized "Welcome back" banner for returning users with their readiness score and new roles count. Uses localStorage for anonymous users and API for authenticated users.
 - **Salary Estimation**: `server/lib/salary-estimator.ts` calculates median salary benchmarks by category/seniority. API endpoint `/api/salary-ranges` serves aggregated data. Jobs missing real salary show "~$Xk–$Yk est." badges on job cards and detail pages.
 - **Social Proof**: Displays real data counters.
 - **Shareable Content**: Generates branded SVG image cards for social media sharing.
