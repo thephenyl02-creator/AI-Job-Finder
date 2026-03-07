@@ -606,6 +606,21 @@ export default function JobDetail() {
 
 
   const salary = formatSalary(job?.salaryMin, job?.salaryMax, (job as any)?.salaryCurrency);
+  const { data: salaryBenchmarkData } = useQuery<{ benchmarks: { category: string; seniorityLevel: string; medianMin: number; medianMax: number }[] }>({
+    queryKey: ["/api/salary-ranges"],
+    staleTime: 30 * 60 * 1000,
+    enabled: !salary && !!job,
+  });
+  const estimatedSalaryLabel = !salary && job && salaryBenchmarkData?.benchmarks
+    ? (() => {
+        const b = salaryBenchmarkData.benchmarks.find(
+          (x) => x.category === job.roleCategory && x.seniorityLevel === job.seniorityLevel
+        ) || salaryBenchmarkData.benchmarks.find(
+          (x) => x.category === job.roleCategory
+        );
+        return b ? `~$${Math.round(b.medianMin / 1000)}k–$${Math.round(b.medianMax / 1000)}k est.` : null;
+      })()
+    : null;
   const postedLabel = getPostedDateLabel(job?.postedDate);
   const locationTypeLabel = job ? getLocationTypeLabel(job) : null;
 
@@ -779,6 +794,12 @@ export default function JobDetail() {
               <span className="flex items-center gap-1.5 text-green-600 dark:text-green-400">
                 <DollarSign className="h-3.5 w-3.5 shrink-0" />
                 <span data-testid="text-salary">{salary}</span>
+              </span>
+            )}
+            {!salary && estimatedSalaryLabel && !isRestricted && (
+              <span className="flex items-center gap-1.5 text-muted-foreground" title="Estimated based on similar roles">
+                <DollarSign className="h-3.5 w-3.5 shrink-0" />
+                <span data-testid="text-est-salary">{estimatedSalaryLabel}</span>
               </span>
             )}
             {job.seniorityLevel && (

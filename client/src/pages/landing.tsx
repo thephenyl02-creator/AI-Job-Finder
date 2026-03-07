@@ -9,7 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LogoMark } from "@/components/logo";
 import { CompanyLogo } from "@/components/company-logo";
-import { ArrowRight, Search, Target, Globe, Wifi, Clock, BarChart3, Lock, Upload, Check, Building2 } from "lucide-react";
+import { ArrowRight, Search, Target, Globe, Wifi, Clock, BarChart3, Lock, Upload, Check, Building2, Sparkles } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Footer } from "@/components/footer";
 
@@ -63,6 +63,25 @@ export default function Landing() {
   });
 
   const hasDiagnostic = !!latestDiag?.report;
+
+  const cachedPreview = (() => {
+    try {
+      const raw = localStorage.getItem("ltc_diagnostic_preview");
+      if (raw) return JSON.parse(raw) as { score: number; topPath: { name: string; confidence: number } | null; skills: string[]; totalMatched: number };
+    } catch {}
+    return null;
+  })();
+
+  const returningUserScore = isAuthenticated
+    ? latestDiag?.report?.readinessScore ?? latestDiag?.overallReadinessScore ?? null
+    : cachedPreview?.score ?? null;
+
+  const showWelcomeBack = returningUserScore !== null;
+
+  const { data: marketPulse } = useQuery<{ newJobsThisWeek: number }>({
+    queryKey: ["/api/market-pulse"],
+    enabled: showWelcomeBack,
+  });
 
   const { data: socialProof, isLoading: socialProofLoading } = useQuery<SocialProof>({
     queryKey: ["/api/stats/social-proof"],
@@ -123,6 +142,54 @@ export default function Landing() {
       </header>
 
       <main className="pt-14 flex-1">
+
+        {showWelcomeBack && (
+          <section className="border-b border-border/30 bg-primary/5" data-testid="section-welcome-back">
+            <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 sm:py-5">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="relative flex items-center justify-center shrink-0">
+                    <svg className="w-[48px] h-[48px] -rotate-90" viewBox="0 0 100 100">
+                      <circle cx="50" cy="50" r="42" fill="none" stroke="hsl(var(--muted))" strokeWidth="6" />
+                      <circle
+                        cx="50" cy="50" r="42" fill="none"
+                        stroke={returningUserScore >= 70 ? "hsl(var(--status-success))" : returningUserScore >= 45 ? "hsl(var(--status-warning))" : "hsl(var(--status-danger))"}
+                        strokeWidth="6"
+                        strokeLinecap="round"
+                        strokeDasharray={`${2 * Math.PI * 42}`}
+                        strokeDashoffset={`${2 * Math.PI * 42 - (returningUserScore / 100) * 2 * Math.PI * 42}`}
+                      />
+                    </svg>
+                    <span className="absolute text-sm font-bold text-foreground" data-testid="text-welcome-score">{returningUserScore}</span>
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-foreground flex items-center gap-1.5 flex-wrap" data-testid="text-welcome-title">
+                      <Sparkles className="h-3.5 w-3.5 text-primary shrink-0" />
+                      Welcome back!
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5" data-testid="text-welcome-subtitle">
+                      Your readiness score: {returningUserScore}
+                      {marketPulse?.newJobsThisWeek ? `. ${marketPulse.newJobsThisWeek} new role${marketPulse.newJobsThisWeek === 1 ? "" : "s"} added this week.` : ""}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Link href="/diagnostic">
+                    <Button size="sm" data-testid="button-welcome-report">
+                      View your report
+                      <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+                    </Button>
+                  </Link>
+                  <Link href="/jobs">
+                    <Button variant="outline" size="sm" data-testid="button-welcome-browse">
+                      Browse new roles
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
 
         <section className="max-w-6xl mx-auto px-4 sm:px-6 pt-10 sm:pt-24 pb-10 sm:pb-24">
           <div className="flex flex-col lg:flex-row items-start gap-8 lg:gap-14">

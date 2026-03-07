@@ -49,6 +49,7 @@ import {
   Eye,
   Bookmark as BookmarkIcon,
   Flame,
+  DollarSign,
 } from "lucide-react";
 import { CompanyLogo } from "@/components/company-logo";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -700,6 +701,11 @@ export default function Jobs() {
   const { data: statsData } = useQuery<{ totalJobs: number; categoryCounts: Record<string, number> }>({
     queryKey: ["/api/stats"],
     staleTime: 60000,
+  });
+
+  const { data: salaryBenchmarkData } = useQuery<{ benchmarks: { category: string; seniorityLevel: string; medianMin: number; medianMax: number }[] }>({
+    queryKey: ["/api/salary-ranges"],
+    staleTime: 30 * 60 * 1000,
   });
 
   const { data: suggestionsData } = useQuery<{ suggestions: { label: string; query: string }[]; personalized: boolean }>({
@@ -1947,6 +1953,41 @@ export default function Jobs() {
                               }`} data-testid={`badge-transition-${job.id}`} title={transLabel}>
                                 <TrendingUp className="h-2.5 w-2.5" />
                                 {transLabel}
+                              </Badge>
+                            );
+                          }
+                          const jobSalary = job.salaryMin || job.salaryMax
+                            ? (() => {
+                                const SYMS: Record<string, string> = { USD: '$', GBP: '\u00A3', EUR: '\u20AC', CAD: 'CA$', AUD: 'A$', SGD: 'S$', HKD: 'HK$', INR: '\u20B9' };
+                                const sym = SYMS[job.salaryCurrency || 'USD'] || '$';
+                                const fmt = (n: number) => n >= 1000 ? `${Math.round(n / 1000)}k` : String(n);
+                                if (job.salaryMin && job.salaryMax && job.salaryMin !== job.salaryMax) return `${sym}${fmt(job.salaryMin)}\u2013${sym}${fmt(job.salaryMax)}`;
+                                if (job.salaryMin) return `${sym}${fmt(job.salaryMin)}+`;
+                                return `Up to ${sym}${fmt(job.salaryMax!)}`;
+                              })()
+                            : null;
+                          const estSalary = !jobSalary && salaryBenchmarkData?.benchmarks
+                            ? (() => {
+                                const b = salaryBenchmarkData.benchmarks.find(
+                                  (x: any) => x.category === job.roleCategory && x.seniorityLevel === job.seniorityLevel
+                                ) || salaryBenchmarkData.benchmarks.find(
+                                  (x: any) => x.category === job.roleCategory
+                                );
+                                return b ? `~$${Math.round(b.medianMin / 1000)}k\u2013$${Math.round(b.medianMax / 1000)}k est.` : null;
+                              })()
+                            : null;
+                          if (jobSalary) {
+                            badgeElements.push(
+                              <Badge key="sal" variant="outline" className="text-[10px] gap-0.5 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800" data-testid={`text-salary-${job.id}`}>
+                                <DollarSign className="h-2.5 w-2.5" />
+                                {jobSalary}
+                              </Badge>
+                            );
+                          } else if (estSalary) {
+                            badgeElements.push(
+                              <Badge key="est-sal" variant="outline" className="text-[10px] gap-0.5 text-muted-foreground border-border/50" data-testid={`text-est-salary-${job.id}`} title="Estimated based on similar roles">
+                                <DollarSign className="h-2.5 w-2.5" />
+                                {estSalary}
                               </Badge>
                             );
                           }

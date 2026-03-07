@@ -48,6 +48,10 @@ import {
   Loader2,
   Sparkles,
   User,
+  Search,
+  Bookmark,
+  Bell,
+  DollarSign,
 } from "lucide-react";
 import {
   RadarChart,
@@ -1359,6 +1363,17 @@ export default function DiagnosticPage() {
 
   const report: DiagnosticReportData | null = latestDiag?.report || null;
 
+  const { data: marketPulseData } = useQuery<{ newJobsThisWeek: number }>({
+    queryKey: ["/api/market-pulse"],
+    enabled: !!report && !isPro,
+  });
+
+  const { data: salaryData } = useQuery<{ benchmarks: any[] }>({
+    queryKey: ["/api/salary-ranges"],
+    enabled: !!report && !isPro,
+  });
+  const salaryBenchmarks = salaryData?.benchmarks;
+
   const { data: percentileData } = useQuery<{ percentile: number | null; totalAssessments: number }>({
     queryKey: [`/api/diagnostic/percentile?score=${report?.overallReadinessScore ?? 0}`],
     enabled: !!report && report.overallReadinessScore > 0,
@@ -1542,7 +1557,59 @@ export default function DiagnosticPage() {
                 {report.topPaths?.[0] && (
                   <div>
                     <p className="diag-label mb-0.5">Top Career Path</p>
-                    <p className="text-sm font-semibold text-foreground" data-testid="text-top-path-name">{report.topPaths[0].name}</p>
+                    {isPro ? (
+                      <p className="text-sm font-semibold text-foreground" data-testid="text-top-path-name">{report.topPaths[0].name}</p>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <Lock className="h-3.5 w-3.5 text-muted-foreground" />
+                        <p className="text-sm text-muted-foreground italic" data-testid="text-top-path-locked">Your #1 career path identified</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {!isPro && report.topPaths?.[0]?.topGaps?.length > 0 && (
+                  <div>
+                    <p className="diag-label mb-0.5">Your Top Skill Gaps</p>
+                    <p className="text-sm text-foreground" data-testid="text-skill-gaps-teaser">
+                      {report.topPaths[0].topGaps.slice(0, 2).join(", ")}
+                      {report.topPaths[0].topGaps.length > 2 && (
+                        <span className="text-muted-foreground"> and {report.topPaths[0].topGaps.length - 2} more</span>
+                      )}
+                    </p>
+                  </div>
+                )}
+                {!isPro && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-3 text-xs flex-wrap">
+                      <div className="flex items-center gap-1.5 text-primary">
+                        <Briefcase className="h-3.5 w-3.5" />
+                        <span className="font-medium" data-testid="text-matched-roles-teaser">
+                          {(report.readinessLadder?.ready?.length || 0) + (report.readinessLadder?.nearReady?.length || 0) + (report.readinessLadder?.stretch?.length || 0)} roles matched to your profile
+                        </span>
+                      </div>
+                      {marketPulseData?.newJobsThisWeek > 0 && (
+                        <div className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400">
+                          <TrendingUp className="h-3.5 w-3.5" />
+                          <span className="font-medium" data-testid="text-urgency-cta">
+                            {marketPulseData.newJobsThisWeek} new this week
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    {salaryBenchmarks && salaryBenchmarks.length > 0 && report.topPaths?.[0]?.name && (() => {
+                      const topPath = report.topPaths[0].name;
+                      const match = salaryBenchmarks.find((b: any) => b.category === topPath);
+                      if (!match) return null;
+                      const fmtK = (n: number) => `$${Math.round(n / 1000)}K`;
+                      return (
+                        <div className="flex items-center gap-1.5 text-xs">
+                          <DollarSign className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                          <span className="text-muted-foreground" data-testid="text-salary-teaser">
+                            Typical salary for your top path: <span className="font-medium text-foreground">{fmtK(match.medianMin)} – {fmtK(match.medianMax)}</span>
+                          </span>
+                        </div>
+                      );
+                    })()}
                   </div>
                 )}
                 {isPro && (
@@ -1656,6 +1723,38 @@ export default function DiagnosticPage() {
                       <Lock className="h-4 w-4 mr-2" />
                       Unlock Full Report — $5/mo
                     </Button>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {!isPro && report && (
+            <Card className="border border-border/50 card-elev-static" data-testid="card-free-next-steps">
+              <CardContent className="p-4 sm:p-6 space-y-4">
+                <p className="text-sm font-semibold text-foreground">While you're here</p>
+                <p className="text-xs text-muted-foreground">You don't need Pro to start exploring. Here are 3 things you can do right now:</p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <Link href="/jobs">
+                    <div className="p-3 rounded-lg border border-border/50 hover:border-primary/30 hover:bg-muted/30 transition-colors cursor-pointer group" data-testid="link-browse-matched-roles">
+                      <Search className="h-4 w-4 text-primary mb-2" />
+                      <p className="text-xs font-medium text-foreground group-hover:text-primary transition-colors">Browse open roles</p>
+                      <p className="text-[11px] text-muted-foreground mt-1">Explore legal tech positions across 130+ companies</p>
+                    </div>
+                  </Link>
+                  <Link href="/jobs">
+                    <div className="p-3 rounded-lg border border-border/50 hover:border-primary/30 hover:bg-muted/30 transition-colors cursor-pointer group" data-testid="link-save-roles">
+                      <Bookmark className="h-4 w-4 text-primary mb-2" />
+                      <p className="text-xs font-medium text-foreground group-hover:text-primary transition-colors">Save roles you like</p>
+                      <p className="text-[11px] text-muted-foreground mt-1">Build a shortlist to come back to later</p>
+                    </div>
+                  </Link>
+                  <Link href="/market-intelligence">
+                    <div className="p-3 rounded-lg border border-border/50 hover:border-primary/30 hover:bg-muted/30 transition-colors cursor-pointer group" data-testid="link-explore-market">
+                      <TrendingUp className="h-4 w-4 text-primary mb-2" />
+                      <p className="text-xs font-medium text-foreground group-hover:text-primary transition-colors">Explore market trends</p>
+                      <p className="text-[11px] text-muted-foreground mt-1">See salary ranges, demand signals, and hiring patterns</p>
+                    </div>
                   </Link>
                 </div>
               </CardContent>

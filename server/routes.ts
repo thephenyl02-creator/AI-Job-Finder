@@ -81,6 +81,7 @@ import {
 } from "./lib/scheduled-scraper";
 import { getLogFiles, readLogFile, getRecentLogs, runStartupCleanup } from "./lib/logger";
 import { runDataCleanup } from "./lib/data-cleanup";
+import { getSalaryBenchmarks, estimateSalary } from "./lib/salary-estimator";
 import { scrapeYCCompanies } from "./lib/yc-scraper";
 import { startEventScheduler, runEventDiscovery, getEventScraperStatus, checkUrlExists } from "./lib/event-scraper";
 
@@ -998,6 +999,16 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error fetching historical stats:", error);
       res.status(500).json({ error: "Failed to fetch historical stats" });
+    }
+  });
+
+  app.get("/api/salary-ranges", async (_req, res) => {
+    try {
+      const benchmarks = await getSalaryBenchmarks();
+      res.json({ benchmarks, _attribution: "Legal Tech Careers" });
+    } catch (error: any) {
+      console.error("Error fetching salary ranges:", error);
+      res.status(500).json({ error: "Failed to fetch salary ranges" });
     }
   });
 

@@ -18,6 +18,11 @@ interface FitScoreData {
   oneLineReason: string | null;
 }
 
+interface SalaryEstimate {
+  min: number;
+  max: number;
+}
+
 interface JobCardProps {
   job: JobWithScore;
   showMatchScore?: boolean;
@@ -25,6 +30,7 @@ interface JobCardProps {
   isSaved?: boolean;
   isAuthenticated?: boolean;
   fitData?: FitScoreData | null;
+  estimatedSalary?: SalaryEstimate | null;
 }
 
 function formatSalary(min?: number | null, max?: number | null, currency?: string | null): string | null {
@@ -107,9 +113,12 @@ function getTransitionLabel(level: string): { label: string; color: string } {
   }
 }
 
-export function JobCard({ job, isSaved = false, isAuthenticated = false, fitData }: JobCardProps) {
+export function JobCard({ job, isSaved = false, isAuthenticated = false, fitData, estimatedSalary }: JobCardProps) {
   const { toast } = useToast();
   const salary = formatSalary(job.salaryMin, job.salaryMax, job.salaryCurrency);
+  const estSalaryLabel = !salary && estimatedSalary
+    ? `~$${Math.round(estimatedSalary.min / 1000)}k–$${Math.round(estimatedSalary.max / 1000)}k est.`
+    : null;
   const companyDescriptor = COMPANY_DESCRIPTORS[job.company] || null;
 
   const getTimeAgo = (date?: Date | string | null) => {
@@ -223,6 +232,13 @@ export function JobCard({ job, isSaved = false, isAuthenticated = false, fitData
                     <Badge key="sal" variant="outline" className="gap-0.5 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800" data-testid={`text-salary-${job.id}`} title={salary}>
                       <DollarSign className="h-3 w-3" />
                       {salary}
+                    </Badge>
+                  );
+                } else if (estSalaryLabel) {
+                  badgeItems.push(
+                    <Badge key="est-sal" variant="outline" className="gap-0.5 text-muted-foreground border-border/50" data-testid={`text-est-salary-${job.id}`} title="Estimated based on similar roles">
+                      <DollarSign className="h-3 w-3" />
+                      {estSalaryLabel}
                     </Badge>
                   );
                 }
