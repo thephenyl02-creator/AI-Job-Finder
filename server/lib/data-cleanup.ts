@@ -5,7 +5,7 @@ import { clearAllStatsCaches, clearDisplayStats, forceRefreshDisplayStats } from
 import { normalizeSkill, toTitleCase } from "./skills-normalization";
 import { isGenericBusinessRole, hasNegativeAiSignal } from "./job-quality-patterns";
 
-const CLEANUP_VERSION = "v5d_reactivate_false_deactivations";
+const CLEANUP_VERSION = "v6_recover_overculled_jobs";
 
 async function hasRunCleanup(version: string): Promise<boolean> {
   try {
@@ -664,6 +664,49 @@ export async function runDataCleanup(force = false): Promise<{
       if (firmFixed > 0) console.log(`[DataCleanup] Firm sources normalized: ${firmFixed}`);
     } catch {}
 
+    const rRecoverInactive = await db.execute(sql`
+      UPDATE jobs
+      SET is_active = true,
+          pipeline_status = 'ready',
+          is_published = true,
+          published_at = COALESCE(published_at, NOW()),
+          review_reason_code = NULL
+      WHERE is_active = false
+        AND quality_score >= 7
+        AND role_category IS NOT NULL
+        AND apply_url IS NOT NULL
+        AND apply_url != ''
+        AND job_status = 'open'
+        AND (review_reason_code IS NULL OR review_reason_code NOT IN ('AUDIT_TITLE_REJECT', 'AUDIT_COMPANY_REJECT', 'AUDIT_DUPLICATE', 'GENERIC_APPLY_URL', 'DUPLICATE_JOB'))
+    `);
+    const reactivated = Number((rRecoverInactive as any).rowCount || 0);
+    console.log(`[DataCleanup] v6: Reactivated and republished ${reactivated} over-culled jobs`);
+
+    const rRecoverUnpublished = await db.execute(sql`
+      UPDATE jobs
+      SET is_published = true,
+          published_at = COALESCE(published_at, NOW()),
+          review_reason_code = NULL
+      WHERE pipeline_status = 'ready'
+        AND is_published = false
+        AND is_active = true
+        AND job_status = 'open'
+        AND quality_score >= 7
+        AND role_category IS NOT NULL
+        AND apply_url IS NOT NULL
+        AND apply_url != ''
+        AND (review_reason_code IS NULL OR review_reason_code NOT IN ('AUDIT_TITLE_REJECT', 'AUDIT_COMPANY_REJECT', 'AUDIT_DUPLICATE', 'GENERIC_APPLY_URL', 'DUPLICATE_JOB'))
+    `);
+    const republished = Number((rRecoverUnpublished as any).rowCount || 0);
+    console.log(`[DataCleanup] v6: Republished ${republished} ready-but-unpublished jobs`);
+
+    const recoveryTotal = reactivated + republished;
+    if (recoveryTotal > 0) {
+      clearDisplayStats();
+      clearAllStatsCaches();
+      console.log(`[DataCleanup] v6: Recovered ${recoveryTotal} total jobs, display stats reset`);
+    }
+
     if (!force) {
       await markCleanupComplete(CLEANUP_VERSION);
     }
@@ -673,14 +716,14 @@ export async function runDataCleanup(force = false): Promise<{
       results.skillsNormalized + results.locationTypeFixed + results.locationRegionFixed +
       results.locationStringsFixed + results.titlesFixed + results.unpublishedQuestionable +
       results.careerTrackFixed + results.workModeSynced +
-      genericRolesUnpublished + negativeAiUnpublished + nullQualityLowRelUnpublished;
+      genericRolesUnpublished + negativeAiUnpublished + nullQualityLowRelUnpublished + recoveryTotal;
 
     if (totalChanges > 0) {
       clearAllStatsCaches();
       console.log(`[DataCleanup] All stats caches cleared after ${totalChanges} total changes`);
     }
 
-    console.log(`[DataCleanup] Complete:`, JSON.stringify(results));
+    console.log(`[DataCleanup] Complete:`, JSON.stringify({ ...results, reactivated, republished }));
     return results;
 
   } catch (error: any) {

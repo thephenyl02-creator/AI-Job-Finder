@@ -1194,8 +1194,9 @@ async function runLiveJobAudit(): Promise<{ audited: number; flagged: number; pr
   let promoted = 0;
 
   try {
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
     const allPublished = await db.select().from(jobs).where(eq(jobs.isPublished, true));
-    console.log(`[Audit] Checking ${allPublished.length} published jobs against ALL quality gates...`);
+    console.log(`[Audit] Checking ${allPublished.length} published jobs (hard-reject + duplicates only for established jobs)...`);
 
     for (const job of allPublished) {
       audited++;
@@ -1203,6 +1204,9 @@ async function runLiveJobAudit(): Promise<{ audited: number; flagged: number; pr
       if (job.pipelineStatus === 'raw' || job.pipelineStatus === 'enriching') {
         continue;
       }
+
+      const isAdminApproved = job.reviewStatus === 'approved';
+      if (isAdminApproved) continue;
 
       if (shouldHardReject(job.title, job.company)) {
         console.log(`[Audit] Unpublish "${job.title}" at ${job.company} - hard reject title`);
@@ -1218,13 +1222,6 @@ async function runLiveJobAudit(): Promise<{ audited: number; flagged: number; pr
         continue;
       }
 
-      if (isGenericCareersUrl(job.applyUrl || '')) {
-        console.log(`[Audit] Unpublish "${job.title}" at ${job.company} - generic careers URL`);
-        await storage.updateJobWorkerFields(job.id, { pipelineStatus: 'rejected', isPublished: false, reviewReasonCode: 'GENERIC_APPLY_URL' });
-        flagged++;
-        continue;
-      }
-
       const duplicate = await storage.findLiveJobDuplicate(job.title, job.company, job.location, job.id);
       if (duplicate && duplicate.id < job.id) {
         console.log(`[Audit] Unpublish duplicate "${job.title}" at ${job.company} (keeping #${duplicate.id})`);
@@ -1233,7 +1230,15 @@ async function runLiveJobAudit(): Promise<{ audited: number; flagged: number; pr
         continue;
       }
 
-      const isAdminApproved = job.reviewStatus === 'approved';
+      const isRecentlyPublished = job.publishedAt && job.publishedAt > sevenDaysAgo;
+      if (!isRecentlyPublished) continue;
+
+      if (isGenericCareersUrl(job.applyUrl || '')) {
+        console.log(`[Audit] Unpublish "${job.title}" at ${job.company} - generic careers URL`);
+        await storage.updateJobWorkerFields(job.id, { pipelineStatus: 'rejected', isPublished: false, reviewReasonCode: 'GENERIC_APPLY_URL' });
+        flagged++;
+        continue;
+      }
 
       if (isBackOfficeTitle(job.title)) {
         console.log(`[Audit] Unpublish "${job.title}" at ${job.company} - back-office title`);
@@ -1258,12 +1263,12 @@ async function runLiveJobAudit(): Promise<{ audited: number; flagged: number; pr
 
       const auditThresholds = getQualityThresholds(job.company);
       let failReason: string | null = null;
-      if (!job.isActive && !isAdminApproved) failReason = 'INACTIVE';
-      else if (job.jobStatus !== 'open' && !isAdminApproved) failReason = 'JOB_CLOSED';
-      else if (!isAdminApproved && (job.qualityScore ?? 0) < auditThresholds.qualityThreshold) failReason = 'LOW_QUALITY_SCORE';
-      else if (!isAdminApproved && (job.legalRelevanceScore ?? 0) < auditThresholds.minRelevance) failReason = 'LOW_RELEVANCE_SCORE';
+      if (!job.isActive) failReason = 'INACTIVE';
+      else if (job.jobStatus !== 'open') failReason = 'JOB_CLOSED';
+      else if ((job.qualityScore ?? 0) < auditThresholds.qualityThreshold) failReason = 'LOW_QUALITY_SCORE';
+      else if ((job.legalRelevanceScore ?? 0) < auditThresholds.minRelevance) failReason = 'LOW_RELEVANCE_SCORE';
       else if (!job.roleCategory) failReason = 'MISSING_CATEGORY';
-      else if (!isAdminApproved && (job.relevanceConfidence ?? 0) < auditThresholds.minConfidence) failReason = 'LOW_CONFIDENCE';
+      else if ((job.relevanceConfidence ?? 0) < auditThresholds.minConfidence) failReason = 'LOW_CONFIDENCE';
       else if (!job.applyUrl || job.applyUrl.trim() === '') failReason = 'NO_APPLY_URL';
 
       if (failReason) {
