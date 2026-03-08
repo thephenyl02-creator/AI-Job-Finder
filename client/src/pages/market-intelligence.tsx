@@ -36,6 +36,11 @@ import {
   Treemap,
   LineChart,
   Line,
+  RadarChart,
+  Radar,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
 } from "recharts";
 import { ProGate } from "@/components/pro-gate";
 import {
@@ -1542,6 +1547,99 @@ export default function MarketIntelligence() {
                 </div>
               </div>
             )}
+
+            {data?.aiIntensityByCategory && data.aiIntensityByCategory.length >= 3 && data?.careerPaths && (() => {
+              const totalJobs = data.careerPaths.reduce((s, p) => s + p.jobCount, 0) || 1;
+              const filtered = data.aiIntensityByCategory
+                .filter(cat => cat.total >= 3)
+                .map(cat => {
+                  const pathMatch = data.careerPaths.find(p => p.name === cat.category);
+                  const volumePct = pathMatch ? (pathMatch.jobCount / totalJobs) * 100 : 0;
+                  return { cat, volumePct };
+                })
+                .sort((a, b) => b.cat.total - a.cat.total)
+                .slice(0, 8);
+              if (filtered.length < 3) return null;
+              const maxHighPct = Math.max(...filtered.map(f => f.cat.highPct), 1);
+              const maxVolPct = Math.max(...filtered.map(f => f.volumePct), 1);
+              const radarData = filtered.map(({ cat, volumePct }) => ({
+                category: cat.category.length > 18 ? cat.category.slice(0, 16) + '…' : cat.category,
+                fullCategory: cat.category,
+                aiIntensity: Math.round((cat.highPct / maxHighPct) * 100),
+                jobVolume: Math.round((volumePct / maxVolPct) * 100),
+                rawAI: cat.highPct,
+                rawVolume: Math.round(volumePct),
+              }));
+              return (
+                <div className="mi-panel mt-4" data-testid="chart-ai-radar">
+                  <div className="mi-panel-header">
+                    <Target className="h-3 w-3 text-muted-foreground" />
+                    <span className="mi-label text-[10px]">AI Exposure vs Job Volume</span>
+                  </div>
+                  <div className="h-[320px] sm:h-[380px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <RadarChart cx="50%" cy="50%" outerRadius="70%" data={radarData}>
+                        <PolarGrid stroke="hsl(var(--border))" strokeOpacity={0.5} />
+                        <PolarAngleAxis
+                          dataKey="category"
+                          tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))", fontFamily: "var(--font-sans)" }}
+                        />
+                        <PolarRadiusAxis
+                          angle={90}
+                          domain={[0, 100]}
+                          tick={{ fontSize: 8, fill: "hsl(var(--muted-foreground))", fontFamily: "var(--font-mono)" }}
+                          tickCount={5}
+                          axisLine={false}
+                        />
+                        <Radar
+                          name="AI Intensity"
+                          dataKey="aiIntensity"
+                          stroke="hsl(var(--status-danger))"
+                          fill="hsl(var(--status-danger))"
+                          fillOpacity={0.25}
+                          strokeWidth={2}
+                          dot={{ r: 3, fill: "hsl(var(--status-danger))", strokeWidth: 0 }}
+                        />
+                        <Radar
+                          name="Job Volume"
+                          dataKey="jobVolume"
+                          stroke="hsl(var(--chart-1))"
+                          fill="hsl(var(--chart-1))"
+                          fillOpacity={0.2}
+                          strokeWidth={2}
+                          dot={{ r: 3, fill: "hsl(var(--chart-1))", strokeWidth: 0 }}
+                        />
+                        <Tooltip
+                          {...SHARED_TOOLTIP_STYLE}
+                          content={({ active, payload }: any) => {
+                            if (!active || !payload?.length) return null;
+                            const d = payload[0]?.payload;
+                            if (!d) return null;
+                            return (
+                              <div className="rounded-md border bg-popover px-3 py-2 text-xs shadow-md">
+                                <p className="font-medium mb-1">{d.fullCategory}</p>
+                                <p style={{ color: "hsl(var(--status-danger))" }}>{d.rawAI}% High AI roles</p>
+                                <p style={{ color: "hsl(var(--chart-1))" }}>{d.rawVolume}% of job volume</p>
+                              </div>
+                            );
+                          }}
+                        />
+                      </RadarChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="flex items-center justify-center gap-6 -mt-2">
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-3 h-2 border" style={{ backgroundColor: "hsl(var(--status-danger) / 0.6)", borderColor: "hsl(var(--status-danger))", borderRadius: '1px' }} />
+                      <span className="text-[9px] text-muted-foreground">AI Intensity (% High AI)</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-3 h-2 border" style={{ backgroundColor: "hsl(var(--chart-1) / 0.4)", borderColor: "hsl(var(--chart-1))", borderRadius: '1px' }} />
+                      <span className="text-[9px] text-muted-foreground">Job Volume Share</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
 
           </div>
         </section>
