@@ -12,6 +12,9 @@ const GRAY_500 = "#64748b";
 const GRAY_600 = "#475569";
 const WHITE = "#ffffff";
 const TEAL = "#0d9488";
+const ROSE = "#e11d48";
+const AMBER = "#d97706";
+const GREEN = "#059669";
 
 const PAGE_WIDTH = 612;
 const PAGE_HEIGHT = 792;
@@ -26,6 +29,7 @@ interface MarketData {
   salaryByPath: { name: string; medianMin: number; medianMax: number; sampleSize: number }[];
   workMode: { remote: number; hybrid: number; onsite: number };
   aiIntensity: { low: number; medium: number; high: number };
+  aiIntensityByCategory?: { category: string; low: number; med: number; high: number; total: number; highPct: number; medPct: number; lowPct: number }[];
   seniorityDistribution: { level: string; count: number }[];
   topCompanies: { company: string; jobCount: number }[];
   geography: { countryCode: string; countryName: string; jobCount: number }[];
@@ -145,6 +149,104 @@ function drawBar(doc: PDFKit.PDFDocument, x: number, y: number, maxW: number, fr
     const bw = Math.max(4, maxW * Math.min(fraction, 1));
     drawRect(doc, x, y, bw, h, barColor, h / 2);
   }
+}
+
+function drawDonut(
+  doc: PDFKit.PDFDocument,
+  cx: number, cy: number,
+  outerR: number, innerR: number,
+  segments: { label: string; value: number; color: string; count?: number }[],
+) {
+  const total = segments.reduce((s, seg) => s + seg.value, 0);
+  if (total <= 0) return;
+  let startAngle = -Math.PI / 2;
+  for (const seg of segments) {
+    const sweep = (seg.value / total) * Math.PI * 2;
+    if (sweep < 0.01) { startAngle += sweep; continue; }
+    const endAngle = startAngle + sweep;
+    const steps = Math.max(20, Math.ceil(sweep / 0.05));
+    doc.save();
+    doc.path((() => {
+      let d = "";
+      const outerStartX = cx + outerR * Math.cos(startAngle);
+      const outerStartY = cy + outerR * Math.sin(startAngle);
+      d += `M ${outerStartX} ${outerStartY} `;
+      for (let i = 1; i <= steps; i++) {
+        const a = startAngle + (sweep * i) / steps;
+        d += `L ${cx + outerR * Math.cos(a)} ${cy + outerR * Math.sin(a)} `;
+      }
+      for (let i = steps; i >= 0; i--) {
+        const a = startAngle + (sweep * i) / steps;
+        d += `L ${cx + innerR * Math.cos(a)} ${cy + innerR * Math.sin(a)} `;
+      }
+      d += "Z";
+      return d;
+    })()).fill(seg.color);
+    doc.restore();
+
+    const midAngle = startAngle + sweep / 2;
+    const labelR = outerR + 14;
+    const lx = cx + labelR * Math.cos(midAngle);
+    const ly = cy + labelR * Math.sin(midAngle);
+    const pct = Math.round((seg.value / total) * 100);
+    if (pct >= 5) {
+      doc.save();
+      const align = lx > cx ? "left" : "right";
+      const tx = lx > cx ? lx : lx - 60;
+      doc.fontSize(7).fillColor(seg.color).font("Helvetica-Bold")
+        .text(`${pct}%`, tx, ly - 5, { width: 60, align });
+      doc.fontSize(6).fillColor(GRAY_500).font("Helvetica")
+        .text(seg.label, tx, ly + 4, { width: 60, align });
+      doc.restore();
+    }
+    startAngle = endAngle;
+  }
+  doc.save();
+  const totalLabel = fmtNum(total);
+  doc.fontSize(14).fillColor(NAVY).font("Helvetica-Bold")
+    .text(totalLabel, cx - 30, cy - 10, { width: 60, align: "center" });
+  doc.fontSize(6).fillColor(GRAY_400).font("Helvetica")
+    .text("TOTAL", cx - 30, cy + 6, { width: 60, align: "center", characterSpacing: 1 });
+  doc.restore();
+}
+
+function drawStackedBar(
+  doc: PDFKit.PDFDocument,
+  x: number, y: number, w: number, h: number,
+  segments: { fraction: number; color: string }[],
+) {
+  drawRect(doc, x, y, w, h, GRAY_200, h / 2);
+  let offsetX = 0;
+  for (const seg of segments) {
+    const segW = w * Math.min(seg.fraction, 1 - offsetX / w);
+    if (segW > 0) {
+      if (offsetX === 0) {
+        drawRect(doc, x, y, segW, h, seg.color, h / 2);
+      } else {
+        drawRect(doc, x + offsetX, y, Math.min(segW, w - offsetX), h, seg.color);
+      }
+      offsetX += segW;
+    }
+  }
+  if (offsetX > 0 && offsetX < w) {
+    drawRect(doc, x + offsetX - 1, y, 1, h, segments[segments.length - 1]?.color || GRAY_200);
+  }
+}
+
+function drawRangeBar(
+  doc: PDFKit.PDFDocument,
+  x: number, y: number, totalW: number, h: number,
+  scaleMin: number, scaleMax: number,
+  valueMin: number, valueMax: number,
+  barColor: string,
+) {
+  drawRect(doc, x, y, totalW, h, GRAY_100, h / 2);
+  if (!Number.isFinite(valueMin) || !Number.isFinite(valueMax) || !Number.isFinite(scaleMin) || !Number.isFinite(scaleMax)) return;
+  const range = scaleMax - scaleMin || 1;
+  const startPx = Math.max(0, ((valueMin - scaleMin) / range) * totalW);
+  const endPx = Math.min(totalW, ((valueMax - scaleMin) / range) * totalW);
+  const barW = Math.max(6, endPx - startPx);
+  drawRect(doc, x + startPx, y, barW, h, barColor, h / 2);
 }
 
 function pageHeader(doc: PDFKit.PDFDocument, pageNum: number) {
@@ -522,26 +624,40 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string, 
 
     narrativeParagraph(doc, `Our curation pipeline screened ${fmtNum(dq.curation.totalScreened)} job listings and published ${fmtNum(dq.curation.totalPublished)} — a ${dq.curation.passRate}% pass rate ensuring only high-quality, relevant positions reach the platform. ${fmtNum(dq.curation.totalRejected)} listings (${dq.curation.rejectedPct}%) were rejected and ${fmtNum(dq.curation.totalInReview)} (${dq.curation.inReviewPct}%) are pending review across ${dq.curation.filterCategories} filter categories from ${fmtNum(dq.curation.uniqueCompanies)} companies and ${fmtNum(dq.curation.uniqueSources)} sources.`, pn);
 
-    const dqBoxW = (CONTENT_WIDTH - 16) / 3;
-    const dqBoxH = 48;
-    ensureSpace(doc, dqBoxH + 8, pn);
-    const dqStats = [
-      { value: fmtNum(dq.curation.totalScreened), label: "SCREENED" },
-      { value: fmtNum(dq.curation.totalPublished), label: "PUBLISHED" },
-      { value: `${dq.curation.passRate}%`, label: "PASS RATE" },
+    const funnelStages = [
+      { label: "Screened", value: dq.curation.totalScreened, color: NAVY },
+      { label: "Rejected", value: dq.curation.totalRejected, color: ROSE },
+      { label: "In Review", value: dq.curation.totalInReview, color: AMBER },
+      { label: "Published", value: dq.curation.totalPublished, color: TEAL },
     ];
-    let dqY = doc.y;
-    dqStats.forEach((s, i) => {
-      const bx = MARGIN + i * (dqBoxW + 8);
-      drawRect(doc, bx, dqY, dqBoxW, dqBoxH, NAVY, 4);
+    const funnelH = funnelStages.length * 28 + 8;
+    ensureSpace(doc, funnelH + 16, pn);
+    doc.save();
+    doc.fontSize(8).fillColor(NAVY).font("Helvetica-Bold")
+      .text("CURATION PIPELINE", MARGIN, doc.y, { characterSpacing: 1 });
+    doc.restore();
+    doc.y += 14;
+    const funnelMax = funnelStages[0].value || 1;
+    const funnelMaxW = CONTENT_WIDTH - 100;
+    for (const stage of funnelStages) {
+      ensureSpace(doc, 28, pn);
+      const fy = doc.y;
+      const barW = Math.max(20, (stage.value / funnelMax) * funnelMaxW);
+      drawRect(doc, MARGIN + 90, fy + 2, barW, 16, stage.color, 3);
       doc.save();
-      doc.fontSize(18).fillColor(WHITE).font("Helvetica-Bold")
-        .text(s.value, bx + 8, dqY + 8, { width: dqBoxW - 16, align: "center" });
-      doc.fontSize(6.5).fillColor(GRAY_300).font("Helvetica")
-        .text(s.label, bx + 8, dqY + 30, { width: dqBoxW - 16, align: "center", characterSpacing: 0.8 });
+      doc.fontSize(7.5).fillColor(NAVY).font("Helvetica-Bold")
+        .text(stage.label, MARGIN, fy + 4, { width: 85 });
+      doc.fontSize(7.5).fillColor(WHITE).font("Helvetica-Bold")
+        .text(fmtNum(stage.value), MARGIN + 94, fy + 4, { width: barW - 8 });
+      const pctOfTotal = dq.curation.totalScreened > 0
+        ? `${Math.round((stage.value / dq.curation.totalScreened) * 100)}%`
+        : "";
+      doc.fontSize(7).fillColor(GRAY_500).font("Helvetica")
+        .text(pctOfTotal, MARGIN + 90 + barW + 6, fy + 5, { width: 40 });
       doc.restore();
-    });
-    doc.y = dqY + dqBoxH + 10;
+      doc.y = fy + 26;
+    }
+    doc.y += 8;
 
     if (dq.quality) {
       ensureSpace(doc, 30, pn);
@@ -879,28 +995,30 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string, 
 
   // ── CAREER PATHS ──
   if (data.careerPaths.length > 0) {
-    sectionTitle(doc, "05", "Career Paths", pn);
-    const cpCols = [
-      { x: MARGIN, w: 180 },
-      { x: MARGIN + 185, w: 55 },
-      { x: MARGIN + 245, w: 50 },
-      { x: MARGIN + 300, w: 75 },
-    ];
-    tableHeaderRow(doc, [
-      { text: "CAREER PATH", ...cpCols[0] },
-      { text: "JOBS", ...cpCols[1], align: "right" },
-      { text: "SHARE", ...cpCols[2], align: "right" },
-      { text: "NEW THIS WEEK", ...cpCols[3], align: "right" },
-    ]);
+    sectionTitle(doc, "05", "Career Paths & Demand", pn);
+
+    const cpMax = data.careerPaths[0]?.jobCount || 1;
+    const cpBarMaxW = CONTENT_WIDTH - 190;
     for (let i = 0; i < data.careerPaths.length; i++) {
-      ensureSpace(doc, 18, pn);
       const cp = data.careerPaths[i];
-      tableDataRow(doc, [
-        { text: cp.name, ...cpCols[0] },
-        { text: fmtNum(cp.jobCount), ...cpCols[1], align: "right" },
-        { text: `${cp.percentage}%`, ...cpCols[2], align: "right" },
-        { text: fmtNum(cp.newThisWeek), ...cpCols[3], align: "right" },
-      ], i % 2 === 0);
+      ensureSpace(doc, 20, pn);
+      const ry = doc.y;
+      doc.save();
+      doc.fontSize(7).fillColor(GRAY_400).font("Helvetica-Bold")
+        .text(String(i + 1).padStart(2, "0"), MARGIN, ry + 1, { width: 14 });
+      doc.fontSize(8).fillColor(NAVY).font("Helvetica")
+        .text(cp.name, MARGIN + 18, ry, { width: 110 });
+      doc.restore();
+      drawBar(doc, MARGIN + 132, ry + 2, cpBarMaxW, cp.jobCount / cpMax, 8, i === 0 ? ACCENT : NAVY);
+      doc.save();
+      doc.fontSize(7.5).fillColor(GRAY_500).font("Helvetica-Bold")
+        .text(`${fmtNum(cp.jobCount)} (${cp.percentage}%)`, MARGIN + 132 + cpBarMaxW + 4, ry, { width: 50, align: "right" });
+      if (cp.newThisWeek > 0) {
+        doc.fontSize(6).fillColor(TEAL).font("Helvetica-Bold")
+          .text(`+${cp.newThisWeek}`, MARGIN + 132 + cpBarMaxW + 4, ry + 10, { width: 50, align: "right" });
+      }
+      doc.restore();
+      doc.y = ry + 18;
     }
     doc.y += 6;
 
@@ -910,25 +1028,54 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string, 
 
   // ── SALARY INSIGHTS ──
   if (data.salaryByPath.length > 0) {
-    sectionTitle(doc, "06", "Salary Insights", pn);
-    const salCols = [
-      { x: MARGIN, w: 175 },
-      { x: MARGIN + 180, w: 140 },
-      { x: MARGIN + 330, w: 75 },
-    ];
-    tableHeaderRow(doc, [
-      { text: "CAREER PATH", ...salCols[0] },
-      { text: "MEDIAN RANGE", ...salCols[1], align: "center" },
-      { text: "SAMPLE SIZE", ...salCols[2], align: "right" },
-    ]);
-    for (let i = 0; i < data.salaryByPath.length; i++) {
-      ensureSpace(doc, 18, pn);
-      const sp = data.salaryByPath[i];
-      tableDataRow(doc, [
-        { text: sp.name, ...salCols[0] },
-        { text: `${formatSalary(sp.medianMin)} – ${formatSalary(sp.medianMax)}`, ...salCols[1], align: "center" },
-        { text: `${sp.sampleSize} roles`, ...salCols[2], align: "right" },
-      ], i % 2 === 0);
+    sectionTitle(doc, "06", "Salary Benchmarks", pn);
+
+    const sorted = [...data.salaryByPath].sort((a, b) => b.medianMax - a.medianMax);
+    const scaleMin = Math.floor(Math.min(...sorted.map(s => s.medianMin)) / 10000) * 10000;
+    const scaleMax = Math.ceil(Math.max(...sorted.map(s => s.medianMax)) / 10000) * 10000;
+    const labelW = 140;
+    const rangeW = CONTENT_WIDTH - labelW - 60;
+    const rangeX = MARGIN + labelW;
+
+    ensureSpace(doc, 20, pn);
+    const axisY = doc.y;
+    const scaleRange = scaleMax - scaleMin || 1;
+    const ticks = [];
+    for (let v = scaleMin; v <= scaleMax; v += 50000) ticks.push(v);
+    if (!ticks.includes(scaleMax)) ticks.push(scaleMax);
+    doc.save();
+    for (const tick of ticks) {
+      const tx = rangeX + ((tick - scaleMin) / scaleRange) * rangeW;
+      doc.fontSize(6).fillColor(GRAY_400).font("Helvetica")
+        .text(formatSalary(tick), tx - 15, axisY, { width: 30, align: "center" });
+    }
+    doc.restore();
+    doc.y = axisY + 12;
+
+    for (let i = 0; i < sorted.length; i++) {
+      const sp = sorted[i];
+      ensureSpace(doc, 22, pn);
+      const ry = doc.y;
+      if (i % 2 === 0) drawRect(doc, MARGIN, ry - 2, CONTENT_WIDTH, 18, GRAY_50);
+      doc.save();
+      doc.fontSize(8).fillColor(NAVY).font("Helvetica")
+        .text(sp.name, MARGIN, ry, { width: labelW - 8 });
+      doc.restore();
+
+      const barColor = i === 0 ? ACCENT : NAVY;
+      drawRangeBar(doc, rangeX, ry + 2, rangeW, 8, scaleMin, scaleMax, sp.medianMin, sp.medianMax, barColor);
+
+      const midPx = rangeX + (((sp.medianMin + sp.medianMax) / 2 - scaleMin) / scaleRange) * rangeW;
+      doc.save();
+      doc.fontSize(6.5).fillColor(WHITE).font("Helvetica-Bold")
+        .text(`${formatSalary(sp.medianMin)}–${formatSalary(sp.medianMax)}`, midPx - 30, ry + 3, { width: 60, align: "center" });
+      doc.restore();
+
+      doc.save();
+      doc.fontSize(6.5).fillColor(GRAY_400).font("Helvetica")
+        .text(`n=${sp.sampleSize}`, MARGIN + CONTENT_WIDTH - 50, ry + 1, { width: 50, align: "right" });
+      doc.restore();
+      doc.y = ry + 18;
     }
     doc.y += 6;
 
@@ -942,79 +1089,141 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string, 
 
   if (wmTotal > 0 || aiTotal > 0) {
     sectionTitle(doc, "07", "Work Mode & AI Intensity", pn);
-    ensureSpace(doc, 70, pn);
+    ensureSpace(doc, 130, pn);
 
-    if (wmTotal > 0) {
-      const wmBoxW = (CONTENT_WIDTH / 2 - 20) / 3;
+    {
       const wmy = doc.y;
-      doc.save();
-      doc.fontSize(8).fillColor(NAVY).font("Helvetica-Bold").text("WORK MODE", MARGIN, wmy, { characterSpacing: 1 });
-      doc.restore();
-      const wmby = wmy + 16;
-      const wmEntries = [
-        { label: "Remote", count: data.workMode.remote || 0 },
-        { label: "Hybrid", count: data.workMode.hybrid || 0 },
-        { label: "On-site", count: data.workMode.onsite || 0 },
-      ];
-      wmEntries.forEach((item, i) => {
-        const bx = MARGIN + i * (wmBoxW + 6);
-        const pct = fmtPct(item.count, wmTotal);
-        drawRect(doc, bx, wmby, wmBoxW, 40, GRAY_50, 4);
+
+      if (wmTotal > 0) {
+        const donutCx = MARGIN + 80;
+        const donutCy = wmy + 55;
         doc.save();
-        doc.moveTo(bx, wmby + 4).lineTo(bx, wmby + 36).strokeColor(i === 0 ? ACCENT : GRAY_300).lineWidth(2).stroke();
-        doc.fontSize(16).fillColor(NAVY).font("Helvetica-Bold")
-          .text(`${pct}%`, bx + 8, wmby + 6, { width: wmBoxW - 12, align: "left" });
-        doc.fontSize(7).fillColor(GRAY_500).font("Helvetica")
-          .text(`${item.label} (${fmtNum(item.count)})`, bx + 8, wmby + 26, { width: wmBoxW - 12, align: "left" });
+        doc.fontSize(8).fillColor(NAVY).font("Helvetica-Bold").text("WORK MODE DISTRIBUTION", MARGIN, wmy, { characterSpacing: 1 });
         doc.restore();
-      });
+        drawDonut(doc, donutCx, donutCy, 42, 22, [
+          { label: "Remote", value: data.workMode.remote || 0, color: TEAL },
+          { label: "Hybrid", value: data.workMode.hybrid || 0, color: ACCENT },
+          { label: "On-site", value: data.workMode.onsite || 0, color: GRAY_400 },
+        ]);
+      }
 
       if (aiTotal > 0) {
-        const aiX = MARGIN + CONTENT_WIDTH / 2 + 10;
-        const aiW = CONTENT_WIDTH / 2 - 10;
+        const aiX = wmTotal > 0 ? MARGIN + CONTENT_WIDTH / 2 + 10 : MARGIN;
         doc.save();
         doc.fontSize(8).fillColor(NAVY).font("Helvetica-Bold").text("AI INTENSITY", aiX, wmy, { characterSpacing: 1 });
         doc.restore();
-        const aiEntries = [
-          { label: "Low", count: data.aiIntensity.low || 0 },
-          { label: "Medium", count: data.aiIntensity.medium || 0 },
-          { label: "High", count: data.aiIntensity.high || 0 },
-        ];
-        let aby = wmby;
-        for (const item of aiEntries) {
-          const pct = fmtPct(item.count, aiTotal);
-          doc.save();
-          doc.fontSize(8).fillColor(NAVY).font("Helvetica")
-            .text(item.label, aiX, aby + 1, { width: 45 });
-          doc.restore();
-          drawBar(doc, aiX + 48, aby + 1, aiW - 90, item.count / aiTotal, 8, item.label === "High" ? ACCENT : NAVY);
-          doc.save();
-          doc.fontSize(7.5).fillColor(GRAY_500).font("Helvetica-Bold")
-            .text(`${pct}%`, aiX + aiW - 36, aby + 1, { width: 36, align: "right" });
-          doc.restore();
-          aby += 13;
-        }
+        const aiDonutCx = aiX + 80;
+        const aiDonutCy = wmy + 55;
+        drawDonut(doc, aiDonutCx, aiDonutCy, 42, 22, [
+          { label: "Low", value: data.aiIntensity.low || 0, color: GREEN },
+          { label: "Medium", value: data.aiIntensity.medium || 0, color: AMBER },
+          { label: "High", value: data.aiIntensity.high || 0, color: ROSE },
+        ]);
       }
 
-      doc.y = wmby + 48;
+      doc.y = wmy + 116;
     }
 
     const workmodeInsight = generateSectionInsight("workmode", data);
     if (workmodeInsight) insightBlock(doc, workmodeInsight, pn);
+
+    if (data.aiIntensityByCategory && data.aiIntensityByCategory.length > 0) {
+      ensureSpace(doc, 40, pn);
+      doc.save();
+      doc.fontSize(8).fillColor(NAVY).font("Helvetica-Bold")
+        .text("AI INTENSITY BY CAREER PATH", MARGIN, doc.y, { characterSpacing: 1 });
+      doc.restore();
+      doc.y += 14;
+
+      const aiCats = [...data.aiIntensityByCategory]
+        .filter(c => c.total >= 3)
+        .sort((a, b) => b.highPct - a.highPct);
+      const pctColW = 54;
+      const stackBarW = CONTENT_WIDTH - 134 - pctColW;
+
+      doc.save();
+      doc.fontSize(6).fillColor(GRAY_400).font("Helvetica")
+        .text("CATEGORY", MARGIN, doc.y, { width: 130 });
+      const pctX = MARGIN + 134 + stackBarW + 4;
+      doc.fontSize(6).fillColor(GREEN).font("Helvetica-Bold")
+        .text("L", pctX, doc.y, { width: 16 });
+      doc.fontSize(6).fillColor(AMBER).font("Helvetica-Bold")
+        .text("M", pctX + 18, doc.y, { width: 16 });
+      doc.fontSize(6).fillColor(ROSE).font("Helvetica-Bold")
+        .text("H", pctX + 36, doc.y, { width: 16 });
+      doc.restore();
+      doc.y += 10;
+
+      for (const cat of aiCats) {
+        ensureSpace(doc, 16, pn);
+        const ry = doc.y;
+        const total = cat.total || 1;
+        doc.save();
+        doc.fontSize(7.5).fillColor(NAVY).font("Helvetica")
+          .text(cat.category.length > 24 ? cat.category.slice(0, 22) + '..' : cat.category, MARGIN, ry, { width: 130 });
+        doc.restore();
+        drawStackedBar(doc, MARGIN + 134, ry + 1, stackBarW, 8, [
+          { fraction: cat.low / total, color: GREEN },
+          { fraction: cat.med / total, color: AMBER },
+          { fraction: cat.high / total, color: ROSE },
+        ]);
+        const catPctX = MARGIN + 134 + stackBarW + 4;
+        doc.save();
+        doc.fontSize(6.5).fillColor(GRAY_500).font("Helvetica")
+          .text(`${cat.lowPct}%`, catPctX, ry + 1, { width: 16 })
+          .text(`${cat.medPct}%`, catPctX + 18, ry + 1, { width: 16 })
+          .text(`${cat.highPct}%`, catPctX + 36, ry + 1, { width: 16 });
+        doc.restore();
+        doc.y = ry + 14;
+      }
+      doc.y += 6;
+
+      insightBlock(doc, `Categories are sorted by AI intensity (highest first). ${aiCats[0]?.category || "Legal AI"} shows the highest concentration of AI-intensive roles at ${aiCats[0]?.highPct || 0}%, while operational categories tend toward medium intensity — suggesting AI is augmenting rather than replacing domain expertise.`, pn);
+    }
   }
 
   // ── SENIORITY DISTRIBUTION ──
   if (data.seniorityDistribution.length > 0) {
     sectionTitle(doc, "08", "Seniority Distribution", pn);
+
+    const totalSen = data.seniorityDistribution.reduce((sum, s) => sum + s.count, 0);
+    const entryLevels = ["entry", "junior", "associate", "intern", "fellowship", "mid"];
+    const entryMidCount = data.seniorityDistribution
+      .filter(s => entryLevels.includes(s.level.toLowerCase()))
+      .reduce((sum, s) => sum + s.count, 0);
+    const seniorCount = totalSen - entryMidCount;
+    const entryPct = totalSen > 0 ? Math.round((entryMidCount / totalSen) * 100) : 0;
+
+    ensureSpace(doc, 90, pn);
+    const calloutY = doc.y;
+    drawRect(doc, MARGIN, calloutY, CONTENT_WIDTH / 2 - 10, 52, GRAY_50, 6);
+    doc.save();
+    doc.moveTo(MARGIN, calloutY + 6).lineTo(MARGIN, calloutY + 46).strokeColor(TEAL).lineWidth(3).stroke();
+    doc.fontSize(24).fillColor(NAVY).font("Helvetica-Bold")
+      .text(`${entryPct}%`, MARGIN + 14, calloutY + 6, { width: 80 });
+    doc.fontSize(8).fillColor(GRAY_500).font("Helvetica")
+      .text("of roles are Entry-to-Mid\naccessible for career changers", MARGIN + 80, calloutY + 10, { width: 150, lineGap: 2 });
+    doc.restore();
+
+    const senDonutCx = MARGIN + CONTENT_WIDTH * 0.75;
+    const senDonutCy = calloutY + 26;
+    drawDonut(doc, senDonutCx, senDonutCy, 24, 14, [
+      { label: "Entry-Mid", value: entryMidCount, color: TEAL },
+      { label: "Senior+", value: seniorCount, color: NAVY },
+    ]);
+
+    doc.y = calloutY + 60;
+
     const maxSen = Math.max(...data.seniorityDistribution.map(s => s.count), 1);
     for (const s of data.seniorityDistribution) {
       ensureSpace(doc, 18, pn);
       const ry = doc.y;
+      const isEntry = entryLevels.includes(s.level.toLowerCase());
       doc.save();
       doc.fontSize(8).fillColor(NAVY).font("Helvetica")
         .text(s.level, MARGIN, ry, { width: 80 });
       doc.restore();
-      drawBar(doc, MARGIN + 85, ry + 2, CONTENT_WIDTH - 135, s.count / maxSen, 7);
+      drawBar(doc, MARGIN + 85, ry + 2, CONTENT_WIDTH - 135, s.count / maxSen, 7, isEntry ? TEAL : NAVY);
       doc.save();
       doc.fontSize(7.5).fillColor(GRAY_500).font("Helvetica-Bold")
         .text(fmtNum(s.count), MARGIN + CONTENT_WIDTH - 40, ry, { width: 40, align: "right" });

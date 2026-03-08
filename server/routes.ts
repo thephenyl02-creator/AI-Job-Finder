@@ -10267,6 +10267,7 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
         medium: miData.aiIntensity?.medium?.count ?? miData.aiIntensity?.medium ?? 0,
         high: miData.aiIntensity?.high?.count ?? miData.aiIntensity?.high ?? 0,
       },
+      aiIntensityByCategory: miData.aiIntensityByCategory || [],
       seniorityDistribution: miData.seniorityDistribution || [],
       topCompanies: miData.topCompanies || [],
       geography: miData.geography || [],
