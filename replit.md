@@ -71,7 +71,7 @@ Legal Tech Careers is a career intelligence platform designed for legal professi
 - **Job Matching**: AI-driven resume-job comparison and fit scoring.
 - **Career Guidance**: Market insights, conversational assistant, and personalized recommendations.
 - **Career Diagnostic Engine**: Skill clustering, readiness scoring, and transition planning.
-- **Market Intelligence Page**: Bloomberg-style terminal for market data.
+- **Market Intelligence Page**: Bloomberg-style terminal for market data. Includes AI Intensity by Career Path (stacked bars showing Low/Med/High per category), Category Growth Trends (line chart from `categoryByMonth` historical data), and Tools by Career Path (Pro-gated grid showing top 5 legal tech tools per category from `KNOWN_LEGAL_TOOLS` set matched against `hardSkills`).
 - **Data Quality & Market Benchmarks**: Public section on curation process and data integrity.
 
 ### Engagement Features

@@ -9613,6 +9613,30 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
       const countryMap: Record<string, { name: string; count: number }> = {};
       const salarySamples: Record<string, { mins: number[]; maxes: number[] }> = {};
       let aiLow = 0, aiMed = 0, aiHigh = 0;
+      const aiByCategory: Record<string, { low: number; med: number; high: number }> = {};
+
+      const KNOWN_LEGAL_TOOLS = new Set([
+        "relativity", "ironclad", "imanage", "docusign", "kira", "luminance", "agiloft",
+        "netdocuments", "clio", "legaltracker", "highq", "brainspace", "disco", "logikcull",
+        "cocounsel", "harvey", "diligent", "contractpodai", "juro", "precisely", "checkbox",
+        "evisort", "linksquares", "simplelegal", "brightflag", "onit", "mitratech", "litera",
+        "salesforce", "servicenow", "power bi", "tableau", "jira", "confluence", "slack",
+        "microsoft 365", "sharepoint", "teams", "workday", "sap", "oracle", "zuora",
+        "hubspot", "marketo", "zendesk", "intercom", "notion", "asana", "monday.com",
+        "smartsheet", "lexisnexis", "westlaw", "bloomberg law", "practical law",
+        "lex machina", "ravel law", "casetext", "ross intelligence", "everlaw",
+        "nuix", "zylab", "concordance", "ringtail", "reveal", "exterro",
+        "wolters kluwer", "thomson reuters", "aderant", "elite 3e", "prolaw",
+        "contract express", "hotdocs", "neota logic", "thoughtriver",
+        "seal software", "icertis", "sirion", "cobblestone", "concord",
+        "legal tracker", "anaqua", "ipfolio", "clarivate", "dennemeyer",
+        "opus 2", "court manager", "tyler technologies", "efile",
+        "onelegal", "docketbird", "pacermonitor",
+        "openai", "anthropic", "google cloud", "aws", "azure",
+        "python", "sql", "javascript", "typescript", "r",
+        "terraform", "docker", "kubernetes",
+      ]);
+      const toolsByCategoryMap: Record<string, Record<string, number>> = {};
 
       const newThisWeekIds = new Set(newThisWeek.map(j => j.id));
 
@@ -9666,6 +9690,23 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
         if (ai === 'Low') aiLow++;
         else if (ai === 'Med') aiMed++;
         else aiHigh++;
+        if (job.roleCategory) {
+          if (!aiByCategory[job.roleCategory]) aiByCategory[job.roleCategory] = { low: 0, med: 0, high: 0 };
+          if (ai === 'Low') aiByCategory[job.roleCategory].low++;
+          else if (ai === 'Med') aiByCategory[job.roleCategory].med++;
+          else aiByCategory[job.roleCategory].high++;
+        }
+        if (job.roleCategory && job.hardSkills && job.hardSkills.length > 0) {
+          if (!toolsByCategoryMap[job.roleCategory]) toolsByCategoryMap[job.roleCategory] = {};
+          for (const skill of job.hardSkills) {
+            const s = skill.toLowerCase().trim();
+            if (!s) continue;
+            if (KNOWN_LEGAL_TOOLS.has(s)) {
+              const display = toTitleCase(s);
+              toolsByCategoryMap[job.roleCategory][display] = (toolsByCategoryMap[job.roleCategory][display] || 0) + 1;
+            }
+          }
+        }
       }
 
       const skillsDemand = Object.entries(skillMap)
@@ -9790,6 +9831,31 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
           medium: { count: aiMed, percentage: totalJobs ? Math.round((aiMed / totalJobs) * 100) : 0 },
           high: { count: aiHigh, percentage: totalJobs ? Math.round((aiHigh / totalJobs) * 100) : 0 },
         },
+        aiIntensityByCategory: Object.entries(aiByCategory)
+          .map(([category, counts]) => {
+            const total = counts.low + counts.med + counts.high;
+            return {
+              category,
+              low: counts.low,
+              med: counts.med,
+              high: counts.high,
+              total,
+              highPct: total ? Math.round((counts.high / total) * 100) : 0,
+              medPct: total ? Math.round((counts.med / total) * 100) : 0,
+              lowPct: total ? Math.round((counts.low / total) * 100) : 0,
+            };
+          })
+          .sort((a, b) => b.highPct - a.highPct),
+        toolsByCategory: Object.entries(toolsByCategoryMap)
+          .filter(([, tools]) => Object.values(tools).reduce((s, c) => s + c, 0) >= 3)
+          .map(([category, tools]) => ({
+            category,
+            tools: Object.entries(tools)
+              .sort(([, a], [, b]) => b - a)
+              .slice(0, 5)
+              .map(([tool, count]) => ({ tool, count })),
+          }))
+          .sort((a, b) => b.tools.reduce((s, t) => s + t.count, 0) - a.tools.reduce((s, t) => s + t.count, 0)),
         seniorityDistribution,
         topCompanies,
         geography,

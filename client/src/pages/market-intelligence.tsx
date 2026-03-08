@@ -34,6 +34,8 @@ import {
   RadialBarChart,
   RadialBar,
   Treemap,
+  LineChart,
+  Line,
 } from "recharts";
 import { ProGate } from "@/components/pro-gate";
 import {
@@ -97,6 +99,8 @@ interface MarketIntelligenceData {
   geography: { countryName: string; countryCode: string; jobCount: number }[];
   seniorityDistribution: { level: string; count: number }[];
   aiIntensity: { low: { count: number; percentage: number }; medium: { count: number; percentage: number }; high: { count: number; percentage: number } };
+  aiIntensityByCategory?: { category: string; low: number; med: number; high: number; total: number; highPct: number; medPct: number; lowPct: number }[];
+  toolsByCategory?: { category: string; tools: { tool: string; count: number }[] }[];
   communityBenchmarks?: {
     avgReadiness: number;
     readinessDistribution: { bucket: string; count: number }[];
@@ -840,6 +844,64 @@ export default function MarketIntelligence() {
                     </div>
                   </div>
                 </div>
+
+                {historicalData.categoryByMonth && (() => {
+                  const catMonths = Object.keys(historicalData.categoryByMonth).sort();
+                  if (catMonths.length < 2) return null;
+                  const catTotals: Record<string, number> = {};
+                  for (const cats of Object.values(historicalData.categoryByMonth)) {
+                    for (const [cat, cnt] of Object.entries(cats)) {
+                      catTotals[cat] = (catTotals[cat] || 0) + cnt;
+                    }
+                  }
+                  const topCats = Object.entries(catTotals).sort(([,a],[,b]) => b - a).slice(0, 6).map(([c]) => c);
+                  const trendData = catMonths.map(m => {
+                    const row: Record<string, any> = { month: formatMonth(m), isPartial: m === currentYM };
+                    for (const cat of topCats) {
+                      row[cat] = historicalData.categoryByMonth[m]?.[cat] || 0;
+                    }
+                    return row;
+                  });
+                  return (
+                    <div className="mi-panel mt-4" data-testid="chart-category-trends">
+                      <div className="mi-panel-header">
+                        <TrendingUp className="h-3 w-3 text-muted-foreground" />
+                        <span className="mi-label text-[10px]">Category Trends</span>
+                      </div>
+                      <div className="h-[240px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={trendData} margin={{ left: 0, right: 8, top: 8, bottom: 4 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.3} vertical={false} />
+                            <XAxis dataKey="month" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))", fontFamily: "var(--font-mono)" }} axisLine={false} tickLine={false} />
+                            <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))", fontFamily: "var(--font-mono)" }} axisLine={false} tickLine={false} width={30} />
+                            <Tooltip {...SHARED_TOOLTIP_STYLE} />
+                            {topCats.map((cat) => (
+                              <Line
+                                key={cat}
+                                type="monotone"
+                                dataKey={cat}
+                                name={cat}
+                                stroke={getCategoryColor(cat)}
+                                strokeWidth={2}
+                                dot={{ r: 3, fill: getCategoryColor(cat), strokeWidth: 0 }}
+                                activeDot={{ r: 5, strokeWidth: 2, stroke: "hsl(var(--background))" }}
+                              />
+                            ))}
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
+                      <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2">
+                        {topCats.map(cat => (
+                          <div key={cat} className="flex items-center gap-1.5" data-testid={`trend-legend-${cat.toLowerCase().replace(/\s+/g, "-")}`}>
+                            <span className="w-3 h-0.5 rounded-full" style={{ backgroundColor: getCategoryColor(cat) }} />
+                            <span className="text-[10px] text-muted-foreground">{cat}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 <p className="text-[10px] text-muted-foreground text-center mt-3" data-testid="text-evolution-note">
                   Based on {historicalData.totalTracked.toLocaleString()} jobs tracked
                   {historicalData.totalActive > 0 && ` · ${historicalData.totalActive.toLocaleString()} active`}
@@ -1421,6 +1483,66 @@ export default function MarketIntelligence() {
               </div>
             </div>
 
+            {data?.aiIntensityByCategory && data.aiIntensityByCategory.length > 0 && (
+              <div className="mi-panel mt-4" data-testid="chart-ai-by-category">
+                <div className="mi-panel-header">
+                  <Sparkles className="h-3 w-3 text-muted-foreground" />
+                  <span className="mi-label text-[10px]">AI Intensity by Career Path</span>
+                </div>
+                <div className="space-y-2.5">
+                  {data.aiIntensityByCategory.map((cat) => (
+                    <div key={cat.category} data-testid={`ai-cat-${cat.category.toLowerCase().replace(/\s+/g, "-")}`}>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-[11px] text-foreground font-medium truncate max-w-[55%]" title={cat.category}>{cat.category}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="mi-bar-label text-rose-600 dark:text-rose-400">{cat.highPct}%</span>
+                          <span className="text-[9px] text-muted-foreground">High AI</span>
+                        </div>
+                      </div>
+                      <div className="h-2.5 flex overflow-hidden" style={{ borderRadius: '2px' }}>
+                        {cat.highPct > 0 && (
+                          <div
+                            className="h-full transition-all duration-500"
+                            style={{ width: `${cat.highPct}%`, backgroundColor: "hsl(var(--status-danger))" }}
+                            title={`High: ${cat.highPct}% (${cat.high})`}
+                          />
+                        )}
+                        {cat.medPct > 0 && (
+                          <div
+                            className="h-full transition-all duration-500"
+                            style={{ width: `${cat.medPct}%`, backgroundColor: "hsl(var(--status-warning))" }}
+                            title={`Medium: ${cat.medPct}% (${cat.med})`}
+                          />
+                        )}
+                        {cat.lowPct > 0 && (
+                          <div
+                            className="h-full transition-all duration-500"
+                            style={{ width: `${cat.lowPct}%`, backgroundColor: "hsl(var(--status-success))" }}
+                            title={`Low: ${cat.lowPct}% (${cat.low})`}
+                          />
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  <div className="flex items-center gap-4 pt-1">
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-2.5 h-2 bg-rose-500" style={{ borderRadius: '1px' }} />
+                      <span className="text-[9px] text-muted-foreground">High</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-2.5 h-2 bg-amber-500" style={{ borderRadius: '1px' }} />
+                      <span className="text-[9px] text-muted-foreground">Medium</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-2.5 h-2 bg-emerald-500" style={{ borderRadius: '1px' }} />
+                      <span className="text-[9px] text-muted-foreground">Low</span>
+                    </div>
+                    <span className="text-[9px] text-muted-foreground ml-auto">{data.aiIntensityByCategory.reduce((s, c) => s + c.total, 0)} roles analyzed</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
           </div>
         </section>
 
@@ -1686,6 +1808,63 @@ export default function MarketIntelligence() {
         )}
 
         </>}
+
+        {/* TOOLS BY CAREER PATH (Pro-gated) */}
+        {canAccessFull && data?.toolsByCategory && data.toolsByCategory.length > 0 && (
+          <section className="border-t border-border/60" data-testid="section-tools-by-path">
+            <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
+              <div className="flex items-center gap-2 mb-4">
+                <p className="mi-section-title">Tools by Career Path</p>
+                <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20">PRO</Badge>
+              </div>
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {data.toolsByCategory.map((catData) => {
+                  const maxCount = Math.max(...catData.tools.map(t => t.count), 1);
+                  const catColor = getCategoryColor(catData.category);
+                  return (
+                    <div key={catData.category} className="mi-panel" data-testid={`tools-cat-${catData.category.toLowerCase().replace(/\s+/g, "-")}`}>
+                      <p className="text-[11px] font-semibold text-foreground mb-2.5 truncate" title={catData.category}>{catData.category}</p>
+                      <div className="space-y-1.5">
+                        {catData.tools.map((t, i) => {
+                          const pct = (t.count / maxCount) * 100;
+                          return (
+                            <div key={t.tool} data-testid={`tool-${catData.category.toLowerCase().replace(/\s+/g, "-")}-${i}`}>
+                              <div className="flex items-center justify-between mb-0.5">
+                                <span className="text-[10px] text-foreground/80 truncate max-w-[70%]">{t.tool}</span>
+                                <span className="mi-bar-label text-[10px] text-foreground">{t.count}</span>
+                              </div>
+                              <div className="h-1 bg-muted/30 overflow-hidden" style={{ borderRadius: '1px' }}>
+                                <div className="h-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: catColor, opacity: 0.6 }} />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </section>
+        )}
+        {!canAccessFull && (
+          <section className="border-t border-border/60" data-testid="section-tools-locked">
+            <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
+              <div className="mi-panel flex flex-col items-center justify-center py-8 text-center">
+                <Lock className="h-5 w-5 text-muted-foreground mb-2" />
+                <p className="text-sm font-medium text-foreground mb-1">Tools by Career Path</p>
+                <p className="text-xs text-muted-foreground mb-3 max-w-sm">See which legal tech tools are most in-demand for each career path</p>
+                <Link href="/pricing">
+                  <Button variant="outline" size="sm" className="gap-1.5" data-testid="button-tools-upgrade">
+                    <Crown className="h-3 w-3 text-amber-500" />
+                    Upgrade to Pro
+                    <ArrowRight className="h-3 w-3" />
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* CTA */}
         <section className="border-t border-border/60" data-testid="section-cta">
