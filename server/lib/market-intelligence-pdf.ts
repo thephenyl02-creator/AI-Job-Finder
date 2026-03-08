@@ -156,6 +156,7 @@ function drawDonut(
   cx: number, cy: number,
   outerR: number, innerR: number,
   segments: { label: string; value: number; color: string; count?: number }[],
+  showLabels: boolean = true,
 ) {
   const total = segments.reduce((s, seg) => s + seg.value, 0);
   if (total <= 0) return;
@@ -184,29 +185,34 @@ function drawDonut(
     })()).fill(seg.color);
     doc.restore();
 
-    const midAngle = startAngle + sweep / 2;
-    const labelR = outerR + 14;
-    const lx = cx + labelR * Math.cos(midAngle);
-    const ly = cy + labelR * Math.sin(midAngle);
-    const pct = Math.round((seg.value / total) * 100);
-    if (pct >= 5) {
-      doc.save();
-      const align = lx > cx ? "left" : "right";
-      const tx = lx > cx ? lx : lx - 60;
-      doc.fontSize(7).fillColor(seg.color).font("Helvetica-Bold")
-        .text(`${pct}%`, tx, ly - 5, { width: 60, align });
-      doc.fontSize(6).fillColor(GRAY_500).font("Helvetica")
-        .text(seg.label, tx, ly + 4, { width: 60, align });
-      doc.restore();
+    if (showLabels) {
+      const midAngle = startAngle + sweep / 2;
+      const labelR = outerR + 14;
+      const lx = cx + labelR * Math.cos(midAngle);
+      let ly = cy + labelR * Math.sin(midAngle);
+      const pct = Math.round((seg.value / total) * 100);
+      if (pct >= 5) {
+        ly = Math.max(cy - outerR, Math.min(cy + outerR - 10, ly));
+        doc.save();
+        const align = lx > cx ? "left" : "right";
+        const tx = lx > cx ? lx : lx - 60;
+        doc.fontSize(7).fillColor(seg.color).font("Helvetica-Bold")
+          .text(`${pct}%`, tx, ly - 5, { width: 60, align });
+        doc.fontSize(6).fillColor(GRAY_500).font("Helvetica")
+          .text(seg.label, tx, ly + 4, { width: 60, align });
+        doc.restore();
+      }
     }
     startAngle = endAngle;
   }
+  const centerFontSize = Math.min(14, Math.floor(innerR * 0.9));
+  const totalSubFontSize = Math.min(6, Math.floor(innerR * 0.4));
   doc.save();
   const totalLabel = fmtNum(total);
-  doc.fontSize(14).fillColor(NAVY).font("Helvetica-Bold")
-    .text(totalLabel, cx - 30, cy - 10, { width: 60, align: "center" });
-  doc.fontSize(6).fillColor(GRAY_400).font("Helvetica")
-    .text("TOTAL", cx - 30, cy + 6, { width: 60, align: "center", characterSpacing: 1 });
+  doc.fontSize(centerFontSize).fillColor(NAVY).font("Helvetica-Bold")
+    .text(totalLabel, cx - 30, cy - centerFontSize * 0.45, { width: 60, align: "center" });
+  doc.fontSize(totalSubFontSize).fillColor(GRAY_400).font("Helvetica")
+    .text("TOTAL", cx - 30, cy + centerFontSize * 0.45, { width: 60, align: "center" });
   doc.restore();
 }
 
@@ -582,7 +588,8 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string, 
   }
 
   // ── EXECUTIVE SUMMARY ──
-  sectionTitle(doc, "01", "Executive Summary", pn);
+  let sn = 0;
+  sectionTitle(doc, String(++sn).padStart(2, "0"), "Executive Summary", pn);
 
   const boxW = (CONTENT_WIDTH - 16) / 3;
   const boxH = 48;
@@ -620,7 +627,7 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string, 
   // ── DATA QUALITY & CURATION ──
   if (data.dataQuality) {
     const dq = data.dataQuality;
-    sectionTitle(doc, "02", "Data Quality & Curation", pn);
+    sectionTitle(doc, String(++sn).padStart(2, "0"), "Data Quality & Curation", pn);
 
     narrativeParagraph(doc, `Our curation pipeline screened ${fmtNum(dq.curation.totalScreened)} job listings and published ${fmtNum(dq.curation.totalPublished)} — a ${dq.curation.passRate}% pass rate ensuring only high-quality, relevant positions reach the platform. ${fmtNum(dq.curation.totalRejected)} listings (${dq.curation.rejectedPct}%) were rejected and ${fmtNum(dq.curation.totalInReview)} (${dq.curation.inReviewPct}%) are pending review across ${dq.curation.filterCategories} filter categories from ${fmtNum(dq.curation.uniqueCompanies)} companies and ${fmtNum(dq.curation.uniqueSources)} sources.`, pn);
 
@@ -652,8 +659,9 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string, 
       const pctOfTotal = dq.curation.totalScreened > 0
         ? `${Math.round((stage.value / dq.curation.totalScreened) * 100)}%`
         : "";
+      const pctLabelX = Math.min(MARGIN + 90 + barW + 6, MARGIN + CONTENT_WIDTH - 44);
       doc.fontSize(7).fillColor(GRAY_500).font("Helvetica")
-        .text(pctOfTotal, MARGIN + 90 + barW + 6, fy + 5, { width: 40 });
+        .text(pctOfTotal, pctLabelX, fy + 5, { width: 40 });
       doc.restore();
       doc.y = fy + 26;
     }
@@ -794,9 +802,9 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string, 
 
   // ── SKILLS IN DEMAND ──
   if (data.skillsDemand.length > 0) {
-    sectionTitle(doc, "03", "Skills in Demand", pn);
+    sectionTitle(doc, String(++sn).padStart(2, "0"), "Skills in Demand", pn);
     const maxCount = data.skillsDemand[0]?.count || 1;
-    const barMax = CONTENT_WIDTH - 170;
+    const barMax = CONTENT_WIDTH - 200;
 
     for (let i = 0; i < Math.min(data.skillsDemand.length, 15); i++) {
       const s = data.skillsDemand[i];
@@ -826,7 +834,7 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string, 
   // ── TRANSITION INTELLIGENCE ──
   if (data.transitionIntelligence) {
     const ti = data.transitionIntelligence;
-    sectionTitle(doc, "04", "Transition Intelligence", pn);
+    sectionTitle(doc, String(++sn).padStart(2, "0"), "Transition Intelligence", pn);
 
     narrativeParagraph(doc, `${ti.transitionFriendlyPct}% of all roles (${fmtNum(ti.totalTransitionFriendly)} positions) explicitly welcome career changers — professionals transitioning from traditional legal practice into legal technology. The average experience requirement is ${ti.avgExperience} years, making many roles accessible to mid-career lawyers.`, pn);
 
@@ -995,21 +1003,24 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string, 
 
   // ── CAREER PATHS ──
   if (data.careerPaths.length > 0) {
-    sectionTitle(doc, "05", "Career Paths & Demand", pn);
+    sectionTitle(doc, String(++sn).padStart(2, "0"), "Career Paths & Demand", pn);
 
     const cpMax = data.careerPaths[0]?.jobCount || 1;
     const cpBarMaxW = CONTENT_WIDTH - 190;
     for (let i = 0; i < data.careerPaths.length; i++) {
       const cp = data.careerPaths[i];
-      ensureSpace(doc, 20, pn);
+      const nameHeight = doc.font("Helvetica").fontSize(8).heightOfString(cp.name, { width: 110 });
+      const rowH = Math.max(18, nameHeight + 4);
+      ensureSpace(doc, rowH + 2, pn);
       const ry = doc.y;
+      const barOffsetY = rowH > 18 ? Math.floor((rowH - 8) / 2) : 2;
       doc.save();
       doc.fontSize(7).fillColor(GRAY_400).font("Helvetica-Bold")
         .text(String(i + 1).padStart(2, "0"), MARGIN, ry + 1, { width: 14 });
       doc.fontSize(8).fillColor(NAVY).font("Helvetica")
         .text(cp.name, MARGIN + 18, ry, { width: 110 });
       doc.restore();
-      drawBar(doc, MARGIN + 132, ry + 2, cpBarMaxW, cp.jobCount / cpMax, 8, i === 0 ? ACCENT : NAVY);
+      drawBar(doc, MARGIN + 132, ry + barOffsetY, cpBarMaxW, cp.jobCount / cpMax, 8, i === 0 ? ACCENT : NAVY);
       doc.save();
       doc.fontSize(7.5).fillColor(GRAY_500).font("Helvetica-Bold")
         .text(`${fmtNum(cp.jobCount)} (${cp.percentage}%)`, MARGIN + 132 + cpBarMaxW + 4, ry, { width: 50, align: "right" });
@@ -1018,7 +1029,7 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string, 
           .text(`+${cp.newThisWeek}`, MARGIN + 132 + cpBarMaxW + 4, ry + 10, { width: 50, align: "right" });
       }
       doc.restore();
-      doc.y = ry + 18;
+      doc.y = ry + rowH;
     }
     doc.y += 6;
 
@@ -1028,7 +1039,7 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string, 
 
   // ── SALARY INSIGHTS ──
   if (data.salaryByPath.length > 0) {
-    sectionTitle(doc, "06", "Salary Benchmarks", pn);
+    sectionTitle(doc, String(++sn).padStart(2, "0"), "Salary Benchmarks", pn);
 
     const sorted = [...data.salaryByPath].sort((a, b) => b.medianMax - a.medianMax);
     const scaleMin = Math.floor(Math.min(...sorted.map(s => s.medianMin)) / 10000) * 10000;
@@ -1065,15 +1076,26 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string, 
       const barColor = i === 0 ? ACCENT : NAVY;
       drawRangeBar(doc, rangeX, ry + 2, rangeW, 8, scaleMin, scaleMax, sp.medianMin, sp.medianMax, barColor);
 
-      const midPx = rangeX + (((sp.medianMin + sp.medianMax) / 2 - scaleMin) / scaleRange) * rangeW;
+      const startPx = Math.max(0, ((sp.medianMin - scaleMin) / scaleRange) * rangeW);
+      const endPx = Math.min(rangeW, ((sp.medianMax - scaleMin) / scaleRange) * rangeW);
+      const barPxW = Math.max(6, endPx - startPx);
+      const salaryLabel = `${formatSalary(sp.medianMin)}–${formatSalary(sp.medianMax)}`;
       doc.save();
-      doc.fontSize(6.5).fillColor(WHITE).font("Helvetica-Bold")
-        .text(`${formatSalary(sp.medianMin)}–${formatSalary(sp.medianMax)}`, midPx - 30, ry + 3, { width: 60, align: "center" });
+      if (barPxW >= 70) {
+        const midPx = rangeX + (((sp.medianMin + sp.medianMax) / 2 - scaleMin) / scaleRange) * rangeW;
+        doc.fontSize(6.5).fillColor(WHITE).font("Helvetica-Bold")
+          .text(salaryLabel, midPx - 30, ry + 3, { width: 60, align: "center" });
+      } else {
+        const maxLabelX = MARGIN + CONTENT_WIDTH - 100;
+        const labelX = Math.min(rangeX + endPx + 4, maxLabelX);
+        doc.fontSize(6.5).fillColor(NAVY).font("Helvetica-Bold")
+          .text(salaryLabel, labelX, ry + 3, { width: 70 });
+      }
       doc.restore();
 
       doc.save();
       doc.fontSize(6.5).fillColor(GRAY_400).font("Helvetica")
-        .text(`n=${sp.sampleSize}`, MARGIN + CONTENT_WIDTH - 50, ry + 1, { width: 50, align: "right" });
+        .text(`n=${sp.sampleSize}`, MARGIN + CONTENT_WIDTH - 30, ry + 1, { width: 30, align: "right" });
       doc.restore();
       doc.y = ry + 18;
     }
@@ -1088,15 +1110,15 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string, 
   const aiTotal = (data.aiIntensity.low || 0) + (data.aiIntensity.medium || 0) + (data.aiIntensity.high || 0);
 
   if (wmTotal > 0 || aiTotal > 0) {
-    sectionTitle(doc, "07", "Work Mode & AI Intensity", pn);
-    ensureSpace(doc, 130, pn);
+    sectionTitle(doc, String(++sn).padStart(2, "0"), "Work Mode & AI Intensity", pn);
+    ensureSpace(doc, 155, pn);
 
     {
       const wmy = doc.y;
 
       if (wmTotal > 0) {
         const donutCx = MARGIN + 80;
-        const donutCy = wmy + 55;
+        const donutCy = wmy + 70;
         doc.save();
         doc.fontSize(8).fillColor(NAVY).font("Helvetica-Bold").text("WORK MODE DISTRIBUTION", MARGIN, wmy, { characterSpacing: 1 });
         doc.restore();
@@ -1113,7 +1135,7 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string, 
         doc.fontSize(8).fillColor(NAVY).font("Helvetica-Bold").text("AI INTENSITY", aiX, wmy, { characterSpacing: 1 });
         doc.restore();
         const aiDonutCx = aiX + 80;
-        const aiDonutCy = wmy + 55;
+        const aiDonutCy = wmy + 70;
         drawDonut(doc, aiDonutCx, aiDonutCy, 42, 22, [
           { label: "Low", value: data.aiIntensity.low || 0, color: GREEN },
           { label: "Medium", value: data.aiIntensity.medium || 0, color: AMBER },
@@ -1121,38 +1143,40 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string, 
         ]);
       }
 
-      doc.y = wmy + 116;
+      doc.y = wmy + 145;
     }
 
     const workmodeInsight = generateSectionInsight("workmode", data);
     if (workmodeInsight) insightBlock(doc, workmodeInsight, pn);
 
     if (data.aiIntensityByCategory && data.aiIntensityByCategory.length > 0) {
-      ensureSpace(doc, 40, pn);
+      const aiCats = [...data.aiIntensityByCategory]
+        .filter(c => c.total >= 3)
+        .sort((a, b) => b.highPct - a.highPct);
+      const minRows = Math.min(aiCats.length, 5);
+      ensureSpace(doc, 24 + minRows * 14 + 6, pn);
       doc.save();
       doc.fontSize(8).fillColor(NAVY).font("Helvetica-Bold")
         .text("AI INTENSITY BY CAREER PATH", MARGIN, doc.y, { characterSpacing: 1 });
       doc.restore();
       doc.y += 14;
 
-      const aiCats = [...data.aiIntensityByCategory]
-        .filter(c => c.total >= 3)
-        .sort((a, b) => b.highPct - a.highPct);
-      const pctColW = 54;
+      const pctColW = 76;
       const stackBarW = CONTENT_WIDTH - 134 - pctColW;
 
+      const headerY = doc.y;
       doc.save();
       doc.fontSize(6).fillColor(GRAY_400).font("Helvetica")
-        .text("CATEGORY", MARGIN, doc.y, { width: 130 });
+        .text("CATEGORY", MARGIN, headerY, { width: 130 });
       const pctX = MARGIN + 134 + stackBarW + 4;
       doc.fontSize(6).fillColor(GREEN).font("Helvetica-Bold")
-        .text("L", pctX, doc.y, { width: 16 });
+        .text("Low", pctX, headerY, { width: 24 });
       doc.fontSize(6).fillColor(AMBER).font("Helvetica-Bold")
-        .text("M", pctX + 18, doc.y, { width: 16 });
+        .text("Med", pctX + 24, headerY, { width: 24 });
       doc.fontSize(6).fillColor(ROSE).font("Helvetica-Bold")
-        .text("H", pctX + 36, doc.y, { width: 16 });
+        .text("High", pctX + 48, headerY, { width: 24 });
       doc.restore();
-      doc.y += 10;
+      doc.y = headerY + 10;
 
       for (const cat of aiCats) {
         ensureSpace(doc, 16, pn);
@@ -1170,9 +1194,9 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string, 
         const catPctX = MARGIN + 134 + stackBarW + 4;
         doc.save();
         doc.fontSize(6.5).fillColor(GRAY_500).font("Helvetica")
-          .text(`${cat.lowPct}%`, catPctX, ry + 1, { width: 16 })
-          .text(`${cat.medPct}%`, catPctX + 18, ry + 1, { width: 16 })
-          .text(`${cat.highPct}%`, catPctX + 36, ry + 1, { width: 16 });
+          .text(`${cat.lowPct}%`, catPctX, ry + 1, { width: 24 })
+          .text(`${cat.medPct}%`, catPctX + 24, ry + 1, { width: 24 })
+          .text(`${cat.highPct}%`, catPctX + 48, ry + 1, { width: 24 });
         doc.restore();
         doc.y = ry + 14;
       }
@@ -1184,7 +1208,7 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string, 
 
   // ── SENIORITY DISTRIBUTION ──
   if (data.seniorityDistribution.length > 0) {
-    sectionTitle(doc, "08", "Seniority Distribution", pn);
+    sectionTitle(doc, String(++sn).padStart(2, "0"), "Seniority Distribution", pn);
 
     const totalSen = data.seniorityDistribution.reduce((sum, s) => sum + s.count, 0);
     const entryLevels = ["entry", "junior", "associate", "intern", "fellowship", "mid"];
@@ -1205,14 +1229,28 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string, 
       .text("of roles are Entry-to-Mid\naccessible for career changers", MARGIN + 80, calloutY + 10, { width: 150, lineGap: 2 });
     doc.restore();
 
-    const senDonutCx = MARGIN + CONTENT_WIDTH * 0.75;
+    const senDonutCx = MARGIN + CONTENT_WIDTH * 0.80;
     const senDonutCy = calloutY + 26;
     drawDonut(doc, senDonutCx, senDonutCy, 24, 14, [
       { label: "Entry-Mid", value: entryMidCount, color: TEAL },
       { label: "Senior+", value: seniorCount, color: NAVY },
-    ]);
+    ], false);
 
-    doc.y = calloutY + 60;
+    const senTotal = entryMidCount + seniorCount;
+    const entryLegPct = senTotal > 0 ? Math.round((entryMidCount / senTotal) * 100) : 0;
+    const senLegPct = 100 - entryLegPct;
+    const senLegendY = calloutY + 56;
+    const senLegRightEdge = MARGIN + CONTENT_WIDTH;
+    doc.save();
+    drawRect(doc, senLegRightEdge - 150, senLegendY + 2, 6, 6, TEAL, 3);
+    doc.fontSize(7).fillColor(NAVY).font("Helvetica")
+      .text(`${entryLegPct}% Entry-Mid`, senLegRightEdge - 140, senLegendY, { width: 60 });
+    drawRect(doc, senLegRightEdge - 72, senLegendY + 2, 6, 6, NAVY, 3);
+    doc.fontSize(7).fillColor(NAVY).font("Helvetica")
+      .text(`${senLegPct}% Senior+`, senLegRightEdge - 62, senLegendY, { width: 60 });
+    doc.restore();
+
+    doc.y = calloutY + 72;
 
     const maxSen = Math.max(...data.seniorityDistribution.map(s => s.count), 1);
     for (const s of data.seniorityDistribution) {
@@ -1238,7 +1276,7 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string, 
 
   // ── TOP COMPANIES & GEOGRAPHY ──
   if (data.topCompanies.length > 0 || data.geography.length > 0) {
-    sectionTitle(doc, "09", "Top Companies & Geography", pn);
+    sectionTitle(doc, String(++sn).padStart(2, "0"), "Top Companies & Geography", pn);
 
     const halfW = (CONTENT_WIDTH - 24) / 2;
     const companyRows = Math.min(data.topCompanies.length, 10);
@@ -1259,12 +1297,12 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string, 
         doc.fontSize(7).fillColor(GRAY_400).font("Helvetica-Bold")
           .text(String(i + 1).padStart(2, "0"), MARGIN, cy, { width: 14 });
         doc.fontSize(8).fillColor(NAVY).font("Helvetica")
-          .text(tc.company, MARGIN + 18, cy, { width: halfW - 70 });
+          .text(tc.company, MARGIN + 18, cy, { width: halfW - 82 });
         doc.restore();
-        drawBar(doc, MARGIN + halfW - 50, cy + 1, 32, tc.jobCount / companyMax, 6, ACCENT);
+        drawBar(doc, MARGIN + halfW - 60, cy + 1, 32, tc.jobCount / companyMax, 6, ACCENT);
         doc.save();
         doc.fontSize(7.5).fillColor(GRAY_500).font("Helvetica-Bold")
-          .text(`${tc.jobCount}`, MARGIN + halfW - 12, cy, { width: 12, align: "right" });
+          .text(`${tc.jobCount}`, MARGIN + halfW - 26, cy, { width: 26, align: "right" });
         doc.restore();
         cy += 16;
       }
@@ -1283,12 +1321,12 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string, 
         doc.fontSize(7).fillColor(GRAY_400).font("Helvetica-Bold")
           .text(String(i + 1).padStart(2, "0"), gx, gy, { width: 14 });
         doc.fontSize(8).fillColor(NAVY).font("Helvetica")
-          .text(g.countryName, gx + 18, gy, { width: halfW - 70 });
+          .text(g.countryName, gx + 18, gy, { width: halfW - 82 });
         doc.restore();
-        drawBar(doc, gx + halfW - 50, gy + 1, 32, g.jobCount / geoMax, 6, TEAL);
+        drawBar(doc, gx + halfW - 60, gy + 1, 32, g.jobCount / geoMax, 6, TEAL);
         doc.save();
         doc.fontSize(7.5).fillColor(GRAY_500).font("Helvetica-Bold")
-          .text(`${g.jobCount}`, gx + halfW - 12, gy, { width: 12, align: "right" });
+          .text(`${g.jobCount}`, gx + halfW - 26, gy, { width: 26, align: "right" });
         doc.restore();
         gy += 16;
       }
@@ -1312,7 +1350,7 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string, 
       return `${names[parseInt(mo) - 1]} '${y.slice(2)}`;
     };
 
-    sectionTitle(doc, "10", "Market Evolution", pn);
+    sectionTitle(doc, String(++sn).padStart(2, "0"), "Market Evolution", pn);
 
     ensureSpace(doc, 40, pn);
     doc.save();
@@ -1375,14 +1413,18 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string, 
       doc.restore();
       doc.y += 14;
 
+      const displayMonths = months.slice(-6);
+      const availableW = CONTENT_WIDTH - 200;
+      const moColW = Math.min(60, Math.floor(availableW / Math.max(displayMonths.length, 1)));
+
       const catHeaderY = doc.y;
       doc.save();
       doc.fontSize(7).fillColor(GRAY_500).font("Helvetica-Bold")
         .text("Category", MARGIN, catHeaderY, { width: 140 });
       let cx = MARGIN + 150;
-      for (const m of months) {
-        doc.text(formatMo(m), cx, catHeaderY, { width: 60 });
-        cx += 60;
+      for (const m of displayMonths) {
+        doc.text(formatMo(m), cx, catHeaderY, { width: moColW });
+        cx += moColW;
       }
       doc.text("Total", cx, catHeaderY, { width: 50 });
       doc.restore();
@@ -1395,11 +1437,11 @@ export function generateMarketIntelligencePDF(data: MarketData, period: string, 
         doc.fontSize(7.5).fillColor(NAVY).font("Helvetica")
           .text(cat.name.length > 24 ? cat.name.slice(0, 22) + '..' : cat.name, MARGIN, rowY, { width: 140 });
         let rx = MARGIN + 150;
-        for (const m of months) {
+        for (const m of displayMonths) {
           const val = ht.categoryByMonth[m]?.[cat.name] || 0;
           doc.fillColor(val > 0 ? GRAY_600 : GRAY_300).font("Helvetica")
-            .text(val > 0 ? String(val) : '—', rx, rowY, { width: 60 });
-          rx += 60;
+            .text(val > 0 ? String(val) : '—', rx, rowY, { width: moColW });
+          rx += moColW;
         }
         doc.fillColor(NAVY).font("Helvetica-Bold")
           .text(String(cat.total), rx, rowY, { width: 50 });
