@@ -4,6 +4,7 @@ import { usePageTitle } from "@/hooks/use-page-title";
 import { useActivityTracker } from "@/hooks/use-activity-tracker";
 import { useSubscription } from "@/hooks/use-subscription";
 import { useAuth } from "@/hooks/use-auth";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -235,6 +236,7 @@ function CareerProgressCard() {
   const { data, isLoading } = useQuery<CareerProgressData>({
     queryKey: ["/api/career-progress"],
   });
+  const isMobile = useIsMobile();
 
   if (isLoading) {
     return (
@@ -311,7 +313,7 @@ function CareerProgressCard() {
             </div>
           </div>
           {showRetakePrompt && (
-            <div className="mt-4 flex items-center gap-2 p-2.5 rounded-md bg-amber-500/10 dark:bg-amber-500/15" data-testid="banner-retake-prompt">
+            <div className="mt-4 flex flex-wrap items-center gap-2 p-2.5 rounded-md bg-amber-500/10 dark:bg-amber-500/15" data-testid="banner-retake-prompt">
               <AlertTriangle className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
               <p className="text-xs text-amber-700 dark:text-amber-300 flex-1">Time to retake your diagnostic</p>
               <Link href="/diagnostic">
@@ -343,7 +345,7 @@ function CareerProgressCard() {
           {delta !== 0 && (
             <Badge variant="secondary" className="text-[10px] ml-auto" data-testid="badge-progress-delta">
               {delta > 0 ? "+" : ""}{delta} pts
-              {firstDate && <span className="text-muted-foreground ml-0.5">since {firstDate}</span>}
+              {!isMobile && firstDate && <span className="text-muted-foreground ml-0.5">since {firstDate}</span>}
             </Badge>
           )}
         </div>
@@ -373,7 +375,7 @@ function CareerProgressCard() {
           </div>
         </div>
         {showRetakePrompt && (
-          <div className="mt-3 flex items-center gap-2 p-2.5 rounded-md bg-amber-500/10 dark:bg-amber-500/15" data-testid="banner-retake-prompt">
+          <div className="mt-3 flex flex-wrap items-center gap-2 p-2.5 rounded-md bg-amber-500/10 dark:bg-amber-500/15" data-testid="banner-retake-prompt">
             <AlertTriangle className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
             <p className="text-xs text-amber-700 dark:text-amber-300 flex-1">Time to retake your diagnostic</p>
             <Link href="/diagnostic">

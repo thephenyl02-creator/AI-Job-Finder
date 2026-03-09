@@ -91,7 +91,7 @@ export default function Companies() {
               </p>
             </div>
 
-            <div className="relative max-w-md">
+            <div className="relative w-full sm:max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search companies..."
@@ -135,7 +135,7 @@ export default function Companies() {
                                 {company.jobCount} {company.jobCount === 1 ? "role" : "roles"}
                               </Badge>
                               {company.topCategory && (
-                                <Badge variant="outline" className="text-[10px] no-default-active-elevate" data-testid={`badge-category-${company.slug}`}>
+                                <Badge variant="outline" className="text-[10px] no-default-active-elevate truncate max-w-[120px]" data-testid={`badge-category-${company.slug}`}>
                                   {company.topCategory}
                                 </Badge>
                               )}

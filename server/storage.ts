@@ -3581,7 +3581,7 @@ class DatabaseStorage implements IStorage {
       .from(jobs)
       .where(whereClause)
       .groupBy(jobs.company)
-      .having(sql`count(*) >= 3`)
+      .having(sql`count(*) >= 1`)
       .orderBy(sql`count(*) DESC`);
 
     const total = allCompanies.length;

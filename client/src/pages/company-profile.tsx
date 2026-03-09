@@ -2,6 +2,7 @@ import { useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams, Link } from "wouter";
 import { usePageTitle } from "@/hooks/use-page-title";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { Container } from "@/components/container";
@@ -94,6 +95,7 @@ function getPrimarySeniority(seniority: { entry: number; mid: number; senior: nu
 export default function CompanyProfile() {
   const params = useParams<{ slug: string }>();
   const slug = params.slug;
+  const isMobile = useIsMobile();
 
   const { data: profile, isLoading, error } = useQuery<CompanyProfile>({
     queryKey: ["/api/companies", slug],
@@ -102,6 +104,11 @@ export default function CompanyProfile() {
   usePageTitle(
     profile ? `${profile.name} Legal Tech Jobs` : "Company Profile"
   );
+
+  const truncateLabel = (label: string, maxLength: number = 14): string => {
+    if (label.length <= maxLength) return label;
+    return label.substring(0, maxLength - 1) + "…";
+  };
 
   useEffect(() => {
     if (!profile) return;
@@ -249,7 +256,7 @@ export default function CompanyProfile() {
             />
             <div className="flex-1 min-w-0 space-y-2">
               <h1
-                className="text-2xl sm:text-3xl font-bold tracking-tight"
+                className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight"
                 data-testid="text-company-name"
               >
                 {profile.name}
@@ -289,7 +296,7 @@ export default function CompanyProfile() {
             <Card data-testid="stat-top-category">
               <CardContent className="p-4 text-center space-y-1">
                 <Sparkles className="h-5 w-5 mx-auto text-muted-foreground" />
-                <div className="text-sm font-semibold truncate">{topCategory}</div>
+                <div className="text-sm font-semibold truncate px-1">{topCategory}</div>
                 <div className="text-xs text-muted-foreground">Top Category</div>
               </CardContent>
             </Card>
@@ -330,9 +337,10 @@ export default function CompanyProfile() {
                       <YAxis
                         type="category"
                         dataKey="name"
-                        width={140}
+                        width={isMobile ? 100 : 140}
                         {...SHARED_AXIS_STYLE}
                         tick={{ ...SHARED_AXIS_STYLE.tick, fontSize: 12 }}
+                        tickFormatter={isMobile ? (label: string) => truncateLabel(label, 14) : undefined}
                       />
                       <Tooltip {...SHARED_TOOLTIP_STYLE} />
                       <Bar dataKey="count" radius={[0, 4, 4, 0]} barSize={20}>
@@ -491,7 +499,7 @@ export default function CompanyProfile() {
                           </div>
                         </div>
                         {job.roleCategory && (
-                          <Badge variant="secondary" className="self-start sm:self-center shrink-0">
+                          <Badge variant="secondary" className="self-start sm:self-center shrink-0 truncate max-w-[140px]">
                             {job.roleCategory}
                           </Badge>
                         )}
@@ -504,7 +512,7 @@ export default function CompanyProfile() {
           )}
 
           <Card className="border-primary/20 bg-primary/5">
-            <CardContent className="p-6 text-center space-y-3">
+            <CardContent className="p-4 sm:p-6 text-center space-y-3">
               <Compass className="h-8 w-8 mx-auto text-primary" />
               <h2 className="text-lg font-semibold" data-testid="heading-diagnostic-cta">
                 How do you match {profile.name}'s roles?
