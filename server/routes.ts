@@ -66,7 +66,7 @@ import { generateMarketIntelligencePDF } from "./lib/market-intelligence-pdf";
 import { generateMarketIntelligenceDocx } from "./lib/market-intelligence-docx";
 import { db } from "./db";
 import { jobs, users, resumes, resumeEditorVersions } from "@shared/schema";
-import { eq, and, sql, desc, asc, count, or, inArray } from "drizzle-orm";
+import { eq, and, sql, desc, asc, count, or, inArray, isNull, gte } from "drizzle-orm";
 import { JOB_TAXONOMY, CATEGORY_TO_TRACK, getTrackForCategory } from "@shared/schema";
 import {
   startScheduler,
@@ -146,7 +146,8 @@ async function requirePro(req: any, res: any, next: any) {
 }
 
 import { clearMarketIntelligenceCache, getMarketIntelligenceCache, setMarketIntelligenceCache, clearDataQualityCache, getDataQualityCache, setDataQualityCache, clearAllStatsCaches, getCanonicalStats, setCanonicalStats, getDisplayStats, setDisplayStats, clearDisplayStats, forceRefreshDisplayStats } from "./lib/mi-cache";
-import { getQualityThresholds, isGenericBusinessRole } from "./workers/enrichment-worker";
+import { getQualityThresholds, isGenericBusinessRole, isBackOfficeTitle } from "./workers/enrichment-worker";
+import { hasNegativeAiSignal } from "./lib/job-quality-patterns";
 export { clearMarketIntelligenceCache, clearAllStatsCaches } from "./lib/mi-cache";
 
 function addAttribution(data: any, userEmail?: string) {
@@ -5357,6 +5358,85 @@ Rules:
     } catch (error: any) {
       console.error("[Review Queue] Error:", error);
       res.status(500).json({ error: "Failed to load review queue" });
+    }
+  });
+
+  app.post("/api/admin/requeue-unenriched", isAuthenticated, async (req, res) => {
+    if (!(await isAdminCheck(req))) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    try {
+      const candidates = await db.select({ id: jobs.id, title: jobs.title, company: jobs.company })
+        .from(jobs)
+        .where(and(
+          or(eq(jobs.pipelineStatus, 'rejected'), eq(jobs.pipelineStatus, 'failed')),
+          eq(jobs.isActive, true),
+          isNull(jobs.qualityScore),
+        ));
+
+      if (candidates.length === 0) {
+        return res.json({ requeued: 0, message: "No un-enriched jobs found" });
+      }
+
+      const ids = candidates.map(c => c.id);
+      await db.update(jobs)
+        .set({ pipelineStatus: 'raw', enrichmentRetries: 0 } as any)
+        .where(inArray(jobs.id, ids));
+
+      console.log(`[Admin] Re-queued ${ids.length} un-enriched jobs for processing`);
+      res.json({ requeued: ids.length, jobs: candidates.slice(0, 20) });
+    } catch (error: any) {
+      console.error("[Admin] Requeue unenriched error:", error);
+      res.status(500).json({ error: "Failed to requeue jobs" });
+    }
+  });
+
+  app.post("/api/admin/bulk-approve-review", isAuthenticated, async (req, res) => {
+    if (!(await isAdminCheck(req))) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    try {
+      const minQuality = Number(req.body.minQuality) || 7;
+      const minRelevance = Number(req.body.minRelevance) || 6;
+
+      const candidates = await db.select().from(jobs).where(and(
+        eq(jobs.pipelineStatus, 'review'),
+        eq(jobs.isActive, true),
+        gte(jobs.qualityScore, minQuality),
+        gte(jobs.legalRelevanceScore, minRelevance),
+      ));
+
+      let approved = 0;
+      let published = 0;
+      let skipped = 0;
+      const publishedJobs: Array<{ id: number; title: string; company: string }> = [];
+
+      for (const job of candidates) {
+        const hasUrl = job.applyUrl && job.applyUrl.trim() !== '';
+        if (!hasUrl || !job.roleCategory) { skipped++; continue; }
+        if (isGenericBusinessRole(job.title) && (job.legalRelevanceScore ?? 0) < 8) { skipped++; continue; }
+        if (hasNegativeAiSignal(job.aiSummary)) { skipped++; continue; }
+        if (isBackOfficeTitle(job.title)) { skipped++; continue; }
+
+        const dup = await storage.findLiveJobDuplicate(job.title, job.company, job.location, job.id);
+        if (dup) { skipped++; continue; }
+
+        await db.update(jobs)
+          .set({ pipelineStatus: 'ready', reviewStatus: 'approved' } as any)
+          .where(eq(jobs.id, job.id));
+        approved++;
+
+        await storage.updateJobWorkerFields(job.id, { isPublished: true, reviewReasonCode: null });
+        publishedJobs.push({ id: job.id, title: job.title, company: job.company });
+        published++;
+      }
+
+      if (published > 0) { clearAllStatsCaches(); clearDisplayStats(); }
+      console.log(`[Admin] Bulk approve review: ${approved} approved, ${published} published, ${skipped} skipped`);
+      res.json({ approved, published, skipped, total: candidates.length, publishedJobs: publishedJobs.slice(0, 50) });
+    } catch (error: any) {
+      console.error("[Admin] Bulk approve review error:", error);
+      res.status(500).json({ error: "Failed to bulk approve" });
     }
   });
 

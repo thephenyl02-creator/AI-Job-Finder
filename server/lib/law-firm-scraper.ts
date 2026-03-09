@@ -1534,6 +1534,9 @@ export function isLegalTechRole(title: string, companyType?: string): boolean {
     /\blegal\s+insights\b/i,
     /\bdata\s+protection\s+officer\b/i,
     /\bchief\s+privacy\s+officer\b/i,
+    /\bproduct\s+counsel\b/i,
+    /\btechnology\s+counsel\b/i,
+    /\bcommercial\s+counsel\b/i,
   ];
   const isWhitelisted = SCRAPER_LEGAL_WHITELIST.some(p => p.test(title));
 

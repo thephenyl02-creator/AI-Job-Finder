@@ -58,13 +58,13 @@ Legal Tech Careers is a career intelligence platform designed for legal professi
 ### Job Curation Pipeline
 - **Process**: A two-layer pipeline (ingestion → AI enrichment → trust gate → published inventory) ensures quality, deduplication, and link validation.
 - **Quality Gates**: Company-type-aware thresholds and AI negative signal filters ensure high data quality.
-- **Scrapers**: Supports various ATS platforms (Greenhouse, Lever, Ashby, Workday, etc.) with multi-region capabilities and ATS auto-detection. Expanded keyword coverage for Legal Transformation, Legal Innovation, Legal Project Management, Legal Data & Analytics, Legal Automation, Legal Workflow, AI Governance, and emerging AI + Legal roles.
-- **Global Coverage**: Gathers data from 400+ companies across US, UK, EU, APAC.
+- **Scrapers**: Supports various ATS platforms (Greenhouse, Lever, Ashby, Workday, etc.) with multi-region capabilities and ATS auto-detection. Expanded keyword coverage for Legal Transformation, Legal Innovation, Legal Project Management, Legal Data & Analytics, Legal Automation, Legal Workflow, AI Governance, emerging AI + Legal roles, and counsel-specific titles (Product Counsel, Technology Counsel, Commercial Counsel).
+- **Global Coverage**: Gathers data from 410+ companies across US, UK, EU, APAC.
 - **Automation & QA**: Scheduled workers manage ingestion, scoring, deduplication, and validation, supported by an admin review queue and dashboard.
 
 ### Core Features
 - **Landing Page**: Highlights career intelligence. Includes a two-row flowing company logo marquee ("Who's Hiring in Legal Tech") powered by `/api/job-density` returning top 15 companies with job counts. Rows scroll in opposite directions with gradient edge fades and reduced-motion accessibility support.
-- **Company Logo System**: All company logos use the shared `CompanyLogo` component (`client/src/components/company-logo.tsx`) with three sizes: `xs` (20px, inline), `sm` (36-40px, cards/marquee), `md` (40-48px, job cards). Server-side favicon proxy (`/api/company-logo?domain=X`) uses a two-tier fallback: Google Favicon API first, then direct `/favicon.ico` fetch. Caches successes for 1 week and 404 failures for 1 hour. Frontend `COMPANY_DOMAINS` map ensures accurate domain resolution for 450+ known companies (covering all firms in `law-firms-list.ts` plus production-only companies). Fallback shows colored initials with smooth opacity transition when favicon loads.
+- **Company Logo System**: All company logos use the shared `CompanyLogo` component (`client/src/components/company-logo.tsx`) with three sizes: `xs` (20px, inline), `sm` (36-40px, cards/marquee), `md` (40-48px, job cards). Server-side favicon proxy (`/api/company-logo?domain=X`) uses a two-tier fallback: Google Favicon API first, then direct `/favicon.ico` fetch. Caches successes for 1 week and 404 failures for 1 hour. Frontend `COMPANY_DOMAINS` map ensures accurate domain resolution for 460+ known companies (covering all firms in `law-firms-list.ts` plus production-only companies). Fallback shows colored initials with smooth opacity transition when favicon loads.
 - **Career Command Center Dashboard**: Personalized dashboard for authenticated users.
 - **Smart Search**: AI-powered natural language job search.
 - **Resume Management & Editing**: Upload, parse, and AI-assisted editing of resumes.

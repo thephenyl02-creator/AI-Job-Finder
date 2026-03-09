@@ -80,6 +80,12 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
     type: 'startup',
   },
   {
+    name: 'Paradigm AI',
+    careerUrl: 'https://www.paradigm.ai/careers',
+    ashbyUrl: 'https://api.ashbyhq.com/posting-api/job-board/paradigmai',
+    type: 'startup',
+  },
+  {
     name: 'Norm AI',
     careerUrl: 'https://www.norm.ai/careers',
     ashbyUrl: 'https://api.ashbyhq.com/posting-api/job-board/norm-ai',
@@ -173,6 +179,26 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
     careerUrl: 'https://careers.wolterskluwer.com/',
     workday: { company: 'wk', instance: 'wd3', site: 'External' },
     type: 'company',
+  },
+
+  // --- Real Estate / Title / Notary Tech ---
+  {
+    name: 'Qualia',
+    careerUrl: 'https://www.qualia.com/careers',
+    greenhouseId: 'qualia',
+    type: 'tech-legal',
+  },
+  {
+    name: 'Snapdocs',
+    careerUrl: 'https://www.snapdocs.com/careers',
+    ashbyUrl: 'https://api.ashbyhq.com/posting-api/job-board/snapdocs',
+    type: 'tech-legal',
+  },
+  {
+    name: 'Canopy',
+    careerUrl: 'https://www.canopytax.com/careers',
+    greenhouseId: 'canopytax',
+    type: 'tech-legal',
   },
 
   // --- Practice Management & Case Management ---
@@ -1004,6 +1030,36 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
     greenhouseId: 'bigid',
     type: 'tech-legal',
   },
+  {
+    name: 'Osano',
+    careerUrl: 'https://www.osano.com/company/careers',
+    greenhouseId: 'osano',
+    type: 'tech-legal',
+  },
+  {
+    name: 'Ethyca',
+    careerUrl: 'https://ethyca.com/careers',
+    ashbyUrl: 'https://api.ashbyhq.com/posting-api/job-board/ethyca',
+    type: 'startup',
+  },
+  {
+    name: 'Skyflow',
+    careerUrl: 'https://www.skyflow.com/careers',
+    ashbyUrl: 'https://api.ashbyhq.com/posting-api/job-board/skyflow',
+    type: 'startup',
+  },
+  {
+    name: 'DataGrail',
+    careerUrl: 'https://www.datagrail.io/careers',
+    greenhouseId: 'datagrail',
+    type: 'startup',
+  },
+  {
+    name: 'Immuta',
+    careerUrl: 'https://www.immuta.com/careers',
+    leverPostingsUrl: 'https://jobs.lever.co/immuta',
+    type: 'tech-legal',
+  },
 
   // ===================================================
   // LEGAL BILLING & FINANCE
@@ -1757,6 +1813,24 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
   {
     name: 'ZenGRC (Reciprocity)',
     careerUrl: 'https://reciprocity.com/careers/',
+    type: 'tech-legal',
+  },
+  {
+    name: 'Thoropass',
+    careerUrl: 'https://thoropass.com/careers/',
+    greenhouseId: 'thoropass',
+    type: 'tech-legal',
+  },
+  {
+    name: 'AuditBoard',
+    careerUrl: 'https://www.auditboard.com/careers/',
+    ashbyUrl: 'https://api.ashbyhq.com/posting-api/job-board/auditboard',
+    type: 'tech-legal',
+  },
+  {
+    name: 'Collibra',
+    careerUrl: 'https://www.collibra.com/us/en/company/careers',
+    greenhouseId: 'collibra',
     type: 'tech-legal',
   },
   {

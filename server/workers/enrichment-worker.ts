@@ -139,7 +139,7 @@ const LEGAL_TITLE_SIGNALS = [
   /\brisk\b/i, /\bgrc\b/i, /\baudit\b/i, /\bpolicy\b/i,
 ];
 
-function isBackOfficeTitle(title: string): boolean {
+export function isBackOfficeTitle(title: string): boolean {
   if (LEGAL_TITLE_SIGNALS.some(p => p.test(title))) return false;
   return BACK_OFFICE_TITLE_PATTERNS.some(p => p.test(title));
 }
@@ -225,6 +225,9 @@ const LEGAL_TITLE_WHITELIST = [
   /\bpre-?sales?\s+engineer\b/i,
   /\bdata\s+security.*engineer\b/i,
   /\bai\s+safety\b/i,
+  /\bproduct\s+counsel\b/i,
+  /\btechnology\s+counsel\b/i,
+  /\bcommercial\s+counsel\b/i,
 ];
 
 function isWhitelistedLegalTitle(title: string): boolean {

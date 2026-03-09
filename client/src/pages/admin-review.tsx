@@ -195,6 +195,47 @@ export default function AdminReview() {
     },
   });
 
+  const requeueMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/admin/requeue-unenriched", {});
+      return res.json();
+    },
+    onSuccess: (result: any) => {
+      toast({
+        title: `${result.requeued} jobs re-queued`,
+        description: "Un-enriched jobs sent back to the pipeline for AI processing.",
+      });
+      refetch();
+    },
+    onError: (err: any) => {
+      toast({ title: "Re-queue failed", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const bulkApproveReviewMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/admin/bulk-approve-review", { minQuality: 7, minRelevance: 6 });
+      return res.json();
+    },
+    onSuccess: (result: any) => {
+      const now = new Date().toISOString();
+      if (result.publishedJobs?.length > 0) {
+        addToRecentlyPublished(
+          result.publishedJobs.map((j: any) => ({ id: j.id, title: j.title, company: j.company, publishedAt: now }))
+        );
+      }
+      toast({
+        title: `${result.approved} approved, ${result.published} published`,
+        description: `${result.skipped} skipped (filters applied). From ${result.total} review-queue candidates.`,
+      });
+      refetch();
+      invalidateJobRelatedQueries();
+    },
+    onError: (err: any) => {
+      toast({ title: "Bulk approve failed", description: err.message, variant: "destructive" });
+    },
+  });
+
   if (authLoading) return null;
   if (!user || !isAdmin) {
     return (
@@ -252,6 +293,34 @@ export default function AdminReview() {
             >
               <RefreshCw className={`w-4 h-4 mr-1 ${isLoading ? "animate-spin" : ""}`} />
               Refresh
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => requeueMutation.mutate()}
+              disabled={requeueMutation.isPending}
+              data-testid="button-requeue-unenriched"
+            >
+              {requeueMutation.isPending ? (
+                <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+              ) : (
+                <RefreshCw className="w-4 h-4 mr-1" />
+              )}
+              Re-queue Un-enriched
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => bulkApproveReviewMutation.mutate()}
+              disabled={bulkApproveReviewMutation.isPending}
+              data-testid="button-bulk-approve-review"
+            >
+              {bulkApproveReviewMutation.isPending ? (
+                <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+              ) : (
+                <CheckCircle className="w-4 h-4 mr-1" />
+              )}
+              Approve Review Queue
             </Button>
             <Button
               size="sm"
