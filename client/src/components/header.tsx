@@ -25,7 +25,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import {
   LogOut, BarChart3, Bell, FileText, Globe,
-  Bookmark, LayoutDashboard, Menu, Calendar, Settings, Activity, Search, CreditCard, Brain, TrendingUp, X, Kanban, Mail,
+  Bookmark, LayoutDashboard, Menu, Calendar, Settings, Activity, Search, CreditCard, Brain, TrendingUp, X, Kanban, Mail, Building2,
 } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { Link, useLocation } from "wouter";
@@ -226,11 +226,13 @@ export function Header() {
               <NavLink href="/diagnostic" icon={Brain} label="Diagnostic" isActive={isDiagnosticActive} testId="link-diagnostic" />
               <NavLink href="/pipeline" icon={Kanban} label="Pipeline" isActive={isPipelineActive} testId="link-pipeline" badgeCount={pipelineCount} />
               <NavLink href="/resumes" icon={FileText} label="Resumes" isActive={isResumesActive} testId="link-resumes" />
+              <NavLink href="/companies" icon={Building2} label="Companies" isActive={isActive("/companies") || location.startsWith("/companies/")} testId="link-companies" />
               <NavLink href="/market-intelligence" icon={TrendingUp} label="Trends" isActive={isActive("/market-intelligence")} testId="link-trends" />
             </div>
           ) : (
             <div className="hidden md:flex items-center gap-0.5">
               <NavLink href="/jobs" icon={Search} label="Jobs" isActive={isJobsActive} testId="link-jobs-public" />
+              <NavLink href="/companies" icon={Building2} label="Companies" isActive={isActive("/companies") || location.startsWith("/companies/")} testId="link-companies-public" />
               <NavLink href="/market-intelligence" icon={TrendingUp} label="Trends" isActive={isActive("/market-intelligence")} testId="link-trends-public" />
               <NavLink href="/pricing" icon={CreditCard} label="Pricing" isActive={isActive("/pricing")} testId="link-pricing-public" />
             </div>
@@ -278,6 +280,7 @@ export function Header() {
                       <MobileNavItem href="/diagnostic" icon={Brain} label="Diagnostic" active={isDiagnosticActive} testId="link-diagnostic-mobile" />
                       <MobileNavItem href="/pipeline" icon={Kanban} label="Pipeline" active={isPipelineActive} testId="link-pipeline-mobile" badgeCount={pipelineCount} />
                       <MobileNavItem href="/resumes" icon={FileText} label="Resumes" active={isResumesActive} testId="link-resumes-mobile" />
+                      <MobileNavItem href="/companies" icon={Building2} label="Companies" active={isActive("/companies") || location.startsWith("/companies/")} testId="link-companies-mobile" />
                       <MobileNavItem href="/market-intelligence" icon={TrendingUp} label="Trends" active={isActive("/market-intelligence")} testId="link-trends-mobile" />
                       <div className="h-px bg-border/40 my-2" />
                       <MobileNavItem href="/opportunity-map" icon={Globe} label="Opportunity Map" active={isActive("/opportunity-map")} testId="link-map-mobile" />

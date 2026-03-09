@@ -66,7 +66,7 @@ import { generateMarketIntelligencePDF } from "./lib/market-intelligence-pdf";
 import { generateMarketIntelligenceDocx } from "./lib/market-intelligence-docx";
 import { db } from "./db";
 import { jobs, users, resumes, resumeEditorVersions } from "@shared/schema";
-import { eq, and, sql, desc, count, or, inArray } from "drizzle-orm";
+import { eq, and, sql, desc, asc, count, or, inArray } from "drizzle-orm";
 import { JOB_TAXONOMY, CATEGORY_TO_TRACK, getTrackForCategory } from "@shared/schema";
 import {
   startScheduler,
@@ -219,7 +219,7 @@ export async function registerRoutes(
     "/api/stats", "/api/stats/social-proof", "/api/market-pulse",
     "/api/job-density", "/api/track", "/api/events", "/api/company-logo",
   ]);
-  const publicApiPrefixes = ["/api/auth/", "/api/stats/", "/api/jobs", "/api/public/", "/api/quiz", "/api/search/", "/api/resume/anonymous", "/api/share/"];
+  const publicApiPrefixes = ["/api/auth/", "/api/stats/", "/api/jobs", "/api/public/", "/api/quiz", "/api/search/", "/api/resume/anonymous", "/api/share/", "/api/companies"];
 
   async function apiKeyGuard(req: any, res: any, next: any) {
     if (req.user) return next();
@@ -540,6 +540,32 @@ export async function registerRoutes(
       res.send(buffer);
     } catch (error) {
       res.status(404).send("Not found");
+    }
+  });
+
+  app.get("/api/companies", async (req, res) => {
+    try {
+      const page = Math.max(1, parseInt(req.query.page as string) || 1);
+      const search = (req.query.search as string) || undefined;
+      const result = await storage.getCompanyDirectory(page, search);
+      res.json(result);
+    } catch (error) {
+      console.error("Error fetching company directory:", error);
+      res.status(500).json({ error: "Failed to fetch companies" });
+    }
+  });
+
+  app.get("/api/companies/:slug", async (req, res) => {
+    try {
+      const { slug } = req.params;
+      const profile = await storage.getCompanyProfile(slug);
+      if (!profile) {
+        return res.status(404).json({ error: "Company not found" });
+      }
+      res.json(profile);
+    } catch (error) {
+      console.error("Error fetching company profile:", error);
+      res.status(500).json({ error: "Failed to fetch company profile" });
     }
   });
 
@@ -9198,6 +9224,53 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
     } catch (error: any) {
       console.error("Error fetching diagnostic:", error);
       res.status(500).json({ error: "Failed to fetch diagnostic" });
+    }
+  });
+
+  app.get("/api/career-progress", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const userId = user?.id;
+      if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+      const reports = await db.select({
+        id: diagnosticReports.id,
+        overallReadinessScore: diagnosticReports.overallReadinessScore,
+        topPaths: diagnosticReports.topPaths,
+        createdAt: diagnosticReports.createdAt,
+      }).from(diagnosticReports)
+        .where(eq(diagnosticReports.userId, userId))
+        .orderBy(asc(diagnosticReports.createdAt));
+
+      if (reports.length === 0) {
+        return res.json({ history: [], totalReports: 0, daysSinceLastDiagnostic: null });
+      }
+
+      const history = reports
+        .filter(r => r.overallReadinessScore != null)
+        .map(r => {
+          const paths = r.topPaths as any[] | null;
+          const topPath = paths?.[0];
+          const topPathName = topPath?.title || topPath?.pathName || null;
+          return {
+            score: r.overallReadinessScore!,
+            date: r.createdAt,
+            topPath: topPathName,
+          };
+        });
+
+      const lastReport = reports[reports.length - 1];
+      const lastDate = lastReport.createdAt ? new Date(lastReport.createdAt) : new Date();
+      const daysSinceLastDiagnostic = Math.floor((Date.now() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
+
+      res.json({
+        history,
+        totalReports: reports.length,
+        daysSinceLastDiagnostic,
+      });
+    } catch (error: any) {
+      console.error("Error fetching career progress:", error);
+      res.status(500).json({ error: "Failed to fetch career progress" });
     }
   });
 

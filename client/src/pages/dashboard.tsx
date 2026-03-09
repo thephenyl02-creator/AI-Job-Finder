@@ -19,7 +19,9 @@ import {
   Brain, Target, Wifi, Clock, CheckCircle,
   Upload, Search, Map, DollarSign, Sparkles,
   RefreshCw, Zap, Flame, BarChart3, Globe, Eye, Kanban,
+  AlertTriangle,
 } from "lucide-react";
+import { LineChart, Line, ResponsiveContainer, Tooltip, YAxis } from "recharts";
 import { ProGate } from "@/components/pro-gate";
 
 interface RecentlyViewedJob {
@@ -220,6 +222,170 @@ function DashboardSkeleton() {
         </div>
       </main>
     </>
+  );
+}
+
+interface CareerProgressData {
+  history: { score: number; date: string; topPath: string | null }[];
+  totalReports: number;
+  daysSinceLastDiagnostic: number | null;
+}
+
+function CareerProgressCard() {
+  const { data, isLoading } = useQuery<CareerProgressData>({
+    queryKey: ["/api/career-progress"],
+  });
+
+  if (isLoading) {
+    return (
+      <Card className="card-elev-static" data-testid="card-career-progress">
+        <CardContent className="p-4 sm:p-5">
+          <Skeleton className="h-28 w-full" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!data || data.totalReports === 0) {
+    return (
+      <Card className="card-elev-static" data-testid="card-career-progress">
+        <CardContent className="p-4 sm:p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="p-1.5 rounded-md bg-chart-2/10 text-chart-2">
+              <TrendingUp className="h-3.5 w-3.5" />
+            </div>
+            <p className="text-sm font-semibold text-foreground">Your Progress</p>
+          </div>
+          <div className="flex flex-col items-center text-center gap-3 py-2">
+            <div className="p-3 rounded-md bg-muted/40">
+              <Brain className="h-6 w-6 text-muted-foreground/60" />
+            </div>
+            <p className="text-sm text-muted-foreground" data-testid="text-progress-empty">
+              Take your first Career Diagnostic to see where you stand
+            </p>
+            <Link href="/diagnostic">
+              <Button size="sm" className="gap-1.5" data-testid="button-start-first-diagnostic">
+                <Sparkles className="h-3 w-3" />
+                Start Diagnostic
+              </Button>
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const { history, daysSinceLastDiagnostic } = data;
+  const latest = history[history.length - 1];
+  const latestScore = latest.score;
+  const latestPath = latest.topPath;
+  const latestDate = latest.date ? new Date(latest.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : null;
+  const showRetakePrompt = daysSinceLastDiagnostic !== null && daysSinceLastDiagnostic >= 30;
+
+  if (history.length === 1) {
+    return (
+      <Card className="card-elev-static" data-testid="card-career-progress">
+        <CardContent className="p-4 sm:p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="p-1.5 rounded-md bg-chart-2/10 text-chart-2">
+              <TrendingUp className="h-3.5 w-3.5" />
+            </div>
+            <p className="text-sm font-semibold text-foreground">Your Progress</p>
+          </div>
+          <div className="flex items-center gap-4">
+            <ReadinessRing score={latestScore} size="sm" />
+            <div className="flex-1 min-w-0">
+              {latestPath && (
+                <p className="text-sm font-medium text-foreground truncate" data-testid="text-progress-top-path" title={latestPath}>
+                  {latestPath}
+                </p>
+              )}
+              {latestDate && (
+                <p className="text-xs text-muted-foreground mt-0.5" data-testid="text-progress-date">
+                  Taken {latestDate}
+                </p>
+              )}
+              <p className="text-xs text-muted-foreground mt-1.5" data-testid="text-progress-retake-hint">
+                Retake in 30 days to track your growth
+              </p>
+            </div>
+          </div>
+          {showRetakePrompt && (
+            <div className="mt-4 flex items-center gap-2 p-2.5 rounded-md bg-amber-500/10 dark:bg-amber-500/15" data-testid="banner-retake-prompt">
+              <AlertTriangle className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
+              <p className="text-xs text-amber-700 dark:text-amber-300 flex-1">Time to retake your diagnostic</p>
+              <Link href="/diagnostic">
+                <Button size="sm" variant="outline" className="text-xs gap-1" data-testid="button-retake-diagnostic">
+                  Retake
+                  <ArrowRight className="h-3 w-3" />
+                </Button>
+              </Link>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const firstScore = history[0].score;
+  const delta = latestScore - firstScore;
+  const firstDate = history[0].date ? new Date(history[0].date).toLocaleDateString("en-US", { month: "short", year: "numeric" }) : null;
+  const chartData = history.map(h => ({ score: h.score, date: h.date ? new Date(h.date).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "" }));
+
+  return (
+    <Card className="card-elev-static" data-testid="card-career-progress">
+      <CardContent className="p-4 sm:p-5">
+        <div className="flex items-center gap-2 mb-4">
+          <div className="p-1.5 rounded-md bg-chart-2/10 text-chart-2">
+            <TrendingUp className="h-3.5 w-3.5" />
+          </div>
+          <p className="text-sm font-semibold text-foreground">Your Progress</p>
+          {delta !== 0 && (
+            <Badge variant="secondary" className="text-[10px] ml-auto" data-testid="badge-progress-delta">
+              {delta > 0 ? "+" : ""}{delta} pts
+              {firstDate && <span className="text-muted-foreground ml-0.5">since {firstDate}</span>}
+            </Badge>
+          )}
+        </div>
+        <div className="h-[120px] w-full" data-testid="chart-progress-sparkline">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={chartData}>
+              <YAxis domain={[0, 100]} hide />
+              <Tooltip
+                contentStyle={{ fontSize: 12, borderRadius: 6, border: "1px solid hsl(var(--border))", background: "hsl(var(--card))" }}
+                labelStyle={{ fontSize: 11, color: "hsl(var(--muted-foreground))" }}
+                formatter={(value: number) => [`${value}`, "Score"]}
+              />
+              <Line type="monotone" dataKey="score" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 3, fill: "hsl(var(--primary))" }} activeDot={{ r: 5 }} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+        <div className="flex items-center justify-between gap-2 mt-3 flex-wrap">
+          <div className="min-w-0">
+            {latestPath && (
+              <p className="text-xs font-medium text-foreground truncate" data-testid="text-progress-top-path" title={latestPath}>
+                {latestPath}
+              </p>
+            )}
+            <p className="text-[10px] text-muted-foreground" data-testid="text-progress-report-count">
+              {data.totalReports} diagnostic{data.totalReports !== 1 ? "s" : ""} taken
+            </p>
+          </div>
+        </div>
+        {showRetakePrompt && (
+          <div className="mt-3 flex items-center gap-2 p-2.5 rounded-md bg-amber-500/10 dark:bg-amber-500/15" data-testid="banner-retake-prompt">
+            <AlertTriangle className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
+            <p className="text-xs text-amber-700 dark:text-amber-300 flex-1">Time to retake your diagnostic</p>
+            <Link href="/diagnostic">
+              <Button size="sm" variant="outline" className="text-xs gap-1" data-testid="button-retake-diagnostic">
+                Retake
+                <ArrowRight className="h-3 w-3" />
+              </Button>
+            </Link>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -643,6 +809,10 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
           )}
+
+          <div className="mb-6 sm:mb-8 max-w-md lg:max-w-sm">
+            <CareerProgressCard />
+          </div>
 
           {!isPro && recentJobsData?.jobs && recentJobsData.jobs.length > 0 && (
             <div className="mb-6 sm:mb-8" data-testid="section-new-this-week">

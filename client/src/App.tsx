@@ -42,6 +42,8 @@ import Quiz from "@/pages/quiz";
 import MarketIntelligence from "@/pages/market-intelligence";
 import Trust from "@/pages/trust";
 import Pipeline from "@/pages/pipeline";
+import CompanyProfile from "@/pages/company-profile";
+import Companies from "@/pages/companies";
 
 import { AssistantWidget } from "@/components/assistant-widget";
 import { OnboardingDialog } from "@/components/onboarding-dialog";
@@ -118,6 +120,8 @@ function AppRouter() {
       <Route path="/about" component={About} />
       <Route path="/post-job" component={PostJob} />
       <Route path="/opportunity-map" component={OpportunityMap} />
+      <Route path="/companies" component={Companies} />
+      <Route path="/companies/:slug" component={CompanyProfile} />
       <Route path="/market-intelligence" component={MarketIntelligence} />
       <Route path="/trust" component={Trust} />
       <Route component={NotFound} />

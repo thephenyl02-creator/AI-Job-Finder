@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { jobs, users, userPreferences, jobCategories, jobSubmissions, jobAlerts, notifications, resumes, builtResumes, userActivities, userPersonas, savedJobs, jobApplications, events, scrapeRuns, scrapeRunSources, jobRejections, jobReports, anonymousEvents, reportLeads, publishedReports, emailPreferences, type Job, type InsertJob, type User, type UserPreferences, type InsertUserPreferences, type ResumeExtractedData, type JobCategory, type JobSubmission, type InsertJobSubmission, type JobAlert, type InsertJobAlert, type Notification, type InsertNotification, type Resume, type InsertResume, type BuiltResume, type InsertBuiltResume, type UserActivity, type InsertUserActivity, type UserPersona, type InsertUserPersona, type SavedJob, type InsertSavedJob, type JobApplication, type InsertJobApplication, type JobApplicationWithJob, type Event, type InsertEvent, type ScrapeRun, type InsertScrapeRun, type ScrapeRunSource, type InsertScrapeRunSource, type JobRejection, type InsertJobRejection, type JobReport, type InsertJobReport, type EmailPreferences, type InsertEmailPreferences, JOB_TAXONOMY } from "@shared/schema";
+import { jobs, users, userPreferences, jobCategories, jobSubmissions, jobAlerts, notifications, resumes, builtResumes, userActivities, userPersonas, savedJobs, jobApplications, events, scrapeRuns, scrapeRunSources, jobRejections, jobReports, anonymousEvents, reportLeads, publishedReports, emailPreferences, companyIntel, type Job, type InsertJob, type User, type UserPreferences, type InsertUserPreferences, type ResumeExtractedData, type JobCategory, type JobSubmission, type InsertJobSubmission, type JobAlert, type InsertJobAlert, type Notification, type InsertNotification, type Resume, type InsertResume, type BuiltResume, type InsertBuiltResume, type UserActivity, type InsertUserActivity, type UserPersona, type InsertUserPersona, type SavedJob, type InsertSavedJob, type JobApplication, type InsertJobApplication, type JobApplicationWithJob, type Event, type InsertEvent, type ScrapeRun, type InsertScrapeRun, type ScrapeRunSource, type InsertScrapeRunSource, type JobRejection, type InsertJobRejection, type JobReport, type InsertJobReport, type EmailPreferences, type InsertEmailPreferences, JOB_TAXONOMY } from "@shared/schema";
 import crypto from "crypto";
 import { eq, desc, asc, and, sql, inArray, lt, gte, count } from "drizzle-orm";
 import { cleanJobDescription } from "./lib/description-cleaner";
@@ -189,6 +189,20 @@ export interface IStorage {
   upsertEmailPreferences(userId: string, prefs: Partial<InsertEmailPreferences>): Promise<EmailPreferences>;
   getEmailPreferenceByUnsubscribeToken(token: string): Promise<EmailPreferences | null>;
   getUsersForWeeklyDigest(): Promise<EmailPreferences[]>;
+  getCompanyDirectory(page: number, search?: string): Promise<{ companies: { name: string; slug: string; jobCount: number; topCategory: string | null; domain: string | null }[]; total: number; page: number; totalPages: number }>;
+  getCompanyProfile(slug: string): Promise<{
+    name: string;
+    domain: string | null;
+    logoUrl: string | null;
+    totalJobs: number;
+    categories: { name: string; count: number }[];
+    seniority: { entry: number; mid: number; senior: number };
+    topHardSkills: string[];
+    topSoftSkills: string[];
+    workModeSplit: { remote: number; hybrid: number; onsite: number };
+    activeJobs: { id: number; title: string; location: string | null; seniorityLevel: string | null; postedDate: Date | null; roleCategory: string | null }[];
+    companyIntel: { summary: string | null; product: string | null; fundingStage: string | null; growthSignals: string[] | null; recentNews: string[] | null } | null;
+  } | null>;
 }
 
 class DatabaseStorage implements IStorage {
@@ -3535,6 +3549,203 @@ class DatabaseStorage implements IStorage {
 
   async getUsersForWeeklyDigest(): Promise<EmailPreferences[]> {
     return db.select().from(emailPreferences).where(eq(emailPreferences.weeklyDigest, true));
+  }
+
+  private companyNameToSlug(name: string): string {
+    return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  }
+
+  async getCompanyDirectory(page: number = 1, search?: string): Promise<{ companies: { name: string; slug: string; jobCount: number; topCategory: string | null; domain: string | null }[]; total: number; page: number; totalPages: number }> {
+    const limit = 20;
+    const conditions = [
+      eq(jobs.isActive, true),
+      eq(jobs.isPublished, true),
+      eq(jobs.pipelineStatus, 'ready'),
+      eq(jobs.jobStatus, 'open'),
+    ];
+
+    if (search) {
+      const term = '%' + search.toLowerCase() + '%';
+      conditions.push(sql`lower(${jobs.company}) LIKE ${term}`);
+    }
+
+    const whereClause = and(...conditions);
+
+    const allCompanies = await db
+      .select({
+        company: jobs.company,
+        jobCount: sql<number>`count(*)::int`,
+        topCategory: sql<string>`mode() WITHIN GROUP (ORDER BY ${jobs.roleCategory})`,
+        domain: sql<string>`min(${jobs.sourceDomain})`,
+      })
+      .from(jobs)
+      .where(whereClause)
+      .groupBy(jobs.company)
+      .having(sql`count(*) >= 3`)
+      .orderBy(sql`count(*) DESC`);
+
+    const total = allCompanies.length;
+    const totalPages = Math.ceil(total / limit);
+    const offset = (page - 1) * limit;
+    const paged = allCompanies.slice(offset, offset + limit);
+
+    const companies = paged.map(c => ({
+      name: c.company,
+      slug: this.companyNameToSlug(c.company),
+      jobCount: c.jobCount,
+      topCategory: c.topCategory || null,
+      domain: c.domain || null,
+    }));
+
+    return { companies, total, page, totalPages };
+  }
+
+  async getCompanyProfile(slug: string): Promise<{
+    name: string;
+    domain: string | null;
+    logoUrl: string | null;
+    totalJobs: number;
+    categories: { name: string; count: number }[];
+    seniority: { entry: number; mid: number; senior: number };
+    topHardSkills: string[];
+    topSoftSkills: string[];
+    workModeSplit: { remote: number; hybrid: number; onsite: number };
+    activeJobs: { id: number; title: string; location: string | null; seniorityLevel: string | null; postedDate: Date | null; roleCategory: string | null }[];
+    companyIntel: { summary: string | null; product: string | null; fundingStage: string | null; growthSignals: string[] | null; recentNews: string[] | null } | null;
+  } | null> {
+    const candidateRows = await db
+      .select({ company: jobs.company })
+      .from(jobs)
+      .where(and(
+        eq(jobs.isActive, true),
+        eq(jobs.isPublished, true),
+        eq(jobs.pipelineStatus, 'ready'),
+        eq(jobs.jobStatus, 'open'),
+      ))
+      .groupBy(jobs.company);
+
+    const matchedCompany = candidateRows.find(r => this.companyNameToSlug(r.company) === slug);
+    if (!matchedCompany) return null;
+    const companyName = matchedCompany.company;
+
+    const companyJobs = await db
+      .select({
+        id: jobs.id,
+        title: jobs.title,
+        company: jobs.company,
+        location: jobs.location,
+        seniorityLevel: jobs.seniorityLevel,
+        postedDate: jobs.postedDate,
+        roleCategory: jobs.roleCategory,
+        hardSkills: jobs.hardSkills,
+        softSkills: jobs.softSkills,
+        workMode: jobs.workMode,
+        locationType: jobs.locationType,
+        isRemote: jobs.isRemote,
+        sourceDomain: jobs.sourceDomain,
+        companyLogo: jobs.companyLogo,
+      })
+      .from(jobs)
+      .where(and(
+        eq(jobs.company, companyName),
+        eq(jobs.isActive, true),
+        eq(jobs.isPublished, true),
+        eq(jobs.pipelineStatus, 'ready'),
+        eq(jobs.jobStatus, 'open'),
+      ));
+
+    if (companyJobs.length === 0) return null;
+
+    const domain = companyJobs[0].sourceDomain || null;
+    const logoUrl = companyJobs[0].companyLogo || null;
+
+    const categoryCounts: Record<string, number> = {};
+    const seniorityBuckets = { entry: 0, mid: 0, senior: 0 };
+    const hardSkillCounts: Record<string, number> = {};
+    const softSkillCounts: Record<string, number> = {};
+    const workModeCounts = { remote: 0, hybrid: 0, onsite: 0 };
+
+    for (const job of companyJobs) {
+      if (job.roleCategory) {
+        categoryCounts[job.roleCategory] = (categoryCounts[job.roleCategory] || 0) + 1;
+      }
+
+      const sLevel = (job.seniorityLevel || '').toLowerCase();
+      if (['entry', 'junior', 'associate', 'intern', 'fellowship'].includes(sLevel)) {
+        seniorityBuckets.entry++;
+      } else if (sLevel === 'mid') {
+        seniorityBuckets.mid++;
+      } else if (['senior', 'lead', 'director', 'vp', 'principal', 'staff'].includes(sLevel)) {
+        seniorityBuckets.senior++;
+      }
+
+      const wm = job.workMode || job.locationType || (job.isRemote ? 'remote' : 'onsite');
+      if (wm === 'remote') workModeCounts.remote++;
+      else if (wm === 'hybrid') workModeCounts.hybrid++;
+      else workModeCounts.onsite++;
+
+      if (job.hardSkills) {
+        for (const s of job.hardSkills) {
+          if (s) hardSkillCounts[s] = (hardSkillCounts[s] || 0) + 1;
+        }
+      }
+      if (job.softSkills) {
+        for (const s of job.softSkills) {
+          if (s) softSkillCounts[s] = (softSkillCounts[s] || 0) + 1;
+        }
+      }
+    }
+
+    const categories = Object.entries(categoryCounts)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count);
+
+    const topHardSkills = Object.entries(hardSkillCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([s]) => s);
+
+    const topSoftSkills = Object.entries(softSkillCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([s]) => s);
+
+    const activeJobs = companyJobs.map(j => ({
+      id: j.id,
+      title: j.title,
+      location: j.location,
+      seniorityLevel: j.seniorityLevel,
+      postedDate: j.postedDate,
+      roleCategory: j.roleCategory,
+    }));
+
+    let intel: { summary: string | null; product: string | null; fundingStage: string | null; growthSignals: string[] | null; recentNews: string[] | null } | null = null;
+    try {
+      const [intelRow] = await db.select().from(companyIntel).where(eq(companyIntel.companyName, companyName)).limit(1);
+      if (intelRow) {
+        intel = {
+          summary: intelRow.summary,
+          product: intelRow.product,
+          fundingStage: intelRow.fundingStage,
+          growthSignals: intelRow.growthSignals,
+          recentNews: intelRow.recentNews,
+        };
+      }
+    } catch {}
+
+    return {
+      name: companyName,
+      domain,
+      logoUrl,
+      totalJobs: companyJobs.length,
+      categories,
+      seniority: seniorityBuckets,
+      topHardSkills,
+      topSoftSkills,
+      workModeSplit: workModeCounts,
+      activeJobs,
+      companyIntel: intel,
+    };
   }
 }
 
