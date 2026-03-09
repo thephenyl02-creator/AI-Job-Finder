@@ -2124,10 +2124,10 @@ class DatabaseStorage implements IStorage {
         j.id, j.title, j.company, j.company_logo as "companyLogo", j.location, j.role_category as "roleCategory",
         ua.created_at as "viewedAt"
       FROM user_activities ua
-      INNER JOIN jobs j ON (ua.metadata->>'jobId')::int = j.id
+      INNER JOIN jobs j ON ua.entity_id::int = j.id
       WHERE ua.user_id = ${userId}
         AND ua.event_type = 'job_view'
-        AND ua.metadata->>'jobId' IS NOT NULL
+        AND ua.entity_id IS NOT NULL
         AND j.is_published = true
         AND j.is_active = true
       ORDER BY j.id, ua.created_at DESC
@@ -2601,10 +2601,10 @@ class DatabaseStorage implements IStorage {
     try {
       const streakRows = await db.execute(sql`
         WITH daily AS (
-          SELECT DISTINCT DATE(timestamp) as d
+          SELECT DISTINCT DATE(created_at) as d
           FROM user_activities
           WHERE user_id = ${userId}
-          AND timestamp >= NOW() - INTERVAL '30 days'
+          AND created_at >= NOW() - INTERVAL '30 days'
           ORDER BY d DESC
         ),
         numbered AS (

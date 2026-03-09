@@ -47,7 +47,7 @@ Legal Tech Careers is a career intelligence platform designed for legal professi
 - **System**: Three role tracks (Lawyer-Led / Technical / Ecosystem) classify every job, mapped from 13 job categories.
 
 ### Analytics & Tracking
-- **User Activity**: Tracks authenticated user actions and anonymous events.
+- **User Activity**: Tracks authenticated user actions and anonymous events. Job views are tracked via `entity_id` column in `user_activities` (not in metadata JSON). The `getRecentlyViewedJobs` query joins on `entity_id::int = j.id`. Streak calculations use `created_at` column.
 - **Cache Management**: Extensive caching with specific TTLs and invalidation strategies for various statistical data to ensure performance and data consistency.
 - **Display Stats Persistence**: `displayStats` (24hr TTL, ratchet-up-only logic) is persisted to `platform_settings` DB table, surviving deployments. Loaded on startup via `loadDisplayStatsFromDB()`. All public-facing endpoints (`/api/stats`, `/api/stats/social-proof`, `/api/job-density`, `/api/stats/data-quality`, `/api/jobs`, `/api/market-pulse`) use displayStats for consistent counts.
 - **Publish Guard**: Company-type-aware relevance thresholds (startup≥6, general-tech≥7, law-firm≥8) via `server/lib/quality-thresholds.ts`.
