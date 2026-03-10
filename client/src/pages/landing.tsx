@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { usePageTitle } from "@/hooks/use-page-title";
 import { Link } from "wouter";
@@ -9,7 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LogoMark } from "@/components/logo";
 import { CompanyLogo } from "@/components/company-logo";
-import { ArrowRight, Search, Target, Globe, Wifi, Clock, BarChart3, Lock, Upload, Check, Building2 } from "lucide-react";
+import { ArrowRight, Search, Target, Globe, Wifi, Clock, BarChart3, Lock, Upload, Check, Building2, FileText, Sparkles, BriefcaseBusiness } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Footer } from "@/components/footer";
 
@@ -42,6 +42,270 @@ const CAREER_PATH_LABELS: Record<string, string> = {
   "Knowledge Management": "Knowledge Management",
   "Intellectual Property & Innovation": "IP & Innovation",
 };
+
+const HOW_IT_WORKS_STEPS = [
+  {
+    number: "01",
+    title: "Upload your resume",
+    description: "Drop in your PDF or Word doc. We extract your skills, experience, and practice areas in seconds. Nothing leaves our servers.",
+    icon: FileText,
+  },
+  {
+    number: "02",
+    title: "See where you stand",
+    description: "Get your readiness score, top career paths ranked by fit, skill gaps, and a week-by-week plan to close them.",
+    icon: Sparkles,
+  },
+  {
+    number: "03",
+    title: "Find your next role",
+    description: "Browse roles matched to your profile. See exactly why you're a fit and get tailored resume suggestions for each one.",
+    icon: BriefcaseBusiness,
+  },
+];
+
+function StepVisual({ step }: { step: number }) {
+  if (step === 0) {
+    return (
+      <div className="space-y-3">
+        <div className="flex items-center gap-3 p-3 rounded-lg border border-border/40 bg-background">
+          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+            <FileText className="h-5 w-5 text-primary" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-medium text-foreground">resume_2026.pdf</p>
+            <p className="text-[10px] text-muted-foreground">Uploaded just now</p>
+          </div>
+          <Check className="h-4 w-4 text-emerald-500 shrink-0" />
+        </div>
+        <div className="pl-4 border-l-2 border-primary/20 space-y-2.5">
+          <div className="flex items-center gap-2">
+            <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+            <span className="text-xs text-foreground">7 years litigation experience</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+            <span className="text-xs text-foreground">Contract drafting · Legal research</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+            <span className="text-xs text-foreground">J.D., Columbia Law School</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+            <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">12 skills extracted</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (step === 1) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center gap-4">
+          <div className="relative flex items-center justify-center shrink-0">
+            <svg className="w-[68px] h-[68px] -rotate-90" viewBox="0 0 100 100">
+              <circle cx="50" cy="50" r="42" fill="none" stroke="hsl(var(--muted))" strokeWidth="6" />
+              <circle cx="50" cy="50" r="42" fill="none" stroke="hsl(var(--primary))" strokeWidth="6" strokeLinecap="round"
+                strokeDasharray={`${2 * Math.PI * 42}`}
+                strokeDashoffset={`${2 * Math.PI * 42 - (72 / 100) * 2 * Math.PI * 42}`}
+              />
+            </svg>
+            <div className="absolute flex flex-col items-center">
+              <span className="text-lg font-bold text-foreground">72</span>
+              <span className="text-[7px] text-muted-foreground uppercase tracking-wider">Ready</span>
+            </div>
+          </div>
+          <div className="space-y-1">
+            <p className="text-xs font-medium text-foreground">Strong match for legal tech</p>
+            <p className="text-[10px] text-muted-foreground">Top 25% of assessed lawyers</p>
+          </div>
+        </div>
+        <div className="space-y-2">
+          {[
+            { path: "Legal Operations", score: 87, color: "bg-emerald-500" },
+            { path: "Contract Management", score: 74, color: "bg-emerald-500" },
+            { path: "Legal Product", score: 61, color: "bg-amber-500" },
+          ].map((item) => (
+            <div key={item.path} className="flex items-center gap-3">
+              <span className="text-xs text-muted-foreground w-[110px] truncate">{item.path}</span>
+              <div className="flex-1 h-1.5 bg-muted/50 rounded-full overflow-hidden">
+                <div className={`h-full rounded-full ${item.color} transition-all duration-700`} style={{ width: `${item.score}%` }} />
+              </div>
+              <span className="text-xs font-medium text-foreground w-8 text-right">{item.score}%</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2.5">
+      {[
+        { title: "Legal Ops Manager", company: "Clio", fit: 92, tag: "Strong Fit" },
+        { title: "Product Counsel", company: "Harvey AI", fit: 85, tag: "Good Fit" },
+        { title: "Contract Analyst", company: "Agiloft", fit: 78, tag: "Near Match" },
+      ].map((job) => (
+        <div key={job.title} className="flex items-center gap-3 p-2.5 rounded-lg border border-border/40 bg-background">
+          <div className="w-8 h-8 rounded-full bg-muted/50 flex items-center justify-center shrink-0">
+            <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-medium text-foreground truncate">{job.title}</p>
+            <p className="text-[10px] text-muted-foreground">{job.company}</p>
+          </div>
+          <Badge
+            variant="secondary"
+            className={`text-[9px] shrink-0 no-default-active-elevate ${
+              job.fit >= 90 ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20"
+              : job.fit >= 80 ? "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20"
+              : "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20"
+            }`}
+          >
+            {job.fit}% fit
+          </Badge>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function HowItWorksSection({ hasDiagnostic }: { hasDiagnostic: boolean }) {
+  const [activeStep, setActiveStep] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pauseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [progressKey, setProgressKey] = useState(0);
+
+  const startTimer = useCallback(() => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    timerRef.current = setInterval(() => {
+      setActiveStep((prev) => (prev + 1) % 3);
+      setProgressKey((k) => k + 1);
+    }, 5000);
+  }, []);
+
+  useEffect(() => {
+    if (!paused) {
+      setProgressKey((k) => k + 1);
+      startTimer();
+    }
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  }, [paused, startTimer]);
+
+  useEffect(() => {
+    return () => { if (pauseTimeoutRef.current) clearTimeout(pauseTimeoutRef.current); };
+  }, []);
+
+  const handleStepClick = (index: number) => {
+    setActiveStep(index);
+    setPaused(true);
+    setProgressKey((k) => k + 1);
+    if (timerRef.current) clearInterval(timerRef.current);
+    if (pauseTimeoutRef.current) clearTimeout(pauseTimeoutRef.current);
+    pauseTimeoutRef.current = setTimeout(() => setPaused(false), 10000);
+  };
+
+  return (
+    <section className="border-t border-border/30 bg-muted/20" data-testid="section-how-it-works">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-14 sm:py-24">
+        <div className="text-center mb-10 sm:mb-14">
+          <p className="text-xs font-semibold text-primary tracking-[0.2em] uppercase mb-3">
+            3 simple steps
+          </p>
+          <h2 className="text-xl sm:text-3xl font-serif font-medium text-foreground" data-testid="text-how-it-works-title">
+            How it works
+          </h2>
+        </div>
+
+        <div
+          className="flex flex-col lg:flex-row gap-8 lg:gap-14 max-w-4xl mx-auto"
+          onMouseEnter={() => setPaused(true)}
+          onMouseLeave={() => { if (!pauseTimeoutRef.current) setPaused(false); }}
+        >
+          <div className="flex-1 space-y-2" data-testid="how-it-works-steps">
+            {HOW_IT_WORKS_STEPS.map((step, index) => {
+              const Icon = step.icon;
+              const isActive = activeStep === index;
+              return (
+                <button
+                  key={step.number}
+                  onClick={() => handleStepClick(index)}
+                  className={`w-full text-left p-4 sm:p-5 rounded-xl transition-all duration-300 group ${
+                    isActive
+                      ? "bg-background border border-border/60 shadow-sm"
+                      : "border border-transparent hover:bg-background/50"
+                  }`}
+                  data-testid={`step-${index}`}
+                >
+                  <div className="flex items-start gap-4">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-colors duration-300 ${
+                      isActive ? "bg-primary text-primary-foreground" : "bg-muted/60 text-muted-foreground group-hover:bg-muted"
+                    }`}>
+                      <Icon className="h-4.5 w-4.5" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2.5 mb-1">
+                        <span className={`text-[10px] font-bold tracking-widest transition-colors duration-300 ${
+                          isActive ? "text-primary" : "text-muted-foreground/60"
+                        }`}>
+                          {step.number}
+                        </span>
+                        <h3 className={`text-sm font-semibold transition-colors duration-300 ${
+                          isActive ? "text-foreground" : "text-muted-foreground group-hover:text-foreground"
+                        }`}>
+                          {step.title}
+                        </h3>
+                      </div>
+                      <p className={`text-sm leading-relaxed transition-all duration-300 ${
+                        isActive ? "text-muted-foreground max-h-20 opacity-100" : "max-h-0 opacity-0 overflow-hidden"
+                      }`}>
+                        {step.description}
+                      </p>
+                      {isActive && (
+                        <div className="mt-3 h-0.5 bg-muted/40 rounded-full overflow-hidden">
+                          <div
+                            key={progressKey}
+                            className="h-full bg-primary/40 rounded-full"
+                            style={{
+                              animation: paused ? "none" : "progress-fill 5s linear forwards",
+                            }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="w-full lg:w-[340px] shrink-0">
+            <div className="rounded-xl border border-border/50 bg-card p-5 sm:p-6 shadow-sm" data-testid="step-visual">
+              <p className="text-[10px] font-semibold text-muted-foreground tracking-wide uppercase mb-4">
+                {activeStep === 0 ? "Resume Analysis" : activeStep === 1 ? "Your Readiness Report" : "Matched Roles"}
+              </p>
+              <div className="transition-opacity duration-300" key={activeStep}>
+                <StepVisual step={activeStep} />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="text-center mt-10 sm:mt-14">
+          <Button size="lg" asChild data-testid="button-how-it-works-cta">
+            <a href="/diagnostic">
+              {hasDiagnostic ? "View your results" : "Check Your Fit"}
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </a>
+          </Button>
+        </div>
+      </div>
+    </section>
+  );
+}
 
 export default function Landing() {
   usePageTitle();
@@ -363,52 +627,7 @@ export default function Landing() {
           </section>
         )}
 
-        <section className="border-t border-border/30 bg-muted/20">
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-14 sm:py-24">
-            <div className="text-center mb-8 sm:mb-12">
-              <h2 className="text-xl sm:text-3xl font-serif font-medium text-foreground" data-testid="text-how-it-works-title">
-                How it works
-              </h2>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 sm:gap-12 max-w-3xl mx-auto" data-testid="how-it-works-steps">
-              <div className="text-center space-y-3">
-                <div className="w-12 h-12 rounded-full bg-background border border-border/50 flex items-center justify-center mx-auto">
-                  <Upload className="h-5 w-5 text-foreground" />
-                </div>
-                <h3 className="text-sm font-semibold text-foreground">Upload your resume</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  PDF or Word. We extract your skills, experience, and practice areas in seconds. Nothing leaves our servers.
-                </p>
-              </div>
-              <div className="text-center space-y-3">
-                <div className="w-12 h-12 rounded-full bg-background border border-border/50 flex items-center justify-center mx-auto">
-                  <BarChart3 className="h-5 w-5 text-foreground" />
-                </div>
-                <h3 className="text-sm font-semibold text-foreground">See where you stand</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  Your readiness score, top career paths, skill gaps, and a week-by-week plan to close them.
-                </p>
-              </div>
-              <div className="text-center space-y-3">
-                <div className="w-12 h-12 rounded-full bg-background border border-border/50 flex items-center justify-center mx-auto">
-                  <Target className="h-5 w-5 text-foreground" />
-                </div>
-                <h3 className="text-sm font-semibold text-foreground">Apply with confidence</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  Matched roles ranked by fit. Tailored resume suggestions. You'll know exactly why you're a good candidate.
-                </p>
-              </div>
-            </div>
-            <div className="text-center mt-10">
-              <Button size="lg" asChild data-testid="button-how-it-works-cta">
-                <a href="/diagnostic">
-                  Check Your Fit
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </a>
-              </Button>
-            </div>
-          </div>
-        </section>
+        <HowItWorksSection hasDiagnostic={hasDiagnostic} />
 
         {careerPaths.length > 0 && (
           <section className="border-t border-border/30">
