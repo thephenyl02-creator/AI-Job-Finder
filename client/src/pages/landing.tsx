@@ -10,7 +10,7 @@ import { LogoMark } from "@/components/logo";
 import { CompanyLogo } from "@/components/company-logo";
 import {
   ArrowRight, Search, Globe, Clock, Lock, Building2, FileText,
-  Check, Compass, Briefcase, Send, User,
+  Check, Compass, Briefcase, Send, User, BarChart3, TrendingUp,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Footer } from "@/components/footer";
@@ -28,6 +28,7 @@ interface MarketPulse {
   topHiringCompanies: { name: string; count: number }[];
   trendingSkill: { name: string; count: number } | null;
   totalJobs: number;
+  workModeSplit?: { remote: number; hybrid: number; onsite: number };
 }
 
 interface JobDensity {
@@ -119,13 +120,103 @@ function LiveTicker({ stats, marketPulse, density }: {
   );
 }
 
-function FloatingComposition() {
+function DonutChart({ workModeSplit, isVisible }: { workModeSplit: { remote: number; hybrid: number; onsite: number }; isVisible: boolean }) {
+  const total = workModeSplit.remote + workModeSplit.hybrid + workModeSplit.onsite;
+  const r = 16;
+  const circumference = 2 * Math.PI * r;
+
+  const segments = [
+    { label: "Remote", value: workModeSplit.remote, color: "#3b82f6" },
+    { label: "Hybrid", value: workModeSplit.hybrid, color: "#f59e0b" },
+    { label: "Onsite", value: workModeSplit.onsite, color: "#94a3b8" },
+  ];
+
+  let accumulated = 0;
+  const segmentData = segments.map((seg, i) => {
+    const pct = total > 0 ? seg.value / total : 0.33;
+    const dashLen = pct * circumference;
+    const offset = accumulated;
+    accumulated += dashLen;
+    return { ...seg, pct, dashLen, offset, rotation: (offset / circumference) * 360 - 90 };
+  });
+
+  return (
+    <div className="flex items-center gap-2.5">
+      <svg width="42" height="42" viewBox="0 0 40 40" className="shrink-0">
+        <circle cx="20" cy="20" r={r} fill="none" stroke="hsl(var(--muted))" strokeWidth="5" opacity="0.2" />
+        {segmentData.map((seg, i) => (
+          <circle
+            key={seg.label}
+            cx="20" cy="20" r={r}
+            fill="none"
+            stroke={seg.color}
+            strokeWidth="5"
+            strokeDasharray={`${seg.dashLen} ${circumference - seg.dashLen}`}
+            strokeLinecap="butt"
+            className={isVisible ? "animate-draw-segment" : ""}
+            style={{
+              "--seg-total": `${circumference}`,
+              "--seg-target": `${circumference - seg.dashLen}`,
+              transform: `rotate(${seg.rotation}deg)`,
+              transformOrigin: "center",
+              animationDelay: `${0.7 + i * 0.2}s`,
+              opacity: isVisible ? 1 : 0,
+            } as React.CSSProperties}
+          />
+        ))}
+      </svg>
+      <div className="space-y-0.5">
+        {segmentData.map((seg) => (
+          <div key={seg.label} className="flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: seg.color }} />
+            <span className="text-[8px] text-muted-foreground">{seg.label}</span>
+            <span className="text-[8px] font-medium text-foreground">{Math.round(seg.pct * 100)}%</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function FloatingComposition({ marketPulse, stats }: { marketPulse?: MarketPulse; stats?: Stats }) {
   const [visiblePanels, setVisiblePanels] = useState<number[]>([]);
   const [scoreValue, setScoreValue] = useState(0);
+  const [scanDone, setScanDone] = useState(false);
+  const [tailorScore, setTailorScore] = useState(68);
+  const [fitValues, setFitValues] = useState([0, 0, 0]);
+  const [showMatchText, setShowMatchText] = useState(false);
+  const [showGaps, setShowGaps] = useState(false);
+  const [showTrending, setShowTrending] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const hasPlayed = useRef(false);
   const timeoutRefs = useRef<ReturnType<typeof setTimeout>[]>([]);
   const unmountedRef = useRef(false);
+
+  const addTimeout = (fn: () => void, ms: number) => {
+    const id = setTimeout(() => { if (!unmountedRef.current) fn(); }, ms);
+    timeoutRefs.current.push(id);
+  };
+
+  const countUp = (setter: React.Dispatch<React.SetStateAction<number[]>>, targets: number[], startDelay: number, duration: number) => {
+    targets.forEach((target, idx) => {
+      addTimeout(() => {
+        const startTime = performance.now();
+        const tick = (now: number) => {
+          if (unmountedRef.current) return;
+          const elapsed = now - startTime;
+          const progress = Math.min(elapsed / duration, 1);
+          const eased = 1 - Math.pow(1 - progress, 3);
+          setter((prev) => {
+            const copy = [...prev];
+            copy[idx] = Math.round(target * eased);
+            return copy;
+          });
+          if (progress < 1) requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+      }, startDelay + idx * 150);
+    });
+  };
 
   useEffect(() => {
     unmountedRef.current = false;
@@ -141,7 +232,7 @@ function FloatingComposition() {
           startSequence();
         }
       },
-      { threshold: 0.2 }
+      { threshold: 0.15 }
     );
     observer.observe(node);
     return () => {
@@ -152,11 +243,15 @@ function FloatingComposition() {
   }, []);
 
   const startSequence = () => {
-    const delays = [300, 1800, 3000, 4000, 4800];
+    const delays = [300, 1500, 3000, 3800, 5000, 5800];
     delays.forEach((delay, i) => {
-      const id = setTimeout(() => {
-        if (unmountedRef.current) return;
+      addTimeout(() => {
         setVisiblePanels((prev) => [...prev, i]);
+
+        if (i === 0) {
+          addTimeout(() => setScanDone(true), 1300);
+        }
+
         if (i === 1) {
           const target = 72;
           const duration = 1200;
@@ -170,9 +265,22 @@ function FloatingComposition() {
             if (progress < 1) requestAnimationFrame(animate);
           };
           requestAnimationFrame(animate);
+          addTimeout(() => setShowMatchText(true), 1300);
+          addTimeout(() => setShowGaps(true), 2400);
+        }
+
+        if (i === 2) {
+          addTimeout(() => setShowTrending(true), 1600);
+        }
+
+        if (i === 3) {
+          countUp(setFitValues, [92, 85, 78], 200, 800);
+        }
+
+        if (i === 4) {
+          addTimeout(() => setTailorScore(91), 500);
         }
       }, delay);
-      timeoutRefs.current.push(id);
     });
   };
 
@@ -192,121 +300,214 @@ function FloatingComposition() {
     { title: "Product Counsel", company: "Harvey AI", fit: 85, color: "bg-blue-500/10 text-blue-700 dark:text-blue-400" },
     { title: "Contract Analyst", company: "Agiloft", fit: 78, color: "bg-amber-500/10 text-amber-700 dark:text-amber-400" },
   ];
+  const skillGaps = ["Data Analytics ↑", "Python ↑", "SQL ↑"];
+
+  const workModeSplit = marketPulse?.workModeSplit
+    ? { remote: Math.round(marketPulse.workModeSplit.remote), hybrid: Math.round(marketPulse.workModeSplit.hybrid), onsite: Math.round(marketPulse.workModeSplit.onsite) }
+    : { remote: 15, hybrid: 21, onsite: 64 };
+  const trendingSkillName = marketPulse?.trendingSkill?.name || "Stakeholder Mgmt";
 
   return (
     <div
       ref={containerRef}
-      className="relative w-full h-[340px] sm:h-[400px] rounded-2xl dot-grid-bg border border-border/30 overflow-hidden"
+      className="relative w-full h-[340px] sm:h-[420px]"
       data-testid="floating-composition"
     >
       {isVisible(0) && (
-        <div className="absolute left-3 sm:left-5 bottom-4 sm:bottom-6 w-[180px] sm:w-[210px] animate-float-in" style={{ zIndex: 2 }}>
-          <div className="rounded-xl border border-border/50 bg-card p-3 shadow-lg">
-            <div className="flex items-center gap-2.5 mb-2.5">
-              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                <FileText className="h-4 w-4 text-primary" />
+        <div
+          className="absolute left-[1%] sm:left-[2%] bottom-[5%] sm:bottom-[8%] w-[155px] sm:w-[175px] animate-float-in"
+          style={{ zIndex: 2 }}
+        >
+          <div className="animate-gentle-float" style={{ animationDelay: "0s" }}>
+          <div className="rounded-xl border border-border/50 bg-card p-2.5 sm:p-3 shadow-md relative overflow-hidden">
+            {!scanDone && (
+              <div className="absolute inset-x-0 top-0 h-0.5 bg-primary/60 animate-scan-line" />
+            )}
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                <FileText className="h-3.5 w-3.5 text-primary" />
               </div>
               <div className="min-w-0">
-                <p className="text-[11px] font-medium text-foreground truncate">Sarah_Resume.pdf</p>
-                <p className="text-[9px] text-muted-foreground">2 pages</p>
+                <p className="text-[10px] sm:text-[11px] font-medium text-foreground truncate">Sarah_Resume.pdf</p>
+                <div className="flex items-center gap-1">
+                  <p className="text-[8px] sm:text-[9px] text-muted-foreground">2 pages</p>
+                  {scanDone && (
+                    <span className="text-[8px] text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-0.5 animate-pop-in">
+                      <Check className="h-2.5 w-2.5" /> Done
+                    </span>
+                  )}
+                  {!scanDone && (
+                    <span className="text-[8px] text-muted-foreground animate-pulse">Parsing...</span>
+                  )}
+                </div>
               </div>
             </div>
-            <div className="flex flex-wrap gap-1">
+            <div className="flex flex-wrap gap-0.5 sm:gap-1">
               {skillTags.map((tag, i) => (
                 <span
                   key={tag}
-                  className={`text-[9px] px-1.5 py-0.5 rounded-md bg-primary/8 text-primary border border-primary/15 ${isVisible(0) ? "animate-pop-in" : "opacity-0"}`}
-                  style={{ animationDelay: `${0.8 + i * 0.12}s` }}
+                  className="text-[8px] sm:text-[9px] px-1 sm:px-1.5 py-0.5 rounded-md bg-primary/8 text-primary border border-primary/15 animate-pop-in opacity-0"
+                  style={{ animationDelay: `${1.4 + i * 0.12}s`, animationFillMode: "both" }}
                 >
                   {tag}
                 </span>
               ))}
             </div>
           </div>
+          </div>
         </div>
       )}
 
       {isVisible(1) && (
-        <div className="absolute left-[15%] sm:left-[18%] top-3 sm:top-5 w-[175px] sm:w-[200px] animate-float-in" style={{ zIndex: 3 }}>
-          <div className="rounded-xl border border-border/50 bg-card p-3 shadow-xl">
-            <div className="flex items-center gap-3 mb-2">
-              <svg className="w-[52px] h-[52px] -rotate-90 shrink-0" viewBox="0 0 100 100">
-                <circle cx="50" cy="50" r="42" fill="none" stroke="hsl(var(--muted))" strokeWidth="6" />
+        <div
+          className="absolute left-[16%] sm:left-[18%] top-[6%] sm:top-[8%] w-[185px] sm:w-[225px] animate-float-in"
+          style={{ zIndex: 5 }}
+        >
+          <div className="animate-gentle-float" style={{ animationDelay: "1.5s" }}>
+          <div className="rounded-xl border border-primary/15 bg-card p-3 sm:p-4 shadow-xl">
+            <div className="flex items-center gap-3 mb-2.5">
+              <svg className="w-[50px] h-[50px] sm:w-[60px] sm:h-[60px] -rotate-90 shrink-0" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="42" fill="none" stroke="hsl(var(--muted))" strokeWidth="5" />
                 <circle
-                  cx="50" cy="50" r="42" fill="none" stroke="hsl(var(--primary))" strokeWidth="6" strokeLinecap="round"
+                  cx="50" cy="50" r="42" fill="none" stroke="hsl(var(--primary))" strokeWidth="5" strokeLinecap="round"
                   strokeDasharray={circumference}
                   strokeDashoffset={scoreOffset}
                   style={{ transition: "stroke-dashoffset 0.1s linear" }}
                 />
               </svg>
               <div>
-                <span className="text-xl font-bold text-foreground">{scoreValue}</span>
-                <p className="text-[8px] text-muted-foreground uppercase tracking-wider">Readiness</p>
+                <span className="text-2xl sm:text-3xl font-bold text-foreground">{scoreValue}</span>
+                <p className="text-[8px] sm:text-[9px] text-muted-foreground uppercase tracking-wider">Readiness</p>
               </div>
             </div>
+
+            {showMatchText && (
+              <p className="text-[9px] sm:text-[10px] text-emerald-600 dark:text-emerald-400 font-medium mb-2.5 animate-fade-in-up">
+                Strong match for legal tech
+              </p>
+            )}
+
             <div className="space-y-1.5">
               {careerPaths.map((path, i) => (
-                <div key={path.name} className="flex items-center gap-2">
-                  <span className="text-[9px] text-muted-foreground w-[70px] truncate">{path.name}</span>
+                <div key={path.name} className="flex items-center gap-1.5 sm:gap-2">
+                  <span className="text-[8px] sm:text-[9px] text-muted-foreground w-[55px] sm:w-[70px] truncate">{path.name}</span>
                   <div className="flex-1 h-1 bg-muted/50 rounded-full overflow-hidden">
                     <div
                       className={`h-full rounded-full ${path.color} animate-fill-bar`}
                       style={{
                         "--target-width": `${path.score}%`,
-                        animationDelay: `${2.0 + i * 0.2}s`,
+                        animationDelay: `${1.5 + i * 0.2}s`,
                       } as React.CSSProperties}
                     />
                   </div>
-                  <span className="text-[9px] font-medium text-foreground w-6 text-right">{path.score}%</span>
+                  <span className="text-[8px] sm:text-[9px] font-medium text-foreground w-6 text-right">{path.score}%</span>
                 </div>
               ))}
             </div>
+
+            {showGaps && (
+              <div className="flex flex-wrap gap-1 mt-2.5">
+                {skillGaps.map((gap, i) => (
+                  <span
+                    key={gap}
+                    className="text-[8px] px-1.5 py-0.5 rounded-md bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/15 font-medium animate-pop-in"
+                    style={{ animationDelay: `${i * 0.15}s` }}
+                  >
+                    {gap}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
           </div>
         </div>
       )}
 
       {isVisible(2) && (
-        <div className="absolute right-3 sm:right-5 top-[25%] w-[185px] sm:w-[210px] animate-slide-from-right" style={{ zIndex: 4 }}>
-          <div className="rounded-xl border border-border/50 bg-card p-2.5 shadow-lg space-y-1.5">
-            {jobMatches.map((job, i) => (
-              <div
-                key={job.title}
-                className="flex items-center gap-2 p-1.5 rounded-lg border border-border/30 bg-background animate-slide-from-right"
-                style={{ animationDelay: `${3.2 + i * 0.15}s` }}
-              >
-                <div className="w-6 h-6 rounded-full bg-muted/50 flex items-center justify-center shrink-0">
-                  <Building2 className="h-3 w-3 text-muted-foreground" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-[9px] font-medium text-foreground truncate">{job.title}</p>
-                  <p className="text-[8px] text-muted-foreground">{job.company}</p>
-                </div>
-                <span className={`text-[8px] px-1.5 py-0.5 rounded-md font-medium shrink-0 ${job.color}`}>
-                  {job.fit}%
+        <div
+          className="absolute left-[0%] sm:left-[0%] top-[1%] sm:top-[2%] w-[140px] sm:w-[155px] animate-fade-in-up"
+          style={{ zIndex: 3 }}
+        >
+          <div className="animate-gentle-float" style={{ animationDelay: "2.5s" }}>
+          <div className="rounded-xl border border-border/50 bg-card p-2.5 shadow-md">
+            <div className="flex items-center gap-1.5 mb-2">
+              <BarChart3 className="h-3 w-3 text-primary" />
+              <span className="text-[9px] font-semibold text-foreground">Market Pulse</span>
+            </div>
+            <DonutChart workModeSplit={workModeSplit} isVisible={isVisible(2)} />
+            {showTrending && (
+              <div className="mt-2 flex items-center gap-1 animate-fade-in-up">
+                <TrendingUp className="h-2.5 w-2.5 text-emerald-500" />
+                <span className="text-[8px] text-muted-foreground truncate">
+                  Trending: <span className="text-foreground font-medium">{trendingSkillName.length > 18 ? trendingSkillName.slice(0, 18) + "…" : trendingSkillName}</span>
                 </span>
               </div>
-            ))}
+            )}
+          </div>
           </div>
         </div>
       )}
 
       {isVisible(3) && (
-        <div className="absolute right-4 sm:right-8 bottom-3 sm:bottom-5 animate-fade-in-up" style={{ zIndex: 5 }}>
-          <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-3 py-2 shadow-md flex items-center gap-2">
-            <Check className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
-            <div>
-              <p className="text-[10px] font-medium text-foreground">Resume tailored</p>
-              <p className="text-[8px] text-muted-foreground">Fit: 68% → 91%</p>
-            </div>
+        <div
+          className="absolute right-[1%] sm:right-[2%] top-[26%] sm:top-[28%] w-[170px] sm:w-[200px] animate-slide-from-right"
+          style={{ zIndex: 4 }}
+        >
+          <div className="animate-gentle-float" style={{ animationDelay: "0.5s" }}>
+          <div className="rounded-xl border border-border/50 bg-card p-2 sm:p-2.5 shadow-lg space-y-1 sm:space-y-1.5">
+            {jobMatches.map((job, i) => (
+              <div
+                key={job.title}
+                className="flex items-center gap-1.5 sm:gap-2 p-1 sm:p-1.5 rounded-lg border border-border/30 bg-background animate-slide-from-right"
+                style={{ animationDelay: `${0.2 + i * 0.15}s` }}
+              >
+                <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-muted/50 flex items-center justify-center shrink-0">
+                  <Building2 className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-muted-foreground" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[8px] sm:text-[9px] font-medium text-foreground truncate">{job.title}</p>
+                  <p className="text-[7px] sm:text-[8px] text-muted-foreground">{job.company}</p>
+                </div>
+                <span className={`text-[8px] px-1.5 py-0.5 rounded-md font-medium shrink-0 ${job.color}`}>
+                  {fitValues[i]}%
+                </span>
+              </div>
+            ))}
+          </div>
           </div>
         </div>
       )}
 
       {isVisible(4) && (
-        <div className="absolute right-[30%] sm:right-[35%] top-2 sm:top-3 animate-pop-in" style={{ zIndex: 6 }}>
-          <div className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 shadow-md flex items-center gap-1.5 animate-pulse-soft" style={{ animationDelay: "5s" }}>
-            <Check className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
-            <span className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-300">Ready to apply</span>
+        <div
+          className="absolute right-[3%] sm:right-[5%] bottom-[2%] sm:bottom-[3%] animate-fade-in-up"
+          style={{ zIndex: 6 }}
+        >
+          <div className="animate-gentle-float" style={{ animationDelay: "3s" }}>
+          <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-2.5 sm:px-3 py-1.5 sm:py-2 shadow-md flex items-center gap-2">
+            <Check className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-emerald-500 shrink-0" />
+            <div>
+              <p className="text-[9px] sm:text-[10px] font-medium text-foreground">Resume tailored</p>
+              <p className="text-[8px]">
+                <span className="text-muted-foreground">Fit: </span>
+                <span
+                  className="font-medium transition-colors duration-300"
+                  style={{ color: tailorScore >= 91 ? "hsl(142, 76%, 36%)" : "hsl(38, 92%, 50%)" }}
+                >
+                  {tailorScore}%
+                </span>
+              </p>
+            </div>
+          </div>
+          </div>
+        </div>
+      )}
+
+      {isVisible(5) && (
+        <div className="absolute right-[22%] sm:right-[25%] top-[0%] animate-pop-in" style={{ zIndex: 7 }}>
+          <div className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 sm:px-3 py-1 sm:py-1.5 shadow-sm flex items-center gap-1.5 animate-pulse-soft" style={{ animationDelay: "0.3s" }}>
+            <Check className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-emerald-600 dark:text-emerald-400" />
+            <span className="text-[9px] sm:text-[10px] font-semibold text-emerald-700 dark:text-emerald-300">Ready to apply</span>
           </div>
         </div>
       )}
@@ -458,7 +659,7 @@ export default function Landing() {
             </div>
 
             <div className="w-full max-w-sm lg:max-w-[480px] lg:w-[480px] shrink-0">
-              <FloatingComposition />
+              <FloatingComposition marketPulse={marketPulse} stats={stats} />
             </div>
           </div>
         </section>
