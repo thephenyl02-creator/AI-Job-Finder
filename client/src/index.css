@@ -247,11 +247,11 @@
   }
 
   .marquee-left {
-    animation: marquee-left 25s linear infinite;
+    animation: marquee-left 15s linear infinite;
   }
 
   .marquee-right {
-    animation: marquee-right 25s linear infinite;
+    animation: marquee-right 15s linear infinite;
   }
 
   @media (hover: hover) {
@@ -263,7 +263,7 @@
   @media (prefers-reduced-motion: reduce) {
     .marquee-left,
     .marquee-right {
-      animation-duration: 45s;
+      animation-duration: 30s;
     }
   }
 
@@ -279,6 +279,76 @@
 
   .animate-slide-in-right {
     animation: slide-in-right 0.3s ease-out forwards;
+  }
+
+  @keyframes float-in {
+    from { opacity: 0; transform: translateY(30px) scale(0.97); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  @keyframes pop-in {
+    from { opacity: 0; transform: scale(0.8); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  @keyframes fade-in-up {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes slide-in-from-right {
+    from { opacity: 0; transform: translateX(30px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  @keyframes pulse-soft {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+  }
+
+  @keyframes score-fill {
+    from { stroke-dashoffset: var(--score-circumference); }
+    to { stroke-dashoffset: var(--score-target); }
+  }
+
+  @keyframes fill-bar {
+    from { width: 0%; }
+    to { width: var(--target-width); }
+  }
+
+  @keyframes ticker-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes ticker-out {
+    from { opacity: 1; transform: translateY(0); }
+    to { opacity: 0; transform: translateY(-8px); }
+  }
+
+  .animate-float-in { animation: float-in 0.7s ease-out both; }
+  .animate-pop-in { animation: pop-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+  .animate-fade-in-up { animation: fade-in-up 0.5s ease-out both; }
+  .animate-slide-from-right { animation: slide-in-from-right 0.5s ease-out both; }
+  .animate-pulse-soft { animation: pulse-soft 2s ease-in-out infinite; }
+  .animate-score-fill { animation: score-fill 1.5s ease-out both; }
+  .animate-fill-bar { animation: fill-bar 1s ease-out both; }
+  .animate-ticker-in { animation: ticker-in 0.4s ease-out both; }
+  .animate-ticker-out { animation: ticker-out 0.3s ease-out both; }
+
+  .dot-grid-bg {
+    background-image: radial-gradient(circle, hsl(var(--muted-foreground) / 0.15) 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+
+  .scroll-fade-in {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+  }
+  .scroll-fade-in.visible {
+    opacity: 1;
+    transform: translateY(0);
   }
 
   .glass {
@@ -299,6 +369,27 @@
   .stagger-4 { animation-delay: 0.2s; }
   .stagger-5 { animation-delay: 0.25s; }
   .stagger-6 { animation-delay: 0.3s; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animate-float-in,
+    .animate-pop-in,
+    .animate-fade-in-up,
+    .animate-slide-from-right,
+    .animate-score-fill,
+    .animate-fill-bar,
+    .animate-ticker-in,
+    .animate-ticker-out {
+      animation-duration: 0.01s !important;
+    }
+    .animate-pulse-soft {
+      animation: none;
+    }
+    .scroll-fade-in {
+      opacity: 1;
+      transform: none;
+      transition: none;
+    }
+  }
 }
 
 /**
