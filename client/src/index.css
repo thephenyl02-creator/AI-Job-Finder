@@ -247,11 +247,11 @@
   }
 
   .marquee-left {
-    animation: marquee-left 40s linear infinite;
+    animation: marquee-left 25s linear infinite;
   }
 
   .marquee-right {
-    animation: marquee-right 40s linear infinite;
+    animation: marquee-right 25s linear infinite;
   }
 
   @media (hover: hover) {
@@ -263,7 +263,7 @@
   @media (prefers-reduced-motion: reduce) {
     .marquee-left,
     .marquee-right {
-      animation-duration: 120s;
+      animation-duration: 45s;
     }
   }
 
