@@ -9838,6 +9838,10 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
         "openai", "anthropic", "google cloud", "aws", "azure",
         "python", "sql", "javascript", "typescript", "r",
         "terraform", "docker", "kubernetes",
+        "ediscovery", "machine learning", "contract lifecycle management",
+        "document automation", "generative ai", "data analytics",
+        "knowledge management", "api integrations", "powerbi", "power bi",
+        "agile/scrum", "data governance",
       ]);
       const toolsByCategoryMap: Record<string, Record<string, number>> = {};
 
@@ -9856,14 +9860,16 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
           s = SKILLS_SYNONYM_MAP[s] || s;
           skillMap[s] = (skillMap[s] || 0) + 1;
         }
-        if (job.hardSkills && job.hardSkills.length > 0) {
-          for (const skill of job.hardSkills) {
+        const jobHardSkills = (job.hardSkills && job.hardSkills.length > 0) ? job.hardSkills : (job.keySkills || []);
+        const jobSoftSkills = (job.softSkills && job.softSkills.length > 0) ? job.softSkills : [];
+        if (jobHardSkills.length > 0) {
+          for (const skill of jobHardSkills) {
             let s = skill.toLowerCase().trim();
             if (!s) continue;
             s = SKILLS_SYNONYM_MAP[s] || s;
             hardSkillMap[s] = (hardSkillMap[s] || 0) + 1;
           }
-          for (const skill of (job.softSkills || [])) {
+          for (const skill of jobSoftSkills) {
             let s = skill.toLowerCase().trim();
             if (!s) continue;
             s = SKILLS_SYNONYM_MAP[s] || s;
@@ -9899,9 +9905,9 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
           else if (ai === 'Med') aiByCategory[job.roleCategory].med++;
           else aiByCategory[job.roleCategory].high++;
         }
-        if (job.roleCategory && job.hardSkills && job.hardSkills.length > 0) {
+        if (job.roleCategory && jobHardSkills.length > 0) {
           if (!toolsByCategoryMap[job.roleCategory]) toolsByCategoryMap[job.roleCategory] = {};
-          for (const skill of job.hardSkills) {
+          for (const skill of jobHardSkills) {
             const s = skill.toLowerCase().trim();
             if (!s) continue;
             if (KNOWN_LEGAL_TOOLS.has(s)) {
@@ -10199,14 +10205,16 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
           td.skillMap[normalized] = (td.skillMap[normalized] || 0) + 1;
         }
 
-        if (job.hardSkills && job.hardSkills.length > 0) {
-          for (const skill of job.hardSkills) {
+        const tHardSkills = (job.hardSkills && job.hardSkills.length > 0) ? job.hardSkills : (job.keySkills || []);
+        const tSoftSkills = (job.softSkills && job.softSkills.length > 0) ? job.softSkills : [];
+        if (tHardSkills.length > 0) {
+          for (const skill of tHardSkills) {
             const s = skill.toLowerCase().trim();
             if (!s) continue;
             const normalized = SKILLS_SYNONYM_MAP[s] || s;
             td.hardSkillMap[normalized] = (td.hardSkillMap[normalized] || 0) + 1;
           }
-          for (const skill of (job.softSkills || [])) {
+          for (const skill of tSoftSkills) {
             const s = skill.toLowerCase().trim();
             if (!s) continue;
             const normalized = SKILLS_SYNONYM_MAP[s] || s;

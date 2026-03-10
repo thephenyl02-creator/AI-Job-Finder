@@ -3306,7 +3306,7 @@ class DatabaseStorage implements IStorage {
       'salaryMin', 'salaryMax', 'salaryCurrency',
       'jobStatus', 'isActive', 'isPublished',
       'title', 'description', 'descriptionFormatted', 'jobHash',
-      'keySkills', 'matchKeywords', 'aiResponsibilities', 'aiQualifications', 'aiNiceToHaves',
+      'keySkills', 'hardSkills', 'softSkills', 'matchKeywords', 'aiResponsibilities', 'aiQualifications', 'aiNiceToHaves',
       'isRemote', 'locationType', 'reviewStatus',
       'statusChangedAt', 'deactivatedAt', 'publishedAt', 'closedAt',
     ]);
