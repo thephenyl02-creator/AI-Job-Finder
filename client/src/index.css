@@ -263,7 +263,7 @@
   @media (prefers-reduced-motion: reduce) {
     .marquee-left,
     .marquee-right {
-      animation-play-state: paused;
+      animation-duration: 120s;
     }
   }
 
