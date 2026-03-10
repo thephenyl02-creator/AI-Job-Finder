@@ -595,98 +595,100 @@ function DiagnosticShowcase() {
   const fadeRef = useFadeInOnScroll();
 
   return (
-    <section className="border-t border-border/30" data-testid="section-diagnostic-showcase">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-16 sm:py-24">
-        <div ref={fadeRef} className="scroll-fade-in text-center mb-10 sm:mb-14">
-          <p className="text-xs uppercase tracking-[0.2em] text-emerald-600 dark:text-emerald-400 font-semibold mb-3">Your Career Snapshot</p>
-          <h2 className="text-2xl sm:text-4xl font-serif font-medium text-foreground" data-testid="text-diagnostic-heading">
-            Discover your readiness for legal tech
-          </h2>
-          <p className="text-sm sm:text-base text-muted-foreground mt-3 max-w-lg mx-auto leading-relaxed">
-            Upload your resume. In 60 seconds, see your readiness score, matching career paths, and a plan to get there.
-          </p>
-          <div className="mt-6">
-            <Button size="lg" asChild data-testid="button-diagnostic-cta">
-              <a href="/diagnostic">
-                Check Your Fit
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </a>
-            </Button>
-          </div>
-        </div>
-
-        <div
-          ref={containerRef}
-          className={`rounded-2xl border border-primary/10 bg-card shadow-xl overflow-hidden transition-all duration-700 ${visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}
-          data-testid="diagnostic-composition"
-        >
-          <div className="grid grid-cols-1 sm:grid-cols-2">
-            <div className="p-6 sm:p-10 bg-gradient-to-br from-primary/[0.03] to-transparent flex flex-col justify-center" data-testid="panel-score-ring">
-              <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-3 py-1.5 mb-6 w-fit" data-testid="panel-you-are-here">
-                <MapPin className="h-3.5 w-3.5 text-primary" />
-                <span className="text-sm font-medium text-foreground">You: Corporate Lawyer, 5yrs</span>
-              </div>
-              <div className="flex items-center gap-5 sm:gap-6 mb-6">
-                <svg className="w-[100px] h-[100px] sm:w-[120px] sm:h-[120px] -rotate-90 shrink-0" viewBox="0 0 100 100">
-                  <circle cx="50" cy="50" r="38" fill="none" stroke="hsl(var(--muted))" strokeWidth="5" />
-                  <circle cx="50" cy="50" r="38" fill="none" stroke="hsl(var(--primary))" strokeWidth="5" strokeLinecap="round"
-                    strokeDasharray={scoreCircumference} strokeDashoffset={scoreOffset}
-                    style={{ transition: "stroke-dashoffset 0.1s linear" }}
-                  />
-                </svg>
-                <div>
-                  <span className="text-5xl sm:text-6xl font-bold text-foreground" data-testid="text-score-value">{scoreValue}</span>
-                  <p className="text-sm text-muted-foreground uppercase tracking-wider mt-1">Readiness Score</p>
-                </div>
-              </div>
-              <span className="inline-flex items-center gap-1.5 text-sm font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-4 py-1.5 rounded-full w-fit">
-                <Check className="h-4 w-4" /> Strong match — top 15%
-              </span>
-            </div>
-
-            <div className="p-6 sm:p-10 border-t sm:border-t-0 sm:border-l border-border/30">
-              <div className="mb-6" data-testid="panel-career-bars">
-                <div className="flex items-center gap-2 mb-4">
-                  <Compass className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-                  <span className="text-base font-semibold text-foreground">Career Paths</span>
-                </div>
-                <div className="space-y-3">
-                  {careerPaths.map((path, i) => (
-                    <div key={path.name}>
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm text-muted-foreground">{path.name}</span>
-                        <span className="text-sm font-bold text-foreground">{barWidths[i]}%</span>
-                      </div>
-                      <div className="h-2 bg-muted/50 rounded-full overflow-hidden">
-                        <div className={`h-full rounded-full ${path.color} transition-all duration-700 ease-out`}
-                          style={{ width: `${barWidths[i]}%` }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className={`border-t border-border/30 pt-5 mb-5 transition-all duration-500 ${showSkills ? "opacity-100" : "opacity-0"}`} data-testid="panel-skill-gaps">
-                <div className="flex items-center gap-2 mb-3">
-                  <TrendingUp className="h-4 w-4 text-rose-500" />
-                  <span className="text-sm font-semibold text-foreground">Skills to Build</span>
-                </div>
-                <div className="space-y-2">
-                  {skillGaps.map((skill) => (
-                    <div key={skill} className="flex items-center gap-2">
-                      <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0" />
-                      <span className="text-sm text-muted-foreground">{skill}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className={`transition-all duration-500 ${showPlan ? "opacity-100" : "opacity-0"}`} data-testid="panel-roadmap">
-                <a href="/diagnostic" className="inline-flex items-center gap-2 text-sm text-primary hover:underline font-medium" data-testid="link-roadmap-plan">
-                  See your 30-day plan
-                  <ArrowRight className="h-3.5 w-3.5" />
+    <section className="bg-gradient-to-b from-background via-background to-emerald-50/40 dark:to-emerald-950/10" data-testid="section-diagnostic-showcase">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-16 sm:py-28">
+        <div className="flex flex-col lg:flex-row items-start gap-10 lg:gap-16">
+          <div ref={fadeRef} className="scroll-fade-in lg:w-[38%] lg:sticky lg:top-24 flex flex-col justify-center text-center lg:text-left">
+            <p className="text-xs uppercase tracking-[0.2em] text-emerald-600 dark:text-emerald-400 font-semibold mb-4">Your Career Snapshot</p>
+            <h2 className="text-2xl sm:text-4xl font-serif font-medium text-foreground leading-tight" data-testid="text-diagnostic-heading">
+              Discover your readiness for legal tech
+            </h2>
+            <p className="text-sm sm:text-base text-muted-foreground mt-4 leading-relaxed">
+              Upload your resume. In 60 seconds, see your readiness score, matching career paths, and a plan to get there.
+            </p>
+            <div className="mt-8">
+              <Button size="lg" asChild data-testid="button-diagnostic-cta">
+                <a href="/diagnostic">
+                  Check Your Fit
+                  <ArrowRight className="ml-2 h-4 w-4" />
                 </a>
+              </Button>
+            </div>
+          </div>
+
+          <div
+            ref={containerRef}
+            className={`lg:w-[62%] rounded-2xl border border-primary/10 bg-card shadow-xl overflow-hidden transition-all duration-700 ${visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}
+            data-testid="diagnostic-composition"
+          >
+            <div className="grid grid-cols-1 sm:grid-cols-2">
+              <div className="p-6 sm:p-8 bg-gradient-to-br from-primary/[0.03] to-transparent flex flex-col justify-center" data-testid="panel-score-ring">
+                <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-3 py-1.5 mb-5 w-fit" data-testid="panel-you-are-here">
+                  <MapPin className="h-3.5 w-3.5 text-primary" />
+                  <span className="text-sm font-medium text-foreground">You: Corporate Lawyer, 5yrs</span>
+                </div>
+                <div className="flex items-center gap-5 mb-5">
+                  <svg className="w-[90px] h-[90px] sm:w-[110px] sm:h-[110px] -rotate-90 shrink-0" viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="38" fill="none" stroke="hsl(var(--muted))" strokeWidth="5" />
+                    <circle cx="50" cy="50" r="38" fill="none" stroke="hsl(var(--primary))" strokeWidth="5" strokeLinecap="round"
+                      strokeDasharray={scoreCircumference} strokeDashoffset={scoreOffset}
+                      style={{ transition: "stroke-dashoffset 0.1s linear" }}
+                    />
+                  </svg>
+                  <div>
+                    <span className="text-4xl sm:text-5xl font-bold text-foreground" data-testid="text-score-value">{scoreValue}</span>
+                    <p className="text-sm text-muted-foreground uppercase tracking-wider mt-1">Readiness Score</p>
+                  </div>
+                </div>
+                <span className="inline-flex items-center gap-1.5 text-sm font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-4 py-1.5 rounded-full w-fit">
+                  <Check className="h-4 w-4" /> Strong match — top 15%
+                </span>
+              </div>
+
+              <div className="p-6 sm:p-8 border-t sm:border-t-0 sm:border-l border-border/30">
+                <div className="mb-5" data-testid="panel-career-bars">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Compass className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                    <span className="text-base font-semibold text-foreground">Career Paths</span>
+                  </div>
+                  <div className="space-y-3">
+                    {careerPaths.map((path, i) => (
+                      <div key={path.name}>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-sm text-muted-foreground">{path.name}</span>
+                          <span className="text-sm font-bold text-foreground">{barWidths[i]}%</span>
+                        </div>
+                        <div className="h-2 bg-muted/50 rounded-full overflow-hidden">
+                          <div className={`h-full rounded-full ${path.color} transition-all duration-700 ease-out`}
+                            style={{ width: `${barWidths[i]}%` }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className={`border-t border-border/30 pt-4 mb-4 transition-all duration-500 ${showSkills ? "opacity-100" : "opacity-0"}`} data-testid="panel-skill-gaps">
+                  <div className="flex items-center gap-2 mb-3">
+                    <TrendingUp className="h-4 w-4 text-rose-500" />
+                    <span className="text-sm font-semibold text-foreground">Skills to Build</span>
+                  </div>
+                  <div className="space-y-2">
+                    {skillGaps.map((skill) => (
+                      <div key={skill} className="flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0" />
+                        <span className="text-sm text-muted-foreground">{skill}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className={`transition-all duration-500 ${showPlan ? "opacity-100" : "opacity-0"}`} data-testid="panel-roadmap">
+                  <a href="/diagnostic" className="inline-flex items-center gap-2 text-sm text-primary hover:underline font-medium" data-testid="link-roadmap-plan">
+                    See your 30-day plan
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </a>
+                </div>
               </div>
             </div>
           </div>
@@ -799,18 +801,18 @@ function MarketIntelShowcase({ stats, marketPulse, density }: { stats?: Stats; m
   const fadeRef = useFadeInOnScroll();
 
   return (
-    <section className="bg-primary/[0.02] dark:bg-primary/[0.04]" data-testid="section-market-intel-showcase">
+    <section className="bg-slate-900 dark:bg-slate-800" data-testid="section-market-intel-showcase">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-16 sm:py-24">
         <div ref={fadeRef} className="scroll-fade-in text-center mb-10 sm:mb-14">
-          <p className="text-xs uppercase tracking-[0.2em] text-blue-600 dark:text-blue-400 font-semibold mb-3">Market Intelligence</p>
-          <h2 className="text-2xl sm:text-4xl font-serif font-semibold text-foreground" data-testid="text-market-heading">
+          <p className="text-xs uppercase tracking-[0.2em] text-blue-400 font-semibold mb-3">Market Intelligence</p>
+          <h2 className="text-2xl sm:text-4xl font-serif font-semibold text-white" data-testid="text-market-heading">
             See the market before you move
           </h2>
-          <p className="text-sm sm:text-base text-muted-foreground mt-3 max-w-lg mx-auto leading-relaxed">
+          <p className="text-sm sm:text-base text-slate-400 mt-3 max-w-lg mx-auto leading-relaxed">
             Real-time hiring data from {totalCompanies}+ companies across {countriesCount} countries.
           </p>
           <div className="mt-6">
-            <Button size="lg" variant="outline" asChild data-testid="button-market-cta">
+            <Button size="lg" variant="outline" className="border-white/20 text-white hover:bg-white/10 hover:text-white" asChild data-testid="button-market-cta">
               <a href="/market-intelligence">
                 Explore Market Data
                 <ArrowRight className="ml-2 h-4 w-4" />
@@ -824,28 +826,28 @@ function MarketIntelShowcase({ stats, marketPulse, density }: { stats?: Stats; m
           className={`grid grid-cols-1 sm:grid-cols-12 gap-5 transition-all duration-700 ${visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}
           data-testid="market-composition"
         >
-          <div className="sm:col-span-7 rounded-xl border border-blue-500/15 bg-card shadow-xl overflow-hidden" data-testid="panel-market-dashboard">
+          <div className="sm:col-span-7 rounded-xl border border-white/10 bg-white/[0.07] backdrop-blur-sm shadow-xl overflow-hidden" data-testid="panel-market-dashboard">
             <div className="p-6 sm:p-8">
-              <div className="flex items-center gap-3 sm:gap-8 mb-6 pb-6 border-b border-border/30">
+              <div className="flex items-center gap-3 sm:gap-8 mb-6 pb-6 border-b border-white/10">
                 {[
                   { value: counterValues[0], label: "Roles", icon: Briefcase },
                   { value: counterValues[1], label: "Companies", icon: Building2 },
                   { value: counterValues[2], label: "Countries", icon: Globe },
                 ].map(stat => (
                   <div key={stat.label} className="flex items-center gap-2 sm:gap-3">
-                    <stat.icon className="h-5 w-5 text-blue-600 dark:text-blue-400 shrink-0 hidden sm:block" />
+                    <stat.icon className="h-5 w-5 text-blue-400 shrink-0 hidden sm:block" />
                     <div>
-                      <span className="text-2xl sm:text-3xl font-bold text-foreground" data-testid={`text-counter-${stat.label.toLowerCase()}`}>{stat.value}+</span>
-                      <p className="text-sm text-muted-foreground uppercase tracking-wider">{stat.label}</p>
+                      <span className="text-2xl sm:text-3xl font-bold text-white" data-testid={`text-counter-${stat.label.toLowerCase()}`}>{stat.value}+</span>
+                      <p className="text-sm text-slate-400 uppercase tracking-wider">{stat.label}</p>
                     </div>
                   </div>
                 ))}
               </div>
 
-              <div className="flex flex-col sm:flex-row sm:items-start gap-6 sm:gap-8 mb-6 pb-6 border-b border-border/30" data-testid="panel-donut">
+              <div className="flex flex-col sm:flex-row sm:items-start gap-6 sm:gap-8 mb-6 pb-6 border-b border-white/10" data-testid="panel-donut">
                 <div className="relative shrink-0 mx-auto sm:mx-0">
                   <svg width="110" height="110" viewBox="0 0 80 80" className="sm:w-[120px] sm:h-[120px]">
-                    <circle cx="40" cy="40" r={donutR} fill="none" stroke="hsl(var(--muted))" strokeWidth="6" opacity="0.2" />
+                    <circle cx="40" cy="40" r={donutR} fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="6" />
                     {donutData.map((seg, i) => (
                       <circle key={seg.label} cx="40" cy="40" r={donutR} fill="none" stroke={seg.color} strokeWidth="6"
                         strokeDasharray={`${seg.dashLen} ${donutCirc - seg.dashLen}`}
@@ -863,17 +865,17 @@ function MarketIntelShowcase({ stats, marketPulse, density }: { stats?: Stats; m
                     ))}
                   </svg>
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="text-2xl sm:text-3xl font-bold text-foreground" data-testid="text-donut-count">{donutJobCount}</span>
-                    <span className="text-sm text-muted-foreground">Roles</span>
+                    <span className="text-2xl sm:text-3xl font-bold text-white" data-testid="text-donut-count">{donutJobCount}</span>
+                    <span className="text-sm text-slate-400">Roles</span>
                   </div>
                 </div>
                 <div className="space-y-2.5 flex-1">
-                  <p className="text-sm font-semibold text-foreground mb-3">Work Mode</p>
+                  <p className="text-sm font-semibold text-white mb-3">Work Mode</p>
                   {donutData.map(seg => (
                     <div key={seg.label} className="flex items-center gap-2.5">
                       <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: seg.color }} />
-                      <span className="text-sm text-muted-foreground flex-1">{seg.label}</span>
-                      <span className="text-sm font-semibold text-foreground">{Math.round(seg.pct * 100)}%</span>
+                      <span className="text-sm text-slate-400 flex-1">{seg.label}</span>
+                      <span className="text-sm font-semibold text-white">{Math.round(seg.pct * 100)}%</span>
                     </div>
                   ))}
                 </div>
@@ -881,8 +883,8 @@ function MarketIntelShowcase({ stats, marketPulse, density }: { stats?: Stats; m
 
               <div className={`transition-all duration-500 ${showBars ? "opacity-100" : "opacity-0"}`} data-testid="panel-category-bars">
                 <div className="flex items-center gap-2 mb-4">
-                  <BarChart3 className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                  <span className="text-sm font-semibold text-foreground">Top Career Paths</span>
+                  <BarChart3 className="h-4 w-4 text-blue-400" />
+                  <span className="text-sm font-semibold text-white">Top Career Paths</span>
                 </div>
                 <div className="space-y-3">
                   {categoryCounts.map(([cat, count]) => {
@@ -890,10 +892,10 @@ function MarketIntelShowcase({ stats, marketPulse, density }: { stats?: Stats; m
                     return (
                       <div key={cat as string}>
                         <div className="flex items-center justify-between mb-1">
-                          <span className="text-sm text-muted-foreground">{shortName}</span>
-                          <span className="text-sm font-bold text-foreground">{count as number}</span>
+                          <span className="text-sm text-slate-400">{shortName}</span>
+                          <span className="text-sm font-bold text-white">{count as number}</span>
                         </div>
-                        <div className="h-2 bg-muted/40 rounded-full overflow-hidden">
+                        <div className="h-2 bg-white/10 rounded-full overflow-hidden">
                           <div className="h-full rounded-full bg-gradient-to-r from-blue-500 to-blue-400 transition-all duration-700 ease-out"
                             style={{ width: showBars ? `${((count as number) / maxCatCount) * 100}%` : "0%" }}
                           />
@@ -906,59 +908,59 @@ function MarketIntelShowcase({ stats, marketPulse, density }: { stats?: Stats; m
             </div>
           </div>
 
-          <div className={`sm:col-span-5 rounded-xl border border-border/30 bg-card shadow-lg overflow-hidden transition-all duration-500 ${showSignals ? "opacity-100 translate-x-0" : "opacity-0 translate-x-4"}`} data-testid="panel-live-signals">
+          <div className={`sm:col-span-5 rounded-xl border border-white/[0.08] bg-white/[0.05] backdrop-blur-sm shadow-lg overflow-hidden transition-all duration-500 ${showSignals ? "opacity-100 translate-x-0" : "opacity-0 translate-x-4"}`} data-testid="panel-live-signals">
             <div className="p-6 sm:p-8">
               <div className="flex items-center gap-2 mb-6">
-                <Zap className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-                <span className="text-sm font-semibold text-foreground">Live Signals</span>
-                <span className="ml-auto inline-flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-sm font-medium text-amber-700 dark:text-amber-300" data-testid="panel-new-this-week">
+                <Zap className="h-4 w-4 text-amber-400" />
+                <span className="text-sm font-semibold text-white">Live Signals</span>
+                <span className="ml-auto inline-flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/15 px-2.5 py-1 text-sm font-medium text-amber-300" data-testid="panel-new-this-week">
                   {newThisWeek} new this week
                 </span>
               </div>
 
-              <div className="mb-6 pb-6 border-b border-border/30" data-testid="panel-top-hiring">
+              <div className="mb-6 pb-6 border-b border-white/10" data-testid="panel-top-hiring">
                 <div className="flex items-center gap-2 mb-3">
-                  <Building2 className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                  <span className="text-sm font-semibold text-foreground">Top Hiring</span>
+                  <Building2 className="h-4 w-4 text-blue-400" />
+                  <span className="text-sm font-semibold text-white">Top Hiring</span>
                 </div>
                 <div className="space-y-2.5">
                   {topHiring.map((company) => (
                     <div key={company.name} className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">{company.name}</span>
-                      <span className="text-sm text-blue-600 dark:text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded font-semibold">{company.count}</span>
+                      <span className="text-sm text-slate-300">{company.name}</span>
+                      <span className="text-sm text-blue-400 bg-blue-500/15 px-2 py-0.5 rounded font-semibold">{company.count}</span>
                     </div>
                   ))}
                 </div>
               </div>
 
-              <div className="mb-6 pb-6 border-b border-border/30" data-testid="panel-trending">
+              <div className="mb-6 pb-6 border-b border-white/10" data-testid="panel-trending">
                 <div className="flex items-center gap-2 mb-3">
-                  <TrendingUp className="h-4 w-4 text-emerald-500" />
-                  <span className="text-sm font-semibold text-foreground">Trending</span>
+                  <TrendingUp className="h-4 w-4 text-emerald-400" />
+                  <span className="text-sm font-semibold text-white">Trending</span>
                 </div>
-                <span className="inline-block text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-500/10 px-3 py-1.5 rounded-lg" data-testid="text-trending-skill">
+                <span className="inline-block text-sm font-medium text-blue-300 bg-blue-500/15 px-3 py-1.5 rounded-lg" data-testid="text-trending-skill">
                   {trendingSkill.length > 30 ? trendingSkill.slice(0, 30) + "…" : trendingSkill}
                 </span>
                 <div className="mt-2 space-y-1">
                   {["Contract Automation ↑", "Legal Analytics ↑"].map((s) => (
-                    <span key={s} className="block text-sm text-muted-foreground">{s}</span>
+                    <span key={s} className="block text-sm text-slate-400">{s}</span>
                   ))}
                 </div>
               </div>
 
               <div data-testid="panel-geography">
                 <div className="flex items-center gap-2 mb-2">
-                  <Globe className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                  <span className="text-sm font-semibold text-foreground">Coverage</span>
+                  <Globe className="h-4 w-4 text-blue-400" />
+                  <span className="text-sm font-semibold text-white">Coverage</span>
                 </div>
                 <div className="flex items-baseline gap-4">
                   <div>
-                    <span className="text-2xl font-bold text-foreground">{countriesCount}</span>
-                    <span className="text-sm text-muted-foreground ml-1">Countries</span>
+                    <span className="text-2xl font-bold text-white">{countriesCount}</span>
+                    <span className="text-sm text-slate-400 ml-1">Countries</span>
                   </div>
                   <div>
-                    <span className="text-2xl font-bold text-foreground">{remoteShare}%</span>
-                    <span className="text-sm text-muted-foreground ml-1">Remote</span>
+                    <span className="text-2xl font-bold text-white">{remoteShare}%</span>
+                    <span className="text-sm text-slate-400 ml-1">Remote</span>
                   </div>
                 </div>
               </div>
@@ -970,7 +972,7 @@ function MarketIntelShowcase({ stats, marketPulse, density }: { stats?: Stats; m
   );
 }
 
-function JourneySteps() {
+function JourneySteps({ dark = false }: { dark?: boolean }) {
   const fadeRef = useFadeInOnScroll();
   const steps = [
     { icon: User, label: "Profile" },
@@ -985,13 +987,13 @@ function JourneySteps() {
       {steps.map((step, i) => (
         <div key={step.label} className="flex items-center gap-1 sm:gap-2">
           <div className="flex flex-col items-center gap-1">
-            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-border/50 bg-card flex items-center justify-center shadow-sm">
-              <step.icon className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary" />
+            <div className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full border flex items-center justify-center ${dark ? "border-white/20 bg-white/10" : "border-border/50 bg-card shadow-sm"}`}>
+              <step.icon className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${dark ? "text-white/80" : "text-primary"}`} />
             </div>
-            <span className="text-[9px] sm:text-[10px] text-muted-foreground font-medium">{step.label}</span>
+            <span className={`text-[9px] sm:text-[10px] font-medium ${dark ? "text-white/60" : "text-muted-foreground"}`}>{step.label}</span>
           </div>
           {i < steps.length - 1 && (
-            <div className="w-4 sm:w-8 h-px bg-border/60 mb-4" />
+            <div className={`w-4 sm:w-8 h-px mb-4 ${dark ? "bg-white/20" : "bg-border/60"}`} />
           )}
         </div>
       ))}
@@ -1124,14 +1126,8 @@ export default function Landing() {
         <MarketIntelShowcase stats={stats} marketPulse={marketPulse} density={density} />
 
         {topCompanies.length > 4 && (
-          <section className="border-t border-border/30" data-testid="section-top-companies">
-            <div ref={marqueeFadeRef} className="scroll-fade-in py-12 sm:py-16">
-              <div className="text-center mb-8">
-                <h2 className="text-lg sm:text-2xl font-serif font-medium text-foreground">
-                  Who's hiring in legal tech
-                </h2>
-              </div>
-
+          <section data-testid="section-top-companies">
+            <div ref={marqueeFadeRef} className="scroll-fade-in py-8 sm:py-12">
               <div className="space-y-4">
                 <div className="relative overflow-hidden marquee-hover-pause">
                   <div className="absolute left-0 top-0 bottom-0 w-16 sm:w-20 z-10 bg-gradient-to-r from-background to-transparent pointer-events-none" />
@@ -1215,20 +1211,20 @@ export default function Landing() {
           </section>
         )}
 
-        <section ref={ctaFadeRef} className="scroll-fade-in border-t border-border/30 dot-grid-bg">
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-12 sm:py-16">
+        <section ref={ctaFadeRef} className="scroll-fade-in bg-slate-900 dark:bg-slate-900">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-14 sm:py-20">
             <div className="text-center space-y-5" data-testid="final-cta-section">
-              <h2 className="text-xl sm:text-3xl font-serif font-medium text-foreground">
+              <h2 className="text-xl sm:text-3xl font-serif font-medium text-white">
                 Ready to start your journey?
               </h2>
-              <JourneySteps />
-              <Button size="lg" asChild data-testid="button-final-cta">
+              <JourneySteps dark />
+              <Button size="lg" className="bg-white text-slate-900 hover:bg-white/90" asChild data-testid="button-final-cta">
                 <a href="/diagnostic">
                   Check Your Fit
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </a>
               </Button>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-sm text-white/60">
                 It takes 60 seconds. No account needed.
               </p>
             </div>
