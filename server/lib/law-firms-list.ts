@@ -25,6 +25,10 @@ export interface LawFirmConfig {
   workableId?: string;
   smartrecruitersId?: string;
   bamboohrId?: string;
+  virecruit?: {
+    url: string;
+    tag: string;
+  };
   selectors?: {
     jobList?: string;
     title?: string;
@@ -693,6 +697,7 @@ export const LAW_FIRMS_AND_COMPANIES: LawFirmConfig[] = [
     name: 'Husch Blackwell',
     careerUrl: 'https://recruiting2.ultipro.com/HUS1001HUSCH/JobBoard/b6637591-8c8d-49b8-b093-5524b203b157',
     ultipro: { companyCode: 'HUS1001HUSCH', boardId: 'b6637591-8c8d-49b8-b093-5524b203b157' },
+    virecruit: { url: 'https://huschblackwellcareers.viglobalcloud.com/viRecruitSelfApply/RecDefault.aspx', tag: '9492488a-838b-4304-84ac-fd459e557f61' },
     type: 'biglaw',
   },
 

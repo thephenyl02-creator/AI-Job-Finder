@@ -902,68 +902,39 @@ async function scrapeICIMSSearchApi(icimsSlug: string, companyName: string): Pro
 
   for (const baseUrl of baseUrls) {
     try {
-      const searchUrl = `${baseUrl}/jobs/search?ss=1&searchRelation=keyword_all&mobile=false&width=1140&height=500&bga=true&needsRedirect=false&jan1offset=-300&jun1offset=-240`;
-      const response = await fetchWithRetry(searchUrl, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json, text/html, */*',
-          'X-Requested-With': 'XMLHttpRequest',
-        },
-      });
+      const allJobs: ScrapedJob[] = [];
+      const seenUrls = new Set<string>();
+      const maxPages = 5;
 
-      const data = response.data;
-      const jobs: ScrapedJob[] = [];
+      for (let page = 0; page < maxPages; page++) {
+        const pr = page * 50;
+        const searchUrl = `${baseUrl}/jobs/search?pr=${pr}&searchRelation=keyword_all&in_iframe=1`;
+        const response = await fetchWithRetry(searchUrl, {
+          method: 'GET',
+          headers: {
+            'Accept': 'text/html, */*',
+            'X-Requested-With': 'XMLHttpRequest',
+          },
+        });
 
-      if (typeof data === 'object' && data !== null) {
-        const jobList = data.jobPositionPostings || data.jobs || data.results || data.data || [];
-        const items = Array.isArray(jobList) ? jobList : (Array.isArray(data) ? data : []);
+        const data = response.data;
+        if (typeof data !== 'string' || !data.includes('<')) break;
 
-        for (const job of items) {
-          const title = job.title || job.Title || job.jobTitle || job.position || '';
-          if (!title || title.length < 3) continue;
-
-          const jobId = job.id || job.Id || job.jobId || job.requisitionId || '';
-          let applyUrl = job.url || job.applyUrl || job.link || job.jobUrl || '';
-          if (!applyUrl && jobId) {
-            applyUrl = `${baseUrl}/jobs/${jobId}/job`;
-          }
-          if (applyUrl && !applyUrl.startsWith('http')) {
-            applyUrl = baseUrl + (applyUrl.startsWith('/') ? '' : '/') + applyUrl;
-          }
-
-          const location = job.location || job.Location || job.city || job.normalizedLocation || '';
-          const locationType = detectLocationType(location + ' ' + title);
-          const postedDate = job.postedDate || job.datePosted || job.postingDate || job.createdDate || new Date().toISOString();
-          const description = job.description || job.jobDescription || job.summary || '';
-
-          jobs.push({
-            title,
-            company: companyName,
-            location: location || 'Not specified',
-            description,
-            applyUrl,
-            postedDate,
-            source: 'icims',
-            externalId: `icims_${icimsSlug}_${jobId || jobs.length}`,
-            locationType,
-            department: job.department || job.category || undefined,
-          });
-        }
-
-        if (jobs.length > 0) return jobs;
-      }
-
-      if (typeof data === 'string' && data.includes('<')) {
         const $ = cheerio.load(data);
-        const seenUrls = new Set<string>();
+        const pageJobs: ScrapedJob[] = [];
 
-        $('a[href*="/jobs/"]').each((i, el) => {
+        $('a[href*="/jobs/"]').each((_i, el) => {
           const $el = $(el);
           let href = $el.attr('href') || '';
-          const title = $el.text().trim();
+
+          if (/login|sign|apply|reset/i.test(href)) return;
+
+          const h3Text = $el.find('h3, h2, h4').first().text().trim();
+          const rawText = $el.text().trim();
+          const title = h3Text || rawText.replace(/^Title\s*/i, '').trim();
 
           if (!title || title.length < 3 || title.length > 200) return;
-          if (/search|login|sign|apply|reset/i.test(title)) return;
+          if (/search|login|sign|apply|reset|back|view all|log back/i.test(title)) return;
 
           if (href.startsWith('/')) {
             href = baseUrl + href;
@@ -971,22 +942,31 @@ async function scrapeICIMSSearchApi(icimsSlug: string, companyName: string): Pro
             href = baseUrl + '/' + href;
           }
 
-          if (seenUrls.has(href)) return;
-          seenUrls.add(href);
+          const cleanUrl = href.replace(/[?&]in_iframe=1/g, '').replace(/\?$/, '');
+          if (seenUrls.has(cleanUrl)) return;
+          seenUrls.add(cleanUrl);
 
           const jobIdMatch = href.match(/\/jobs\/(\d+)/);
-          const jobId = jobIdMatch ? jobIdMatch[1] : String(i);
+          const jobId = jobIdMatch ? jobIdMatch[1] : '';
+          if (!jobId) return;
 
-          const locationEl = $el.closest('tr, .row, [class*="row"], div').find('[class*="location"], [class*="Location"]');
-          const location = locationEl.text().trim() || '';
+          const row = $el.closest('.col-xs-12, tr, .iCIMS_JobListingRow, [class*="row"]');
+          const additionalFields = row.siblings('.additionalFields').text().trim();
+          let location = '';
+          if (additionalFields) {
+            const locMatch = additionalFields.match(/Location\s*:?\s*(?:Location\s*)?([A-Z]{2}-[A-Z]{2}-[^\s].*?)(?:\s+(?:Additional|Department|Work|Post|Category|Position)\b|$)/i);
+            if (locMatch) {
+              location = locMatch[1].replace(/^US-\w{2}-/, '').trim();
+            }
+          }
           const locationType = detectLocationType(location + ' ' + title);
 
-          jobs.push({
+          pageJobs.push({
             title,
             company: companyName,
             location: location || 'Not specified',
             description: '',
-            applyUrl: href,
+            applyUrl: cleanUrl,
             postedDate: new Date().toISOString(),
             source: 'icims',
             externalId: `icims_${icimsSlug}_${jobId}`,
@@ -994,7 +974,15 @@ async function scrapeICIMSSearchApi(icimsSlug: string, companyName: string): Pro
           });
         });
 
-        if (jobs.length > 0) return jobs;
+        if (pageJobs.length === 0) break;
+        allJobs.push(...pageJobs);
+
+        if (page < maxPages - 1) await delay(500);
+      }
+
+      if (allJobs.length > 0) {
+        const jobsWithDescs = await fetchICIMSDescriptions(baseUrl, allJobs);
+        return jobsWithDescs;
       }
     } catch {
       continue;
@@ -1002,6 +990,79 @@ async function scrapeICIMSSearchApi(icimsSlug: string, companyName: string): Pro
   }
 
   return [];
+}
+
+async function fetchICIMSDescriptions(baseUrl: string, jobs: ScrapedJob[]): Promise<ScrapedJob[]> {
+  const maxFetch = 60;
+  const toFetch = jobs.slice(0, maxFetch);
+
+  for (const job of toFetch) {
+    try {
+      const jobIdMatch = job.applyUrl.match(/\/jobs\/(\d+)/);
+      if (!jobIdMatch) continue;
+      const jobId = jobIdMatch[1];
+      const detailUrl = `${baseUrl}/jobs/${jobId}/job?in_iframe=1`;
+
+      const resp = await fetchWithRetry(detailUrl, {
+        method: 'GET',
+        headers: { 'Accept': 'text/html, */*' },
+        timeout: 10000,
+      }, 1);
+
+      const html = typeof resp.data === 'string' ? resp.data : '';
+      if (!html) continue;
+
+      const $ = cheerio.load(html);
+
+      const descParts: string[] = [];
+      $('.iCIMS_InfoMsg_Job').each((_i, el) => {
+        const text = $(el).text().trim();
+        if (text.length > 10) descParts.push(text);
+      });
+      if (descParts.length === 0) {
+        const content = $('.iCIMS_JobContent').text().trim();
+        if (content.length > 50) descParts.push(content);
+      }
+
+      if (descParts.length > 0) {
+        job.description = descParts.join('\n\n')
+          .replace(/\n{3,}/g, '\n\n')
+          .replace(/[ \t]+/g, ' ')
+          .trim();
+      }
+
+      const headerData: Record<string, string> = {};
+      let currentLabel = '';
+      $('.iCIMS_JobHeaderField').each((_i, el) => {
+        const fieldText = $(el).text().trim();
+        const labelMatch = fieldText.match(/^(Location|Department|Work Arrangement|Position Type|Posted (?:Min|Max) Pay Rate|Job ID)\s*:?\s*/i);
+        if (labelMatch) {
+          currentLabel = labelMatch[1].toLowerCase();
+          const val = fieldText.slice(labelMatch[0].length).replace(/^Location\s*/i, '').trim();
+          if (val) headerData[currentLabel] = val;
+        }
+      });
+
+      if (headerData['location'] && (!job.location || job.location === 'Not specified')) {
+        const loc = headerData['location'].replace(/^US-\w{2}-/, '').trim();
+        if (loc.length > 2) {
+          job.location = loc;
+          job.locationType = detectLocationType(loc + ' ' + job.title);
+        }
+      }
+
+      const allText = job.description + ' ' + Object.values(headerData).join(' ');
+      const salary = parseSalaryFromText(allText);
+      if (salary.min) job.salaryMin = salary.min;
+      if (salary.max) job.salaryMax = salary.max;
+
+      await delay(200);
+    } catch {
+      continue;
+    }
+  }
+
+  return jobs;
 }
 
 async function scrapeICIMSFeed(icimsSlug: string, companyName: string): Promise<ScrapedJob[]> {
@@ -1021,6 +1082,7 @@ async function scrapeICIMSFeed(icimsSlug: string, companyName: string): Promise<
 
       const xmlData = typeof response.data === 'string' ? response.data : '';
       if (!xmlData || !xmlData.includes('<')) continue;
+      if (!xmlData.includes('<item') && !xmlData.includes('<entry')) continue;
 
       const $ = cheerio.load(xmlData, { xmlMode: true });
       const jobs: ScrapedJob[] = [];
@@ -1039,6 +1101,8 @@ async function scrapeICIMSFeed(icimsSlug: string, companyName: string): Promise<
           link = baseUrl + (link.startsWith('/') ? '' : '/') + link;
         }
 
+        const cleanUrl = link.replace(/[?&]in_iframe=1/g, '').replace(/\?$/, '');
+
         const description = $item.find('description').text().trim();
         const pubDate = $item.find('pubDate').text().trim();
         const category = $item.find('category').text().trim();
@@ -1047,7 +1111,7 @@ async function scrapeICIMSFeed(icimsSlug: string, companyName: string): Promise<
         const location = locationMatch ? locationMatch[1].trim() : '';
         const locationType = detectLocationType(location + ' ' + title + ' ' + description);
 
-        const jobIdMatch = link.match(/\/jobs\/(\d+)/);
+        const jobIdMatch = cleanUrl.match(/\/jobs\/(\d+)/);
         const jobId = jobIdMatch ? jobIdMatch[1] : String(i);
 
         const salary = parseSalaryFromText(description);
@@ -1057,7 +1121,7 @@ async function scrapeICIMSFeed(icimsSlug: string, companyName: string): Promise<
           company: companyName,
           location: location || 'Not specified',
           description,
-          applyUrl: link,
+          applyUrl: cleanUrl,
           postedDate: pubDate ? new Date(pubDate).toISOString() : new Date().toISOString(),
           source: 'icims',
           externalId: `icims_${icimsSlug}_${jobId}`,
@@ -1322,8 +1386,10 @@ export async function scrapeUltiPro(companyCode: string, boardId: string, compan
         const locationText = locations.map((l: any) => {
           const addr = l.Address;
           if (!addr) return l.LocalizedDescription || '';
-          return [addr.City, addr.State?.Code, addr.Country?.Name].filter(Boolean).join(', ');
-        }).join(' | ') || '';
+          return [addr.City, addr.State?.Code, addr.Country?.Name]
+            .filter(v => v && v !== 'null' && v !== 'undefined')
+            .join(', ');
+        }).filter((s: string) => s.length > 0).join(' | ') || '';
         const category = job.JobCategoryName || '';
         const requisition = job.RequisitionNumber || '';
         const postedDate = job.PostedDate || new Date().toISOString();
@@ -1334,44 +1400,32 @@ export async function scrapeUltiPro(companyCode: string, boardId: string, compan
 
         let description = '';
         try {
-          const detailUrl = `${baseUrl}/JobBoardView/LoadOpportunityDetail`;
-          const detailResp = await fetchWithRetry(detailUrl, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Accept': 'application/json',
-            },
-            data: { opportunityId },
-          });
-          const detail = detailResp.data;
-          description = detail?.Description || detail?.JobDescription || detail?.description || detail?.model?.Description || '';
-          if (description) {
-            description = description
+          const htmlResp = await fetchWithRetry(applyUrl, {
+            method: 'GET',
+            headers: { 'Accept': 'text/html', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
+            timeout: 12000,
+          }, 1);
+          const htmlText = typeof htmlResp.data === 'string' ? htmlResp.data : '';
+          const descMatch = htmlText.match(/class="opportunity-description"[^>]*>([\s\S]*?)<\/div>/i);
+          if (descMatch) {
+            description = descMatch[1]
               .replace(/<[^>]+>/g, '\n')
               .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
               .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, ' ')
               .replace(/\n{3,}/g, '\n\n').replace(/[ \t]+/g, ' ').trim();
           }
-        } catch {
-        }
-
-        if (!description) {
-          try {
-            const htmlResp = await fetchWithRetry(applyUrl, {
-              method: 'GET',
-              headers: { 'Accept': 'text/html', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
-            });
-            const htmlText = typeof htmlResp.data === 'string' ? htmlResp.data : '';
-            const descMatch = htmlText.match(/class="[^"]*(?:job-?description|opportunity-?description|detail-?body)[^"]*"[^>]*>([\s\S]*?)<\/div>/i);
-            if (descMatch) {
-              description = descMatch[1]
+          if (!descMatch) {
+            const jsonMatch = htmlText.match(/"[Dd]escription"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+            if (jsonMatch) {
+              description = jsonMatch[1]
+                .replace(/\\u003c/g, '<').replace(/\\u003e/g, '>').replace(/\\u0026/g, '&')
+                .replace(/\\n/g, '\n').replace(/\\"/g, '"')
                 .replace(/<[^>]+>/g, '\n')
-                .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
-                .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, ' ')
                 .replace(/\n{3,}/g, '\n\n').replace(/[ \t]+/g, ' ').trim();
             }
-          } catch {
           }
+          await delay(300);
+        } catch {
         }
 
         const locationType = detectLocationType(locationText + ' ' + title + ' ' + description);
@@ -1405,6 +1459,83 @@ export async function scrapeUltiPro(companyCode: string, boardId: string, compan
     return allJobs;
   } catch (error: any) {
     logError('ULTIPRO', `Error scraping ${companyName}`, { error: error.message });
+    return [];
+  }
+}
+
+export async function scrapeViRecruit(viRecruitUrl: string, tag: string, companyName: string): Promise<ScrapedJob[]> {
+  try {
+    const pageUrl = `${viRecruitUrl}?Tag=${tag}`;
+    const response = await fetchWithRetry(pageUrl, {
+      method: 'GET',
+      headers: {
+        'Accept': 'text/html',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+      },
+      timeout: 15000,
+    }, 1);
+
+    const html = typeof response.data === 'string' ? response.data : '';
+    if (!html || !html.includes('gridviewList')) return [];
+
+    const $ = cheerio.load(html);
+    const jobs: ScrapedJob[] = [];
+    const seenTitles = new Set<string>();
+
+    $('tr.even-row, tr.odd-row').each((_i, el) => {
+      const $row = $(el);
+      const title = $row.find('h4').first().text().trim();
+      if (!title || title.length < 3) return;
+
+      const titleKey = title.toLowerCase();
+      if (seenTitles.has(titleKey)) return;
+      seenTitles.add(titleKey);
+
+      const location = $row.find('h5:contains("Office") span').text().trim()
+        || $row.find('h5:contains("Location") span').text().trim();
+      const department = $row.find('h5:contains("Practice") span').text().trim()
+        || $row.find('h5:contains("Category") span').text().trim()
+        || $row.find('h5:contains("Department") span').text().trim();
+      const datePosted = $row.find('h5:contains("Date Posted") span').text().trim();
+
+      const summaryText = $row.find('section.summary .summary').text().trim();
+      const descriptionText = $row.find('section.description .description').text().trim();
+      const description = [summaryText, descriptionText].filter(t => t.length > 10).join('\n\n')
+        .replace(/\n{3,}/g, '\n\n').replace(/[ \t]+/g, ' ').trim();
+
+      const locationType = detectLocationType(location + ' ' + title + ' ' + description);
+      const applyUrl = pageUrl;
+      const externalId = `virecruit_${tag.slice(0, 8)}_${titleKey.replace(/[^a-z0-9]+/g, '_').slice(0, 50)}`;
+      const salary = parseSalaryFromText(description);
+
+      let parsedDate = new Date().toISOString();
+      if (datePosted) {
+        try {
+          const d = new Date(datePosted);
+          if (!isNaN(d.getTime())) parsedDate = d.toISOString();
+        } catch {}
+      }
+
+      jobs.push({
+        title,
+        company: companyName,
+        location: location || 'Not specified',
+        description: description || `${title} at ${companyName}`,
+        applyUrl,
+        postedDate: parsedDate,
+        source: 'virecruit',
+        externalId,
+        locationType,
+        department: department || undefined,
+        salaryMin: salary.min,
+        salaryMax: salary.max,
+      });
+    });
+
+    logInfo('VIRECRUIT', `${companyName}: Found ${jobs.length} jobs`);
+    return jobs;
+  } catch (error: any) {
+    logError('VIRECRUIT', `Error scraping ${companyName}`, { error: error.message });
     return [];
   }
 }
@@ -2010,7 +2141,7 @@ export async function scrapeAllLawFirms(): Promise<{
     const batch = LAW_FIRMS_AND_COMPANIES.slice(batchStart, batchStart + BATCH_SIZE);
     const batchResults = await Promise.allSettled(
       batch.map(async (firm) => {
-        const atsType = firm.greenhouseId ? `greenhouse` : firm.leverPostingsUrl ? `lever` : firm.ashbyUrl ? `ashby` : firm.workday ? `workday` : firm.ultipro ? `ultipro` : firm.rippling ? `rippling` : firm.icims ? `icims` : firm.workableId ? `workable` : firm.smartrecruitersId ? `smartrecruiters` : firm.bamboohrId ? `bamboohr` : `generic`;
+        const atsType = firm.greenhouseId ? `greenhouse` : firm.leverPostingsUrl ? `lever` : firm.ashbyUrl ? `ashby` : firm.workday ? `workday` : firm.ultipro ? `ultipro` : firm.virecruit ? `virecruit` : firm.rippling ? `rippling` : firm.icims ? `icims` : firm.workableId ? `workable` : firm.smartrecruitersId ? `smartrecruiters` : firm.bamboohrId ? `bamboohr` : `generic`;
         const circuitKey = `${atsType}:${firm.name}`;
         const companyStart = Date.now();
 
@@ -2038,7 +2169,15 @@ export async function scrapeAllLawFirms(): Promise<{
             } else if (firm.workday) {
               return await scrapeWorkdayMultiRegion(firm.workday, firm.name, firm.type);
             } else if (firm.ultipro) {
-              return await scrapeUltiPro(firm.ultipro.companyCode, firm.ultipro.boardId, firm.name);
+              const ultiproJobs = await scrapeUltiPro(firm.ultipro.companyCode, firm.ultipro.boardId, firm.name);
+              if (firm.virecruit) {
+                const viJobs = await scrapeViRecruit(firm.virecruit.url, firm.virecruit.tag, firm.name);
+                const existingTitles = new Set(ultiproJobs.map(j => j.title.toLowerCase()));
+                return [...ultiproJobs, ...viJobs.filter(j => !existingTitles.has(j.title.toLowerCase()))];
+              }
+              return ultiproJobs;
+            } else if (firm.virecruit) {
+              return await scrapeViRecruit(firm.virecruit.url, firm.virecruit.tag, firm.name);
             } else if (firm.rippling) {
               return await scrapeRippling(firm.rippling, firm.name);
             } else if (firm.icims) {
@@ -2147,6 +2286,7 @@ export async function scrapeAllLawFirms(): Promise<{
           case 'rippling': scrapedJobs = await scrapeRippling(config.company, source.firmName); break;
           case 'workable': scrapedJobs = await scrapeWorkable(config.company, source.firmName); break;
           case 'ultipro': scrapedJobs = await scrapeUltiPro(config.companyCode, config.boardId, source.firmName); break;
+          case 'virecruit': scrapedJobs = await scrapeViRecruit(config.url, config.tag, source.firmName); break;
         }
 
         const firmType = 'biglaw';
@@ -2208,6 +2348,13 @@ export async function scrapeSingleCompany(companyName: string): Promise<InsertJo
     scrapedJobs = await scrapeWorkdayMultiRegion(firm.workday, firm.name, firm.type);
   } else if (firm.ultipro) {
     scrapedJobs = await scrapeUltiPro(firm.ultipro.companyCode, firm.ultipro.boardId, firm.name);
+    if (firm.virecruit) {
+      const viJobs = await scrapeViRecruit(firm.virecruit.url, firm.virecruit.tag, firm.name);
+      const existingTitles = new Set(scrapedJobs.map(j => j.title.toLowerCase()));
+      scrapedJobs = [...scrapedJobs, ...viJobs.filter(j => !existingTitles.has(j.title.toLowerCase()))];
+    }
+  } else if (firm.virecruit) {
+    scrapedJobs = await scrapeViRecruit(firm.virecruit.url, firm.virecruit.tag, firm.name);
   } else if (firm.rippling) {
     scrapedJobs = await scrapeRippling(firm.rippling, firm.name);
   } else if (firm.icims) {
@@ -2260,6 +2407,13 @@ export async function scrapeAllLawFirmsWithAI(
         scrapedJobs = await scrapeWorkdayMultiRegion(firm.workday, firm.name, firm.type);
       } else if (firm.ultipro) {
         scrapedJobs = await scrapeUltiPro(firm.ultipro.companyCode, firm.ultipro.boardId, firm.name);
+        if (firm.virecruit) {
+          const viJobs = await scrapeViRecruit(firm.virecruit.url, firm.virecruit.tag, firm.name);
+          const existingTitles = new Set(scrapedJobs.map(j => j.title.toLowerCase()));
+          scrapedJobs = [...scrapedJobs, ...viJobs.filter(j => !existingTitles.has(j.title.toLowerCase()))];
+        }
+      } else if (firm.virecruit) {
+        scrapedJobs = await scrapeViRecruit(firm.virecruit.url, firm.virecruit.tag, firm.name);
       } else if (firm.rippling) {
         scrapedJobs = await scrapeRippling(firm.rippling, firm.name);
       } else if (firm.icims) {
@@ -2320,7 +2474,7 @@ export async function scrapeAllLawFirmsWithAI(
   return { jobs: allJobs, stats };
 }
 
-type ATSPlatform = 'greenhouse' | 'lever' | 'ashby' | 'workday' | 'smartrecruiters' | 'icims' | 'bamboohr' | 'rippling' | 'jazzhr' | 'recruitee' | 'breezy' | 'linkedin' | 'indeed' | 'myworkdayjobs' | 'applytojob' | 'jobvite' | 'dover' | 'personio' | 'workable' | 'ultipro' | 'generic';
+type ATSPlatform = 'greenhouse' | 'lever' | 'ashby' | 'workday' | 'smartrecruiters' | 'icims' | 'bamboohr' | 'rippling' | 'jazzhr' | 'recruitee' | 'breezy' | 'linkedin' | 'indeed' | 'myworkdayjobs' | 'applytojob' | 'jobvite' | 'dover' | 'personio' | 'workable' | 'ultipro' | 'virecruit' | 'generic';
 
 function detectATSPlatform(url: string): ATSPlatform {
   const hostname = new URL(url).hostname.toLowerCase();
@@ -2345,6 +2499,7 @@ function detectATSPlatform(url: string): ATSPlatform {
   if (hostname.includes('dover.com') || hostname.includes('app.dover.io')) return 'dover';
   if (hostname.includes('personio.de') || hostname.includes('jobs.personio.de')) return 'personio';
   if (hostname.includes('ultipro.com') || hostname.includes('recruiting2.ultipro.com')) return 'ultipro';
+  if (hostname.includes('viglobalcloud.com') || hostname.includes('virecruit')) return 'virecruit';
 
   return 'generic';
 }
