@@ -15,6 +15,8 @@ import { AdminHeader } from "@/components/admin-header";
 import { apiRequest, queryClient, invalidateJobRelatedQueries } from "@/lib/queryClient";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
+const DANGEROUS_REVIEW_CODES = ['GARBAGE_DESCRIPTION', 'BROKEN_APPLY_LINK', 'AUDIT_TITLE_REJECT', 'AUDIT_COMPANY_REJECT', 'HARD_REJECT', 'NON_ENGLISH', 'GENERIC_APPLY_URL', 'LOW_QUALITY_SCRAPE', 'ARTICLE_TITLE', 'AUDIT_DUPLICATE'];
+
 interface QAItem {
   code: string;
   field: string;
@@ -500,7 +502,7 @@ export default function AdminReview() {
                           <Eye className="w-4 h-4" />
                         </Button>
                       </Link>
-                      {job.qa.qaStatus === "passed" && (
+                      {job.qa.qaStatus === "passed" && !DANGEROUS_REVIEW_CODES.includes(job.reviewReasonCode || '') && (
                         <Button
                           size="sm"
                           onClick={() => publishSingleMutation.mutate(job.id)}
@@ -511,10 +513,11 @@ export default function AdminReview() {
                           Publish
                         </Button>
                       )}
-                      {(job.qa.qaStatus === "needs_review" || job.qa.qaStatus === "failed") && (
+                      {(job.qa.qaStatus === "needs_review" || job.qa.qaStatus === "failed" || DANGEROUS_REVIEW_CODES.includes(job.reviewReasonCode || '')) && (
                         <Button
                           size="sm"
                           variant="outline"
+                          className={DANGEROUS_REVIEW_CODES.includes(job.reviewReasonCode || '') ? 'border-amber-500 text-amber-700 hover:bg-amber-50' : ''}
                           onClick={() => forcePublishMutation.mutate(job.id)}
                           disabled={forcePublishMutation.isPending}
                           data-testid={`button-force-publish-${job.id}`}

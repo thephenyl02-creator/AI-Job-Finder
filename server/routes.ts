@@ -4814,6 +4814,13 @@ Rules:
         }
       }
 
+      if (forceOverride) {
+        await storage.updateJobWorkerFields(id, {
+          reviewReasonCode: null,
+          reviewStatus: 'admin_approved',
+        });
+      }
+
       const updated = await storage.publishJob(id);
       clearAllStatsCaches();
       clearDisplayStats();
@@ -5160,6 +5167,7 @@ Rules:
         lawyerFirstScore: qaResult.lawyerFirstScore,
         qaExcludeReason: qaResult.excludeReason,
         qaCheckedAt: new Date(),
+        ...(forceOverride ? { reviewReasonCode: null, reviewStatus: 'admin_approved' } : {}),
       } as any);
 
       clearAllStatsCaches();
