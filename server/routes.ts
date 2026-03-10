@@ -4633,8 +4633,18 @@ Rules:
             const desc = (job.description || '').trim();
             if (desc.length < 100 || desc.includes('Skip to main content')) { skipped++; continue; }
           }
-          await storage.publishJob(job.id);
-          published++;
+          try {
+            await storage.publishJob(job.id, { force: forceOverride });
+            published++;
+          } catch (e: any) {
+            const msg = e?.message || '';
+            if (msg.includes('Relevance score') || msg.includes('No role category')) {
+              skipped++;
+            } else {
+              console.error(`[BulkPublish] Unexpected error for job ${job.id}:`, msg);
+              skipped++;
+            }
+          }
         }
       }
       clearAllStatsCaches();
@@ -4821,11 +4831,15 @@ Rules:
         });
       }
 
-      const updated = await storage.publishJob(id);
+      const updated = await storage.publishJob(id, { force: forceOverride });
       clearAllStatsCaches();
       clearDisplayStats();
       res.json({ job: updated });
-    } catch (error) {
+    } catch (error: any) {
+      const msg = error?.message || '';
+      if (msg.includes('Relevance score') || msg.includes('No role category')) {
+        return res.status(400).json({ error: msg, warning: 'PUBLISH_GUARD_BLOCKED' });
+      }
       console.error("Error publishing job:", error);
       res.status(500).json({ error: "Failed to publish job" });
     }

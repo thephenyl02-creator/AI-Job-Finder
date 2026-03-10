@@ -27,7 +27,7 @@ export interface IStorage {
   getPublishedJobs(): Promise<Job[]>;
   getPublishedJobsPaginated(page: number, limit: number, filters?: { category?: string; location?: string; locationType?: string; search?: string; seniority?: string; sort?: string; track?: string }): Promise<{ jobs: Job[]; total: number; page: number; totalPages: number }>;
   getJobsForStandardization(status?: string): Promise<Job[]>;
-  publishJob(id: number): Promise<Job | undefined>;
+  publishJob(id: number, options?: { force?: boolean }): Promise<Job | undefined>;
   unpublishJob(id: number): Promise<Job | undefined>;
   updateStructuredStatus(id: number, status: string, structuredDescription?: any): Promise<Job | undefined>;
   // User Resume
@@ -459,18 +459,18 @@ class DatabaseStorage implements IStorage {
       .orderBy(desc(jobs.postedDate));
   }
 
-  async publishJob(id: number): Promise<Job | undefined> {
+  async publishJob(id: number, options?: { force?: boolean }): Promise<Job | undefined> {
     const [existing] = await db.select().from(jobs).where(eq(jobs.id, id));
     if (!existing) return undefined;
 
-    const { minRelevance } = getCompanyQualityThresholds(existing.company ?? '');
-    if ((existing.legalRelevanceScore ?? 0) < minRelevance) {
-      console.warn(`[PublishGuard] Blocked publish for job ${id}: relevance ${existing.legalRelevanceScore} < ${minRelevance} (company: ${existing.company})`);
-      return existing;
-    }
-    if (!existing.roleCategory) {
-      console.warn(`[PublishGuard] Blocked publish for job ${id}: no roleCategory assigned`);
-      return existing;
+    if (!options?.force) {
+      const { minRelevance } = getCompanyQualityThresholds(existing.company ?? '');
+      if ((existing.legalRelevanceScore ?? 0) < minRelevance) {
+        throw new Error(`Relevance score ${existing.legalRelevanceScore ?? 0} is below threshold ${minRelevance} for ${existing.company}. Use force override to publish anyway.`);
+      }
+      if (!existing.roleCategory) {
+        throw new Error(`No role category assigned. Use force override to publish anyway.`);
+      }
     }
 
     const now = new Date();
