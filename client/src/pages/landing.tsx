@@ -4,15 +4,13 @@ import { usePageTitle } from "@/hooks/use-page-title";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LogoMark } from "@/components/logo";
 import { CompanyLogo } from "@/components/company-logo";
 import {
-  ArrowRight, Search, Globe, Clock, Lock, Building2, FileText,
+  ArrowRight, Clock, Lock, Building2, FileText,
   Check, Compass, BarChart3, TrendingUp, MapPin,
 } from "lucide-react";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Footer } from "@/components/footer";
 
 interface Stats {
@@ -571,15 +569,15 @@ function DiagnosticShowcase() {
 
   return (
     <section className="bg-gradient-to-b from-background via-background to-emerald-50/40 dark:to-emerald-950/10" data-testid="section-diagnostic-showcase">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-20 sm:py-32">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-24 sm:py-36">
         <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-20">
           <div ref={fadeRef} className="scroll-fade-in lg:w-[38%] flex flex-col justify-center text-center lg:text-left">
-            <p className="text-xs uppercase tracking-[0.2em] text-emerald-600 dark:text-emerald-400 font-semibold mb-4">Your Career Snapshot</p>
+            <p className="text-xs uppercase tracking-[0.2em] text-emerald-600 dark:text-emerald-400 font-medium mb-4">Your Career Snapshot</p>
             <h2 className="text-2xl sm:text-4xl font-serif font-medium text-foreground leading-tight" data-testid="text-diagnostic-heading">
               Discover your readiness for legal tech
             </h2>
-            <p className="text-sm sm:text-base text-muted-foreground mt-4 leading-relaxed">
-              Upload your resume. In 60 seconds, see your readiness score, matching career paths, and a plan to get there.
+            <p className="text-base text-muted-foreground mt-4 leading-relaxed max-w-xl">
+              See where you stand — a readiness score that maps your legal experience to the roles that fit.
             </p>
             <div className="mt-8">
               <Button size="lg" asChild data-testid="button-diagnostic-cta">
@@ -593,7 +591,7 @@ function DiagnosticShowcase() {
 
           <div
             ref={containerRef}
-            className={`lg:w-[52%] rounded-2xl border border-border/40 bg-card shadow-xl overflow-hidden transition-all duration-700 ${visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}
+            className={`lg:w-[52%] rounded-2xl border border-border/50 bg-card shadow-lg overflow-hidden transition-all duration-700 ${visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}
             data-testid="diagnostic-composition"
           >
             <div className="p-8 sm:p-12">
@@ -602,17 +600,19 @@ function DiagnosticShowcase() {
                 <span className="text-sm font-medium text-foreground">You: Corporate Lawyer, 5yrs</span>
               </div>
 
-              <div className="flex flex-col items-center py-6" data-testid="panel-score-ring">
-                <svg className="w-[140px] h-[140px] sm:w-[170px] sm:h-[170px] -rotate-90" viewBox="0 0 100 100">
-                  <circle cx="50" cy="50" r="42" fill="none" stroke="hsl(var(--muted))" strokeWidth="4" />
-                  <circle cx="50" cy="50" r="42" fill="none" stroke="hsl(var(--primary))" strokeWidth="4" strokeLinecap="round"
-                    strokeDasharray={scoreCircumference} strokeDashoffset={scoreOffset}
-                    style={{ transition: "stroke-dashoffset 0.1s linear" }}
-                  />
-                </svg>
-                <div className="text-center -mt-[105px] sm:-mt-[128px] mb-[55px] sm:mb-[68px]">
-                  <span className="text-6xl sm:text-7xl font-bold text-foreground" data-testid="text-score-value">{scoreValue}</span>
-                  <p className="text-sm text-muted-foreground uppercase tracking-wider mt-1">Readiness Score</p>
+              <div className="flex justify-center py-6" data-testid="panel-score-ring">
+                <div className="relative w-[140px] h-[140px] sm:w-[170px] sm:h-[170px]">
+                  <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="42" fill="none" stroke="hsl(var(--muted))" strokeWidth="4" />
+                    <circle cx="50" cy="50" r="42" fill="none" stroke="hsl(var(--primary))" strokeWidth="4" strokeLinecap="round"
+                      strokeDasharray={scoreCircumference} strokeDashoffset={scoreOffset}
+                      style={{ transition: "stroke-dashoffset 0.1s linear" }}
+                    />
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className="text-6xl sm:text-7xl font-bold text-foreground" data-testid="text-score-value">{scoreValue}</span>
+                    <p className="text-sm text-muted-foreground uppercase tracking-wider mt-1">Readiness Score</p>
+                  </div>
                 </div>
               </div>
 
@@ -726,42 +726,39 @@ function MarketIntelShowcase({ stats, marketPulse, density }: { stats?: Stats; m
   const fadeRef = useFadeInOnScroll();
 
   return (
-    <section className="bg-stone-50/80 dark:bg-card" data-testid="section-market-intel-showcase">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-20 sm:py-28">
+    <section className="bg-muted/30 dark:bg-muted/10" data-testid="section-market-intel-showcase">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-24 sm:py-36">
         <div ref={fadeRef} className="scroll-fade-in text-center mb-12 sm:mb-16">
-          <p className="text-xs uppercase tracking-[0.2em] text-primary font-semibold mb-3">Market Intelligence</p>
-          <h2 className="text-2xl sm:text-4xl font-serif font-semibold text-foreground" data-testid="text-market-heading">
+          <p className="text-xs uppercase tracking-[0.2em] text-primary font-medium mb-3">Market Intelligence</p>
+          <h2 className="text-2xl sm:text-4xl font-serif font-medium text-foreground" data-testid="text-market-heading">
             See the market before you move
           </h2>
-          <p className="text-sm sm:text-base text-muted-foreground mt-3 max-w-lg mx-auto leading-relaxed">
+          <p className="text-base text-muted-foreground mt-3 max-w-lg mx-auto leading-relaxed">
             Real-time hiring data from {totalCompanies}+ companies across {countriesCount} countries.
           </p>
-          <div className="mt-6">
-            <Button size="lg" variant="outline" asChild data-testid="button-market-cta">
-              <a href="/market-intelligence">
-                Explore Market Data
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </a>
-            </Button>
+          <div className="mt-5">
+            <a href="/market-intelligence" className="text-sm text-primary hover:underline inline-flex items-center gap-1.5 transition-colors" data-testid="button-market-cta">
+              Explore market data <ArrowRight className="h-3.5 w-3.5" />
+            </a>
           </div>
         </div>
 
         <div
           ref={containerRef}
-          className={`rounded-2xl border border-border/40 bg-card shadow-lg overflow-hidden transition-all duration-700 ${visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}
+          className={`rounded-2xl border border-border/50 bg-card shadow-lg overflow-hidden transition-all duration-700 ${visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}
           data-testid="market-composition"
         >
           <div className="p-8 sm:p-10">
-            <div className="flex items-baseline justify-center gap-6 sm:gap-10 pb-8 border-b border-border/30 flex-wrap" data-testid="panel-market-dashboard">
+            <div className="flex items-center justify-center gap-8 sm:gap-0 pb-8 border-b border-border/30 flex-wrap" data-testid="panel-market-dashboard">
               {[
                 { value: counterValues[0], label: "Roles" },
                 { value: counterValues[1], label: "Companies" },
                 { value: counterValues[2], label: "Countries" },
               ].map((stat, i) => (
-                <div key={stat.label} className="flex items-baseline gap-3">
-                  {i > 0 && <span className="text-border text-2xl font-light hidden sm:inline -ml-5 mr-1">·</span>}
+                <div key={stat.label} className="flex items-center gap-0">
+                  {i > 0 && <div className="hidden sm:block w-px h-12 bg-border/40 mx-8 sm:mx-10" />}
                   <div className="text-center">
-                    <span className="text-4xl sm:text-5xl font-bold text-foreground" data-testid={`text-counter-${stat.label.toLowerCase()}`}>{stat.value}+</span>
+                    <span className="text-5xl sm:text-6xl font-bold text-foreground" data-testid={`text-counter-${stat.label.toLowerCase()}`}>{stat.value}+</span>
                     <p className="text-sm text-muted-foreground uppercase tracking-wider mt-1">{stat.label}</p>
                   </div>
                 </div>
@@ -836,18 +833,11 @@ export default function Landing() {
   const { data: density } = useQuery<JobDensity>({ queryKey: ["/api/job-density"] });
   const { data: marketPulse } = useQuery<MarketPulse>({ queryKey: ["/api/market-pulse"] });
 
-  const careerPathsWithCounts = stats?.categoryCounts
-    ? Object.entries(stats.categoryCounts)
-        .filter(([, count]) => count >= 3)
-        .sort((a, b) => b[1] - a[1])
-    : [];
-
   const topCompanies = density?.topCompanies?.filter(c => c.count > 0) || [];
   const marqueeRow1 = topCompanies.slice(0, Math.ceil(topCompanies.length / 2));
   const marqueeRow2 = topCompanies.slice(Math.ceil(topCompanies.length / 2));
 
   const marqueeFadeRef = useFadeInOnScroll();
-  const careerFadeRef = useFadeInOnScroll();
   const ctaFadeRef = useFadeInOnScroll();
 
   return (
@@ -883,22 +873,22 @@ export default function Landing() {
 
       <main className="pt-14 flex-1">
 
-        <section className="max-w-6xl mx-auto px-4 sm:px-6 pt-10 sm:pt-20 pb-10 sm:pb-20">
-          <div className="flex flex-col lg:flex-row items-center gap-8 lg:gap-12">
+        <section className="max-w-5xl mx-auto px-4 sm:px-6 pt-16 sm:pt-28 pb-16 sm:pb-24">
+          <div className="flex flex-col lg:flex-row items-center gap-10 lg:gap-16">
             <div className="flex-1 max-w-md lg:max-w-lg text-center lg:text-left">
-              <p className="text-sm font-semibold text-primary tracking-[0.2em] uppercase mb-5 lg:border-l-2 lg:border-primary lg:pl-3 lg:-ml-3" data-testid="text-hero-label">
+              <p className="text-xs font-medium text-primary tracking-[0.2em] uppercase mb-5" data-testid="text-hero-label">
                 Career intelligence for legal professionals
               </p>
 
-              <h1 className="text-2xl sm:text-[2.75rem] font-serif font-medium text-foreground leading-[1.3] sm:leading-[1.4]" data-testid="text-hero-title">
+              <h1 className="text-4xl sm:text-[3.5rem] font-serif font-medium text-foreground leading-[1.15]" data-testid="text-hero-title">
                 Where do you fit in legal tech?
               </h1>
 
-              <p className="text-sm sm:text-base text-muted-foreground mt-5 sm:mt-8 leading-relaxed" data-testid="text-hero-subtitle">
+              <p className="text-base text-muted-foreground mt-6 sm:mt-8 leading-relaxed max-w-xl" data-testid="text-hero-subtitle">
                 Upload your resume. In 60 seconds, see your readiness score, matching career paths, and a plan to get there.
               </p>
 
-              <div className="mt-5 sm:mt-8 flex items-center gap-4 flex-wrap justify-center lg:justify-start">
+              <div className="mt-6 sm:mt-8 flex items-center gap-4 flex-wrap justify-center lg:justify-start">
                 <Button size="lg" asChild data-testid="button-hero-diagnostic">
                   <a href="/diagnostic" onClick={() => {
                     if (!hasDiagnostic) {
@@ -914,7 +904,7 @@ export default function Landing() {
                 </a>
               </div>
 
-              <div className="mt-4 flex items-center gap-3 text-xs text-muted-foreground flex-wrap justify-center lg:justify-start" data-testid="text-hero-trust">
+              <div className="mt-3 flex items-center gap-3 text-xs text-muted-foreground flex-wrap justify-center lg:justify-start" data-testid="text-hero-trust">
                 <span className="flex items-center gap-1"><Lock className="h-3 w-3" /> Private by default</span>
                 <span className="text-border">·</span>
                 <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> Results in ~90 seconds</span>
@@ -922,14 +912,7 @@ export default function Landing() {
                 <span>No account needed</span>
               </div>
 
-              <p className="mt-3">
-                <a href="/quiz" className="text-sm text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-1.5" data-testid="link-hero-quiz">
-                  <Search className="h-3.5 w-3.5" />
-                  Not sure yet? Take a 30-second career quiz →
-                </a>
-              </p>
-
-              <div className="mt-5">
+              <div className="mt-3">
                 <LiveTicker stats={stats} marketPulse={marketPulse} density={density} />
               </div>
             </div>
@@ -946,11 +929,11 @@ export default function Landing() {
 
         {topCompanies.length > 4 && (
           <section data-testid="section-top-companies">
-            <div ref={marqueeFadeRef} className="scroll-fade-in py-8 sm:py-12">
+            <div ref={marqueeFadeRef} className="scroll-fade-in py-16 sm:py-20">
               <div className="space-y-4">
                 <div className="relative overflow-hidden marquee-hover-pause">
-                  <div className="absolute left-0 top-0 bottom-0 w-16 sm:w-20 z-10 bg-gradient-to-r from-background to-transparent pointer-events-none" />
-                  <div className="absolute right-0 top-0 bottom-0 w-16 sm:w-20 z-10 bg-gradient-to-l from-background to-transparent pointer-events-none" />
+                  <div className="absolute left-0 top-0 bottom-0 w-16 sm:w-24 z-10 bg-gradient-to-r from-background to-transparent pointer-events-none" />
+                  <div className="absolute right-0 top-0 bottom-0 w-16 sm:w-24 z-10 bg-gradient-to-l from-background to-transparent pointer-events-none" />
                   <div className="marquee-track marquee-left" data-testid="marquee-row-1">
                     {[...marqueeRow1, ...marqueeRow1].map((company, i) => (
                       <div
@@ -972,8 +955,8 @@ export default function Landing() {
                 </div>
 
                 <div className="relative overflow-hidden marquee-hover-pause">
-                  <div className="absolute left-0 top-0 bottom-0 w-16 sm:w-20 z-10 bg-gradient-to-r from-background to-transparent pointer-events-none" />
-                  <div className="absolute right-0 top-0 bottom-0 w-16 sm:w-20 z-10 bg-gradient-to-l from-background to-transparent pointer-events-none" />
+                  <div className="absolute left-0 top-0 bottom-0 w-16 sm:w-24 z-10 bg-gradient-to-r from-background to-transparent pointer-events-none" />
+                  <div className="absolute right-0 top-0 bottom-0 w-16 sm:w-24 z-10 bg-gradient-to-l from-background to-transparent pointer-events-none" />
                   <div className="marquee-track marquee-right" data-testid="marquee-row-2">
                     {[...marqueeRow2, ...marqueeRow2].map((company, i) => (
                       <div
@@ -994,49 +977,17 @@ export default function Landing() {
                   </div>
                 </div>
               </div>
-
-              {careerPathsWithCounts.length > 0 && (
-                <div ref={careerFadeRef} className="scroll-fade-in max-w-5xl mx-auto px-4 sm:px-6 mt-10">
-                  <div className="dot-grid-bg rounded-xl border border-border/30 p-6 sm:p-8">
-                    <p className="text-xs font-semibold text-muted-foreground tracking-[0.15em] uppercase mb-4 text-center">
-                      Career paths we track
-                    </p>
-                    <div className="flex items-center justify-center gap-2 sm:gap-2.5 flex-wrap" data-testid="career-paths-list">
-                      {careerPathsWithCounts.map(([path, count], index) => (
-                        <a key={path} href="/diagnostic" className={index >= 8 ? "hidden sm:block" : ""} data-testid={`career-path-${path.toLowerCase().replace(/\s+/g, "-")}`}>
-                          <div
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border/40 bg-card shadow-sm text-xs hover:shadow-md transition-shadow cursor-pointer"
-                          >
-                            <span className="font-medium text-foreground">{CAREER_PATH_LABELS[path] || path}</span>
-                            <span className="text-muted-foreground text-[10px]">{count}</span>
-                          </div>
-                        </a>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <div className="text-center mt-8 flex items-center justify-center gap-4">
-                <a href="/jobs" className="text-sm text-primary hover:underline inline-flex items-center gap-1.5 transition-colors" data-testid="link-marquee-explore">
-                  Explore all roles <ArrowRight className="h-3.5 w-3.5" />
-                </a>
-                <span className="text-border">·</span>
-                <a href="/opportunity-map" className="text-sm text-primary hover:underline inline-flex items-center gap-1.5 transition-colors" data-testid="link-marquee-map">
-                  <Globe className="h-3.5 w-3.5" /> Explore the map
-                </a>
-              </div>
             </div>
           </section>
         )}
 
-        <section ref={ctaFadeRef} className="scroll-fade-in bg-background dot-grid-bg border-t border-border/40">
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-16 sm:py-24">
+        <section ref={ctaFadeRef} className="scroll-fade-in bg-muted/30 dark:bg-muted/10 dot-grid-bg border-t border-border/40">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-20 sm:py-28">
             <div className="text-center space-y-5" data-testid="final-cta-section">
-              <h2 className="text-xl sm:text-3xl font-serif font-medium text-foreground">
+              <h2 className="text-2xl sm:text-4xl font-serif font-medium text-foreground">
                 Ready to make your move?
               </h2>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-base text-muted-foreground">
                 60 seconds. No account needed.
               </p>
               <Button size="lg" asChild data-testid="button-final-cta">
