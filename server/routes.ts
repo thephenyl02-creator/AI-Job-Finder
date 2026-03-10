@@ -6084,13 +6084,38 @@ Rules:
       if (newJobs.length > 0) {
         matchNewJobsAgainstAlerts(newJobs).catch(err => console.error("Alert matching error:", err));
       }
+
+      const allCompanyJobs = (await storage.getJobs()).filter(
+        j => j.company.toLowerCase() === companyName.toLowerCase()
+      );
+      const statusBreakdown = {
+        published: allCompanyJobs.filter(j => j.isPublished && j.pipelineStatus === 'ready').length,
+        rejected: allCompanyJobs.filter(j => j.pipelineStatus === 'rejected').length,
+        pendingEnrichment: allCompanyJobs.filter(j => j.pipelineStatus === 'raw' || j.pipelineStatus === 'enriching').length,
+        review: allCompanyJobs.filter(j => j.pipelineStatus === 'review').length,
+        ready: allCompanyJobs.filter(j => j.pipelineStatus === 'ready' && !j.isPublished).length,
+        total: allCompanyJobs.length,
+      };
+
+      let message = `Found ${scrapedJobs.length} jobs at ${companyName}. ${inserted} new, ${updated} already tracked.`;
+      if (updated > 0 && inserted === 0) {
+        const parts: string[] = [];
+        if (statusBreakdown.published > 0) parts.push(`${statusBreakdown.published} published`);
+        if (statusBreakdown.rejected > 0) parts.push(`${statusBreakdown.rejected} rejected`);
+        if (statusBreakdown.pendingEnrichment > 0) parts.push(`${statusBreakdown.pendingEnrichment} pending enrichment`);
+        if (statusBreakdown.review > 0) parts.push(`${statusBreakdown.review} in review`);
+        if (statusBreakdown.ready > 0) parts.push(`${statusBreakdown.ready} ready to publish`);
+        if (parts.length > 0) message += ` Status: ${parts.join(', ')}.`;
+      }
       
       res.json({
         success: true,
-        message: `Found ${scrapedJobs.length} jobs at ${companyName}. Inserted ${inserted}, updated ${updated}.`,
+        message,
         inserted,
         updated,
         totalScraped: scrapedJobs.length,
+        statusBreakdown,
+        companyName,
       });
     } catch (error: any) {
       console.error("Error scraping company:", error);

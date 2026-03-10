@@ -163,6 +163,15 @@ interface ScrapeResult {
   inserted: number;
   updated: number;
   totalScraped?: number;
+  statusBreakdown?: {
+    published: number;
+    rejected: number;
+    pendingEnrichment: number;
+    review: number;
+    ready: number;
+    total: number;
+  };
+  companyName?: string;
 }
 
 interface LogEntry {
@@ -832,9 +841,16 @@ export default function AdminPage() {
     },
     onSuccess: (data) => {
       invalidateJobRelatedQueries();
+      const sb = data.statusBreakdown;
+      let description = data.message;
+      if (data.companyName) {
+        description += ` Scroll down to the Jobs section to view them.`;
+        setJobsSearch(data.companyName);
+        setJobsPage(1);
+      }
       toast({
         title: "Company Scraped",
-        description: data.message,
+        description,
       });
     },
     onError: (error: Error) => {
