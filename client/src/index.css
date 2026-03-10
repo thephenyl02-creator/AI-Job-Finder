@@ -359,8 +359,8 @@
   .animate-ticker-in { animation: ticker-in 0.4s ease-out both; }
   .animate-ticker-out { animation: ticker-out 0.3s ease-out both; }
   .animate-scan-line { animation: scan-line 0.6s ease-in-out both; }
-  .animate-draw-segment { animation: draw-segment 0.6s ease-out both; }
-  .animate-gentle-float { animation: gentle-float 6s ease-in-out infinite alternate; }
+  .animate-draw-segment { animation: draw-segment 0.6s ease-out both; animation-delay: var(--seg-delay, 0s); }
+  .animate-gentle-float { animation: gentle-float 6s ease-in-out infinite alternate; animation-delay: var(--float-delay, 0s); }
 
   @keyframes scale-in {
     from { transform: scale(0); opacity: 0; }

@@ -158,9 +158,9 @@ function DonutChart({ workModeSplit, isVisible }: { workModeSplit: { remote: num
             style={{
               "--seg-total": `${circumference}`,
               "--seg-target": `${circumference - seg.dashLen}`,
+              "--seg-delay": `${0.7 + i * 0.2}s`,
               transform: `rotate(${seg.rotation}deg)`,
               transformOrigin: "center",
-              animationDelay: `${0.7 + i * 0.2}s`,
               opacity: isVisible ? 1 : 0,
             } as React.CSSProperties}
           />
@@ -319,7 +319,7 @@ function FloatingComposition({ marketPulse, stats }: { marketPulse?: MarketPulse
           className="absolute left-[1%] sm:left-[2%] bottom-[5%] sm:bottom-[8%] w-[155px] sm:w-[175px] animate-float-in"
           style={{ zIndex: 2 }}
         >
-          <div className="animate-gentle-float" style={{ animationDelay: "0s" }}>
+          <div className="animate-gentle-float" style={{ "--float-delay": "0s" } as React.CSSProperties}>
           <div className="rounded-xl border border-border/50 bg-card p-2.5 sm:p-3 shadow-md relative overflow-hidden">
             {!scanDone && (
               <div className="absolute inset-x-0 top-0 h-0.5 bg-primary/60 animate-scan-line" />
@@ -364,7 +364,7 @@ function FloatingComposition({ marketPulse, stats }: { marketPulse?: MarketPulse
           className="absolute left-[16%] sm:left-[18%] top-[6%] sm:top-[8%] w-[185px] sm:w-[225px] animate-float-in"
           style={{ zIndex: 5 }}
         >
-          <div className="animate-gentle-float" style={{ animationDelay: "1.5s" }}>
+          <div className="animate-gentle-float" style={{ "--float-delay": "1.5s" } as React.CSSProperties}>
           <div className="rounded-xl border border-primary/15 bg-card p-3 sm:p-4 shadow-xl">
             <div className="flex items-center gap-3 mb-2.5">
               <svg className="w-[50px] h-[50px] sm:w-[60px] sm:h-[60px] -rotate-90 shrink-0" viewBox="0 0 100 100">
@@ -429,7 +429,7 @@ function FloatingComposition({ marketPulse, stats }: { marketPulse?: MarketPulse
           className="absolute left-[0%] sm:left-[0%] top-[1%] sm:top-[2%] w-[140px] sm:w-[155px] animate-fade-in-up"
           style={{ zIndex: 3 }}
         >
-          <div className="animate-gentle-float" style={{ animationDelay: "2.5s" }}>
+          <div className="animate-gentle-float" style={{ "--float-delay": "2.5s" } as React.CSSProperties}>
           <div className="rounded-xl border border-border/50 bg-card p-2.5 shadow-md">
             <div className="flex items-center gap-1.5 mb-2">
               <BarChart3 className="h-3 w-3 text-primary" />
@@ -454,7 +454,7 @@ function FloatingComposition({ marketPulse, stats }: { marketPulse?: MarketPulse
           className="absolute right-[1%] sm:right-[2%] top-[26%] sm:top-[28%] w-[170px] sm:w-[200px] animate-slide-from-right"
           style={{ zIndex: 4 }}
         >
-          <div className="animate-gentle-float" style={{ animationDelay: "0.5s" }}>
+          <div className="animate-gentle-float" style={{ "--float-delay": "0.5s" } as React.CSSProperties}>
           <div className="rounded-xl border border-border/50 bg-card p-2 sm:p-2.5 shadow-lg space-y-1 sm:space-y-1.5">
             {jobMatches.map((job, i) => (
               <div
@@ -481,10 +481,10 @@ function FloatingComposition({ marketPulse, stats }: { marketPulse?: MarketPulse
 
       {isVisible(4) && (
         <div
-          className="absolute right-[3%] sm:right-[5%] bottom-[2%] sm:bottom-[3%] animate-fade-in-up"
+          className="absolute right-[6%] sm:right-[10%] bottom-[8%] sm:bottom-[10%] animate-fade-in-up"
           style={{ zIndex: 6 }}
         >
-          <div className="animate-gentle-float" style={{ animationDelay: "3s" }}>
+          <div className="animate-gentle-float" style={{ "--float-delay": "3s" } as React.CSSProperties}>
           <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-2.5 sm:px-3 py-1.5 sm:py-2 shadow-md flex items-center gap-2">
             <Check className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-emerald-500 shrink-0" />
             <div>
@@ -506,7 +506,7 @@ function FloatingComposition({ marketPulse, stats }: { marketPulse?: MarketPulse
 
       {isVisible(5) && (
         <div className="absolute right-[22%] sm:right-[25%] top-[0%] animate-pop-in" style={{ zIndex: 7 }}>
-          <div className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 sm:px-3 py-1 sm:py-1.5 shadow-sm flex items-center gap-1.5 animate-pulse-soft" style={{ animationDelay: "0.3s" }}>
+          <div className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 sm:px-3 py-1 sm:py-1.5 shadow-sm flex items-center gap-1.5 animate-pulse-soft">
             <Check className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-emerald-600 dark:text-emerald-400" />
             <span className="text-[9px] sm:text-[10px] font-semibold text-emerald-700 dark:text-emerald-300">Ready to apply</span>
           </div>
@@ -641,16 +641,16 @@ function DiagnosticShowcase() {
 
   return (
     <section className="border-t border-border/30" data-testid="section-diagnostic-showcase">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
-        <div ref={fadeRef} className="scroll-fade-in text-center mb-8 sm:mb-10">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
+        <div ref={fadeRef} className="scroll-fade-in text-center mb-10 sm:mb-14">
           <p className="text-xs uppercase tracking-[0.15em] text-primary font-semibold mb-2">Career Diagnostic</p>
-          <h2 className="text-xl sm:text-3xl font-serif font-medium text-foreground" data-testid="text-diagnostic-heading">
+          <h2 className="text-2xl sm:text-4xl font-serif font-medium text-foreground" data-testid="text-diagnostic-heading">
             Discover your readiness for legal tech
           </h2>
-          <p className="text-sm text-muted-foreground mt-3 max-w-lg mx-auto leading-relaxed">
+          <p className="text-sm sm:text-base text-muted-foreground mt-3 max-w-lg mx-auto leading-relaxed">
             Upload your resume. In 60 seconds, see your readiness score, career path matches, skill gaps, and a 30-day plan to get there.
           </p>
-          <div className="mt-5">
+          <div className="mt-6">
             <Button size="lg" asChild data-testid="button-diagnostic-cta">
               <a href="/diagnostic">
                 Check Your Fit
@@ -660,163 +660,151 @@ function DiagnosticShowcase() {
           </div>
         </div>
 
-        <div ref={containerRef} className="relative h-[520px] sm:h-[580px]" data-testid="diagnostic-composition">
-          {isPanel(0) && (
-            <div className="absolute left-[5%] sm:left-[12%] top-[10%] sm:top-[6%] w-[200px] sm:w-[240px] animate-float-in" style={{ zIndex: 5 }}>
-              <div className="animate-gentle-float" style={{ animationDelay: "0s" }}>
-                <div className="rounded-xl border border-primary/15 bg-card p-4 sm:p-5 shadow-xl" data-testid="panel-score-ring">
-                  <div className="flex items-center gap-3 sm:gap-4 mb-3">
-                    <svg className="w-[70px] h-[70px] sm:w-[85px] sm:h-[85px] -rotate-90 shrink-0" viewBox="0 0 100 100">
-                      <circle cx="50" cy="50" r="38" fill="none" stroke="hsl(var(--muted))" strokeWidth="5" />
-                      <circle cx="50" cy="50" r="38" fill="none" stroke="hsl(var(--primary))" strokeWidth="5" strokeLinecap="round"
-                        strokeDasharray={scoreCircumference} strokeDashoffset={scoreOffset}
-                        style={{ transition: "stroke-dashoffset 0.1s linear" }}
-                      />
-                    </svg>
-                    <div>
-                      <span className="text-3xl sm:text-4xl font-bold text-foreground" data-testid="text-score-value">{scoreValue}</span>
-                      <p className="text-[9px] sm:text-[10px] text-muted-foreground uppercase tracking-wider">Readiness Score</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1.5 mb-1.5">
-                    <span className="inline-flex items-center gap-1 text-[9px] sm:text-[10px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">
-                      <Check className="h-2.5 w-2.5" /> Strong Fit
-                    </span>
-                  </div>
-                  <p className="text-[9px] sm:text-[10px] text-muted-foreground">Top 15% of assessed professionals</p>
-                </div>
-              </div>
+        <div ref={containerRef} className="grid grid-cols-1 sm:grid-cols-12 gap-4 sm:gap-5" data-testid="diagnostic-composition">
+          <div className={`sm:col-span-12 flex justify-center transition-all duration-500 ${isPanel(5) ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"}`}>
+            <div className={`rounded-full border border-primary/20 bg-primary/5 px-4 py-2 shadow-sm flex items-center gap-2 ${isPanel(5) ? "animate-pulse-soft" : ""}`} data-testid="panel-you-are-here">
+              <MapPin className="h-3.5 w-3.5 text-primary" />
+              <span className="text-xs sm:text-sm font-medium text-foreground whitespace-nowrap">You: Corporate Lawyer, 5yrs</span>
             </div>
-          )}
+          </div>
 
-          {isPanel(2) && (
-            <div className="absolute right-[2%] sm:right-[5%] top-[3%] sm:top-[0%] w-[210px] sm:w-[260px] animate-slide-from-right" style={{ zIndex: 4 }}>
-              <div className="animate-gentle-float" style={{ animationDelay: "1s" }}>
-                <div className="rounded-xl border border-border/50 bg-card p-3 sm:p-4 shadow-lg" data-testid="panel-career-bars">
-                  <div className="flex items-center gap-1.5 mb-3">
-                    <Compass className="h-3.5 w-3.5 text-primary" />
-                    <span className="text-[10px] sm:text-xs font-semibold text-foreground">Your Career Paths</span>
-                  </div>
-                  <div className="space-y-2 sm:space-y-2.5">
-                    {careerPaths.map((path, i) => (
-                      <div key={path.name}>
-                        <div className="flex items-center justify-between mb-0.5">
-                          <span className="text-[9px] sm:text-[10px] text-muted-foreground">{path.name}</span>
-                          <span className="text-[9px] sm:text-[10px] font-semibold text-foreground">{barWidths[i]}%</span>
-                        </div>
-                        <div className="h-1.5 sm:h-2 bg-muted/50 rounded-full overflow-hidden">
-                          <div className={`h-full rounded-full ${path.color} transition-all duration-700 ease-out`}
-                            style={{ width: `${barWidths[i]}%` }}
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {isPanel(3) && (
-            <div className="absolute right-[6%] sm:right-[10%] bottom-[22%] sm:bottom-[18%] w-[180px] sm:w-[210px] animate-fade-in-up" style={{ zIndex: 3 }}>
-              <div className="animate-gentle-float" style={{ animationDelay: "2.5s" }}>
-                <div className="rounded-xl border border-border/50 bg-card p-3 sm:p-4 shadow-md" data-testid="panel-skill-gaps">
-                  <div className="flex items-center gap-1.5 mb-2.5">
-                    <TrendingUp className="h-3 w-3 text-rose-500" />
-                    <span className="text-[10px] sm:text-xs font-semibold text-foreground">Skills to Build</span>
-                  </div>
-                  <div className="space-y-2">
-                    {skillGaps.map((skill, i) => (
-                      <div key={skill.name} className="animate-pop-in" style={{ animationDelay: `${i * 0.15}s` }}>
-                        <div className="flex items-center justify-between mb-0.5">
-                          <span className="text-[9px] sm:text-[10px] text-muted-foreground">{skill.name}</span>
-                          <span className="text-[8px] sm:text-[9px] font-medium text-rose-500">{skillWidths[i]}%</span>
-                        </div>
-                        <div className="h-1 bg-muted/50 rounded-full overflow-hidden">
-                          <div className="h-full rounded-full bg-rose-500 transition-all duration-500 ease-out"
-                            style={{ width: `${skillWidths[i]}%` }}
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {isPanel(1) && (
-            <div className="absolute left-[0%] sm:left-[2%] top-[-2%] sm:top-[-4%] w-[160px] sm:w-[195px] animate-fade-in-up" style={{ zIndex: 2 }}>
-              <div className="animate-gentle-float" style={{ animationDelay: "0.5s" }}>
-                <div className="rounded-xl border border-border/50 bg-card p-2.5 sm:p-3 shadow-md" data-testid="panel-radar">
-                  <p className="text-[10px] sm:text-xs font-semibold text-foreground mb-1.5">Skill Profile</p>
-                  <svg width="120" height="120" viewBox="0 0 130 130" className="mx-auto sm:w-[140px] sm:h-[140px]">
-                    {gridLevels.map(level => (
-                      <polygon key={level}
-                        points={Array.from({ length: 6 }, (_, i) => getRadarPoint(i, level)).map(p => `${p.x},${p.y}`).join(" ")}
-                        fill="none" stroke="hsl(var(--muted-foreground))" strokeWidth="0.5" opacity="0.2"
-                      />
-                    ))}
-                    {radarAxes.map((_, i) => {
-                      const p = getRadarPoint(i, 1);
-                      return <line key={i} x1={radarCenter} y1={radarCenter} x2={p.x} y2={p.y} stroke="hsl(var(--muted-foreground))" strokeWidth="0.5" opacity="0.15" />;
-                    })}
-                    <polygon points={radarPolygon} fill="hsl(var(--primary) / 0.15)" stroke="hsl(var(--primary))" strokeWidth="1.5"
-                      style={{ transform: `scale(${radarScale})`, transformOrigin: `${radarCenter}px ${radarCenter}px`, transition: "transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)" }}
+          <div className={`sm:col-span-6 transition-all duration-700 ${isPanel(0) ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}>
+            <div className={isPanel(0) ? "animate-gentle-float" : ""} style={{ "--float-delay": "0s" } as React.CSSProperties}>
+              <div className="rounded-2xl border border-primary/15 bg-card p-5 sm:p-7 shadow-xl" data-testid="panel-score-ring">
+                <div className="flex items-center gap-4 sm:gap-5 mb-4">
+                  <svg className="w-[90px] h-[90px] sm:w-[110px] sm:h-[110px] -rotate-90 shrink-0" viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="38" fill="none" stroke="hsl(var(--muted))" strokeWidth="5" />
+                    <circle cx="50" cy="50" r="38" fill="none" stroke="hsl(var(--primary))" strokeWidth="5" strokeLinecap="round"
+                      strokeDasharray={scoreCircumference} strokeDashoffset={scoreOffset}
+                      style={{ transition: "stroke-dashoffset 0.1s linear" }}
                     />
-                    {radarAxes.map((label, i) => {
-                      const p = getRadarPoint(i, 1.22);
-                      return <text key={label} x={p.x} y={p.y} textAnchor="middle" dominantBaseline="middle" className="fill-muted-foreground" style={{ fontSize: "7px" }}>{label}</text>;
-                    })}
                   </svg>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {isPanel(4) && (
-            <div className="absolute left-[8%] sm:left-[12%] bottom-[2%] sm:bottom-[4%] w-[260px] sm:w-[320px] animate-fade-in-up" style={{ zIndex: 3 }}>
-              <div className="animate-gentle-float" style={{ animationDelay: "3s" }}>
-                <div className="rounded-xl border border-border/50 bg-card p-3 sm:p-4 shadow-lg" data-testid="panel-roadmap">
-                  <p className="text-[10px] sm:text-xs font-semibold text-foreground mb-3">30-Day Plan</p>
-                  <div className="flex items-center justify-between px-2 sm:px-4">
-                    {timelineSteps.map((step, i) => (
-                      <div key={step} className="flex flex-col items-center relative" style={{ flex: 1 }}>
-                        <div className="flex items-center w-full">
-                          {i > 0 && (
-                            <div className="flex-1 h-0.5 bg-muted/50 rounded-full overflow-hidden -ml-1">
-                              <div className="h-full bg-emerald-500 rounded-full transition-all duration-400 ease-out"
-                                style={{ width: timelineStep >= i ? "100%" : "0%" }}
-                              />
-                            </div>
-                          )}
-                          <div className={`w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full shrink-0 transition-all duration-300 ${timelineStep >= i ? "bg-emerald-500 scale-100" : "bg-muted scale-75"}`} />
-                          {i < timelineSteps.length - 1 && (
-                            <div className="flex-1 h-0.5 bg-muted/50 rounded-full overflow-hidden -mr-1">
-                              <div className="h-full bg-emerald-500 rounded-full transition-all duration-400 ease-out"
-                                style={{ width: timelineStep > i ? "100%" : "0%" }}
-                              />
-                            </div>
-                          )}
-                        </div>
-                        <span className="text-[8px] sm:text-[9px] text-muted-foreground mt-1.5 whitespace-nowrap">{step}</span>
-                      </div>
-                    ))}
+                  <div>
+                    <span className="text-4xl sm:text-5xl font-bold text-foreground" data-testid="text-score-value">{scoreValue}</span>
+                    <p className="text-xs sm:text-sm text-muted-foreground uppercase tracking-wider mt-1">Readiness Score</p>
                   </div>
-                  <a href="/diagnostic" className="block text-[9px] sm:text-[10px] text-primary mt-3 hover:underline" data-testid="link-roadmap-plan">See your full plan →</a>
+                </div>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full">
+                    <Check className="h-3.5 w-3.5" /> Strong Fit
+                  </span>
+                </div>
+                <p className="text-xs sm:text-sm text-muted-foreground">Top 15% of assessed professionals</p>
+              </div>
+            </div>
+          </div>
+
+          <div className={`sm:col-span-6 transition-all duration-700 ${isPanel(2) ? "opacity-100 translate-x-0" : "opacity-0 translate-x-6"}`}>
+            <div className={isPanel(2) ? "animate-gentle-float" : ""} style={{ "--float-delay": "1s" } as React.CSSProperties}>
+              <div className="rounded-2xl border border-border/40 bg-card p-5 sm:p-7 shadow-lg" data-testid="panel-career-bars">
+                <div className="flex items-center gap-2 mb-4">
+                  <Compass className="h-5 w-5 text-primary" />
+                  <span className="text-sm sm:text-base font-semibold text-foreground">Your Career Paths</span>
+                </div>
+                <div className="space-y-3 sm:space-y-4">
+                  {careerPaths.map((path, i) => (
+                    <div key={path.name}>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs sm:text-sm text-muted-foreground">{path.name}</span>
+                        <span className="text-xs sm:text-sm font-bold text-foreground">{barWidths[i]}%</span>
+                      </div>
+                      <div className="h-2.5 sm:h-3 bg-muted/50 rounded-full overflow-hidden">
+                        <div className={`h-full rounded-full ${path.color} transition-all duration-700 ease-out`}
+                          style={{ width: `${barWidths[i]}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
-          )}
+          </div>
 
-          {isPanel(5) && (
-            <div className="absolute left-[22%] sm:left-[28%] top-[30%] sm:top-[26%] animate-pop-in" style={{ zIndex: 6 }}>
-              <div className="rounded-full border border-primary/20 bg-primary/5 px-3 py-1.5 shadow-sm flex items-center gap-1.5 animate-pulse-soft" style={{ animationDelay: "0.3s" }} data-testid="panel-you-are-here">
-                <MapPin className="h-3 w-3 text-primary" />
-                <span className="text-[9px] sm:text-[10px] font-medium text-foreground whitespace-nowrap">You: Corporate Lawyer, 5yrs</span>
+          <div className={`sm:col-span-4 transition-all duration-700 delay-100 ${isPanel(1) ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}>
+            <div className={isPanel(1) ? "animate-gentle-float" : ""} style={{ "--float-delay": "0.5s" } as React.CSSProperties}>
+              <div className="rounded-2xl border border-border/40 bg-card p-4 sm:p-5 shadow-md" data-testid="panel-radar">
+                <p className="text-xs sm:text-sm font-semibold text-foreground mb-3">Skill Profile</p>
+                <svg width="150" height="150" viewBox="0 0 130 130" className="mx-auto sm:w-[180px] sm:h-[180px]">
+                  {gridLevels.map(level => (
+                    <polygon key={level}
+                      points={Array.from({ length: 6 }, (_, i) => getRadarPoint(i, level)).map(p => `${p.x},${p.y}`).join(" ")}
+                      fill="none" stroke="hsl(var(--muted-foreground))" strokeWidth="0.5" opacity="0.2"
+                    />
+                  ))}
+                  {radarAxes.map((_, i) => {
+                    const p = getRadarPoint(i, 1);
+                    return <line key={i} x1={radarCenter} y1={radarCenter} x2={p.x} y2={p.y} stroke="hsl(var(--muted-foreground))" strokeWidth="0.5" opacity="0.15" />;
+                  })}
+                  <polygon points={radarPolygon} fill="hsl(var(--primary) / 0.15)" stroke="hsl(var(--primary))" strokeWidth="1.5"
+                    style={{ transform: `scale(${radarScale})`, transformOrigin: `${radarCenter}px ${radarCenter}px`, transition: "transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)" }}
+                  />
+                  {radarAxes.map((label, i) => {
+                    const p = getRadarPoint(i, 1.22);
+                    return <text key={label} x={p.x} y={p.y} textAnchor="middle" dominantBaseline="middle" className="fill-muted-foreground" style={{ fontSize: "8px" }}>{label}</text>;
+                  })}
+                </svg>
               </div>
             </div>
-          )}
+          </div>
+
+          <div className={`sm:col-span-4 transition-all duration-700 delay-200 ${isPanel(3) ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}>
+            <div className={isPanel(3) ? "animate-gentle-float" : ""} style={{ "--float-delay": "2.5s" } as React.CSSProperties}>
+              <div className="rounded-2xl border border-border/40 bg-card p-4 sm:p-5 shadow-md" data-testid="panel-skill-gaps">
+                <div className="flex items-center gap-2 mb-3">
+                  <TrendingUp className="h-4 w-4 text-rose-500" />
+                  <span className="text-xs sm:text-sm font-semibold text-foreground">Skills to Build</span>
+                </div>
+                <div className="space-y-3">
+                  {skillGaps.map((skill, i) => (
+                    <div key={skill.name}>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs sm:text-sm text-muted-foreground">{skill.name}</span>
+                        <span className="text-xs font-medium text-rose-500">{skillWidths[i]}%</span>
+                      </div>
+                      <div className="h-1.5 sm:h-2 bg-muted/50 rounded-full overflow-hidden">
+                        <div className="h-full rounded-full bg-rose-500 transition-all duration-500 ease-out"
+                          style={{ width: `${skillWidths[i]}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className={`sm:col-span-4 transition-all duration-700 delay-300 ${isPanel(4) ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}>
+            <div className={isPanel(4) ? "animate-gentle-float" : ""} style={{ "--float-delay": "3s" } as React.CSSProperties}>
+              <div className="rounded-2xl border border-border/40 bg-card p-4 sm:p-5 shadow-lg" data-testid="panel-roadmap">
+                <p className="text-xs sm:text-sm font-semibold text-foreground mb-4">30-Day Plan</p>
+                <div className="flex items-center justify-between px-2 sm:px-3">
+                  {timelineSteps.map((step, i) => (
+                    <div key={step} className="flex flex-col items-center relative" style={{ flex: 1 }}>
+                      <div className="flex items-center w-full">
+                        {i > 0 && (
+                          <div className="flex-1 h-0.5 bg-muted/50 rounded-full overflow-hidden -ml-1">
+                            <div className="h-full bg-emerald-500 rounded-full transition-all duration-400 ease-out"
+                              style={{ width: timelineStep >= i ? "100%" : "0%" }}
+                            />
+                          </div>
+                        )}
+                        <div className={`w-3 h-3 sm:w-4 sm:h-4 rounded-full shrink-0 transition-all duration-300 ${timelineStep >= i ? "bg-emerald-500 scale-100" : "bg-muted scale-75"}`} />
+                        {i < timelineSteps.length - 1 && (
+                          <div className="flex-1 h-0.5 bg-muted/50 rounded-full overflow-hidden -mr-1">
+                            <div className="h-full bg-emerald-500 rounded-full transition-all duration-400 ease-out"
+                              style={{ width: timelineStep > i ? "100%" : "0%" }}
+                            />
+                          </div>
+                        )}
+                      </div>
+                      <span className="text-[10px] sm:text-xs text-muted-foreground mt-2 whitespace-nowrap">{step}</span>
+                    </div>
+                  ))}
+                </div>
+                <a href="/diagnostic" className="block text-xs sm:text-sm text-primary mt-4 hover:underline" data-testid="link-roadmap-plan">See your full plan →</a>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -938,16 +926,16 @@ function MarketIntelShowcase({ stats, marketPulse, density }: { stats?: Stats; m
 
   return (
     <section className="border-t border-border/30" data-testid="section-market-intel-showcase">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
-        <div ref={fadeRef} className="scroll-fade-in text-center mb-8 sm:mb-10">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
+        <div ref={fadeRef} className="scroll-fade-in text-center mb-10 sm:mb-14">
           <p className="text-xs uppercase tracking-[0.15em] text-primary font-semibold mb-2">Market Intelligence</p>
-          <h2 className="text-xl sm:text-3xl font-serif font-medium text-foreground" data-testid="text-market-heading">
+          <h2 className="text-2xl sm:text-4xl font-serif font-medium text-foreground" data-testid="text-market-heading">
             See the market before you move
           </h2>
-          <p className="text-sm text-muted-foreground mt-3 max-w-lg mx-auto leading-relaxed">
+          <p className="text-sm sm:text-base text-muted-foreground mt-3 max-w-lg mx-auto leading-relaxed">
             Real-time hiring data from {totalCompanies}+ companies across {countriesCount} countries.
           </p>
-          <div className="mt-5">
+          <div className="mt-6">
             <Button size="lg" variant="outline" asChild data-testid="button-market-cta">
               <a href="/market-intelligence">
                 Explore Market Data
@@ -957,171 +945,156 @@ function MarketIntelShowcase({ stats, marketPulse, density }: { stats?: Stats; m
           </div>
         </div>
 
-        <div ref={containerRef} className="relative h-[520px] sm:h-[580px]" data-testid="market-composition">
-          {isPanel(0) && (
-            <div className="absolute left-[3%] sm:left-[8%] top-[10%] sm:top-[8%] w-[200px] sm:w-[240px] animate-float-in" style={{ zIndex: 5 }}>
-              <div className="animate-gentle-float" style={{ animationDelay: "0s" }}>
-                <div className="rounded-xl border border-primary/15 bg-card p-4 sm:p-5 shadow-xl" data-testid="panel-donut">
-                  <p className="text-[10px] sm:text-xs font-semibold text-foreground mb-3">Work Mode Split</p>
-                  <div className="flex items-center gap-3">
-                    <div className="relative shrink-0">
-                      <svg width="80" height="80" viewBox="0 0 80 80" className="sm:w-[100px] sm:h-[100px]">
-                        <circle cx="40" cy="40" r={donutR} fill="none" stroke="hsl(var(--muted))" strokeWidth="6" opacity="0.2" />
-                        {donutData.map((seg, i) => (
-                          <circle key={seg.label} cx="40" cy="40" r={donutR} fill="none" stroke={seg.color} strokeWidth="6"
-                            strokeDasharray={`${seg.dashLen} ${donutCirc - seg.dashLen}`}
-                            strokeLinecap="butt"
-                            className={visible ? "animate-draw-segment" : ""}
-                            style={{
-                              "--seg-total": `${donutCirc}`,
-                              "--seg-target": `${donutCirc - seg.dashLen}`,
-                              transform: `rotate(${seg.rotation}deg)`,
-                              transformOrigin: "center",
-                              animationDelay: `${0.3 + i * 0.25}s`,
-                              opacity: visible ? 1 : 0,
-                            } as React.CSSProperties}
-                          />
-                        ))}
-                      </svg>
-                      <div className="absolute inset-0 flex flex-col items-center justify-center">
-                        <span className="text-lg sm:text-xl font-bold text-foreground" data-testid="text-donut-count">{donutJobCount}</span>
-                        <span className="text-[7px] sm:text-[8px] text-muted-foreground">Active Roles</span>
-                      </div>
+        <div ref={containerRef} className="grid grid-cols-1 sm:grid-cols-12 gap-4 sm:gap-5" data-testid="market-composition">
+          <div className={`sm:col-span-12 flex items-center gap-3 transition-all duration-500 ${isPanel(6) ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"}`}>
+            <div className={`rounded-full border border-amber-500/30 bg-amber-500/10 px-4 py-2 shadow-sm flex items-center gap-2 ${isPanel(6) ? "animate-pulse-soft" : ""}`} data-testid="panel-new-this-week">
+              <Zap className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+              <span className="text-xs sm:text-sm font-semibold text-amber-700 dark:text-amber-300 whitespace-nowrap">{newThisWeek} new this week</span>
+            </div>
+          </div>
+
+          <div className={`sm:col-span-12 transition-all duration-700 ${isPanel(2) ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}>
+            <div className={isPanel(2) ? "animate-gentle-float" : ""} style={{ "--float-delay": "2s" } as React.CSSProperties}>
+              <div className="rounded-2xl border border-border/40 bg-card p-5 sm:p-7 shadow-lg" data-testid="panel-stats-counters">
+                <div className="flex items-center justify-around gap-6 sm:gap-10">
+                  {[
+                    { icon: Briefcase, value: counterValues[0], label: "Roles" },
+                    { icon: Building2, value: counterValues[1], label: "Companies" },
+                    { icon: Globe, value: counterValues[2], label: "Countries" },
+                  ].map(stat => (
+                    <div key={stat.label} className="flex flex-col items-center gap-1.5">
+                      <stat.icon className="h-6 w-6 sm:h-8 sm:w-8 text-primary mb-1" />
+                      <span className="text-2xl sm:text-3xl font-bold text-foreground" data-testid={`text-counter-${stat.label.toLowerCase()}`}>{stat.value}</span>
+                      <span className="text-xs sm:text-sm text-muted-foreground uppercase tracking-wider">{stat.label}</span>
                     </div>
-                    <div className="space-y-1">
-                      {donutData.map(seg => (
-                        <div key={seg.label} className="flex items-center gap-1.5">
-                          <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: seg.color }} />
-                          <span className="text-[9px] sm:text-[10px] text-muted-foreground">{seg.label}</span>
-                          <span className="text-[9px] sm:text-[10px] font-medium text-foreground">{Math.round(seg.pct * 100)}%</span>
-                        </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className={`sm:col-span-6 transition-all duration-700 ${isPanel(0) ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}>
+            <div className={isPanel(0) ? "animate-gentle-float" : ""} style={{ "--float-delay": "0s" } as React.CSSProperties}>
+              <div className="rounded-2xl border border-primary/15 bg-card p-5 sm:p-7 shadow-xl" data-testid="panel-donut">
+                <p className="text-sm sm:text-base font-semibold text-foreground mb-4">Work Mode Split</p>
+                <div className="flex items-center gap-5 sm:gap-6">
+                  <div className="relative shrink-0">
+                    <svg width="100" height="100" viewBox="0 0 80 80" className="sm:w-[130px] sm:h-[130px]">
+                      <circle cx="40" cy="40" r={donutR} fill="none" stroke="hsl(var(--muted))" strokeWidth="6" opacity="0.2" />
+                      {donutData.map((seg, i) => (
+                        <circle key={seg.label} cx="40" cy="40" r={donutR} fill="none" stroke={seg.color} strokeWidth="6"
+                          strokeDasharray={`${seg.dashLen} ${donutCirc - seg.dashLen}`}
+                          strokeLinecap="butt"
+                          className={visible ? "animate-draw-segment" : ""}
+                          style={{
+                            "--seg-total": `${donutCirc}`,
+                            "--seg-target": `${donutCirc - seg.dashLen}`,
+                            "--seg-delay": `${0.3 + i * 0.25}s`,
+                            transform: `rotate(${seg.rotation}deg)`,
+                            transformOrigin: "center",
+                            opacity: visible ? 1 : 0,
+                          } as React.CSSProperties}
+                        />
                       ))}
+                    </svg>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <span className="text-2xl sm:text-3xl font-bold text-foreground" data-testid="text-donut-count">{donutJobCount}</span>
+                      <span className="text-[9px] sm:text-xs text-muted-foreground">Active Roles</span>
                     </div>
                   </div>
+                  <div className="space-y-2">
+                    {donutData.map(seg => (
+                      <div key={seg.label} className="flex items-center gap-2">
+                        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: seg.color }} />
+                        <span className="text-xs sm:text-sm text-muted-foreground">{seg.label}</span>
+                        <span className="text-xs sm:text-sm font-medium text-foreground">{Math.round(seg.pct * 100)}%</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
-          )}
+          </div>
 
-          {isPanel(1) && (
-            <div className="absolute right-[2%] sm:right-[4%] top-[3%] sm:top-[0%] w-[215px] sm:w-[270px] animate-slide-from-right" style={{ zIndex: 4 }}>
-              <div className="animate-gentle-float" style={{ animationDelay: "1.5s" }}>
-                <div className="rounded-xl border border-border/50 bg-card p-3 sm:p-4 shadow-lg" data-testid="panel-category-bars">
-                  <div className="flex items-center gap-1.5 mb-3">
-                    <BarChart3 className="h-3.5 w-3.5 text-primary" />
-                    <span className="text-[10px] sm:text-xs font-semibold text-foreground">Roles by Career Path</span>
-                  </div>
-                  <div className="space-y-2 sm:space-y-2.5">
-                    {categoryCounts.map(([cat, count], i) => {
-                      const shortName = (CAREER_PATH_LABELS[cat as string] || (cat as string));
-                      const truncated = shortName.length > 18 ? shortName.slice(0, 18) + "…" : shortName;
-                      return (
-                        <div key={cat as string} className="animate-pop-in" style={{ animationDelay: `${i * 0.2}s` }}>
-                          <div className="flex items-center justify-between mb-0.5">
-                            <span className="text-[9px] sm:text-[10px] text-muted-foreground">{truncated}</span>
-                            <span className="text-[9px] sm:text-[10px] font-semibold text-foreground">{count as number}</span>
-                          </div>
-                          <div className="h-1.5 sm:h-2 bg-muted/50 rounded-full overflow-hidden">
-                            <div className={`h-full rounded-full ${catColors[i]} animate-fill-bar`}
-                              style={{ "--target-width": `${((count as number) / maxCatCount) * 100}%`, animationDelay: `${0.3 + i * 0.2}s` } as React.CSSProperties}
-                            />
-                          </div>
+          <div className={`sm:col-span-6 transition-all duration-700 ${isPanel(1) ? "opacity-100 translate-x-0" : "opacity-0 translate-x-6"}`}>
+            <div className={isPanel(1) ? "animate-gentle-float" : ""} style={{ "--float-delay": "1.5s" } as React.CSSProperties}>
+              <div className="rounded-2xl border border-border/40 bg-card p-5 sm:p-7 shadow-lg" data-testid="panel-category-bars">
+                <div className="flex items-center gap-2 mb-4">
+                  <BarChart3 className="h-5 w-5 text-primary" />
+                  <span className="text-sm sm:text-base font-semibold text-foreground">Roles by Career Path</span>
+                </div>
+                <div className="space-y-3 sm:space-y-4">
+                  {categoryCounts.map(([cat, count], i) => {
+                    const shortName = (CAREER_PATH_LABELS[cat as string] || (cat as string));
+                    return (
+                      <div key={cat as string}>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-xs sm:text-sm text-muted-foreground">{shortName}</span>
+                          <span className="text-xs sm:text-sm font-bold text-foreground">{count as number}</span>
                         </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {isPanel(2) && (
-            <div className="absolute left-[12%] sm:left-[18%] top-[-2%] sm:top-[-4%] w-[250px] sm:w-[300px] animate-fade-in-up" style={{ zIndex: 3 }}>
-              <div className="animate-gentle-float" style={{ animationDelay: "2s" }}>
-                <div className="rounded-xl border border-border/50 bg-card p-3 sm:p-4 shadow-lg" data-testid="panel-stats-counters">
-                  <div className="flex items-center justify-around gap-4 sm:gap-6">
-                    {[
-                      { icon: Briefcase, value: counterValues[0], label: "Roles" },
-                      { icon: Building2, value: counterValues[1], label: "Companies" },
-                      { icon: Globe, value: counterValues[2], label: "Countries" },
-                    ].map(stat => (
-                      <div key={stat.label} className="flex flex-col items-center gap-1">
-                        <stat.icon className="h-4 w-4 sm:h-5 sm:w-5 text-primary mb-0.5" />
-                        <span className="text-lg sm:text-xl font-bold text-foreground" data-testid={`text-counter-${stat.label.toLowerCase()}`}>{stat.value}</span>
-                        <span className="text-[8px] sm:text-[9px] text-muted-foreground uppercase tracking-wider">{stat.label}</span>
+                        <div className="h-2.5 sm:h-3 bg-muted/50 rounded-full overflow-hidden">
+                          <div className={`h-full rounded-full ${catColors[i]} transition-all duration-700 ease-out`}
+                            style={{ width: isPanel(1) ? `${((count as number) / maxCatCount) * 100}%` : "0%" }}
+                          />
+                        </div>
                       </div>
-                    ))}
-                  </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>
-          )}
+          </div>
 
-          {isPanel(3) && (
-            <div className="absolute right-[6%] sm:right-[10%] bottom-[28%] sm:bottom-[22%] w-[175px] sm:w-[200px] animate-fade-in-up" style={{ zIndex: 3 }}>
-              <div className="animate-gentle-float" style={{ animationDelay: "0.5s" }}>
-                <div className="rounded-xl border border-border/50 bg-card p-3 sm:p-4 shadow-md" data-testid="panel-trending">
-                  <div className="flex items-center gap-1.5 mb-2.5">
-                    <TrendingUp className="h-3 w-3 text-emerald-500" />
-                    <span className="text-[10px] sm:text-xs font-semibold text-foreground">Trending Skills</span>
-                  </div>
-                  <div className="space-y-1.5">
-                    <span className="inline-block text-[9px] sm:text-[10px] font-medium text-primary bg-primary/10 px-2 py-1 rounded-md animate-pop-in" data-testid="text-trending-skill">
-                      {trendingSkill.length > 22 ? trendingSkill.slice(0, 22) + "…" : trendingSkill}
-                    </span>
-                    {["Contract Automation ↑", "Legal Analytics ↑"].map((s, i) => (
-                      <span key={s} className="block text-[8px] sm:text-[9px] text-muted-foreground animate-pop-in" style={{ animationDelay: `${0.3 + i * 0.15}s` }}>{s}</span>
-                    ))}
-                  </div>
+          <div className={`sm:col-span-4 transition-all duration-700 delay-100 ${isPanel(4) ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}>
+            <div className={isPanel(4) ? "animate-gentle-float" : ""} style={{ "--float-delay": "2.5s" } as React.CSSProperties}>
+              <div className="rounded-2xl border border-border/40 bg-card p-4 sm:p-5 shadow-md" data-testid="panel-top-hiring">
+                <div className="flex items-center gap-2 mb-3">
+                  <Building2 className="h-4 w-4 text-primary" />
+                  <span className="text-xs sm:text-sm font-semibold text-foreground">Top Hiring</span>
+                </div>
+                <div className="space-y-2.5">
+                  {topHiring.map((company) => (
+                    <div key={company.name} className="flex items-center justify-between">
+                      <span className="text-xs sm:text-sm text-foreground truncate max-w-[140px] sm:max-w-[180px]">{company.name}</span>
+                      <span className="text-xs text-muted-foreground bg-muted/50 px-2 py-0.5 rounded-md font-medium">{company.count}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
-          )}
+          </div>
 
-          {isPanel(4) && (
-            <div className="absolute left-[2%] sm:left-[4%] bottom-[8%] sm:bottom-[10%] w-[185px] sm:w-[220px] animate-fade-in-up" style={{ zIndex: 3 }}>
-              <div className="animate-gentle-float" style={{ animationDelay: "2.5s" }}>
-                <div className="rounded-xl border border-border/50 bg-card p-3 sm:p-4 shadow-md" data-testid="panel-top-hiring">
-                  <div className="flex items-center gap-1.5 mb-2.5">
-                    <Building2 className="h-3 w-3 text-primary" />
-                    <span className="text-[10px] sm:text-xs font-semibold text-foreground">Top Hiring</span>
-                  </div>
-                  <div className="space-y-1.5">
-                    {topHiring.map((company, i) => (
-                      <div key={company.name} className="flex items-center justify-between animate-slide-from-right" style={{ animationDelay: `${i * 0.15}s` }}>
-                        <span className="text-[9px] sm:text-[10px] text-foreground truncate max-w-[120px] sm:max-w-[150px]">{company.name}</span>
-                        <span className="text-[8px] sm:text-[9px] text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded-md">{company.count}</span>
-                      </div>
-                    ))}
-                  </div>
+          <div className={`sm:col-span-4 transition-all duration-700 delay-200 ${isPanel(3) ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}>
+            <div className={isPanel(3) ? "animate-gentle-float" : ""} style={{ "--float-delay": "0.5s" } as React.CSSProperties}>
+              <div className="rounded-2xl border border-border/40 bg-card p-4 sm:p-5 shadow-md" data-testid="panel-trending">
+                <div className="flex items-center gap-2 mb-3">
+                  <TrendingUp className="h-4 w-4 text-emerald-500" />
+                  <span className="text-xs sm:text-sm font-semibold text-foreground">Trending Skills</span>
+                </div>
+                <div className="space-y-2">
+                  <span className="inline-block text-xs sm:text-sm font-medium text-primary bg-primary/10 px-3 py-1.5 rounded-lg" data-testid="text-trending-skill">
+                    {trendingSkill.length > 28 ? trendingSkill.slice(0, 28) + "…" : trendingSkill}
+                  </span>
+                  {["Contract Automation ↑", "Legal Analytics ↑"].map((s) => (
+                    <span key={s} className="block text-xs sm:text-sm text-muted-foreground">{s}</span>
+                  ))}
                 </div>
               </div>
             </div>
-          )}
+          </div>
 
-          {isPanel(5) && (
-            <div className="absolute right-[12%] sm:right-[18%] bottom-[2%] sm:bottom-[4%] w-[150px] sm:w-[170px] animate-fade-in-up" style={{ zIndex: 2 }}>
-              <div className="animate-gentle-float" style={{ animationDelay: "3s" }}>
-                <div className="rounded-xl border border-border/50 bg-card p-3 sm:p-4 shadow-sm" data-testid="panel-geography">
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <Globe className="h-3 w-3 text-primary" />
-                    <span className="text-[10px] sm:text-xs font-semibold text-foreground">Global Coverage</span>
-                  </div>
-                  <p className="text-lg sm:text-xl font-bold text-foreground">{countriesCount} Countries</p>
-                  <p className="text-[9px] sm:text-[10px] text-muted-foreground">{remoteShare}% Remote</p>
+          <div className={`sm:col-span-4 transition-all duration-700 delay-300 ${isPanel(5) ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}>
+            <div className={isPanel(5) ? "animate-gentle-float" : ""} style={{ "--float-delay": "3s" } as React.CSSProperties}>
+              <div className="rounded-2xl border border-border/40 bg-card p-4 sm:p-5 shadow-md" data-testid="panel-geography">
+                <div className="flex items-center gap-2 mb-2">
+                  <Globe className="h-4 w-4 text-primary" />
+                  <span className="text-xs sm:text-sm font-semibold text-foreground">Global Coverage</span>
                 </div>
+                <p className="text-2xl sm:text-3xl font-bold text-foreground">{countriesCount} Countries</p>
+                <p className="text-xs sm:text-sm text-muted-foreground mt-1">{remoteShare}% Remote</p>
               </div>
             </div>
-          )}
-
-          {isPanel(6) && (
-            <div className="absolute left-[0%] sm:left-[2%] top-[0%] sm:top-[-2%] animate-pop-in" style={{ zIndex: 6 }}>
-              <div className="rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 shadow-sm flex items-center gap-1.5 animate-pulse-soft" style={{ animationDelay: "0.3s" }} data-testid="panel-new-this-week">
-                <Zap className="h-3 w-3 text-amber-600 dark:text-amber-400" />
-                <span className="text-[9px] sm:text-[10px] font-semibold text-amber-700 dark:text-amber-300 whitespace-nowrap">{newThisWeek} new this week</span>
-              </div>
-            </div>
-          )}
+          </div>
         </div>
       </div>
     </section>
