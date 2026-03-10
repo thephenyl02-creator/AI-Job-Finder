@@ -37,7 +37,7 @@ Legal Tech Careers is a career intelligence platform designed for legal professi
 - **Models**: Three high-impact features use `gpt-4o`: Career Diagnostic Engine, Conversational Chat, and Market Insights Q&A. Everything else (search, resume parsing, resume builder, job categorization, description extraction, scraping) uses `gpt-4o-mini` for cost efficiency.
 - **Capabilities**: Powers Guided Search, Job Categorization, Resume Parsing, Resume-Job Comparison, Conversational Assistant, ATS Resume Review, AI-assisted resume builder, Market Insights Q&A, Career Diagnostic Engine, and per-job fit scoring.
 - **Skill Extraction**: AI categorizes `hardSkills` and `softSkills`. The `WORKER_SAFE_KEYS` allowlist in `storage.ts` must include both fields for persistence.
-- **Categorization Boundaries**: Explicit rules prevent over-bucketing into Legal Operations and Legal Consulting.
+- **Categorization Boundaries**: Explicit rules prevent over-bucketing into Legal Operations and Legal Consulting. Appian/Celonis generic roles (no legal mention in description) have `legalRelevanceScore` reduced to 5 to prevent auto-publishing by the audit worker.
 
 ### Payments & Subscription
 - **Model**: Freemium SaaS with "Free" and "Pro" tiers.
@@ -73,7 +73,7 @@ Legal Tech Careers is a career intelligence platform designed for legal professi
 - **Career Diagnostic Engine**: Skill clustering, readiness scoring, and transition planning.
 - **Career Progress Card**: Dashboard card showing readiness score history (sparkline for 2+ reports), retake prompts after 30 days, and score delta tracking. Uses existing `diagnostic_reports` table via `/api/career-progress` endpoint.
 - **Company Intelligence Pages**: Public, SEO-optimized company directory (`/companies`) and individual profile pages (`/companies/:slug`). Directory shows companies with 3+ active listings, paginated and searchable. Profiles aggregate job categories, seniority distribution, top skills, work mode, and active listings with a conversion CTA to the diagnostic. Includes Schema.org JSON-LD structured data (`Organization` + `JobPosting`) for SEO.
-- **Market Intelligence Page**: Bloomberg-style terminal for market data. Includes AI Intensity by Career Path (stacked bars showing Low/Med/High per category), Category Growth Trends (line chart from `categoryByMonth` historical data), and Tools by Career Path (Pro-gated grid showing top 5 legal tech tools per category from `KNOWN_LEGAL_TOOLS` set matched against `hardSkills` with `keySkills` fallback).
+- **Market Intelligence Page**: Bloomberg-style terminal for market data. Includes AI Intensity by Career Path (stacked bars showing Low/Med/High per category), Category Growth Trends (line chart from `categoryByMonth` historical data), and Tools by Career Path (Pro-gated grid showing top 5 legal tech tools per category from `KNOWN_LEGAL_TOOLS` set matched against `hardSkills` with `keySkills` fallback). Salary stats require both `salary_min` AND `salary_max` to be present (prevents min>max anomalies). "New this week" metric uses progressive fallback: 7d → 14d → 30d window. Geography treats `WW` country code as "Global / Remote" instead of excluding it.
 - **Data Quality & Market Benchmarks**: Public section on curation process and data integrity.
 
 ### Engagement Features

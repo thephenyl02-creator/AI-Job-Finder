@@ -83,6 +83,7 @@ interface MarketIntelligenceData {
     countriesCount: number;
     remotePercentage: number;
     newJobsThisWeek: number;
+    newJobsWindow?: string;
     avgSalaryMin: number | null;
     avgSalaryMax: number | null;
     medianSalaryMin: number | null;
@@ -502,7 +503,7 @@ export default function MarketIntelligence() {
           <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4">
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
               {[
-                { label: "Active Roles", value: overview.totalJobs.toLocaleString(), sub: `+${overview.newJobsThisWeek} this week`, icon: Briefcase, delta: overview.newJobsThisWeek > 0 ? "up" : "flat" },
+                { label: "Active Roles", value: overview.totalJobs.toLocaleString(), sub: overview.newJobsThisWeek > 0 ? `+${overview.newJobsThisWeek} ${overview.newJobsWindow === '7d' ? 'this week' : overview.newJobsWindow === '14d' ? 'in 2 weeks' : 'this month'}` : 'Updated regularly', icon: Briefcase, delta: overview.newJobsThisWeek > 0 ? "up" : "flat" },
                 { label: "Career Changers", value: transitionData ? `${transitionData.transitionFriendlyPct}%` : "—", sub: transitionData ? `${transitionData.totalTransitionFriendly} roles` : "Pro", icon: Users, delta: "flat" },
                 { label: "Lawyer-Led", value: `${lawyerLedPct}%`, sub: `${transitionData?.trackSummary.find(t => t.track === "Lawyer-Led")?.jobCount || (dataQuality?.market?.trackDistribution?.find((t: { name: string; count: number }) => t.name === "Lawyer-Led")?.count || 0)} roles`, icon: Shield, delta: "flat" },
                 { label: "Entry-to-Mid", value: `${entryAccessiblePct}%`, sub: transitionData ? `${transitionData.avgExperience}y avg exp` : "of roles", icon: GraduationCap, delta: "flat" },

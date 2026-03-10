@@ -9792,15 +9792,27 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
       }
       const now = new Date();
       const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-      const newThisWeek = allJobs.filter(j => j.firstSeenAt && new Date(j.firstSeenAt) > oneWeekAgo);
+      const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+      const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      let newThisWeek = allJobs.filter(j => j.firstSeenAt && new Date(j.firstSeenAt) > oneWeekAgo);
+      let newJobsWindow = '7d';
+      if (newThisWeek.length === 0) {
+        newThisWeek = allJobs.filter(j => j.firstSeenAt && new Date(j.firstSeenAt) > twoWeeksAgo);
+        newJobsWindow = '14d';
+      }
+      if (newThisWeek.length === 0) {
+        newThisWeek = allJobs.filter(j => j.firstSeenAt && new Date(j.firstSeenAt) > thirtyDaysAgo);
+        newJobsWindow = '30d';
+      }
 
       const remoteJobs = allJobs.filter(j => j.locationType === 'remote' || (!j.locationType && j.isRemote));
       const hybridJobs = allJobs.filter(j => j.locationType === 'hybrid');
       const onsiteJobs = allJobs.filter(j => j.locationType === 'onsite' || (!j.locationType && !j.isRemote));
 
       const MAX_SALARY = 400000;
-      const jobsWithSalMin = allJobs.filter(j => j.salaryMin && j.salaryMin > 0 && j.salaryMin <= MAX_SALARY);
-      const jobsWithSalMax = allJobs.filter(j => j.salaryMax && j.salaryMax > 0 && j.salaryMax <= MAX_SALARY);
+      const jobsWithBothSalary = allJobs.filter(j => j.salaryMin && j.salaryMin > 0 && j.salaryMin <= MAX_SALARY && j.salaryMax && j.salaryMax > 0 && j.salaryMax <= MAX_SALARY && j.salaryMin <= j.salaryMax);
+      const jobsWithSalMin = jobsWithBothSalary;
+      const jobsWithSalMax = jobsWithBothSalary;
       const median = (arr: number[]) => {
         if (!arr.length) return null;
         const s = [...arr].sort((a, b) => a - b);
@@ -9886,14 +9898,16 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
           seniorityMap[job.seniorityLevel] = (seniorityMap[job.seniorityLevel] || 0) + 1;
         }
         companyMap[job.company] = (companyMap[job.company] || 0) + 1;
-        if (job.countryCode && job.countryCode !== 'UN' && job.countryCode !== 'WW') {
-          if (!countryMap[job.countryCode]) countryMap[job.countryCode] = { name: job.countryName || job.countryCode, count: 0 };
-          countryMap[job.countryCode].count++;
+        if (job.countryCode && job.countryCode !== 'UN') {
+          const geoCode = job.countryCode === 'WW' ? 'GLOBAL' : job.countryCode;
+          const geoName = job.countryCode === 'WW' ? 'Global / Remote' : (job.countryName || job.countryCode);
+          if (!countryMap[geoCode]) countryMap[geoCode] = { name: geoName, count: 0 };
+          countryMap[geoCode].count++;
         }
-        if (job.roleCategory) {
+        if (job.roleCategory && job.salaryMin && job.salaryMin > 0 && job.salaryMin <= MAX_SALARY && job.salaryMax && job.salaryMax > 0 && job.salaryMax <= MAX_SALARY && job.salaryMin <= job.salaryMax) {
           if (!salarySamples[job.roleCategory]) salarySamples[job.roleCategory] = { mins: [], maxes: [] };
-          if (job.salaryMin && job.salaryMin > 0 && job.salaryMin <= MAX_SALARY) salarySamples[job.roleCategory].mins.push(job.salaryMin);
-          if (job.salaryMax && job.salaryMax > 0 && job.salaryMax <= MAX_SALARY) salarySamples[job.roleCategory].maxes.push(job.salaryMax);
+          salarySamples[job.roleCategory].mins.push(job.salaryMin);
+          salarySamples[job.roleCategory].maxes.push(job.salaryMax);
         }
         const ai = computeAIIntensity(job);
         if (ai === 'Low') aiLow++;
@@ -10013,6 +10027,7 @@ Extract as much as possible. Use IDs like "exp-1", "edu-1", "cert-1". If a secti
           countriesCount: miDisplay ? miDisplay.totalCountries : countries.size,
           remotePercentage: totalJobs ? Math.round((remoteJobs.length / totalJobs) * 100) : 0,
           newJobsThisWeek: newThisWeek.length,
+          newJobsWindow,
           avgSalaryMin: jobsWithSalMin.length ? Math.round(jobsWithSalMin.reduce((s, j) => s + j.salaryMin!, 0) / jobsWithSalMin.length) : null,
           avgSalaryMax: jobsWithSalMax.length ? Math.round(jobsWithSalMax.reduce((s, j) => s + j.salaryMax!, 0) / jobsWithSalMax.length) : null,
           medianSalaryMin: median(jobsWithSalMin.map(j => j.salaryMin!)),
