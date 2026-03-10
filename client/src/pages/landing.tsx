@@ -518,12 +518,10 @@ function FloatingComposition({ marketPulse, stats }: { marketPulse?: MarketPulse
 
 function DiagnosticShowcase() {
   const [visible, setVisible] = useState(false);
-  const [visiblePanels, setVisiblePanels] = useState<number[]>([]);
   const [scoreValue, setScoreValue] = useState(0);
-  const [barWidths, setBarWidths] = useState([0, 0, 0, 0]);
-  const [skillWidths, setSkillWidths] = useState([0, 0, 0, 0]);
-  const [timelineStep, setTimelineStep] = useState(-1);
-  const [radarScale, setRadarScale] = useState(0);
+  const [barWidths, setBarWidths] = useState([0, 0, 0]);
+  const [showSkills, setShowSkills] = useState(false);
+  const [showPlan, setShowPlan] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const hasPlayed = useRef(false);
   const timeoutRefs = useRef<ReturnType<typeof setTimeout>[]>([]);
@@ -574,38 +572,14 @@ function DiagnosticShowcase() {
   };
 
   const startSequence = () => {
-    const delays = [300, 500, 1200, 2000, 2500, 3200];
-    delays.forEach((delay, i) => {
-      addTimeout(() => {
-        setVisiblePanels((prev) => [...prev, i]);
-        if (i === 0) {
-          animateValue(setScoreValue, 78, 1200);
-        }
-        if (i === 2) {
-          const targets = [87, 74, 61, 48];
-          targets.forEach((t, idx) => {
-            addTimeout(() => animateValue((v) => setBarWidths(prev => { const c = [...prev]; c[idx] = v; return c; }), t, 800), idx * 250);
-          });
-        }
-        if (i === 3) {
-          const targets = [30, 20, 40, 15];
-          targets.forEach((t, idx) => {
-            addTimeout(() => animateValue((v) => setSkillWidths(prev => { const c = [...prev]; c[idx] = v; return c; }), t, 600), idx * 150);
-          });
-        }
-        if (i === 1) {
-          addTimeout(() => setRadarScale(1), 300);
-        }
-        if (i === 4) {
-          [0, 1, 2, 3].forEach(step => {
-            addTimeout(() => setTimelineStep(step), step * 300);
-          });
-        }
-      }, delay);
+    addTimeout(() => animateValue(setScoreValue, 78, 1200), 300);
+    const pathTargets = [87, 74, 61];
+    pathTargets.forEach((t, idx) => {
+      addTimeout(() => animateValue((v) => setBarWidths(prev => { const c = [...prev]; c[idx] = v; return c; }), t, 800), 800 + idx * 250);
     });
+    addTimeout(() => setShowSkills(true), 1800);
+    addTimeout(() => setShowPlan(true), 2400);
   };
-
-  const isPanel = (p: number) => visiblePanels.includes(p);
 
   const scoreCircumference = 2 * Math.PI * 38;
   const scoreOffset = scoreCircumference - (scoreValue / 100) * scoreCircumference;
@@ -614,41 +588,22 @@ function DiagnosticShowcase() {
     { name: "Legal Operations", pct: 87, color: "bg-emerald-500" },
     { name: "Contract Management", pct: 74, color: "bg-emerald-500" },
     { name: "Legal Product", pct: 61, color: "bg-amber-500" },
-    { name: "Compliance & Privacy", pct: 48, color: "bg-amber-500" },
   ];
 
-  const skillGaps = [
-    { name: "Data Analytics", pct: 30 },
-    { name: "Python", pct: 20 },
-    { name: "SQL", pct: 40 },
-    { name: "Process Automation", pct: 15 },
-  ];
-
-  const radarAxes = ["Legal", "Tech", "Comm.", "Analytics", "Domain", "Leadership"];
-  const radarValues = [0.9, 0.4, 0.75, 0.35, 0.85, 0.6];
-  const radarR = 52;
-  const radarCenter = 65;
-  const getRadarPoint = (index: number, value: number) => {
-    const angle = (Math.PI * 2 * index) / 6 - Math.PI / 2;
-    return { x: radarCenter + radarR * value * Math.cos(angle), y: radarCenter + radarR * value * Math.sin(angle) };
-  };
-  const radarPolygon = radarValues.map((v, i) => getRadarPoint(i, v)).map(p => `${p.x},${p.y}`).join(" ");
-  const gridLevels = [0.33, 0.66, 1];
-
-  const timelineSteps = ["SQL Basics", "Automation", "Legal Ops", "Portfolio"];
+  const skillGaps = ["Data Analytics", "Python", "SQL"];
 
   const fadeRef = useFadeInOnScroll();
 
   return (
     <section className="border-t border-border/30" data-testid="section-diagnostic-showcase">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-16 sm:py-24">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-16 sm:py-24">
         <div ref={fadeRef} className="scroll-fade-in text-center mb-10 sm:mb-14">
           <p className="text-xs uppercase tracking-[0.2em] text-emerald-600 dark:text-emerald-400 font-semibold mb-3">Your Career Snapshot</p>
           <h2 className="text-2xl sm:text-4xl font-serif font-medium text-foreground" data-testid="text-diagnostic-heading">
             Discover your readiness for legal tech
           </h2>
           <p className="text-sm sm:text-base text-muted-foreground mt-3 max-w-lg mx-auto leading-relaxed">
-            Upload your resume. In 60 seconds, see your readiness score, career path matches, skill gaps, and a 30-day plan to get there.
+            Upload your resume. In 60 seconds, see your readiness score, matching career paths, and a plan to get there.
           </p>
           <div className="mt-6">
             <Button size="lg" asChild data-testid="button-diagnostic-cta">
@@ -660,57 +615,49 @@ function DiagnosticShowcase() {
           </div>
         </div>
 
-        <div ref={containerRef} className="grid grid-cols-1 sm:grid-cols-12 gap-4 sm:gap-5" data-testid="diagnostic-composition">
-          <div className={`sm:col-span-6 transition-all duration-700 ${isPanel(0) ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}>
-            <div className={isPanel(0) ? "animate-gentle-float" : ""} style={{ "--float-delay": "0s" } as React.CSSProperties}>
-              <div className="rounded-2xl border border-primary/15 bg-gradient-to-br from-primary/[0.03] to-transparent p-6 sm:p-8 shadow-xl" data-testid="panel-score-ring">
-                <div className={`mb-4 transition-all duration-500 ${isPanel(5) ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"}`}>
-                  <div className={`inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-3 py-1.5 ${isPanel(5) ? "animate-pulse-soft" : ""}`} data-testid="panel-you-are-here">
-                    <MapPin className="h-3.5 w-3.5 text-primary" />
-                    <span className="text-sm font-medium text-foreground whitespace-nowrap">You: Corporate Lawyer, 5yrs</span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-5 sm:gap-6 mb-5">
-                  <svg className="w-[100px] h-[100px] sm:w-[130px] sm:h-[130px] -rotate-90 shrink-0" viewBox="0 0 100 100">
-                    <circle cx="50" cy="50" r="38" fill="none" stroke="hsl(var(--muted))" strokeWidth="5" />
-                    <circle cx="50" cy="50" r="38" fill="none" stroke="hsl(var(--primary))" strokeWidth="5" strokeLinecap="round"
-                      strokeDasharray={scoreCircumference} strokeDashoffset={scoreOffset}
-                      style={{ transition: "stroke-dashoffset 0.1s linear" }}
-                    />
-                  </svg>
-                  <div>
-                    <span className="text-5xl sm:text-6xl font-bold text-foreground" data-testid="text-score-value">{scoreValue}</span>
-                    <p className="text-sm sm:text-base text-muted-foreground uppercase tracking-wider mt-1">Readiness Score</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="inline-flex items-center gap-1.5 text-sm font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-4 py-1.5 rounded-full">
-                    <Check className="h-4 w-4" /> Strong Fit
-                  </span>
-                  <span className="text-sm text-muted-foreground">Top 15% of assessed professionals</span>
+        <div
+          ref={containerRef}
+          className={`rounded-2xl border border-primary/10 bg-card shadow-xl overflow-hidden transition-all duration-700 ${visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}
+          data-testid="diagnostic-composition"
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-2">
+            <div className="p-6 sm:p-10 bg-gradient-to-br from-primary/[0.03] to-transparent flex flex-col justify-center" data-testid="panel-score-ring">
+              <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-3 py-1.5 mb-6 w-fit" data-testid="panel-you-are-here">
+                <MapPin className="h-3.5 w-3.5 text-primary" />
+                <span className="text-sm font-medium text-foreground">You: Corporate Lawyer, 5yrs</span>
+              </div>
+              <div className="flex items-center gap-5 sm:gap-6 mb-6">
+                <svg className="w-[100px] h-[100px] sm:w-[120px] sm:h-[120px] -rotate-90 shrink-0" viewBox="0 0 100 100">
+                  <circle cx="50" cy="50" r="38" fill="none" stroke="hsl(var(--muted))" strokeWidth="5" />
+                  <circle cx="50" cy="50" r="38" fill="none" stroke="hsl(var(--primary))" strokeWidth="5" strokeLinecap="round"
+                    strokeDasharray={scoreCircumference} strokeDashoffset={scoreOffset}
+                    style={{ transition: "stroke-dashoffset 0.1s linear" }}
+                  />
+                </svg>
+                <div>
+                  <span className="text-5xl sm:text-6xl font-bold text-foreground" data-testid="text-score-value">{scoreValue}</span>
+                  <p className="text-sm text-muted-foreground uppercase tracking-wider mt-1">Readiness Score</p>
                 </div>
               </div>
+              <span className="inline-flex items-center gap-1.5 text-sm font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-4 py-1.5 rounded-full w-fit">
+                <Check className="h-4 w-4" /> Strong match — top 15%
+              </span>
             </div>
-          </div>
 
-          <div className={`sm:col-span-6 transition-all duration-700 ${isPanel(2) ? "opacity-100 translate-x-0" : "opacity-0 translate-x-6"}`}>
-            <div className={isPanel(2) ? "animate-gentle-float" : ""} style={{ "--float-delay": "1s" } as React.CSSProperties}>
-              <div className="rounded-2xl border border-border/40 bg-card p-5 sm:p-7 shadow-lg" data-testid="panel-career-bars">
-                <div className="flex items-center gap-2 mb-5">
+            <div className="p-6 sm:p-10 border-t sm:border-t-0 sm:border-l border-border/30">
+              <div className="mb-6" data-testid="panel-career-bars">
+                <div className="flex items-center gap-2 mb-4">
                   <Compass className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-                  <span className="text-base sm:text-lg font-semibold text-foreground">Your Career Paths</span>
+                  <span className="text-base font-semibold text-foreground">Career Paths</span>
                 </div>
-                <div className="space-y-3.5 sm:space-y-4">
+                <div className="space-y-3">
                   {careerPaths.map((path, i) => (
                     <div key={path.name}>
-                      <div className="flex items-center justify-between mb-1.5">
-                        <div className="flex items-center gap-2">
-                          <span className={`w-2 h-2 rounded-full ${path.color} shrink-0`} />
-                          <span className="text-sm sm:text-base text-muted-foreground">{path.name}</span>
-                        </div>
-                        <span className="text-sm sm:text-base font-bold text-foreground">{barWidths[i]}%</span>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-sm text-muted-foreground">{path.name}</span>
+                        <span className="text-sm font-bold text-foreground">{barWidths[i]}%</span>
                       </div>
-                      <div className="h-2.5 sm:h-3 bg-muted/50 rounded-full overflow-hidden">
+                      <div className="h-2 bg-muted/50 rounded-full overflow-hidden">
                         <div className={`h-full rounded-full ${path.color} transition-all duration-700 ease-out`}
                           style={{ width: `${barWidths[i]}%` }}
                         />
@@ -719,86 +666,27 @@ function DiagnosticShowcase() {
                   ))}
                 </div>
               </div>
-            </div>
-          </div>
 
-          <div className={`sm:col-span-4 transition-all duration-700 delay-100 ${isPanel(1) ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}>
-            <div className={isPanel(1) ? "animate-gentle-float" : ""} style={{ "--float-delay": "0.5s" } as React.CSSProperties}>
-              <div className="rounded-2xl border border-border/40 bg-card p-4 sm:p-5 shadow-md" data-testid="panel-radar">
-                <p className="text-sm sm:text-base font-semibold text-foreground mb-3">Skill Profile</p>
-                <svg width="180" height="180" viewBox="0 0 130 130" className="mx-auto sm:w-[200px] sm:h-[200px]">
-                  {gridLevels.map(level => (
-                    <polygon key={level}
-                      points={Array.from({ length: 6 }, (_, i) => getRadarPoint(i, level)).map(p => `${p.x},${p.y}`).join(" ")}
-                      fill="none" stroke="hsl(var(--muted-foreground))" strokeWidth="0.5" opacity="0.2"
-                    />
-                  ))}
-                  {radarAxes.map((_, i) => {
-                    const p = getRadarPoint(i, 1);
-                    return <line key={i} x1={radarCenter} y1={radarCenter} x2={p.x} y2={p.y} stroke="hsl(var(--muted-foreground))" strokeWidth="0.5" opacity="0.15" />;
-                  })}
-                  <polygon points={radarPolygon} fill="hsl(var(--primary) / 0.15)" stroke="hsl(var(--primary))" strokeWidth="1.5"
-                    style={{ transform: `scale(${radarScale})`, transformOrigin: `${radarCenter}px ${radarCenter}px`, transition: "transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)" }}
-                  />
-                  {radarAxes.map((label, i) => {
-                    const p = getRadarPoint(i, 1.22);
-                    return <text key={label} x={p.x} y={p.y} textAnchor="middle" dominantBaseline="middle" className="fill-muted-foreground" style={{ fontSize: "9px" }}>{label}</text>;
-                  })}
-                </svg>
-              </div>
-            </div>
-          </div>
-
-          <div className={`sm:col-span-4 transition-all duration-700 delay-200 ${isPanel(3) ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}>
-            <div className={isPanel(3) ? "animate-gentle-float" : ""} style={{ "--float-delay": "2.5s" } as React.CSSProperties}>
-              <div className="rounded-2xl border border-border/40 bg-card p-4 sm:p-5 shadow-md" data-testid="panel-skill-gaps">
-                <div className="flex items-center gap-2 mb-4">
+              <div className={`border-t border-border/30 pt-5 mb-5 transition-all duration-500 ${showSkills ? "opacity-100" : "opacity-0"}`} data-testid="panel-skill-gaps">
+                <div className="flex items-center gap-2 mb-3">
                   <TrendingUp className="h-4 w-4 text-rose-500" />
-                  <span className="text-sm sm:text-base font-semibold text-foreground">Skills to Build</span>
+                  <span className="text-sm font-semibold text-foreground">Skills to Build</span>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  {skillGaps.map((skill, i) => (
-                    <span key={skill.name} className="inline-flex items-center gap-1.5 text-sm font-medium text-rose-600 dark:text-rose-400 bg-rose-500/10 border border-rose-500/20 px-3 py-1.5 rounded-lg transition-all duration-500 ease-out"
-                      style={{ opacity: skillWidths[i] > 0 ? 1 : 0, transform: skillWidths[i] > 0 ? "scale(1)" : "scale(0.8)" }}
-                    >
-                      {skill.name}
-                      <span className="text-xs bg-rose-500/15 px-1.5 py-0.5 rounded-md font-semibold">{skillWidths[i]}%</span>
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className={`sm:col-span-4 transition-all duration-700 delay-300 ${isPanel(4) ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}>
-            <div className={isPanel(4) ? "animate-gentle-float" : ""} style={{ "--float-delay": "3s" } as React.CSSProperties}>
-              <div className="rounded-2xl border border-border/40 bg-card p-4 sm:p-5 shadow-lg" data-testid="panel-roadmap">
-                <p className="text-sm sm:text-base font-semibold text-foreground mb-4">30-Day Plan</p>
-                <div className="flex items-center justify-between px-2 sm:px-3">
-                  {timelineSteps.map((step, i) => (
-                    <div key={step} className="flex flex-col items-center relative" style={{ flex: 1 }}>
-                      <div className="flex items-center w-full">
-                        {i > 0 && (
-                          <div className="flex-1 h-0.5 bg-muted/50 rounded-full overflow-hidden -ml-1">
-                            <div className="h-full bg-emerald-500 rounded-full transition-all duration-400 ease-out"
-                              style={{ width: timelineStep >= i ? "100%" : "0%" }}
-                            />
-                          </div>
-                        )}
-                        <div className={`w-4 h-4 sm:w-5 sm:h-5 rounded-full shrink-0 transition-all duration-300 ${timelineStep >= i ? "bg-emerald-500 scale-100" : "bg-muted scale-75"}`} />
-                        {i < timelineSteps.length - 1 && (
-                          <div className="flex-1 h-0.5 bg-muted/50 rounded-full overflow-hidden -mr-1">
-                            <div className="h-full bg-emerald-500 rounded-full transition-all duration-400 ease-out"
-                              style={{ width: timelineStep > i ? "100%" : "0%" }}
-                            />
-                          </div>
-                        )}
-                      </div>
-                      <span className="text-xs sm:text-sm text-muted-foreground mt-2 whitespace-nowrap">{step}</span>
+                <div className="space-y-2">
+                  {skillGaps.map((skill) => (
+                    <div key={skill} className="flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0" />
+                      <span className="text-sm text-muted-foreground">{skill}</span>
                     </div>
                   ))}
                 </div>
-                <a href="/diagnostic" className="block text-sm text-primary mt-4 hover:underline font-medium" data-testid="link-roadmap-plan">See your full plan →</a>
+              </div>
+
+              <div className={`transition-all duration-500 ${showPlan ? "opacity-100" : "opacity-0"}`} data-testid="panel-roadmap">
+                <a href="/diagnostic" className="inline-flex items-center gap-2 text-sm text-primary hover:underline font-medium" data-testid="link-roadmap-plan">
+                  See your 30-day plan
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </a>
               </div>
             </div>
           </div>
@@ -810,9 +698,10 @@ function DiagnosticShowcase() {
 
 function MarketIntelShowcase({ stats, marketPulse, density }: { stats?: Stats; marketPulse?: MarketPulse; density?: JobDensity }) {
   const [visible, setVisible] = useState(false);
-  const [visiblePanels, setVisiblePanels] = useState<number[]>([]);
   const [counterValues, setCounterValues] = useState([0, 0, 0]);
   const [donutJobCount, setDonutJobCount] = useState(0);
+  const [showBars, setShowBars] = useState(false);
+  const [showSignals, setShowSignals] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const hasPlayed = useRef(false);
   const timeoutRefs = useRef<ReturnType<typeof setTimeout>[]>([]);
@@ -833,8 +722,8 @@ function MarketIntelShowcase({ stats, marketPulse, density }: { stats?: Stats; m
   const newThisWeek = marketPulse?.newJobsThisWeek ?? 5;
 
   const categoryCounts = stats?.categoryCounts
-    ? Object.entries(stats.categoryCounts).sort((a, b) => b[1] - a[1]).slice(0, 6)
-    : [["Legal Operations", 85], ["Contract Management", 62], ["Compliance & Privacy", 48], ["In-House Counsel", 35], ["Legal AI & Analytics", 28], ["Knowledge Management", 20]] as [string, number][];
+    ? Object.entries(stats.categoryCounts).sort((a, b) => b[1] - a[1]).slice(0, 5)
+    : [["Legal Operations", 85], ["Contract Management", 62], ["Compliance & Privacy", 48], ["In-House Counsel", 35], ["Legal AI & Analytics", 28]] as [string, number][];
   const maxCatCount = categoryCounts.length > 0 ? (categoryCounts[0][1] as number) : 1;
 
   const addTimeout = (fn: () => void, ms: number) => {
@@ -881,24 +770,14 @@ function MarketIntelShowcase({ stats, marketPulse, density }: { stats?: Stats; m
   }, []);
 
   const startSequence = () => {
-    const delays = [300, 500, 1000, 1500, 2000, 2800, 3300];
-    delays.forEach((delay, i) => {
-      addTimeout(() => {
-        setVisiblePanels(prev => [...prev, i]);
-        if (i === 0) {
-          animateValue(setDonutJobCount, totalJobs, 1200);
-        }
-        if (i === 2) {
-          const targets = [totalJobs, totalCompanies, countriesCount];
-          targets.forEach((t, idx) => {
-            addTimeout(() => animateValue((v) => setCounterValues(prev => { const c = [...prev]; c[idx] = v; return c; }), t, 1000), idx * 200);
-          });
-        }
-      }, delay);
+    addTimeout(() => animateValue(setDonutJobCount, totalJobs, 1200), 300);
+    const targets = [totalJobs, totalCompanies, countriesCount];
+    targets.forEach((t, idx) => {
+      addTimeout(() => animateValue((v) => setCounterValues(prev => { const c = [...prev]; c[idx] = v; return c; }), t, 1000), 500 + idx * 200);
     });
+    addTimeout(() => setShowBars(true), 1200);
+    addTimeout(() => setShowSignals(true), 1800);
   };
-
-  const isPanel = (p: number) => visiblePanels.includes(p);
 
   const donutTotal = workModeSplit.remote + workModeSplit.hybrid + workModeSplit.onsite;
   const donutR = 34;
@@ -909,7 +788,7 @@ function MarketIntelShowcase({ stats, marketPulse, density }: { stats?: Stats; m
     { label: "Onsite", value: workModeSplit.onsite, color: "#94a3b8" },
   ];
   let donutAccum = 0;
-  const donutData = donutSegments.map((seg, i) => {
+  const donutData = donutSegments.map((seg) => {
     const pct = donutTotal > 0 ? seg.value / donutTotal : 0.33;
     const dashLen = pct * donutCirc;
     const offset = donutAccum;
@@ -921,7 +800,7 @@ function MarketIntelShowcase({ stats, marketPulse, density }: { stats?: Stats; m
 
   return (
     <section className="bg-primary/[0.02] dark:bg-primary/[0.04]" data-testid="section-market-intel-showcase">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-16 sm:py-24">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-16 sm:py-24">
         <div ref={fadeRef} className="scroll-fade-in text-center mb-10 sm:mb-14">
           <p className="text-xs uppercase tracking-[0.2em] text-blue-600 dark:text-blue-400 font-semibold mb-3">Market Intelligence</p>
           <h2 className="text-2xl sm:text-4xl font-serif font-semibold text-foreground" data-testid="text-market-heading">
@@ -940,96 +819,83 @@ function MarketIntelShowcase({ stats, marketPulse, density }: { stats?: Stats; m
           </div>
         </div>
 
-        <div ref={containerRef} className="grid grid-cols-1 sm:grid-cols-12 gap-4 sm:gap-5" data-testid="market-composition">
-          <div className={`sm:col-span-12 flex items-center gap-3 transition-all duration-500 ${isPanel(6) ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"}`}>
-            <div className={`rounded-full border border-amber-500/30 bg-amber-500/10 px-4 py-2 shadow-sm flex items-center gap-2 ${isPanel(6) ? "animate-pulse-soft" : ""}`} data-testid="panel-new-this-week">
-              <Zap className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-              <span className="text-sm sm:text-base font-semibold text-amber-700 dark:text-amber-300 whitespace-nowrap">{newThisWeek} new this week</span>
-            </div>
-          </div>
+        <div
+          ref={containerRef}
+          className={`grid grid-cols-1 sm:grid-cols-12 gap-5 transition-all duration-700 ${visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}
+          data-testid="market-composition"
+        >
+          <div className="sm:col-span-7 rounded-xl border border-blue-500/15 bg-card shadow-xl overflow-hidden" data-testid="panel-market-dashboard">
+            <div className="p-6 sm:p-8">
+              <div className="flex items-center gap-3 sm:gap-8 mb-6 pb-6 border-b border-border/30">
+                {[
+                  { value: counterValues[0], label: "Roles", icon: Briefcase },
+                  { value: counterValues[1], label: "Companies", icon: Building2 },
+                  { value: counterValues[2], label: "Countries", icon: Globe },
+                ].map(stat => (
+                  <div key={stat.label} className="flex items-center gap-2 sm:gap-3">
+                    <stat.icon className="h-5 w-5 text-blue-600 dark:text-blue-400 shrink-0 hidden sm:block" />
+                    <div>
+                      <span className="text-2xl sm:text-3xl font-bold text-foreground" data-testid={`text-counter-${stat.label.toLowerCase()}`}>{stat.value}+</span>
+                      <p className="text-sm text-muted-foreground uppercase tracking-wider">{stat.label}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
 
-          <div className={`sm:col-span-12 transition-all duration-700 ${isPanel(2) ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}>
-            <div className={isPanel(2) ? "animate-gentle-float" : ""} style={{ "--float-delay": "2s" } as React.CSSProperties}>
-              <div className="rounded-xl border border-blue-500/20 bg-card/80 backdrop-blur-sm p-6 sm:p-8 shadow-lg ring-1 ring-blue-500/10" data-testid="panel-stats-counters">
-                <div className="flex items-center justify-around gap-6 sm:gap-10">
-                  {[
-                    { icon: Briefcase, value: counterValues[0], label: "Roles" },
-                    { icon: Building2, value: counterValues[1], label: "Companies" },
-                    { icon: Globe, value: counterValues[2], label: "Countries" },
-                  ].map(stat => (
-                    <div key={stat.label} className="flex flex-col items-center gap-2">
-                      <stat.icon className="h-7 w-7 sm:h-9 sm:w-9 text-blue-600 dark:text-blue-400 mb-1" />
-                      <span className="text-3xl sm:text-4xl font-bold text-foreground" data-testid={`text-counter-${stat.label.toLowerCase()}`}>{stat.value}+</span>
-                      <span className="text-sm sm:text-base text-muted-foreground uppercase tracking-wider">{stat.label}</span>
+              <div className="flex flex-col sm:flex-row sm:items-start gap-6 sm:gap-8 mb-6 pb-6 border-b border-border/30" data-testid="panel-donut">
+                <div className="relative shrink-0 mx-auto sm:mx-0">
+                  <svg width="110" height="110" viewBox="0 0 80 80" className="sm:w-[120px] sm:h-[120px]">
+                    <circle cx="40" cy="40" r={donutR} fill="none" stroke="hsl(var(--muted))" strokeWidth="6" opacity="0.2" />
+                    {donutData.map((seg, i) => (
+                      <circle key={seg.label} cx="40" cy="40" r={donutR} fill="none" stroke={seg.color} strokeWidth="6"
+                        strokeDasharray={`${seg.dashLen} ${donutCirc - seg.dashLen}`}
+                        strokeLinecap="butt"
+                        className={visible ? "animate-draw-segment" : ""}
+                        style={{
+                          "--seg-total": `${donutCirc}`,
+                          "--seg-target": `${donutCirc - seg.dashLen}`,
+                          "--seg-delay": `${0.3 + i * 0.25}s`,
+                          transform: `rotate(${seg.rotation}deg)`,
+                          transformOrigin: "center",
+                          opacity: visible ? 1 : 0,
+                        } as React.CSSProperties}
+                      />
+                    ))}
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className="text-2xl sm:text-3xl font-bold text-foreground" data-testid="text-donut-count">{donutJobCount}</span>
+                    <span className="text-sm text-muted-foreground">Roles</span>
+                  </div>
+                </div>
+                <div className="space-y-2.5 flex-1">
+                  <p className="text-sm font-semibold text-foreground mb-3">Work Mode</p>
+                  {donutData.map(seg => (
+                    <div key={seg.label} className="flex items-center gap-2.5">
+                      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: seg.color }} />
+                      <span className="text-sm text-muted-foreground flex-1">{seg.label}</span>
+                      <span className="text-sm font-semibold text-foreground">{Math.round(seg.pct * 100)}%</span>
                     </div>
                   ))}
                 </div>
               </div>
-            </div>
-          </div>
 
-          <div className={`sm:col-span-6 transition-all duration-700 ${isPanel(0) ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}>
-            <div className={isPanel(0) ? "animate-gentle-float" : ""} style={{ "--float-delay": "0s" } as React.CSSProperties}>
-              <div className="rounded-xl border border-blue-500/20 bg-card/80 backdrop-blur-sm p-5 sm:p-7 shadow-lg ring-1 ring-blue-500/10" data-testid="panel-donut">
-                <p className="text-base sm:text-lg font-semibold text-foreground mb-5">Work Mode Split</p>
-                <div className="flex items-center gap-6 sm:gap-8">
-                  <div className="relative shrink-0">
-                    <svg width="120" height="120" viewBox="0 0 80 80" className="sm:w-[150px] sm:h-[150px]">
-                      <circle cx="40" cy="40" r={donutR} fill="none" stroke="hsl(var(--muted))" strokeWidth="6" opacity="0.2" />
-                      {donutData.map((seg, i) => (
-                        <circle key={seg.label} cx="40" cy="40" r={donutR} fill="none" stroke={seg.color} strokeWidth="6"
-                          strokeDasharray={`${seg.dashLen} ${donutCirc - seg.dashLen}`}
-                          strokeLinecap="butt"
-                          className={visible ? "animate-draw-segment" : ""}
-                          style={{
-                            "--seg-total": `${donutCirc}`,
-                            "--seg-target": `${donutCirc - seg.dashLen}`,
-                            "--seg-delay": `${0.3 + i * 0.25}s`,
-                            transform: `rotate(${seg.rotation}deg)`,
-                            transformOrigin: "center",
-                            opacity: visible ? 1 : 0,
-                          } as React.CSSProperties}
-                        />
-                      ))}
-                    </svg>
-                    <div className="absolute inset-0 flex flex-col items-center justify-center">
-                      <span className="text-3xl sm:text-4xl font-bold text-foreground" data-testid="text-donut-count">{donutJobCount}</span>
-                      <span className="text-xs sm:text-sm text-muted-foreground">Active Roles</span>
-                    </div>
-                  </div>
-                  <div className="space-y-3">
-                    {donutData.map(seg => (
-                      <div key={seg.label} className="flex items-center gap-2.5">
-                        <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: seg.color }} />
-                        <span className="text-sm text-muted-foreground">{seg.label}</span>
-                        <span className="text-sm font-semibold text-foreground">{Math.round(seg.pct * 100)}%</span>
-                      </div>
-                    ))}
-                  </div>
+              <div className={`transition-all duration-500 ${showBars ? "opacity-100" : "opacity-0"}`} data-testid="panel-category-bars">
+                <div className="flex items-center gap-2 mb-4">
+                  <BarChart3 className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  <span className="text-sm font-semibold text-foreground">Top Career Paths</span>
                 </div>
-              </div>
-            </div>
-          </div>
-
-          <div className={`sm:col-span-6 transition-all duration-700 ${isPanel(1) ? "opacity-100 translate-x-0" : "opacity-0 translate-x-6"}`}>
-            <div className={isPanel(1) ? "animate-gentle-float" : ""} style={{ "--float-delay": "1.5s" } as React.CSSProperties}>
-              <div className="rounded-xl border border-blue-500/20 bg-card/80 backdrop-blur-sm p-5 sm:p-7 shadow-lg ring-1 ring-blue-500/10" data-testid="panel-category-bars">
-                <div className="flex items-center gap-2 mb-5">
-                  <BarChart3 className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                  <span className="text-base sm:text-lg font-semibold text-foreground">Roles by Career Path</span>
-                </div>
-                <div className="space-y-3.5 sm:space-y-4">
-                  {categoryCounts.map(([cat, count], i) => {
+                <div className="space-y-3">
+                  {categoryCounts.map(([cat, count]) => {
                     const shortName = (CAREER_PATH_LABELS[cat as string] || (cat as string));
                     return (
                       <div key={cat as string}>
-                        <div className="flex items-center justify-between mb-1.5">
+                        <div className="flex items-center justify-between mb-1">
                           <span className="text-sm text-muted-foreground">{shortName}</span>
                           <span className="text-sm font-bold text-foreground">{count as number}</span>
                         </div>
-                        <div className="h-3 sm:h-3.5 bg-muted/40 rounded-full overflow-hidden">
+                        <div className="h-2 bg-muted/40 rounded-full overflow-hidden">
                           <div className="h-full rounded-full bg-gradient-to-r from-blue-500 to-blue-400 transition-all duration-700 ease-out"
-                            style={{ width: isPanel(1) ? `${((count as number) / maxCatCount) * 100}%` : "0%" }}
+                            style={{ width: showBars ? `${((count as number) / maxCatCount) * 100}%` : "0%" }}
                           />
                         </div>
                       </div>
@@ -1040,53 +906,61 @@ function MarketIntelShowcase({ stats, marketPulse, density }: { stats?: Stats; m
             </div>
           </div>
 
-          <div className={`sm:col-span-4 transition-all duration-700 delay-100 ${isPanel(4) ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}>
-            <div className={isPanel(4) ? "animate-gentle-float" : ""} style={{ "--float-delay": "2.5s" } as React.CSSProperties}>
-              <div className="rounded-xl border border-border/20 bg-card/80 backdrop-blur-sm p-4 sm:p-5 shadow-md" data-testid="panel-top-hiring">
-                <div className="flex items-center gap-2 mb-4">
-                  <Building2 className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                  <span className="text-sm sm:text-base font-semibold text-foreground">Top Hiring</span>
+          <div className={`sm:col-span-5 rounded-xl border border-border/30 bg-card shadow-lg overflow-hidden transition-all duration-500 ${showSignals ? "opacity-100 translate-x-0" : "opacity-0 translate-x-4"}`} data-testid="panel-live-signals">
+            <div className="p-6 sm:p-8">
+              <div className="flex items-center gap-2 mb-6">
+                <Zap className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                <span className="text-sm font-semibold text-foreground">Live Signals</span>
+                <span className="ml-auto inline-flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-sm font-medium text-amber-700 dark:text-amber-300" data-testid="panel-new-this-week">
+                  {newThisWeek} new this week
+                </span>
+              </div>
+
+              <div className="mb-6 pb-6 border-b border-border/30" data-testid="panel-top-hiring">
+                <div className="flex items-center gap-2 mb-3">
+                  <Building2 className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  <span className="text-sm font-semibold text-foreground">Top Hiring</span>
                 </div>
-                <div className="space-y-3">
+                <div className="space-y-2.5">
                   {topHiring.map((company) => (
                     <div key={company.name} className="flex items-center justify-between">
-                      <span className="text-sm text-foreground truncate max-w-[140px] sm:max-w-[180px]">{company.name}</span>
-                      <span className="text-sm text-blue-600 dark:text-blue-400 bg-blue-500/10 px-2.5 py-1 rounded-md font-semibold">{company.count}</span>
+                      <span className="text-sm text-muted-foreground">{company.name}</span>
+                      <span className="text-sm text-blue-600 dark:text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded font-semibold">{company.count}</span>
                     </div>
                   ))}
                 </div>
               </div>
-            </div>
-          </div>
 
-          <div className={`sm:col-span-4 transition-all duration-700 delay-200 ${isPanel(3) ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}>
-            <div className={isPanel(3) ? "animate-gentle-float" : ""} style={{ "--float-delay": "0.5s" } as React.CSSProperties}>
-              <div className="rounded-xl border border-border/20 bg-card/80 backdrop-blur-sm p-4 sm:p-5 shadow-md" data-testid="panel-trending">
-                <div className="flex items-center gap-2 mb-4">
-                  <TrendingUp className="h-5 w-5 text-emerald-500" />
-                  <span className="text-sm sm:text-base font-semibold text-foreground">Trending Skills</span>
+              <div className="mb-6 pb-6 border-b border-border/30" data-testid="panel-trending">
+                <div className="flex items-center gap-2 mb-3">
+                  <TrendingUp className="h-4 w-4 text-emerald-500" />
+                  <span className="text-sm font-semibold text-foreground">Trending</span>
                 </div>
-                <div className="space-y-2.5">
-                  <span className="inline-block text-sm sm:text-base font-medium text-blue-600 dark:text-blue-400 bg-blue-500/10 px-4 py-2 rounded-lg" data-testid="text-trending-skill">
-                    {trendingSkill.length > 28 ? trendingSkill.slice(0, 28) + "…" : trendingSkill}
-                  </span>
+                <span className="inline-block text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-500/10 px-3 py-1.5 rounded-lg" data-testid="text-trending-skill">
+                  {trendingSkill.length > 30 ? trendingSkill.slice(0, 30) + "…" : trendingSkill}
+                </span>
+                <div className="mt-2 space-y-1">
                   {["Contract Automation ↑", "Legal Analytics ↑"].map((s) => (
                     <span key={s} className="block text-sm text-muted-foreground">{s}</span>
                   ))}
                 </div>
               </div>
-            </div>
-          </div>
 
-          <div className={`sm:col-span-4 transition-all duration-700 delay-300 ${isPanel(5) ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}>
-            <div className={isPanel(5) ? "animate-gentle-float" : ""} style={{ "--float-delay": "3s" } as React.CSSProperties}>
-              <div className="rounded-xl border border-border/20 bg-card/80 backdrop-blur-sm p-4 sm:p-5 shadow-md" data-testid="panel-geography">
-                <div className="flex items-center gap-2 mb-3">
-                  <Globe className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                  <span className="text-sm sm:text-base font-semibold text-foreground">Global Coverage</span>
+              <div data-testid="panel-geography">
+                <div className="flex items-center gap-2 mb-2">
+                  <Globe className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  <span className="text-sm font-semibold text-foreground">Coverage</span>
                 </div>
-                <p className="text-3xl sm:text-4xl font-bold text-foreground">{countriesCount} Countries</p>
-                <p className="text-sm sm:text-base text-muted-foreground mt-1">{remoteShare}% Remote</p>
+                <div className="flex items-baseline gap-4">
+                  <div>
+                    <span className="text-2xl font-bold text-foreground">{countriesCount}</span>
+                    <span className="text-sm text-muted-foreground ml-1">Countries</span>
+                  </div>
+                  <div>
+                    <span className="text-2xl font-bold text-foreground">{remoteShare}%</span>
+                    <span className="text-sm text-muted-foreground ml-1">Remote</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
