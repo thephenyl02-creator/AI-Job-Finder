@@ -362,6 +362,12 @@
   .animate-draw-segment { animation: draw-segment 0.6s ease-out both; }
   .animate-gentle-float { animation: gentle-float 6s ease-in-out infinite alternate; }
 
+  @keyframes scale-in {
+    from { transform: scale(0); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+  .animate-scale-in { animation: scale-in 0.8s ease-out both; }
+
   .dot-grid-bg {
     background-image: radial-gradient(circle, hsl(var(--muted-foreground) / 0.15) 1px, transparent 1px);
     background-size: 20px 20px;
@@ -406,7 +412,8 @@
     .animate-ticker-in,
     .animate-ticker-out,
     .animate-scan-line,
-    .animate-draw-segment {
+    .animate-draw-segment,
+    .animate-scale-in {
       animation-duration: 0.01s !important;
     }
     .animate-pulse-soft,
