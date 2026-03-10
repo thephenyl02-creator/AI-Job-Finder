@@ -29,6 +29,8 @@ import {
   Info,
 } from "lucide-react";
 
+const DANGEROUS_REVIEW_CODES = ['GARBAGE_DESCRIPTION', 'BROKEN_APPLY_LINK', 'AUDIT_TITLE_REJECT', 'AUDIT_COMPANY_REJECT', 'HARD_REJECT', 'NON_ENGLISH', 'GENERIC_APPLY_URL', 'LOW_QUALITY_SCRAPE', 'ARTICLE_TITLE', 'AUDIT_DUPLICATE'];
+
 interface QueueData {
   jobs: Job[];
   counts: {
@@ -307,6 +309,18 @@ function JobQueueRow({ job, onRefreshQueue }: { job: Job; onRefreshQueue: () => 
     onError: (err: any) => toast({ title: "Cannot publish", description: err?.message || "Must be approved first", variant: "destructive" }),
   });
 
+  const forcePublishMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", `/api/admin/jobs/${job.id}/publish`, { forceOverride: true });
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Job force-published" });
+      onRefreshQueue();
+    },
+    onError: (err: any) => toast({ title: "Cannot force publish", description: err?.message || "Unknown error", variant: "destructive" }),
+  });
+
   const unpublishMutation = useMutation({
     mutationFn: async () => {
       const res = await apiRequest("POST", `/api/admin/jobs/${job.id}/unpublish`);
@@ -319,7 +333,8 @@ function JobQueueRow({ job, onRefreshQueue }: { job: Job; onRefreshQueue: () => 
     onError: () => toast({ title: "Failed to unpublish", variant: "destructive" }),
   });
 
-  const anyPending = generateMutation.isPending || approveMutation.isPending || publishMutation.isPending || unpublishMutation.isPending;
+  const hasDangerousCode = DANGEROUS_REVIEW_CODES.includes(job.reviewReasonCode || '');
+  const anyPending = generateMutation.isPending || approveMutation.isPending || publishMutation.isPending || forcePublishMutation.isPending || unpublishMutation.isPending;
 
   return (
     <div className="border border-border/50 rounded-md p-3" data-testid={`queue-job-${job.id}`}>
@@ -360,10 +375,16 @@ function JobQueueRow({ job, onRefreshQueue }: { job: Job; onRefreshQueue: () => 
               </Button>
             </>
           )}
-          {status === "approved" && !job.isPublished && (
+          {status === "approved" && !job.isPublished && !hasDangerousCode && (
             <Button size="sm" onClick={() => publishMutation.mutate()} disabled={anyPending} data-testid={`button-publish-${job.id}`}>
               {publishMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <Eye className="h-3.5 w-3.5 mr-1" />}
               Publish
+            </Button>
+          )}
+          {status === "approved" && !job.isPublished && hasDangerousCode && (
+            <Button size="sm" variant="outline" className="border-amber-500 text-amber-700 hover:bg-amber-50" onClick={() => forcePublishMutation.mutate()} disabled={anyPending} data-testid={`button-force-publish-${job.id}`}>
+              {forcePublishMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <AlertTriangle className="h-3.5 w-3.5 mr-1" />}
+              Force Publish
             </Button>
           )}
           {job.isPublished && (
