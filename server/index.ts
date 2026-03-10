@@ -14,6 +14,53 @@ import { getStripeSync } from './stripeClient';
 const app = express();
 const httpServer = createServer(app);
 
+async function scrapeNewATSCompanies() {
+  const { LAW_FIRMS_AND_COMPANIES } = await import('./lib/law-firms-list');
+  const { scrapeSingleCompany } = await import('./lib/law-firm-scraper');
+
+  const atsCompanies = LAW_FIRMS_AND_COMPANIES.filter(
+    f => f.icims || f.ultipro || f.virecruit
+  );
+
+  if (atsCompanies.length === 0) return;
+
+  const { pool } = await import('./db');
+  const { rows } = await pool.query('SELECT LOWER(company) as name FROM jobs GROUP BY LOWER(company)');
+  const companiesWithJobs = new Set(rows.map((r: any) => r.name));
+
+  const newCompanies = atsCompanies.filter(
+    f => !companiesWithJobs.has(f.name.toLowerCase())
+  );
+
+  if (newCompanies.length === 0) {
+    console.log('[New ATS Scrape] All ATS companies already have jobs in DB');
+    return;
+  }
+
+  console.log(`[New ATS Scrape] Found ${newCompanies.length} ATS companies with 0 jobs: ${newCompanies.map(f => f.name).join(', ')}`);
+
+  await new Promise(resolve => setTimeout(resolve, 30000));
+
+  let totalInserted = 0;
+  for (const firm of newCompanies) {
+    try {
+      console.log(`[New ATS Scrape] Scraping ${firm.name}...`);
+      const jobs = await scrapeSingleCompany(firm.name);
+      if (jobs.length > 0) {
+        const { inserted } = await storage.bulkUpsertJobs(jobs);
+        totalInserted += inserted;
+        console.log(`[New ATS Scrape] ${firm.name}: ${jobs.length} scraped, ${inserted} inserted`);
+      } else {
+        console.log(`[New ATS Scrape] ${firm.name}: 0 jobs found`);
+      }
+    } catch (err: any) {
+      console.error(`[New ATS Scrape] ${firm.name} failed: ${err.message}`);
+    }
+  }
+
+  console.log(`[New ATS Scrape] Complete: ${totalInserted} new jobs inserted from ${newCompanies.length} companies`);
+}
+
 declare module "http" {
   interface IncomingMessage {
     rawBody: unknown;
@@ -199,6 +246,9 @@ app.use((req, res, next) => {
             });
           } else {
             log(`${published.length} published jobs found — skipping initial scrape`);
+            scrapeNewATSCompanies().catch(err => {
+              console.error('[New ATS Scrape] Failed:', err.message);
+            });
           }
         } catch (err: any) {
           console.error('[Startup Scrape] Check failed:', err.message);

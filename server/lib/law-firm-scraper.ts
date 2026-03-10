@@ -2072,10 +2072,10 @@ export function transformToJobSchema(job: ScrapedJob, categorization?: JobCatego
   }
 
   return {
-    title: decodeHtmlEntities(job.title.trim()),
-    company: companyClean,
+    title: decodeHtmlEntities(job.title.trim()).slice(0, 255),
+    company: companyClean.slice(0, 255),
     companyLogo: `https://www.google.com/s2/favicons?domain=${logoDomain}&sz=128`,
-    location: locationText,
+    location: locationText ? locationText.slice(0, 255) : null,
     isRemote: isRemoteDetected,
     locationType,
     locationRegion: inferRegionFromLocation(locationText || ''),
@@ -2087,7 +2087,7 @@ export function transformToJobSchema(job: ScrapedJob, categorization?: JobCatego
     roleType: inferRoleType(job.title),
     description: cleanDescription || `${job.title} position at ${job.company}`,
     requirements: null,
-    applyUrl: job.applyUrl?.trim() || '#',
+    applyUrl: (job.applyUrl?.trim() || '#').slice(0, 500),
     isActive: true,
     externalId: job.externalId,
     source: job.source,
